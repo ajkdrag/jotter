@@ -54,7 +54,7 @@ class WorkspaceIndex {
         hits.push({
           note: entry.note,
           score: normalized_score,
-          snippet
+          ...(snippet ? { snippet } : {})
         })
       }
     }
@@ -118,14 +118,14 @@ class WorkspaceIndex {
 
     let match
     while ((match = wiki_link_regex.exec(content)) !== null) {
-      const link_text = match[1].split('|')[0].trim()
+      const link_text = match[1]?.split('|')[0]?.trim()
       if (link_text) {
         links.add(as_note_path(link_text))
       }
     }
 
     while ((match = markdown_link_regex.exec(content)) !== null) {
-      const link_url = match[2].trim()
+      const link_url = match[2]?.trim()
       if (link_url && !link_url.startsWith('http') && !link_url.startsWith('imdown-asset://')) {
         links.add(as_note_path(link_url.replace(/\.md$/, '')))
       }

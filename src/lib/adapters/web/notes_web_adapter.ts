@@ -9,10 +9,12 @@ async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryH
     throw new Error(`Vault not found: ${vault_id}`)
   }
 
-  try {
-    await record.handle.requestPermission({ mode: 'readwrite' })
-  } catch (e) {
-    throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+  if ('requestPermission' in record.handle && typeof record.handle.requestPermission === 'function') {
+    try {
+      await (record.handle as { requestPermission: (opts: { mode: string }) => Promise<PermissionState> }).requestPermission({ mode: 'readwrite' })
+    } catch (e) {
+      throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   return record.handle
@@ -28,6 +30,7 @@ async function resolve_note_path(
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
+    if (!part) continue
     const is_last = i === parts.length - 1
 
     if (is_last) {
@@ -48,9 +51,15 @@ async function list_markdown_files(
 ): Promise<NoteMeta[]> {
   const notes: NoteMeta[] = []
 
-  for await (const [name, handle] of dir.entries()) {
+  const entries: [string, FileSystemHandle][] = []
+  for await (const [name, handle] of dir as any) {
+    entries.push([name, handle])
+  }
+
+  for (const [name, handle] of entries) {
     if (handle.kind === 'file' && name.endsWith('.md')) {
-      const file = await handle.getFile()
+      const file_handle = handle as FileSystemFileHandle
+      const file = await file_handle.getFile()
       const full_path = prefix ? `${prefix}/${name}` : name
       const note_path = as_note_path(full_path.replace(/\.md$/, ''))
 
@@ -63,7 +72,7 @@ async function list_markdown_files(
       })
     } else if (handle.kind === 'directory') {
       const sub_prefix = prefix ? `${prefix}/${name}` : name
-      const sub_notes = await list_markdown_files(handle, sub_prefix)
+      const sub_notes = await list_markdown_files(handle as FileSystemDirectoryHandle, sub_prefix)
       notes.push(...sub_notes)
     }
   }
@@ -115,6 +124,7 @@ export function create_notes_web_adapter(): NotesPort {
 
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i]
+        if (!part) continue
         const is_last = i === parts.length - 1
 
         if (is_last) {
@@ -149,6 +159,7 @@ export function create_notes_web_adapter(): NotesPort {
 
       for (let i = 0; i < to_parts.length; i++) {
         const part = to_parts[i]
+        if (!part) continue
         const is_last = i === to_parts.length - 1
 
         if (is_last) {
@@ -158,7 +169,8 @@ export function create_notes_web_adapter(): NotesPort {
         }
       }
 
-      const from_file = await from_resolved.handle.getFile()
+      const from_file_handle = from_resolved.handle as FileSystemFileHandle
+      const from_file = await from_file_handle.getFile()
       const to_file_handle = await to_parent.getFileHandle(to_name, { create: true })
       const writable = await to_file_handle.createWritable()
       await writable.write(await from_file.text())

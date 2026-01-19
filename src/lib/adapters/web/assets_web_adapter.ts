@@ -10,21 +10,19 @@ async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryH
     throw new Error(`Vault not found: ${vault_id}`)
   }
 
-  try {
-    await record.handle.requestPermission({ mode: 'readwrite' })
-  } catch (e) {
-    throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+  if ('requestPermission' in record.handle && typeof record.handle.requestPermission === 'function') {
+    try {
+      await (record.handle as { requestPermission: (opts: { mode: string }) => Promise<PermissionState> }).requestPermission({ mode: 'readwrite' })
+    } catch (e) {
+      throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   return record.handle
 }
 
 async function ensure_assets_directory(root: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle> {
-  try {
-    return await root.getDirectoryHandle('assets', { create: true })
-  } catch {
-    return await root.getDirectoryHandle('assets', { create: true })
-  }
+  return await root.getDirectoryHandle('assets', { create: true })
 }
 
 async function resolve_asset_path(
@@ -38,6 +36,7 @@ async function resolve_asset_path(
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
+    if (!part) continue
     const is_last = i === parts.length - 1
 
     if (is_last) {
@@ -63,6 +62,7 @@ export function create_assets_web_adapter(): AssetsPort {
 
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i]
+        if (!part) continue
         const is_last = i === parts.length - 1
 
         if (is_last) {
@@ -73,7 +73,8 @@ export function create_assets_web_adapter(): AssetsPort {
           if (source.kind === 'path') {
             throw new Error('Path-based asset import not supported in web environment. Use bytes instead.')
           } else {
-            await writable.write(source.bytes)
+            const buffer = new Uint8Array(source.bytes).buffer
+            await writable.write(buffer)
           }
 
           await writable.close()
@@ -85,7 +86,7 @@ export function create_assets_web_adapter(): AssetsPort {
           }
 
           return target_path
-        } else {
+        } else if (part) {
           current = await current.getDirectoryHandle(part, { create: true })
         }
       }

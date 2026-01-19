@@ -34,7 +34,8 @@ export function create_vault_web_adapter(): VaultPort {
       }
 
       try {
-        const handle = await window.showDirectoryPicker()
+        const show_picker = window.showDirectoryPicker as () => Promise<FileSystemDirectoryHandle>
+        const handle = await show_picker()
         const path = handle.name
         pending_handles.set(path, { handle, timestamp: Date.now() })
         return as_vault_path(path)
@@ -59,7 +60,12 @@ export function create_vault_web_adapter(): VaultPort {
       }
 
       if (!handle) {
-        handle = await window.showDirectoryPicker()
+        const show_picker = window.showDirectoryPicker as () => Promise<FileSystemDirectoryHandle>
+        handle = await show_picker()
+      }
+
+      if (!handle) {
+        throw new Error('Failed to get directory handle')
       }
 
       const { name, path } = await read_vault_metadata(handle)
@@ -84,10 +90,12 @@ export function create_vault_web_adapter(): VaultPort {
 
       const { name, path, handle, created_at } = record
 
-      try {
-        await handle.requestPermission({ mode: 'readwrite' })
-      } catch (e) {
-        throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+      if ('requestPermission' in handle && typeof handle.requestPermission === 'function') {
+        try {
+          await (handle as { requestPermission: (opts: { mode: string }) => Promise<PermissionState> }).requestPermission({ mode: 'readwrite' })
+        } catch (e) {
+          throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+        }
       }
 
       return {
