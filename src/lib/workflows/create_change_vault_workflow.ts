@@ -23,6 +23,7 @@ export function create_change_vault_workflow() {
       await ensure_watching(result.vault.id)
       void ports.index.build_index(result.vault.id)
       await refresh_recent()
+      await ports.navigation.navigate_to_home()
     },
     async open_last_vault() {
       const result = await open_last_vault(ports)
@@ -46,6 +47,7 @@ export function create_change_vault_workflow() {
       await ensure_watching(vault.id)
       void ports.index.build_index(vault.id)
       await refresh_recent()
+      await ports.navigation.navigate_to_home()
     },
     async load_recent() {
       await refresh_recent()

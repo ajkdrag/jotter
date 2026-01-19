@@ -27,6 +27,9 @@
     loading = true
     try {
       await vault_workflow.open_recent(vault.id)
+    } catch (error) {
+      console.error('[VaultSelection] Error opening vault:', error)
+      alert(`Failed to open vault: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       loading = false
     }
