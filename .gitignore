@@ -1,0 +1,10 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+.DS_Store
+src-tauri/target/
+src-tauri/Cargo.lock
+.pnpm-store/
+devlog/
+
