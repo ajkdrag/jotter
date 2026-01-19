@@ -3,6 +3,9 @@
   import { app_state } from '$lib/adapters/state/app_state.svelte'
   import { create_change_vault_workflow } from '$lib/workflows/create_change_vault_workflow'
   import type { Vault } from '$lib/types/vault'
+  import * as Card from '$lib/components/ui/card'
+  import { Button } from '$lib/components/ui/button'
+  import { Plus, Check } from '@lucide/svelte'
 
   const vault_workflow = create_change_vault_workflow()
   let loading = $state(false)
@@ -38,246 +41,58 @@
   }
 </script>
 
-<div class="vault-panel">
-  <div class="vault-panel__header">
-    <h2 class="vault-panel__title">Select Vault</h2>
-  </div>
+<div class="mx-auto max-w-[65ch] p-8">
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>Select Vault</Card.Title>
+      <Card.Description>Choose a vault directory or select from recent vaults</Card.Description>
+    </Card.Header>
 
-  <div class="vault-panel__actions">
-    <button
-      type="button"
-      onclick={handle_choose_vault}
-      disabled={loading}
-      class="vault-panel__button vault-panel__button--primary"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="vault-panel__icon"
+    <Card.Content class="space-y-6">
+      <Button
+        onclick={handle_choose_vault}
+        disabled={loading}
+        class="w-full"
       >
-        <path d="M12 5v14M5 12h14" />
-      </svg>
-      Choose Vault Directory
-    </button>
-  </div>
+        <Plus />
+        Choose Vault Directory
+      </Button>
 
-  {#if app_state.recent_vaults.length > 0}
-    <div class="vault-panel__section">
-      <h3 class="vault-panel__section-title">Recent Vaults</h3>
-      <div class="vault-panel__list">
-        {#each app_state.recent_vaults as vault (vault.id)}
-          <button
-            type="button"
-            onclick={() => handle_select_vault(vault)}
-            disabled={loading || app_state.vault?.id === vault.id}
-            class="vault-panel__item"
-            class:vault-panel__item--active={app_state.vault?.id === vault.id}
-          >
-            <div class="vault-panel__item-content">
-              <div class="vault-panel__item-name">{vault.name}</div>
-              <div class="vault-panel__item-path">{format_path(vault.path)}</div>
-            </div>
-            {#if app_state.vault?.id === vault.id}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="vault-panel__check-icon"
+      {#if app_state.recent_vaults.length > 0}
+        <div class="mt-4 space-y-3">
+          <h3 class="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Recent Vaults
+          </h3>
+          <div class="flex flex-col gap-2">
+            {#each app_state.recent_vaults as vault (vault.id)}
+              <button
+                type="button"
+                onclick={() => handle_select_vault(vault)}
+                disabled={loading || app_state.vault?.id === vault.id}
+                class="flex min-h-14 items-center justify-between rounded-lg border bg-card px-4 py-3 text-left outline-none transition-all hover:bg-accent/10 hover:border-accent/30 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/15 data-[active=true]:border-l-[3px] data-[active=true]:border-l-primary data-[active=true]:pl-[calc(1rem-2px)]"
+                data-active={app_state.vault?.id === vault.id}
               >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-            {/if}
-          </button>
-        {/each}
-      </div>
-    </div>
-  {:else}
-    <div class="vault-panel__empty">
-      <p class="vault-panel__empty-text">No recent vaults</p>
-      <p class="vault-panel__empty-hint">Choose a vault directory to get started</p>
-    </div>
-  {/if}
+                <div class="min-w-0 flex-1">
+                  <div class="mb-1 truncate text-[0.9375rem] font-medium text-foreground">
+                    {vault.name}
+                  </div>
+                  <div class="truncate text-[0.8125rem] text-muted-foreground">
+                    {format_path(vault.path)}
+                  </div>
+                </div>
+                {#if app_state.vault?.id === vault.id}
+                  <Check class="ml-4 shrink-0 text-primary" />
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {:else}
+        <div class="py-12 px-6 text-center">
+          <p class="mb-2 text-[0.9375rem] font-medium text-foreground">No recent vaults</p>
+          <p class="text-sm text-muted-foreground">Choose a vault directory to get started</p>
+        </div>
+      {/if}
+    </Card.Content>
+  </Card.Root>
 </div>
-
-<style>
-  .vault-panel {
-    max-width: 65ch;
-    margin: 0 auto;
-    padding: var(--spacing-8);
-    background-color: var(--background-base);
-  }
-
-  .vault-panel__header {
-    margin-bottom: var(--spacing-8);
-  }
-
-  .vault-panel__title {
-    font-size: var(--font-size-3xl);
-    font-weight: var(--font-weight-semibold);
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-    color: var(--foreground-primary);
-    margin: 0;
-  }
-
-  .vault-panel__actions {
-    margin-bottom: var(--spacing-8);
-  }
-
-  .vault-panel__button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-2);
-    height: 36px;
-    padding: 12px 16px;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-medium);
-    transition: background-color 150ms ease-out;
-    cursor: pointer;
-    border: none;
-    outline: none;
-  }
-
-  .vault-panel__button:focus-visible {
-    outline: 2px solid var(--control-border-focus);
-    outline-offset: 2px;
-  }
-
-  .vault-panel__button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .vault-panel__button--primary {
-    background-color: var(--accent);
-    color: white;
-  }
-
-  .vault-panel__button--primary:hover:not(:disabled) {
-    background-color: var(--accent-hover);
-  }
-
-  .vault-panel__icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-
-  .vault-panel__section {
-    margin-top: var(--spacing-8);
-  }
-
-  .vault-panel__section-title {
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.4;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--foreground-secondary);
-    margin: 0 0 var(--spacing-4) 0;
-  }
-
-  .vault-panel__list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-2);
-  }
-
-  .vault-panel__item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 56px;
-    padding: var(--spacing-4);
-    border-radius: var(--radius-md);
-    background-color: var(--background-surface-1);
-    border: 0.5px solid var(--border-default);
-    cursor: pointer;
-    transition: background-color 150ms ease-out, border-color 150ms ease-out;
-    text-align: left;
-    outline: none;
-  }
-
-  .vault-panel__item:hover:not(:disabled) {
-    background-color: var(--background-surface-2);
-  }
-
-  .vault-panel__item:focus-visible {
-    outline: 2px solid var(--control-border-focus);
-    outline-offset: 2px;
-  }
-
-  .vault-panel__item:disabled {
-    cursor: default;
-  }
-
-  .vault-panel__item--active {
-    background-color: var(--background-surface-2);
-    border-left: 2px solid var(--accent);
-    padding-left: calc(var(--spacing-4) - 2px);
-  }
-
-  .vault-panel__item-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .vault-panel__item-name {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-normal);
-    color: var(--foreground-primary);
-    margin-bottom: var(--spacing-1);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .vault-panel__item-path {
-    font-size: var(--font-size-sm);
-    color: var(--foreground-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .vault-panel__check-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    color: var(--accent);
-    margin-left: var(--spacing-4);
-  }
-
-  .vault-panel__empty {
-    margin-top: var(--spacing-8);
-    padding: var(--spacing-8);
-    text-align: center;
-  }
-
-  .vault-panel__empty-text {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-medium);
-    color: var(--foreground-primary);
-    margin: 0 0 var(--spacing-2) 0;
-  }
-
-  .vault-panel__empty-hint {
-    font-size: var(--font-size-sm);
-    color: var(--foreground-secondary);
-    margin: 0;
-  }
-</style>
