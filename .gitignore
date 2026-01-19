@@ -8,4 +8,5 @@ src-tauri/target/
 src-tauri/Cargo.lock
 .pnpm-store/
 devlog/
-
+.design-engineer/
+.ignore

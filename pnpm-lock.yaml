@@ -61,8 +61,8 @@ importers:
         specifier: ^4.0.4
         version: 4.0.4(svelte@5.47.0)(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))
       '@tailwindcss/vite':
-        specifier: ^4.0.0
-        version: 4.0.0(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))
+        specifier: ^4.1.18
+        version: 4.1.18(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))
       '@tauri-apps/cli':
         specifier: ^2.9.6
         version: 2.9.6
@@ -79,8 +79,8 @@ importers:
         specifier: ^4.3.5
         version: 4.3.5(picomatch@4.0.3)(svelte@5.47.0)(typescript@5.9.3)
       tailwindcss:
-        specifier: ^4.0.0
-        version: 4.0.0
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -753,10 +753,10 @@ packages:
     resolution: {integrity: sha512-EgCR5tTS5bUSKQgzeMClT6iCY3ToqE1y+ZB0AKldj809QXk1Y+3jB0upOYZrn9aGIzPtUsP7sX4QQ4XtjBB95A==}
     engines: {node: '>= 10'}
 
-  '@tailwindcss/vite@4.0.0':
-    resolution: {integrity: sha512-4uukMiU9gHui8KMPMdWic5SP1O/tmQ1NFSRNrQWmcop5evAVl/LZ6/LuWL3quEiecp2RBcRWwqJrG+mFXlRlew==}
+  '@tailwindcss/vite@4.1.18':
+    resolution: {integrity: sha512-jVA+/UpKL1vRLg6Hkao5jldawNmRo7mQYrZtNHMIVpLfLhDml5nMRUo/8MwoX2vNXvnaXNNMedrMfMugAVX1nA==}
     peerDependencies:
-      vite: ^5.2.0 || ^6
+      vite: ^5.2.0 || ^6 || ^7
 
   '@tauri-apps/api@2.9.1':
     resolution: {integrity: sha512-IGlhP6EivjXHepbBic618GOmiWe4URJiIeZFlB7x3czM0yDHHYviH1Xvoiv4FefdkQtn6v7TuwWCRfOGdnVUGw==}
@@ -1498,9 +1498,6 @@ packages:
 
   tailwind-merge@2.6.0:
     resolution: {integrity: sha512-P+Vu1qXfzediirmHOC3xKGAYeZtPcV9g76X+xg2FD4tYgR71ewMA35Y3sCz3zhiN/dwefRpJX0yBcgwi1fXNQA==}
-
-  tailwindcss@4.0.0:
-    resolution: {integrity: sha512-ULRPI3A+e39T7pSaf1xoi58AqqJxVCLg8F/uM5A3FadUbnyDTgltVnXJvdkTjwCOGA6NazqHVcwPJC5h2vRYVQ==}
 
   tailwindcss@4.1.18:
     resolution: {integrity: sha512-4+Z+0yiYyEtUVCScyfHCxOYP06L5Ne+JiHhY2IjR2KWMIWhJOYZKLSGZaP5HkZ8+bY0cxfzwDE5uOmzFXyIwxw==}
@@ -2564,12 +2561,11 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.18
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.18
 
-  '@tailwindcss/vite@4.0.0(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))':
+  '@tailwindcss/vite@4.1.18(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))':
     dependencies:
       '@tailwindcss/node': 4.1.18
       '@tailwindcss/oxide': 4.1.18
-      lightningcss: 1.30.2
-      tailwindcss: 4.0.0
+      tailwindcss: 4.1.18
       vite: 5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)
 
   '@tauri-apps/api@2.9.1': {}
@@ -3546,8 +3542,6 @@ snapshots:
   tabbable@6.4.0: {}
 
   tailwind-merge@2.6.0: {}
-
-  tailwindcss@4.0.0: {}
 
   tailwindcss@4.1.18: {}
 
