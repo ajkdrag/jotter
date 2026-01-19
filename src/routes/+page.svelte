@@ -9,6 +9,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
+  SidebarTrigger,
 } from '$lib/components/ui/sidebar'
 import { Button } from '$lib/components/ui/button'
 import FileTree from '$lib/components/file_tree.svelte'
@@ -17,6 +18,7 @@ import { FolderOpen } from 'lucide-svelte'
 const vault_workflow = create_change_vault_workflow()
 
 let vault_ready = $state(false)
+let sidebar_open = $state(true)
 
 $effect(() => {
   if (!app_state.vault) {
@@ -26,14 +28,18 @@ $effect(() => {
   }
 })
 
+function handle_sidebar_change(open: boolean) {
+  sidebar_open = open
+}
+
 async function handle_change_vault() {
   await vault_workflow.choose_and_change()
 }
 </script>
 
 {#if vault_ready && app_state.vault}
-  <SidebarProvider>
-    <Sidebar>
+  <SidebarProvider bind:open={sidebar_open} onOpenChange={handle_sidebar_change}>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <div class="flex items-center gap-2 px-4 py-2">
           <FolderOpen class="h-5 w-5" />
@@ -53,7 +59,11 @@ async function handle_change_vault() {
     </Sidebar>
 
     <SidebarInset>
-      <div class="flex h-full items-center justify-center text-muted-foreground">
+      <header class="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarTrigger />
+        <div class="text-sm font-medium">Notes</div>
+      </header>
+      <div class="flex flex-1 items-center justify-center text-muted-foreground">
         Select a note to begin
       </div>
     </SidebarInset>

@@ -49,6 +49,42 @@
 - Architectural decisions must have traceable rationale
 - Project is active; prefer clean refactors over backward compatibility. Internal API breaks are OK if it simplifies design and tests/examples are updated
 
+<!-- Source: .ruler/skill_usage.md -->
+
+**IMPORTANT: Proactive Skill Usage**
+
+You MUST proactively invoke relevant skills when the user asks for:
+
+- Adding or updating UI components → Use `/design-engineer` or `/shadcn-svelte-integration`
+- Adding new features → Use `/feature-dev`
+- Styling or design system work → Use `/design-system-principles` or `/tailwind-bem-naming`
+- Component organization → Use `/component-organization`
+- Performance optimization → Use `/rendering-performance`
+- Svelte 5 reactivity patterns → Use `/svelte5-reactivity`
+
+Do NOT ask for permission to use these skills. Invoke them immediately as your FIRST action when the request matches the skill's domain. The skills are designed to guide implementation with best practices and consistency.
+
+<!-- Source: .ruler/design_token_usage.md -->
+
+**Design Token Usage**
+
+Always use shadcn semantic utilities. Use custom utilities only when shadcn lacks the specific token.
+
+**Default to shadcn:**
+
+- `bg-card`, `bg-background`, `bg-popover`, `bg-muted`, `bg-accent`
+- `text-foreground`, `text-muted-foreground`, `text-primary`, `text-destructive`
+- `border-border`, `border-input`, `ring-ring`
+
+**Use custom only when needed:**
+
+- `bg-background-surface-2/3` - Specific elevation levels
+- `text-foreground-tertiary` - Deeper text hierarchy
+- `border-border-strong/subtle` - Specific border weights
+- `bg-accent-hover` - Explicit state variants
+
+**Rule:** If shadcn has it, use it. Custom tokens are for granularity shadcn doesn't provide.
+
 <!-- Source: .ruler/testing_conventions.md -->
 
 - Store tests in a top-level `tests/` directory, separate from logic
@@ -59,13 +95,13 @@
 - Prefer focused unit tests by default; incrementally grow coverage with meaningful cases
 - Tests must be deterministic, readable, and fail loudly on assertion failures.
 
-## Important
+<!-- Source: .ruler/post_edit_validation_rules.md -->
 
 Once you are done making any code changes and are about to finalize. Do the following tasks:
 
 - Run `pnpm check` and fix any issues
 - Verify TypeScript types. Use the linter's feedback
-- See if you can simplify your implementation WITHOUT breaking the logic or the "requirement" that user proposed. Oversimplication will be penalized if it breaks existing code patterns and guidelines
+- See if you can simplify your implementation WITHOUT breaking the logic or the "requirement" that user proposed. Simplification will be penalized if it breaks existing code patterns, standards or guidelines
 - Remove docstrings, comments which are redundant
 - Add tests in the right location (if we should), even if the user might have forgotten to ask you to create them
 - Make sure files are always in snake_case
