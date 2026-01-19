@@ -49,8 +49,8 @@ importers:
         specifier: ^3.10.1
         version: 3.10.1
       '@lucide/svelte':
-        specifier: ^0.561.0
-        version: 0.561.0(svelte@5.47.0)
+        specifier: ^0.562.0
+        version: 0.562.0(svelte@5.47.0)
       '@sveltejs/adapter-static':
         specifier: ^3.0.10
         version: 3.0.10(@sveltejs/kit@2.50.0(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.47.0)(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)))(svelte@5.47.0)(typescript@5.9.3)(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)))
@@ -432,8 +432,8 @@ packages:
   '@lezer/yaml@1.0.3':
     resolution: {integrity: sha512-GuBLekbw9jDBDhGur82nuwkxKQ+a3W5H0GfaAthDXcAu+XdpS43VlnxA9E9hllkpSP5ellRDKjLLj7Lu9Wr6xA==}
 
-  '@lucide/svelte@0.561.0':
-    resolution: {integrity: sha512-vofKV2UFVrKE6I4ewKJ3dfCXSV6iP6nWVmiM83MLjsU91EeJcEg7LoWUABLp/aOTxj1HQNbJD1f3g3L0JQgH9A==, tarball: https://artifactory.corp.ebay.com/artifactory/api/npm/npm-corp/@lucide/svelte/-/svelte-0.561.0.tgz}
+  '@lucide/svelte@0.562.0':
+    resolution: {integrity: sha512-wDMULwtTFN2Sc/TFBm6gfuVCNb4Y5P9LDrwxNnUbV52+IEU7NXZmvxwXoz+vrrpad6Xupq+Hw5eUlqIHEGhouw==, tarball: https://artifactory.corp.ebay.com/artifactory/api/npm/npm-corp/@lucide/svelte/-/svelte-0.562.0.tgz}
     peerDependencies:
       svelte: ^5
 
@@ -2156,7 +2156,7 @@ snapshots:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.7
 
-  '@lucide/svelte@0.561.0(svelte@5.47.0)':
+  '@lucide/svelte@0.562.0(svelte@5.47.0)':
     dependencies:
       svelte: 5.47.0
 
