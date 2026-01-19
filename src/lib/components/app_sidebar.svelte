@@ -9,27 +9,43 @@
 
 {#if app_state.vault}
     <Sidebar.Provider>
-        <Sidebar.Root collapsible="icon">
+        <Sidebar.Root>
             <Sidebar.Header>
-                <div class="flex items-center gap-2 px-4 py-2">
-                    <FolderOpen class="h-5 w-5" />
-                    <span class="font-semibold">{app_state.vault.name}</span>
-                </div>
+                <Sidebar.Menu>
+                    <Sidebar.MenuItem>
+                        <Sidebar.MenuButton size="lg">
+                            <div class="flex items-center gap-2">
+                                <FolderOpen class="h-5 w-5" />
+                                <span class="font-semibold"
+                                    >{app_state.vault.name}</span
+                                >
+                            </div>
+                        </Sidebar.MenuButton>
+                    </Sidebar.MenuItem>
+                </Sidebar.Menu>
             </Sidebar.Header>
 
             <Sidebar.Content>
-                <FileTree notes={app_state.notes} />
+                <Sidebar.Group>
+                    <Sidebar.GroupContent>
+                        <FileTree notes={app_state.notes} />
+                    </Sidebar.GroupContent>
+                </Sidebar.Group>
             </Sidebar.Content>
 
             <Sidebar.Footer>
-                <Button
-                    variant="ghost"
-                    class="w-full"
-                    onclick={() => console.log("switching vault")}
-                >
-                    Change Vault
-                </Button>
+                <Sidebar.Menu>
+                    <Sidebar.MenuItem>
+                        <Sidebar.MenuButton
+                            onclick={() => console.log("switching vault")}
+                        >
+                            <span>Change Vault</span>
+                        </Sidebar.MenuButton>
+                    </Sidebar.MenuItem>
+                </Sidebar.Menu>
             </Sidebar.Footer>
+
+            <Sidebar.Rail />
         </Sidebar.Root>
 
         <Sidebar.Inset>

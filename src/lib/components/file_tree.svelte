@@ -1,36 +1,36 @@
 <script lang="ts">
-import type { NoteMeta } from '$lib/types/note'
-import type { FileTreeNode } from '$lib/utils/filetree'
-import { build_filetree, sort_tree } from '$lib/utils/filetree'
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuSub,
-} from '$lib/components/ui/sidebar'
-import { ChevronRight, ChevronDown, Folder, File } from 'lucide-svelte'
+  import type { NoteMeta } from "$lib/types/note";
+  import type { FileTreeNode } from "$lib/utils/filetree";
+  import { build_filetree, sort_tree } from "$lib/utils/filetree";
+  import {
+    SidebarMenu,
+    SidebarMenuItem,
+    SidebarMenuButton,
+    SidebarMenuSub,
+  } from "$lib/components/ui/sidebar";
+  import { ChevronRight, ChevronDown, Folder, File } from "lucide-svelte";
 
-type Props = {
-  notes: NoteMeta[]
-}
+  type Props = {
+    notes: NoteMeta[];
+  };
 
-let { notes }: Props = $props()
+  let { notes }: Props = $props();
 
-let expanded = $state(new Set<string>())
-let tree = $derived(sort_tree(build_filetree(notes)))
+  let expanded = $state(new Set<string>());
+  let tree = $derived(sort_tree(build_filetree(notes)));
 
-function toggle_folder(path: string) {
-  if (expanded.has(path)) {
-    expanded.delete(path)
-  } else {
-    expanded.add(path)
+  function toggle_folder(path: string) {
+    if (expanded.has(path)) {
+      expanded.delete(path);
+    } else {
+      expanded.add(path);
+    }
+    expanded = new Set(expanded);
   }
-  expanded = new Set(expanded)
-}
 
-function handle_file_click(note: NoteMeta) {
-  console.log('File clicked:', note.path)
-}
+  function handle_file_click(note: NoteMeta) {
+    console.log("File clicked:", note.path);
+  }
 </script>
 
 {#snippet render_tree(nodes: Map<string, FileTreeNode>)}
@@ -40,11 +40,11 @@ function handle_file_click(note: NoteMeta) {
         <SidebarMenuItem>
           <SidebarMenuButton onclick={() => toggle_folder(node.path)}>
             {#if expanded.has(node.path)}
-              <ChevronDown class="h-4 w-4" />
+              <ChevronDown />
             {:else}
-              <ChevronRight class="h-4 w-4" />
+              <ChevronRight />
             {/if}
-            <Folder class="h-4 w-4" />
+            <Folder />
             <span>{name}</span>
           </SidebarMenuButton>
           {#if expanded.has(node.path) && node.children.size > 0}
@@ -56,7 +56,7 @@ function handle_file_click(note: NoteMeta) {
       {:else if node.note}
         <SidebarMenuItem>
           <SidebarMenuButton onclick={() => handle_file_click(node.note!)}>
-            <File class="h-4 w-4" />
+            <File />
             <span>{name}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
