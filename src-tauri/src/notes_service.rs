@@ -107,7 +107,7 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            name != ".imdown" && name != ".git"
+            !name.starts_with('.') || name == ".." || name == "."
         })
         .filter_map(|e| e.ok())
     {

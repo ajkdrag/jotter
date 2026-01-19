@@ -7,7 +7,7 @@ import { tauri_invoke } from '$lib/adapters/tauri/tauri_invoke'
 export function create_watcher_tauri_adapter(): WatcherPort {
   return {
     async watch_vault(vault_id: VaultId, on_event) {
-      await tauri_invoke<void>('watch_vault', { vault_id })
+      await tauri_invoke<void>('watch_vault', { vaultId: vault_id })
       const unlisten = await listen<VaultFsEvent>('vault_fs_event', (e) => on_event(e.payload))
       return async () => {
         await unlisten()
