@@ -14,6 +14,7 @@
     let editor_handle: MilkdownHandle | null = $state(null);
     let current_note_id: string | null = $state(null);
     let cached_untitled: OpenNoteState | null = $state(null);
+    let is_initializing = false;
 
     function generate_untitled_name(): string {
         const existing = app_state.notes
@@ -59,23 +60,30 @@
     }
 
     async function initialize_editor() {
-        if (!editor_root) return;
+        if (!editor_root || editor_handle || is_initializing) return;
 
         const note = get_current_note();
         if (!note) return;
-
-        const handle = await create_milkdown_editor(editor_root, {
-            initial_markdown: note.markdown,
-            on_markdown_change: (markdown) => {
-                const current = app_state.open_note;
-                if (current) {
-                    current.markdown = as_markdown_text(markdown);
-                }
-            },
-        });
-
-        editor_handle = handle;
-        current_note_id = note.meta.id;
+        is_initializing = true;
+        try {
+            const handle = await create_milkdown_editor(editor_root, {
+                initial_markdown: note.markdown,
+                on_markdown_change: (markdown) => {
+                    const current = app_state.open_note;
+                    if (current) current.markdown = as_markdown_text(markdown);
+                },
+            });
+            // If user navigated away while we were 'awaiting',
+            // destroy the instance to prevent a memory leak/ghost editor.
+            if (!editor_root) {
+                handle.destroy();
+                return;
+            }
+            editor_handle = handle;
+            current_note_id = note.meta.id;
+        } finally {
+            is_initializing = false;
+        }
     }
 
     function update_editor_content(note: OpenNoteState) {
@@ -87,37 +95,20 @@
     }
 
     $effect(() => {
-        const note = get_current_note();
-        if (!note) {
-            if (editor_handle) {
-                editor_handle.destroy();
-                editor_handle = null;
-                current_note_id = null;
-            }
-            return;
-        }
-
-        if (!editor_handle) {
-            void initialize_editor();
-            return;
-        }
-
-        if (current_note_id !== note.meta.id) {
-            update_editor_content(note);
-        }
-    });
-
-    onMount(() => {
         if (editor_root && !editor_handle) {
             void initialize_editor();
         }
     });
 
-    onDestroy(() => {
-        if (editor_handle) {
-            editor_handle.destroy();
-            editor_handle = null;
+    $effect(() => {
+        const note = get_current_note();
+        if (note && editor_handle && current_note_id !== note.meta.id) {
+            update_editor_content(note);
         }
+    });
+
+    onDestroy(() => {
+        editor_handle?.destroy();
     });
 </script>
 

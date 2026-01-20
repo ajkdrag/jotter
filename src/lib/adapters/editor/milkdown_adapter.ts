@@ -88,19 +88,9 @@ export async function create_milkdown_editor(
         const doc = parser(markdown)
         if (!doc) return
 
-        const tr = view.state.tr
-        const from = 0
-        const to = view.state.doc.content.size
-
-        tr.delete(from, to)
-
-        let pos = 0
-        doc.content.forEach((node) => {
-          tr.insert(pos, node)
-          pos += node.nodeSize
-        })
-
-        view.dispatch(tr)
+        view.dispatch(
+          view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content)
+        )
       })
     },
     toggle_bold: () => {
