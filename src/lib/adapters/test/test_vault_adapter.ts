@@ -6,6 +6,10 @@ const TEST_VAULT_PATH = as_vault_path('test-vault')
 const TEST_VAULT_ID = as_vault_id('test_vault_001')
 const TEST_VAULT_NAME = 'Test Vault'
 
+const TEST_VAULT_2_PATH = as_vault_path('another-vault')
+const TEST_VAULT_2_ID = as_vault_id('test_vault_002')
+const TEST_VAULT_2_NAME = 'Another Vault'
+
 const LAST_VAULT_KEY = 'imdown_test_last_vault_id'
 
 export function create_test_vault_adapter(): VaultPort {
@@ -15,29 +19,47 @@ export function create_test_vault_adapter(): VaultPort {
     },
 
     async open_vault(vault_path: VaultPath): Promise<Vault> {
-      if (vault_path !== TEST_VAULT_PATH) {
-        throw new Error(`Test adapter only supports path: ${TEST_VAULT_PATH}`)
+      if (vault_path === TEST_VAULT_PATH) {
+        return {
+          id: TEST_VAULT_ID,
+          path: TEST_VAULT_PATH,
+          name: TEST_VAULT_NAME,
+          created_at: Date.now()
+        }
       }
 
-      return {
-        id: TEST_VAULT_ID,
-        path: TEST_VAULT_PATH,
-        name: TEST_VAULT_NAME,
-        created_at: Date.now()
+      if (vault_path === TEST_VAULT_2_PATH) {
+        return {
+          id: TEST_VAULT_2_ID,
+          path: TEST_VAULT_2_PATH,
+          name: TEST_VAULT_2_NAME,
+          created_at: Date.now()
+        }
       }
+
+      throw new Error(`Test adapter only supports paths: ${TEST_VAULT_PATH}, ${TEST_VAULT_2_PATH}`)
     },
 
     async open_vault_by_id(vault_id: VaultId): Promise<Vault> {
-      if (vault_id !== TEST_VAULT_ID) {
-        throw new Error(`Test adapter only supports vault ID: ${TEST_VAULT_ID}`)
+      if (vault_id === TEST_VAULT_ID) {
+        return {
+          id: TEST_VAULT_ID,
+          path: TEST_VAULT_PATH,
+          name: TEST_VAULT_NAME,
+          created_at: Date.now()
+        }
       }
 
-      return {
-        id: TEST_VAULT_ID,
-        path: TEST_VAULT_PATH,
-        name: TEST_VAULT_NAME,
-        created_at: Date.now()
+      if (vault_id === TEST_VAULT_2_ID) {
+        return {
+          id: TEST_VAULT_2_ID,
+          path: TEST_VAULT_2_PATH,
+          name: TEST_VAULT_2_NAME,
+          created_at: Date.now()
+        }
       }
+
+      throw new Error(`Test adapter only supports vault IDs: ${TEST_VAULT_ID}, ${TEST_VAULT_2_ID}`)
     },
 
     async list_vaults(): Promise<Vault[]> {
@@ -46,6 +68,12 @@ export function create_test_vault_adapter(): VaultPort {
           id: TEST_VAULT_ID,
           path: TEST_VAULT_PATH,
           name: TEST_VAULT_NAME,
+          created_at: Date.now()
+        },
+        {
+          id: TEST_VAULT_2_ID,
+          path: TEST_VAULT_2_PATH,
+          name: TEST_VAULT_2_NAME,
           created_at: Date.now()
         }
       ]
