@@ -98,6 +98,13 @@
         if (editor_root && !editor_handle) {
             void initialize_editor();
         }
+
+        return () => {
+            if (editor_handle) {
+                editor_handle.destroy();
+                editor_handle = null;
+            }
+        };
     });
 
     $effect(() => {
@@ -105,10 +112,6 @@
         if (note && editor_handle && current_note_id !== note.meta.id) {
             update_editor_content(note);
         }
-    });
-
-    onDestroy(() => {
-        editor_handle?.destroy();
     });
 </script>
 
