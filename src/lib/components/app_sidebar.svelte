@@ -8,6 +8,12 @@
     import { app_state } from "$lib/adapters/state/app_state.svelte";
     import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
+    type Props = {
+        onOpenNote: (note_path: string) => void;
+    };
+
+    let { onOpenNote }: Props = $props();
+
     let open = $state(true);
     let pane: any = $state();
     let isCurrentlyCollapsed = true;
@@ -77,7 +83,7 @@
                     <Sidebar.Content>
                         <Sidebar.Group>
                             <Sidebar.GroupContent>
-                                <FileTree notes={app_state.notes} />
+                                <FileTree notes={app_state.notes} onOpenNote={onOpenNote} />
                             </Sidebar.GroupContent>
                         </Sidebar.Group>
                     </Sidebar.Content>

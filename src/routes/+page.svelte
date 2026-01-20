@@ -2,6 +2,9 @@
   import { app_state } from "$lib/adapters/state/app_state.svelte";
   import AppSidebar from "$lib/components/app_sidebar.svelte";
   import VaultSelectionPanel from "$lib/components/vault_selection_panel.svelte";
+  import { create_open_note_workflow } from "$lib/workflows/create_open_note_workflow";
+
+  const open_note_workflow = create_open_note_workflow();
 </script>
 
 {#if !app_state.vault}
@@ -10,7 +13,7 @@
   </div>
 {:else}
   <main>
-    <AppSidebar />
+    <AppSidebar onOpenNote={(note_path) => void open_note_workflow.open(note_path)} />
   </main>
 {/if}
 

@@ -2,6 +2,9 @@
   import { onMount, onDestroy } from 'svelte'
   import { app_state } from '$lib/adapters/state/app_state.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
+  import { create_open_note_workflow } from '$lib/workflows/create_open_note_workflow'
+
+  const open_note_workflow = create_open_note_workflow()
   import { test_ports } from '$lib/adapters/test/test_ports'
   import { ports } from '$lib/adapters/ports'
   import { change_vault } from '$lib/operations/change_vault'
@@ -56,7 +59,7 @@
 
 {#if app_state.vault}
   <main>
-    <AppSidebar />
+    <AppSidebar onOpenNote={(note_path) => void open_note_workflow.open(note_path)} />
   </main>
 {:else}
   <div class="flex items-center justify-center min-h-screen">
