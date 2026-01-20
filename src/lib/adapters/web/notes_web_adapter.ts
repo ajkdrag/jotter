@@ -61,7 +61,7 @@ async function list_markdown_files(
       const file_handle = handle as FileSystemFileHandle
       const file = await file_handle.getFile()
       const full_path = prefix ? `${prefix}/${name}` : name
-      const note_path = as_note_path(full_path.replace(/\.md$/, ''))
+      const note_path = as_note_path(full_path)
 
       notes.push({
         id: note_path,
@@ -94,7 +94,12 @@ export function create_notes_web_adapter(): NotesPort {
       const file = await file_handle.getFile()
       const markdown = as_markdown_text(await file.text())
 
-      const note_path = as_note_path(note_id)
+      const parts = note_id.split('/').filter(Boolean)
+      const last_part = parts[parts.length - 1] || ''
+      const full_name = last_part.endsWith('.md') ? last_part : `${last_part}.md`
+      parts[parts.length - 1] = full_name
+      const note_path = as_note_path(parts.join('/'))
+
       const meta: NoteMeta = {
         id: note_path,
         path: note_path,
@@ -135,9 +140,12 @@ export function create_notes_web_adapter(): NotesPort {
           await writable.close()
 
           const file = await file_handle.getFile()
+          const parts_with_md = [...parts]
+          parts_with_md[parts_with_md.length - 1] = file_name
+          const full_path = as_note_path(parts_with_md.join('/'))
           return {
-            id: as_note_path(note_path),
-            path: as_note_path(note_path),
+            id: full_path,
+            path: full_path,
             title: file_name.replace(/\.md$/, ''),
             mtime_ms: file.lastModified,
             size_bytes: file.size

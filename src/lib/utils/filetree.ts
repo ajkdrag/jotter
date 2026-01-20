@@ -26,7 +26,6 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
       if (!part) continue
       
       const isLast = i === parts.length - 1
-      const isFile = isLast && part.endsWith('.md')
 
       if (!current.children.has(part)) {
         const nodePath = parts.slice(0, i + 1).join('/')
@@ -35,7 +34,7 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
           path: nodePath,
           children: new Map(),
           note: isLast ? note : null,
-          isFolder: !isFile
+          isFolder: !isLast
         })
       }
 
