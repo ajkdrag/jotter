@@ -1,11 +1,13 @@
 <script lang="ts">
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
+    import * as Tooltip from "$lib/components/ui/tooltip/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
 
     import { app_state } from "$lib/adapters/state/app_state.svelte";
-    import { FolderOpen } from "@lucide/svelte";
+    import { ports } from "$lib/adapters/ports";
+    import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
     let open = $state(true);
     let pane: any = $state();
@@ -53,6 +55,23 @@
                                         >
                                     </div>
                                 </Sidebar.MenuButton>
+                                <Tooltip.Root>
+                                    <Tooltip.Trigger>
+                                        {#snippet child({ props })}
+                                            <Sidebar.MenuAction
+                                                {...props}
+                                                showOnHover={true}
+                                                onclick={() =>
+                                                    ports.navigation.navigate_to_vault_selection()}
+                                            >
+                                                <ArrowLeftRight />
+                                            </Sidebar.MenuAction>
+                                        {/snippet}
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content side="right">
+                                        Change Vault
+                                    </Tooltip.Content>
+                                </Tooltip.Root>
                             </Sidebar.MenuItem>
                         </Sidebar.Menu>
                     </Sidebar.Header>
@@ -64,19 +83,6 @@
                             </Sidebar.GroupContent>
                         </Sidebar.Group>
                     </Sidebar.Content>
-
-                    <Sidebar.Footer>
-                        <Sidebar.Menu>
-                            <Sidebar.MenuItem>
-                                <Sidebar.MenuButton
-                                    onclick={() =>
-                                        console.log("switching vault")}
-                                >
-                                    <span>Change Vault</span>
-                                </Sidebar.MenuButton>
-                            </Sidebar.MenuItem>
-                        </Sidebar.Menu>
-                    </Sidebar.Footer>
 
                     <Sidebar.Rail />
                 </Sidebar.Root>
