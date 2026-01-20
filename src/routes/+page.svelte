@@ -5,7 +5,9 @@
 </script>
 
 {#if !app_state.vault}
-  <VaultSelectionPanel />
+  <div class="mx-auto max-w-[65ch] p-8">
+    <VaultSelectionPanel />
+  </div>
 {:else}
   <main>
     <AppSidebar />

@@ -5,7 +5,14 @@
   import type { Vault } from '$lib/types/vault'
   import * as Card from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
-  import { Plus, Check } from '@lucide/svelte'
+  import { Plus, Check, X } from '@lucide/svelte'
+
+  interface Props {
+    onClose?: () => void
+    isDialog?: boolean
+  }
+
+  let { onClose, isDialog = false }: Props = $props()
 
   const vault_workflow = create_change_vault_workflow()
   let loading = $state(false)
@@ -14,19 +21,33 @@
     await vault_workflow.load_recent()
   })
 
-  async function handle_choose_vault() {
+  $effect(() => {
+    if (isDialog && app_state.vault_dialog_open) {
+      void vault_workflow.load_recent()
+    }
+  })
+
+  async function handle_choose_vault(event?: Event) {
+    if (event) {
+      event.stopPropagation()
+      event.preventDefault()
+    }
     loading = true
     try {
-      await vault_workflow.choose_and_change()
+      await vault_workflow.choose_and_change(onClose)
     } finally {
       loading = false
     }
   }
 
-  async function handle_select_vault(vault: Vault) {
+  async function handle_select_vault(vault: Vault, event?: Event) {
+    if (event) {
+      event.stopPropagation()
+      event.preventDefault()
+    }
     loading = true
     try {
-      await vault_workflow.open_recent(vault.id)
+      await vault_workflow.open_recent(vault.id, onClose)
     } catch (error) {
       console.error('[VaultSelection] Error opening vault:', error)
       alert(`Failed to open vault: ${error instanceof Error ? error.message : String(error)}`)
@@ -44,58 +65,85 @@
   }
 </script>
 
-<div class="mx-auto max-w-[65ch] p-8">
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>Select Vault</Card.Title>
-      <Card.Description>Choose a vault directory or select from recent vaults</Card.Description>
-    </Card.Header>
-
-    <Card.Content class="space-y-6">
-      <Button
-        onclick={handle_choose_vault}
-        disabled={loading}
-        class="w-full"
-      >
-        <Plus />
-        Choose Vault Directory
-      </Button>
-
-      {#if app_state.recent_vaults.length > 0}
-        <div class="mt-4 space-y-3">
-          <h3 class="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Recent Vaults
-          </h3>
-          <div class="flex flex-col gap-2">
-            {#each app_state.recent_vaults as vault (vault.id)}
-              <button
-                type="button"
-                onclick={() => handle_select_vault(vault)}
-                disabled={loading || app_state.vault?.id === vault.id}
-                class="flex min-h-14 items-center justify-between rounded-lg border bg-card px-4 py-3 text-left outline-none transition-all hover:bg-accent/10 hover:border-accent/30 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/15 data-[active=true]:border-l-[3px] data-[active=true]:border-l-primary data-[active=true]:pl-[calc(1rem-2px)]"
-                data-active={app_state.vault?.id === vault.id}
-              >
-                <div class="min-w-0 flex-1">
-                  <div class="mb-1 truncate text-[0.9375rem] font-medium text-foreground">
-                    {vault.name}
-                  </div>
-                  <div class="truncate text-[0.8125rem] text-muted-foreground">
-                    {format_path(vault.path)}
-                  </div>
-                </div>
-                {#if app_state.vault?.id === vault.id}
-                  <Check class="ml-4 shrink-0 text-primary" />
-                {/if}
-              </button>
-            {/each}
-          </div>
-        </div>
-      {:else}
-        <div class="py-12 px-6 text-center">
-          <p class="mb-2 text-[0.9375rem] font-medium text-foreground">No recent vaults</p>
-          <p class="text-sm text-muted-foreground">Choose a vault directory to get started</p>
-        </div>
+{#if isDialog}
+  <div class="flex flex-col gap-6">
+    <div class="relative">
+      {#if onClose}
+        <button
+          type="button"
+          onclick={onClose}
+          class="ring-offset-background focus:ring-ring absolute end-0 top-0 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+        >
+          <X class="h-4 w-4" />
+          <span class="sr-only">Close</span>
+        </button>
       {/if}
-    </Card.Content>
-  </Card.Root>
-</div>
+      <div class="space-y-1.5 pr-8">
+        <h2 class="text-lg font-semibold leading-none tracking-tight">Select Vault</h2>
+        <p class="text-sm text-muted-foreground">Choose a vault directory or select from recent vaults</p>
+      </div>
+    </div>
+    <div class="space-y-6">
+      {@render content()}
+    </div>
+  </div>
+{:else}
+  <div class="p-0">
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>Select Vault</Card.Title>
+        <Card.Description>Choose a vault directory or select from recent vaults</Card.Description>
+      </Card.Header>
+      <Card.Content class="space-y-6">
+        {@render content()}
+      </Card.Content>
+    </Card.Root>
+  </div>
+{/if}
+
+{#snippet content()}
+  <Button
+    onclick={(e) => handle_choose_vault(e)}
+    disabled={loading}
+    class="w-full"
+  >
+    <Plus />
+    Choose Vault Directory
+  </Button>
+
+  {#if app_state.recent_vaults.length > 0}
+    <div class="mt-4 space-y-3">
+      <h3 class="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Recent Vaults
+      </h3>
+      <div class="flex flex-col gap-2">
+        {#each app_state.recent_vaults as vault (vault.id)}
+          <button
+            type="button"
+            onclick={(e) => handle_select_vault(vault, e)}
+            disabled={loading || app_state.vault?.id === vault.id}
+            class="flex min-h-14 items-center justify-between rounded-lg border bg-card px-4 py-3 text-left outline-none transition-all hover:bg-accent/10 hover:border-accent/30 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/15 data-[active=true]:border-l-[3px] data-[active=true]:border-l-primary data-[active=true]:pl-[calc(1rem-2px)]"
+            data-active={app_state.vault?.id === vault.id}
+          >
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 truncate text-[0.9375rem] font-medium text-foreground">
+                {vault.name}
+              </div>
+              <div class="truncate text-[0.8125rem] text-muted-foreground">
+                {format_path(vault.path)}
+              </div>
+            </div>
+            {#if app_state.vault?.id === vault.id}
+              <Check class="ml-4 shrink-0 text-primary" />
+            {/if}
+          </button>
+        {/each}
+      </div>
+    </div>
+  {:else}
+    <div class="py-12 px-6 text-center">
+      <p class="mb-2 text-[0.9375rem] font-medium text-foreground">No recent vaults</p>
+      <p class="text-sm text-muted-foreground">Choose a vault directory to get started</p>
+    </div>
+  {/if}
+{/snippet}

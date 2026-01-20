@@ -11,6 +11,7 @@ type AppState = {
   search_results: SearchHit[]
   links: LinksState
   conflict: { note_path: string; seen_at_ms: number } | null
+  vault_dialog_open: boolean
 }
 
 export const app_state = $state<AppState>({
@@ -24,5 +25,6 @@ export const app_state = $state<AppState>({
     backlinks: [],
     outlinks: []
   },
-  conflict: null
+  conflict: null,
+  vault_dialog_open: false
 })

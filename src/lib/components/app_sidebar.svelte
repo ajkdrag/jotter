@@ -6,7 +6,6 @@
     import NoteEditor from "$lib/components/note_editor.svelte";
 
     import { app_state } from "$lib/adapters/state/app_state.svelte";
-    import { ports } from "$lib/adapters/ports";
     import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
     let open = $state(true);
@@ -61,8 +60,7 @@
                                             <Sidebar.MenuAction
                                                 {...props}
                                                 showOnHover={true}
-                                                onclick={() =>
-                                                    ports.navigation.navigate_to_vault_selection()}
+                                                onclick={() => (app_state.vault_dialog_open = true)}
                                             >
                                                 <ArrowLeftRight />
                                             </Sidebar.MenuAction>

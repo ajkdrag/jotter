@@ -11,7 +11,7 @@ export function create_change_vault_workflow() {
   }
 
   return {
-    async choose_and_change() {
+    async choose_and_change(onClose?: () => void) {
       const vault_path = await ports.vault.choose_vault()
       if (!vault_path) return
       const result = await change_vault(ports, { vault_path })
@@ -23,7 +23,11 @@ export function create_change_vault_workflow() {
       await ensure_watching(result.vault.id)
       void ports.index.build_index(result.vault.id)
       await refresh_recent()
-      await ports.navigation.navigate_to_home()
+      if (onClose) {
+        onClose()
+      } else {
+        await ports.navigation.navigate_to_home()
+      }
     },
     async open_last_vault() {
       const result = await open_last_vault(ports)
@@ -36,7 +40,7 @@ export function create_change_vault_workflow() {
       void ports.index.build_index(result.vault.id)
       await refresh_recent()
     },
-    async open_recent(vault_id: VaultId) {
+    async open_recent(vault_id: VaultId, onClose?: () => void) {
       const vault = await ports.vault.open_vault_by_id(vault_id)
       const notes = await ports.notes.list_notes(vault.id)
       app_state.vault = vault
@@ -47,7 +51,11 @@ export function create_change_vault_workflow() {
       await ensure_watching(vault.id)
       void ports.index.build_index(vault.id)
       await refresh_recent()
-      await ports.navigation.navigate_to_home()
+      if (onClose) {
+        onClose()
+      } else {
+        await ports.navigation.navigate_to_home()
+      }
     },
     async load_recent() {
       await refresh_recent()
