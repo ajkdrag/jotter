@@ -13,6 +13,7 @@ import { $view } from '@milkdown/kit/utils'
 import { codeBlockComponent } from '@milkdown/components/code-block'
 import { configure_codemirror_codeblocks } from '$lib/adapters/editor/codemirror_codeblock_nodeview'
 import { nord } from '@milkdown/theme-nord'
+import '@milkdown/theme-nord/style.css';
 
 export type MilkdownHandle = {
   destroy: () => void

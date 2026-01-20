@@ -121,22 +121,7 @@
     });
 </script>
 
-<div
-    bind:this={editor_root}
-    class="milkdown-editor h-full w-full overflow-y-auto"
-></div>
+<div bind:this={editor_root} class="milkdown-editor"></div>
 
 <style>
-    /* This ensures the actual Prosemirror editor fills the container */
-    :global(.milkdown .editor) {
-        height: 100%;
-        min-height: 100%;
-        outline: none;
-        padding-bottom: 20rem; /* Give some breathing room at the bottom */
-    }
-    /* This prevents the theme's background/mask from leaking out */
-    .milkdown-editor {
-        position: relative;
-        isolation: isolate;
-    }
 </style>
