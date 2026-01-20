@@ -46,9 +46,9 @@
                         <Sidebar.Menu>
                             <Sidebar.MenuItem>
                                 <Sidebar.MenuButton size="lg">
-                                    <div class="flex items-center gap-2">
-                                        <FolderOpen class="h-5 w-5" />
-                                        <span class="font-semibold"
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <FolderOpen class="h-5 w-5 shrink-0" />
+                                        <span class="font-semibold truncate"
                                             >{app_state.vault.name}</span
                                         >
                                     </div>
@@ -84,7 +84,7 @@
             <Resizable.Handle withHandle />
             {/if}
             <Resizable.Pane order={2} defaultSize={open ? 80 : 100}>
-                <Sidebar.Inset>
+                <Sidebar.Inset class="min-h-0 h-full">
                     <header
                         class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                     >

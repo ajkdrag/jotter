@@ -123,10 +123,7 @@
 
 <style>
     .NoteEditor {
-        height: 100%;
-        width: 100%;
         overflow-y: auto;
-        overflow-x: hidden;
     }
 
     .NoteEditor__content {
