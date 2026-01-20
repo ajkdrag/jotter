@@ -122,7 +122,7 @@
             type="button"
             onclick={(e) => handle_select_vault(vault, e)}
             disabled={loading || app_state.vault?.id === vault.id}
-            class="flex min-h-14 items-center justify-between rounded-lg border bg-card px-4 py-3 text-left outline-none transition-all hover:bg-accent/10 hover:border-accent/30 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/15 data-[active=true]:border-l-[3px] data-[active=true]:border-l-primary data-[active=true]:pl-[calc(1rem-2px)]"
+            class="flex min-h-14 items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-left outline-none transition-all hover:bg-muted/70 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/20 data-[active=true]:border-primary/30"
             data-active={app_state.vault?.id === vault.id}
           >
             <div class="min-w-0 flex-1">
