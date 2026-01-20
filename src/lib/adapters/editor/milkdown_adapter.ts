@@ -1,4 +1,4 @@
-import { Editor, commandsCtx, defaultValueCtx, editorViewCtx, rootCtx } from '@milkdown/kit/core'
+import { Editor, commandsCtx, defaultValueCtx, editorViewCtx, parserCtx, rootCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import {
   createCodeBlockCommand,
@@ -10,12 +10,13 @@ import {
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { $view } from '@milkdown/kit/utils'
-import { nord } from '@milkdown/theme-nord'
 import { codeBlockComponent } from '@milkdown/components/code-block'
 import { configure_codemirror_codeblocks } from '$lib/adapters/editor/codemirror_codeblock_nodeview'
+import { nord } from '@milkdown/theme-nord'
 
 export type MilkdownHandle = {
   destroy: () => void
+  set_markdown: (markdown: string) => void
   toggle_bold: () => void
   toggle_italic: () => void
   toggle_link: (href?: string) => void
@@ -41,7 +42,6 @@ export async function create_milkdown_editor(
       })
       configure_codemirror_codeblocks(ctx)
     })
-    .config(nord)
     .use(
       $view(imageSchema.node, () => {
         return (node) => {
@@ -69,6 +69,7 @@ export async function create_milkdown_editor(
         }
       })
     )
+    .config(nord)
     .use(commonmark)
     .use(gfm)
     .use(codeBlockComponent)
@@ -78,6 +79,28 @@ export async function create_milkdown_editor(
   return {
     destroy: () => {
       editor.destroy()
+    },
+    set_markdown: (markdown: string) => {
+      editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        const parser = ctx.get(parserCtx)
+        const doc = parser(markdown)
+        if (!doc) return
+
+        const tr = view.state.tr
+        const from = 0
+        const to = view.state.doc.content.size
+
+        tr.delete(from, to)
+
+        let pos = 0
+        doc.content.forEach((node) => {
+          tr.insert(pos, node)
+          pos += node.nodeSize
+        })
+
+        view.dispatch(tr)
+      })
     },
     toggle_bold: () => {
       editor.action((ctx) => ctx.get(commandsCtx).call(toggleStrongCommand.key))

@@ -1,63 +1,94 @@
 <script lang="ts">
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-    import { Button } from "$lib/components/ui/button";
+    import * as Resizable from "$lib/components/ui/resizable/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
+    import NoteEditor from "$lib/components/note_editor.svelte";
 
     import { app_state } from "$lib/adapters/state/app_state.svelte";
     import { FolderOpen } from "@lucide/svelte";
+
+    let open = $state(true);
+    let pane: any = $state();
+    let isCurrentlyCollapsed = true;
+
+    $effect(() => {
+        if (!pane) return;
+
+        if (open && isCurrentlyCollapsed) {
+            pane.expand();
+            isCurrentlyCollapsed = false;
+        } else if (!open && !isCurrentlyCollapsed) {
+            pane.collapse();
+            isCurrentlyCollapsed = true;
+        }
+    });
 </script>
 
 {#if app_state.vault}
-    <Sidebar.Provider>
-        <Sidebar.Root>
-            <Sidebar.Header>
-                <Sidebar.Menu>
-                    <Sidebar.MenuItem>
-                        <Sidebar.MenuButton size="lg">
-                            <div class="flex items-center gap-2">
-                                <FolderOpen class="h-5 w-5" />
-                                <span class="font-semibold"
-                                    >{app_state.vault.name}</span
-                                >
-                            </div>
-                        </Sidebar.MenuButton>
-                    </Sidebar.MenuItem>
-                </Sidebar.Menu>
-            </Sidebar.Header>
-
-            <Sidebar.Content>
-                <Sidebar.Group>
-                    <Sidebar.GroupContent>
-                        <FileTree notes={app_state.notes} />
-                    </Sidebar.GroupContent>
-                </Sidebar.Group>
-            </Sidebar.Content>
-
-            <Sidebar.Footer>
-                <Sidebar.Menu>
-                    <Sidebar.MenuItem>
-                        <Sidebar.MenuButton
-                            onclick={() => console.log("switching vault")}
-                        >
-                            <span>Change Vault</span>
-                        </Sidebar.MenuButton>
-                    </Sidebar.MenuItem>
-                </Sidebar.Menu>
-            </Sidebar.Footer>
-
-            <Sidebar.Rail />
-        </Sidebar.Root>
-
-        <Sidebar.Inset>
-            <header class="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-                <Sidebar.Trigger />
-                <div class="text-sm font-medium">Notes</div>
-            </header>
-            <div
-                class="flex flex-1 items-center justify-center text-muted-foreground"
+    <Sidebar.Provider bind:open class="h-screen">
+        <Resizable.PaneGroup direction="horizontal" class="h-full">
+            {#if open}
+            <Resizable.Pane
+                defaultSize={15}
+                minSize={10}
+                maxSize={40}
+                order={1}
             >
-                Select a note to begin
-            </div>
-        </Sidebar.Inset>
+                <Sidebar.Root collapsible="none" class="w-full">
+                    <Sidebar.Header>
+                        <Sidebar.Menu>
+                            <Sidebar.MenuItem>
+                                <Sidebar.MenuButton size="lg">
+                                    <div class="flex items-center gap-2">
+                                        <FolderOpen class="h-5 w-5" />
+                                        <span class="font-semibold"
+                                            >{app_state.vault.name}</span
+                                        >
+                                    </div>
+                                </Sidebar.MenuButton>
+                            </Sidebar.MenuItem>
+                        </Sidebar.Menu>
+                    </Sidebar.Header>
+
+                    <Sidebar.Content>
+                        <Sidebar.Group>
+                            <Sidebar.GroupContent>
+                                <FileTree notes={app_state.notes} />
+                            </Sidebar.GroupContent>
+                        </Sidebar.Group>
+                    </Sidebar.Content>
+
+                    <Sidebar.Footer>
+                        <Sidebar.Menu>
+                            <Sidebar.MenuItem>
+                                <Sidebar.MenuButton
+                                    onclick={() =>
+                                        console.log("switching vault")}
+                                >
+                                    <span>Change Vault</span>
+                                </Sidebar.MenuButton>
+                            </Sidebar.MenuItem>
+                        </Sidebar.Menu>
+                    </Sidebar.Footer>
+
+                    <Sidebar.Rail />
+                </Sidebar.Root>
+            </Resizable.Pane>
+            <Resizable.Handle withHandle />
+            {/if}
+            <Resizable.Pane order={2} defaultSize={open ? 80 : 100}>
+                <Sidebar.Inset>
+                    <header
+                        class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
+                    >
+                        <Sidebar.Trigger />
+                        <div class="text-sm font-medium">Notes</div>
+                    </header>
+                    <div class="flex flex-1 flex-col overflow-hidden">
+                        <NoteEditor />
+                    </div>
+                </Sidebar.Inset>
+            </Resizable.Pane>
+        </Resizable.PaneGroup>
     </Sidebar.Provider>
 {/if}

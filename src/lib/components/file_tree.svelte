@@ -9,6 +9,7 @@
     SidebarMenuSub,
   } from "$lib/components/ui/sidebar";
   import { ChevronRight, ChevronDown, Folder, File } from "lucide-svelte";
+  import { create_open_note_workflow } from "$lib/workflows/create_open_note_workflow";
 
   type Props = {
     notes: NoteMeta[];
@@ -18,6 +19,7 @@
 
   let expanded = $state(new Set<string>());
   let tree = $derived(sort_tree(build_filetree(notes)));
+  const open_note_workflow = create_open_note_workflow();
 
   function toggle_folder(path: string) {
     if (expanded.has(path)) {
@@ -29,7 +31,7 @@
   }
 
   function handle_file_click(note: NoteMeta) {
-    console.log("File clicked:", note.path);
+    void open_note_workflow.open(note.path);
   }
 </script>
 
