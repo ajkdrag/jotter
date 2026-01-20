@@ -53,7 +53,9 @@
             return app_state.open_note;
         }
         if (app_state.vault) {
-            return get_or_create_untitled();
+            const untitled = get_or_create_untitled();
+            app_state.open_note = untitled;
+            return untitled;
         }
         cached_untitled = null;
         return null;
@@ -115,7 +117,20 @@
     });
 </script>
 
-<div bind:this={editor_root} class="milkdown-editor"></div>
+<div class="NoteEditor">
+    <div bind:this={editor_root} class="NoteEditor__content"></div>
+</div>
 
 <style>
+    .NoteEditor {
+        height: 100%;
+        width: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .NoteEditor__content {
+        max-width: 65ch;
+        padding: 1.5rem 1.5rem;
+    }
 </style>

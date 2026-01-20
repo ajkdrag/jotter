@@ -11,6 +11,13 @@
     let pane: any = $state();
     let isCurrentlyCollapsed = true;
 
+    function get_current_note_title(): string {
+        if (app_state.open_note) {
+            return app_state.open_note.meta.title;
+        }
+        return "Notes";
+    }
+
     $effect(() => {
         if (!pane) return;
 
@@ -82,9 +89,9 @@
                         class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                     >
                         <Sidebar.Trigger />
-                        <div class="text-sm font-medium">Notes</div>
+                        <div class="text-sm font-medium">{get_current_note_title()}</div>
                     </header>
-                    <div class="flex flex-1 flex-col overflow-hidden">
+                    <div class="flex flex-1 flex-col min-h-0">
                         <NoteEditor />
                     </div>
                 </Sidebar.Inset>
