@@ -3,6 +3,7 @@ import { open_note } from '$lib/operations/open_note'
 import { as_note_path } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { OpenNoteState } from '$lib/types/editor'
+import type { Ports } from '$lib/adapters/create_prod_ports'
 
 type AppState = {
   vault: Vault | null
@@ -10,7 +11,7 @@ type AppState = {
 }
 
 export function create_open_note_workflow(args: {
-  ports: ReturnType<typeof import('$lib/adapters/create_prod_ports').create_prod_ports>
+  ports: Ports
   state: AppState
 }) {
   const { ports, state } = args

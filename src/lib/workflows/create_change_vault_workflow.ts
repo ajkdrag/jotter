@@ -3,12 +3,14 @@ import { open_last_vault } from '$lib/operations/open_last_vault'
 import type { VaultId } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
+import type { OpenNoteState } from '$lib/types/editor'
+import type { Ports } from '$lib/adapters/create_prod_ports'
 
 type AppState = {
   vault: Vault | null
   recent_vaults: Vault[]
   notes: NoteMeta[]
-  open_note: unknown | null
+  open_note: OpenNoteState | null
 }
 
 export type VaultChangeResult = {
@@ -17,7 +19,7 @@ export type VaultChangeResult = {
 }
 
 export function create_change_vault_workflow(args: {
-  ports: ReturnType<typeof import('$lib/adapters/create_prod_ports').create_prod_ports>
+  ports: Ports
   state: AppState
 }) {
   const { ports, state } = args

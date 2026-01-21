@@ -58,8 +58,6 @@ describe('change_vault_workflow navigation', () => {
       recent_vaults: [] as Vault[]
     }
 
-    async function ensure_watching(_id: VaultId) {}
-
     async function open_recent(vault_id: VaultId) {
       const vault = await mock_ports.vault.open_vault_by_id(vault_id)
       const notes = await mock_ports.notes.list_notes(vault.id)
@@ -68,7 +66,6 @@ describe('change_vault_workflow navigation', () => {
       app_state.open_note = null
       app_state.conflict = null
       await mock_ports.vault.remember_last_vault(vault.id)
-      await ensure_watching(vault.id)
       void mock_ports.index.build_index(vault.id)
       app_state.recent_vaults = await mock_ports.vault.list_vaults()
       await mock_ports.navigation.navigate_to_home()
