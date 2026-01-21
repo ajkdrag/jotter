@@ -1,16 +1,12 @@
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
-import type { LinksState, OpenNoteState } from '$lib/types/editor'
-import type { SearchHit } from '$lib/types/search'
+import type { OpenNoteState } from '$lib/types/editor'
 
 type AppState = {
   vault: Vault | null
   recent_vaults: Vault[]
   notes: NoteMeta[]
   open_note: OpenNoteState | null
-  search_results: SearchHit[]
-  links: LinksState
-  conflict: { note_path: string; seen_at_ms: number } | null
   vault_dialog_open: boolean
 }
 
@@ -19,12 +15,5 @@ export const app_state = $state<AppState>({
   recent_vaults: [],
   notes: [],
   open_note: null,
-  search_results: [],
-  links: {
-    loading: false,
-    backlinks: [],
-    outlinks: []
-  },
-  conflict: null,
   vault_dialog_open: false
 })

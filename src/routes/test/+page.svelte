@@ -27,8 +27,6 @@
       app_state.vault = result.vault
       app_state.notes = result.notes
       app_state.open_note = null
-      app_state.search_results = []
-      app_state.conflict = null
       await ensure_watching(result.vault.id)
       void ports.index.build_index(result.vault.id)
     }

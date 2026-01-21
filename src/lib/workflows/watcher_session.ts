@@ -38,7 +38,6 @@ async function handle_event(event: VaultFsEvent) {
     if (!open) return
     if (open.meta.path !== event.note_path) return
     if (open.dirty) {
-      app_state.conflict = { note_path: event.note_path, seen_at_ms: Date.now() }
       schedule_index_rebuild(vault.id)
       return
     }

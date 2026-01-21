@@ -18,8 +18,6 @@ export function create_change_vault_workflow() {
       app_state.vault = result.vault
       app_state.notes = result.notes
       app_state.open_note = null
-      app_state.search_results = []
-      app_state.conflict = null
       await ensure_watching(result.vault.id)
       void ports.index.build_index(result.vault.id)
       await refresh_recent()
@@ -35,7 +33,6 @@ export function create_change_vault_workflow() {
       app_state.vault = result.vault
       app_state.notes = result.notes
       app_state.open_note = null
-      app_state.conflict = null
       await ensure_watching(result.vault.id)
       void ports.index.build_index(result.vault.id)
       await refresh_recent()
@@ -46,7 +43,6 @@ export function create_change_vault_workflow() {
       app_state.vault = vault
       app_state.notes = notes
       app_state.open_note = null
-      app_state.conflict = null
       await ports.vault.remember_last_vault(vault.id)
       await ensure_watching(vault.id)
       void ports.index.build_index(vault.id)

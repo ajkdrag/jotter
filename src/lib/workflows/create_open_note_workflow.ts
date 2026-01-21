@@ -19,22 +19,6 @@ export function create_open_note_workflow() {
       )
 
       app_state.open_note = to_open_note_state(doc)
-      app_state.links = { loading: true, backlinks: [], outlinks: [] }
-      app_state.conflict = null
-
-      const note_id = doc.meta.id
-      void Promise.all([
-        ports.index.backlinks(vault.id, note_id),
-        ports.index.outlinks(vault.id, note_id)
-      ])
-        .then(([backlinks, outlinks]) => {
-          app_state.links.backlinks = backlinks
-          app_state.links.outlinks = outlinks
-          app_state.links.loading = false
-        })
-        .catch(() => {
-          app_state.links.loading = false
-        })
     }
   }
 }
