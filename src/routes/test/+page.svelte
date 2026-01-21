@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount } from 'svelte'
   import { app_state } from '$lib/adapters/state/app_state.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import { create_open_note_workflow } from '$lib/workflows/create_open_note_workflow'
   import { create_editor_session_workflow } from '$lib/workflows/create_editor_session_workflow'
+  import { create_test_ports } from '$lib/adapters/test/test_ports'
+  import { change_vault } from '$lib/operations/change_vault'
+  import { as_vault_path } from '$lib/types/ids'
+  import { ensure_watching } from '$lib/workflows/watcher_session'
 
+  const ports = create_test_ports()
   const open_note_workflow = create_open_note_workflow()
   const editor_session_workflow = create_editor_session_workflow({ state: app_state })
 
@@ -14,33 +19,8 @@
     const _open_note = app_state.open_note
     editor_session_workflow.ensure_open_note()
   })
-  import { test_ports } from '$lib/adapters/test/test_ports'
-  import { ports } from '$lib/adapters/ports'
-  import { change_vault } from '$lib/operations/change_vault'
-  import { as_vault_path } from '$lib/types/ids'
-  import { ensure_watching } from '$lib/workflows/watcher_session'
-
-  const original_ports = {
-    vault: ports.vault,
-    notes: ports.notes,
-    index: ports.index,
-    watcher: ports.watcher,
-    settings: ports.settings,
-    assets: ports.assets,
-    telemetry: ports.telemetry,
-    navigation: ports.navigation
-  }
 
   onMount(async () => {
-    ports.vault = test_ports.vault
-    ports.notes = test_ports.notes
-    ports.index = test_ports.index
-    ports.watcher = test_ports.watcher
-    ports.settings = test_ports.settings
-    ports.assets = test_ports.assets
-    ports.telemetry = test_ports.telemetry
-    ports.navigation = test_ports.navigation
-
     if (!app_state.vault) {
       const hardcoded_path = as_vault_path('test-vault')
       const result = await change_vault(ports, { vault_path: hardcoded_path })
@@ -52,17 +32,6 @@
       await ensure_watching(result.vault.id)
       void ports.index.build_index(result.vault.id)
     }
-  })
-
-  onDestroy(() => {
-    ports.vault = original_ports.vault
-    ports.notes = original_ports.notes
-    ports.index = original_ports.index
-    ports.watcher = original_ports.watcher
-    ports.settings = original_ports.settings
-    ports.assets = original_ports.assets
-    ports.telemetry = original_ports.telemetry
-    ports.navigation = original_ports.navigation
   })
 </script>
 

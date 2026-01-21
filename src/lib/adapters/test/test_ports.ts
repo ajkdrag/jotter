@@ -14,13 +14,15 @@ const settings_stub: SettingsPort = {
   async set_setting<T>(_key: string, _value: T) {}
 }
 
-export const test_ports = {
-  vault: create_test_vault_adapter(),
-  notes: create_test_notes_adapter(),
-  index: create_test_workspace_index_adapter(),
-  watcher: create_test_watcher_adapter(),
-  settings: settings_stub,
-  assets: create_test_assets_adapter(),
-  telemetry: create_console_telemetry_adapter(),
-  navigation: create_navigation_adapter()
+export function create_test_ports() {
+  return {
+    vault: create_test_vault_adapter(),
+    notes: create_test_notes_adapter(),
+    index: create_test_workspace_index_adapter(),
+    watcher: create_test_watcher_adapter(),
+    settings: settings_stub,
+    assets: create_test_assets_adapter(),
+    telemetry: create_console_telemetry_adapter(),
+    navigation: create_navigation_adapter()
+  }
 }
