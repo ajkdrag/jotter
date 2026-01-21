@@ -1,28 +1,34 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { app_state } from "$lib/adapters/state/app_state.svelte";
   import AppSidebar from "$lib/components/app_sidebar.svelte";
   import VaultSelectionPanel from "$lib/components/vault_selection_panel.svelte";
-  import { create_open_note_workflow } from "$lib/workflows/create_open_note_workflow";
-  import { create_editor_session_workflow } from "$lib/workflows/create_editor_session_workflow";
+  import { create_prod_ports } from "$lib/adapters/create_prod_ports";
+  import { reset_app_state_for_backend_switch } from "$lib/hosts/reset_app_state_for_backend_switch";
+  import { create_home_host } from "$lib/hosts/home_host";
 
-  const open_note_workflow = create_open_note_workflow();
-  const editor_session_workflow = create_editor_session_workflow({ state: app_state });
+  const ports = create_prod_ports();
+  const host = create_home_host({ ports, state: app_state });
+
+  onMount(() => {
+    reset_app_state_for_backend_switch(app_state);
+  });
 
   $effect(() => {
-    const _vault = app_state.vault;
-    const _notes = app_state.notes;
-    const _open_note = app_state.open_note;
-    editor_session_workflow.ensure_open_note();
+    const _vault = host.vault;
+    const _notes = host.notes;
+    const _open_note = host.open_note;
+    host.ensure_open_note();
   });
 </script>
 
-{#if !app_state.vault}
+{#if !host.vault}
   <div class="mx-auto max-w-[65ch] p-8">
     <VaultSelectionPanel />
   </div>
 {:else}
   <main>
-    <AppSidebar onOpenNote={(note_path) => void open_note_workflow.open(note_path)} />
+    <AppSidebar onOpenNote={(note_path) => void host.on_open_note(note_path)} />
   </main>
 {/if}
 
