@@ -1,33 +1,33 @@
 <script lang="ts">
-    import { app_state } from "$lib/adapters/state/app_state.svelte";
     import {
         create_milkdown_editor,
         type MilkdownHandle,
     } from "$lib/adapters/editor/milkdown_adapter";
-    import { as_markdown_text } from "$lib/types/ids";
     import type { OpenNoteState } from "$lib/types/editor";
+
+    interface Props {
+        open_note: OpenNoteState | null;
+        onMarkdownChange: (markdown: string) => void;
+    }
+
+    let { open_note, onMarkdownChange }: Props = $props();
 
     let editor_root: HTMLDivElement;
     let editor_handle: MilkdownHandle | null = $state(null);
     let current_note_id: string | null = $state(null);
     let is_initializing = false;
 
-    function get_current_note() {
-        return app_state.open_note;
-    }
-
     async function initialize_editor() {
         if (!editor_root || editor_handle || is_initializing) return;
 
-        const note = get_current_note();
+        const note = open_note;
         if (!note) return;
         is_initializing = true;
         try {
             const handle = await create_milkdown_editor(editor_root, {
                 initial_markdown: note.markdown,
                 on_markdown_change: (markdown) => {
-                    const current = app_state.open_note;
-                    if (current) current.markdown = as_markdown_text(markdown);
+                    onMarkdownChange(markdown);
                 },
             });
              // If user navigated away while we were awaiting,
@@ -54,7 +54,7 @@
 
     $effect(() => {
         if (!editor_root || editor_handle || is_initializing) return;
-        if (!app_state.open_note) return;
+        if (!open_note) return;
         void initialize_editor();
     });
 
@@ -68,7 +68,7 @@
     });
 
     $effect(() => {
-        const note = get_current_note();
+        const note = open_note;
         if (note && editor_handle && current_note_id !== note.meta.id) {
             update_editor_content(note);
         }

@@ -1,29 +1,40 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { app_state } from '$lib/adapters/state/app_state.svelte'
-  import { create_change_vault_workflow } from '$lib/workflows/create_change_vault_workflow'
   import type { Vault } from '$lib/types/vault'
+  import type { VaultId } from '$lib/types/ids'
   import * as Card from '$lib/components/ui/card'
   import { Button } from '$lib/components/ui/button'
   import { Plus, Check, X } from '@lucide/svelte'
 
   interface Props {
+    recent_vaults: Vault[]
+    current_vault_id: VaultId | null
+    onChooseVaultDir: () => Promise<void>
+    onSelectVault: (vault_id: VaultId) => Promise<void>
+    onLoadRecent: () => Promise<void>
     onClose?: () => void
     isDialog?: boolean
   }
 
-  let { onClose, isDialog = false }: Props = $props()
+  let {
+    recent_vaults,
+    current_vault_id,
+    onChooseVaultDir,
+    onSelectVault,
+    onLoadRecent,
+    onClose,
+    isDialog = false
+  }: Props = $props()
 
-  const vault_workflow = create_change_vault_workflow()
   let loading = $state(false)
 
   onMount(async () => {
-    await vault_workflow.load_recent()
+    await onLoadRecent()
   })
 
   $effect(() => {
-    if (isDialog && app_state.vault_dialog_open) {
-      void vault_workflow.load_recent()
+    if (isDialog) {
+      void onLoadRecent()
     }
   })
 
@@ -34,7 +45,10 @@
     }
     loading = true
     try {
-      await vault_workflow.choose_and_change(onClose)
+      await onChooseVaultDir()
+      if (onClose) {
+        onClose()
+      }
     } finally {
       loading = false
     }
@@ -47,7 +61,10 @@
     }
     loading = true
     try {
-      await vault_workflow.open_recent(vault.id, onClose)
+      await onSelectVault(vault.id)
+      if (onClose) {
+        onClose()
+      }
     } catch (error) {
       console.error('[VaultSelection] Error opening vault:', error)
       alert(`Failed to open vault: ${error instanceof Error ? error.message : String(error)}`)
@@ -111,19 +128,19 @@
     Choose Vault Directory
   </Button>
 
-  {#if app_state.recent_vaults.length > 0}
+  {#if recent_vaults.length > 0}
     <div class="mt-4 space-y-3">
       <h3 class="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Recent Vaults
       </h3>
       <div class="flex flex-col gap-2">
-        {#each app_state.recent_vaults as vault (vault.id)}
+        {#each recent_vaults as vault (vault.id)}
           <button
             type="button"
             onclick={(e) => handle_select_vault(vault, e)}
-            disabled={loading || app_state.vault?.id === vault.id}
+            disabled={loading || current_vault_id === vault.id}
             class="flex min-h-14 items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-left outline-none transition-all hover:bg-muted/70 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/20 data-[active=true]:border-primary/30"
-            data-active={app_state.vault?.id === vault.id}
+            data-active={current_vault_id === vault.id}
           >
             <div class="min-w-0 flex-1">
               <div class="mb-1 truncate text-[0.9375rem] font-medium text-foreground">
@@ -133,7 +150,7 @@
                 {format_path(vault.path)}
               </div>
             </div>
-            {#if app_state.vault?.id === vault.id}
+            {#if current_vault_id === vault.id}
               <Check class="ml-4 shrink-0 text-primary" />
             {/if}
           </button>

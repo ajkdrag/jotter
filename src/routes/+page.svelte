@@ -24,11 +24,26 @@
 
 {#if !host.vault}
   <div class="mx-auto max-w-[65ch] p-8">
-    <VaultSelectionPanel />
+    <VaultSelectionPanel
+      recent_vaults={host.recent_vaults}
+      current_vault_id={null}
+      onChooseVaultDir={host.on_choose_vault}
+      onSelectVault={host.on_select_vault}
+      onLoadRecent={host.on_load_recent}
+    />
   </div>
 {:else}
   <main>
-    <AppSidebar onOpenNote={(note_path) => void host.on_open_note(note_path)} />
+    <AppSidebar
+      vault={host.vault}
+      notes={host.notes}
+      open_note_title={host.open_note?.meta.title ?? "Notes"}
+      is_vault_dialog_open={host.vault_dialog_open}
+      open_note={host.open_note}
+      onOpenNote={(note_path) => void host.on_open_note(note_path)}
+      onRequestChangeVault={host.on_request_change_vault}
+      onMarkdownChange={host.on_markdown_change}
+    />
   </main>
 {/if}
 

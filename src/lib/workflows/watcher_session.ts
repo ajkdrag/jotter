@@ -4,10 +4,23 @@ import { as_note_path } from '$lib/types/ids'
 import type { VaultId } from '$lib/types/ids'
 import type { VaultFsEvent } from '$lib/types/events'
 
+type Scheduler = {
+  setTimeout: (fn: () => void, delay: number) => number
+  clearTimeout: (id: number | null) => void
+}
+
+const default_scheduler: Scheduler = {
+  setTimeout: (fn, delay) => window.setTimeout(fn, delay),
+  clearTimeout: (id) => {
+    if (id != null) window.clearTimeout(id)
+  }
+}
+
 let stop: (() => void | Promise<void>) | null = null
 let watching_vault: VaultId | null = null
 let refresh_timer: number | null = null
 let index_timer: number | null = null
+let current_scheduler: Scheduler = default_scheduler
 
 async function refresh_notes(vault_id: VaultId) {
   const notes = await ports.notes.list_notes(vault_id)
@@ -15,8 +28,8 @@ async function refresh_notes(vault_id: VaultId) {
 }
 
 function schedule_index_rebuild(vault_id: VaultId) {
-  if (index_timer != null) window.clearTimeout(index_timer)
-  index_timer = window.setTimeout(() => {
+  if (index_timer != null) current_scheduler.clearTimeout(index_timer)
+  index_timer = current_scheduler.setTimeout(() => {
     void ports.index.build_index(vault_id)
   }, 800)
 }
@@ -27,8 +40,8 @@ async function handle_event(event: VaultFsEvent) {
   if (event.vault_id !== vault.id) return
 
   if (event.type === 'note_added' || event.type === 'note_removed') {
-    if (refresh_timer != null) window.clearTimeout(refresh_timer)
-    refresh_timer = window.setTimeout(() => refresh_notes(vault.id), 250)
+    if (refresh_timer != null) current_scheduler.clearTimeout(refresh_timer)
+    refresh_timer = current_scheduler.setTimeout(() => refresh_notes(vault.id), 250)
     schedule_index_rebuild(vault.id)
     return
   }
@@ -50,7 +63,11 @@ async function handle_event(event: VaultFsEvent) {
   }
 }
 
-export async function ensure_watching(vault_id: VaultId) {
+export async function ensure_watching(vault_id: VaultId, scheduler?: Scheduler) {
+  if (scheduler) {
+    current_scheduler = scheduler
+  }
+
   if (watching_vault === vault_id && stop) return
 
   if (stop) {

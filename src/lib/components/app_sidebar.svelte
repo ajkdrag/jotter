@@ -4,26 +4,36 @@
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
-
-    import { app_state } from "$lib/adapters/state/app_state.svelte";
+    import type { Vault } from "$lib/types/vault";
+    import type { NoteMeta } from "$lib/types/note";
+    import type { OpenNoteState } from "$lib/types/editor";
     import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
     type Props = {
+        vault: Vault | null;
+        notes: NoteMeta[];
+        open_note_title: string;
+        is_vault_dialog_open: boolean;
+        open_note: OpenNoteState | null;
         onOpenNote: (note_path: string) => void;
+        onRequestChangeVault: () => void;
+        onMarkdownChange: (markdown: string) => void;
     };
 
-    let { onOpenNote }: Props = $props();
+    let {
+        vault,
+        notes,
+        open_note_title,
+        is_vault_dialog_open,
+        open_note,
+        onOpenNote,
+        onRequestChangeVault,
+        onMarkdownChange
+    }: Props = $props();
 
     let open = $state(true);
     let pane: any = $state();
     let isCurrentlyCollapsed = true;
-
-    function get_current_note_title(): string {
-        if (app_state.open_note) {
-            return app_state.open_note.meta.title;
-        }
-        return "Notes";
-    }
 
     $effect(() => {
         if (!pane) return;
@@ -38,7 +48,7 @@
     });
 </script>
 
-{#if app_state.vault}
+{#if vault}
     <Sidebar.Provider bind:open class="h-screen">
         <Resizable.PaneGroup direction="horizontal" class="h-full">
             {#if open}
@@ -56,7 +66,7 @@
                                     <div class="flex items-center gap-2 min-w-0">
                                         <FolderOpen class="h-5 w-5 shrink-0" />
                                         <span class="font-semibold truncate"
-                                            >{app_state.vault.name}</span
+                                            >{vault.name}</span
                                         >
                                     </div>
                                 </Sidebar.MenuButton>
@@ -66,7 +76,7 @@
                                             <Sidebar.MenuAction
                                                 {...props}
                                                 showOnHover={true}
-                                                onclick={() => (app_state.vault_dialog_open = true)}
+                                                onclick={onRequestChangeVault}
                                             >
                                                 <ArrowLeftRight />
                                             </Sidebar.MenuAction>
@@ -83,7 +93,7 @@
                     <Sidebar.Content>
                         <Sidebar.Group>
                             <Sidebar.GroupContent>
-                                <FileTree notes={app_state.notes} onOpenNote={onOpenNote} />
+                                <FileTree notes={notes} onOpenNote={onOpenNote} />
                             </Sidebar.GroupContent>
                         </Sidebar.Group>
                     </Sidebar.Content>
@@ -99,10 +109,10 @@
                         class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                     >
                         <Sidebar.Trigger />
-                        <div class="text-sm font-medium">{get_current_note_title()}</div>
+                        <div class="text-sm font-medium">{open_note_title}</div>
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">
-                        <NoteEditor />
+                        <NoteEditor open_note={open_note} onMarkdownChange={onMarkdownChange} />
                     </div>
                 </Sidebar.Inset>
             </Resizable.Pane>
