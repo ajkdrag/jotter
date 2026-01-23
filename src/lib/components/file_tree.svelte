@@ -8,14 +8,16 @@
     SidebarMenuButton,
     SidebarMenuSub,
   } from "$lib/components/ui/sidebar";
-  import { ChevronRight, ChevronDown, Folder, File } from "lucide-svelte";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import { ChevronRight, ChevronDown, Folder, File, Trash2 } from "lucide-svelte";
 
   type Props = {
     notes: NoteMeta[];
     onOpenNote: (note_path: string) => void;
+    onRequestDelete?: (note: NoteMeta) => void;
   };
 
-  let { notes, onOpenNote }: Props = $props();
+  let { notes, onOpenNote, onRequestDelete }: Props = $props();
 
   let expanded = $state(new Set<string>());
   let tree = $derived(sort_tree(build_filetree(notes)));
@@ -31,6 +33,10 @@
 
   function handle_file_click(note: NoteMeta) {
     onOpenNote(note.path);
+  }
+
+  function handle_delete_click(note: NoteMeta) {
+    onRequestDelete?.(note);
   }
 </script>
 
@@ -56,10 +62,22 @@
         </SidebarMenuItem>
       {:else if node.note}
         <SidebarMenuItem>
-          <SidebarMenuButton onclick={() => handle_file_click(node.note!)}>
-            <File />
-            <span>{name}</span>
-          </SidebarMenuButton>
+          <ContextMenu.Root>
+            <ContextMenu.Trigger class="w-full">
+              <SidebarMenuButton onclick={() => handle_file_click(node.note!)}>
+                <File />
+                <span>{name}</span>
+              </SidebarMenuButton>
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+              <ContextMenu.Content>
+                <ContextMenu.Item onclick={() => handle_delete_click(node.note!)}>
+                  <Trash2 class="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </ContextMenu.Item>
+              </ContextMenu.Content>
+            </ContextMenu.Portal>
+          </ContextMenu.Root>
         </SidebarMenuItem>
       {/if}
     {/each}

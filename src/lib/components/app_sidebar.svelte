@@ -18,6 +18,7 @@
         onOpenNote: (note_path: string) => void;
         onRequestChangeVault: () => void;
         onMarkdownChange: (markdown: string) => void;
+        onRequestDeleteNote?: (note: NoteMeta) => void;
     };
 
     let {
@@ -28,7 +29,8 @@
         open_note,
         onOpenNote,
         onRequestChangeVault,
-        onMarkdownChange
+        onMarkdownChange,
+        onRequestDeleteNote
     }: Props = $props();
 
     let open = $state(true);
@@ -93,7 +95,11 @@
                     <Sidebar.Content>
                         <Sidebar.Group>
                             <Sidebar.GroupContent>
-                                <FileTree notes={notes} onOpenNote={onOpenNote} />
+                                {#if onRequestDeleteNote}
+                                  <FileTree notes={notes} onOpenNote={onOpenNote} onRequestDelete={onRequestDeleteNote} />
+                                {:else}
+                                  <FileTree notes={notes} onOpenNote={onOpenNote} />
+                                {/if}
                             </Sidebar.GroupContent>
                         </Sidebar.Group>
                     </Sidebar.Content>

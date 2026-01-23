@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, getContext } from "svelte";
   import { app_state } from "$lib/adapters/state/app_state.svelte";
   import AppSidebar from "$lib/components/app_sidebar.svelte";
   import VaultSelectionPanel from "$lib/components/vault_selection_panel.svelte";
   import { create_prod_ports } from "$lib/adapters/create_prod_ports";
   import { reset_app_state_for_backend_switch } from "$lib/utils/reset_app_state_for_backend_switch";
   import { create_home_controller } from "$lib/controllers/home_controller";
+  import type { NoteMeta } from "$lib/types/note";
 
   let controller: ReturnType<typeof create_home_controller> | undefined = $state();
+
+  const delete_note_flow = getContext<{ request_delete: (note: NoteMeta) => void }>("delete_note_flow");
 
   onMount(() => {
     reset_app_state_for_backend_switch(app_state);
@@ -48,6 +51,7 @@
         onOpenNote={(note_path) => void c.on_open_note(note_path)}
         onRequestChangeVault={c.on_request_change_vault}
         onMarkdownChange={c.on_markdown_change}
+        onRequestDeleteNote={delete_note_flow?.request_delete}
       />
     </main>
   {/if}

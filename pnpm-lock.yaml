@@ -44,6 +44,9 @@ importers:
       lucide-svelte:
         specifier: ^0.469.0
         version: 0.469.0(svelte@5.47.0)
+      xstate:
+        specifier: ^5.25.1
+        version: 5.25.1
     devDependencies:
       '@internationalized/date':
         specifier: ^3.10.1
@@ -1707,6 +1710,9 @@ packages:
     resolution: {integrity: sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==}
     engines: {node: '>=8'}
     hasBin: true
+
+  xstate@5.25.1:
+    resolution: {integrity: sha512-oyvsNH5pF2qkHmiHEMdWqc3OjDtoZOH2MTAI35r01f/ZQWOD+VLOiYqo65UgQET0XMA5s9eRm8fnsIo+82biEw==}
 
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
@@ -3791,6 +3797,8 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+
+  xstate@5.25.1: {}
 
   zimmerframe@1.1.4: {}
 

@@ -47,9 +47,13 @@ export function create_mock_vault_port(): VaultPort & {
 
 export function create_mock_notes_port(): NotesPort & {
   _mock_notes: Map<VaultId, NoteMeta[]>
+  _calls: { delete_note: { vault_id: VaultId; note_id: any }[] }
 } {
   const mock = {
     _mock_notes: new Map<VaultId, NoteMeta[]>(),
+    _calls: {
+      delete_note: [] as { vault_id: VaultId; note_id: any }[]
+    },
     async list_notes(vault_id: VaultId) {
       return mock._mock_notes.get(vault_id) || []
     },
@@ -63,15 +67,24 @@ export function create_mock_notes_port(): NotesPort & {
     async create_note(_vault_id: VaultId, _note_path: NotePath, _markdown: any) {
       return { id: _note_path as any, path: _note_path, title: '', mtime_ms: 0, size_bytes: 0 }
     },
-    async delete_note(_vault_id: VaultId, _note_id: any) {},
+    async delete_note(vault_id: VaultId, note_id: any) {
+      mock._calls.delete_note.push({ vault_id, note_id })
+    },
     async rename_note(_vault_id: VaultId, _old_path: NotePath, _new_path: NotePath): Promise<void> {}
   }
   return mock
 }
 
-export function create_mock_index_port(): WorkspaceIndexPort {
-  return {
-    async build_index(_vault_id: VaultId) {},
+export function create_mock_index_port(): WorkspaceIndexPort & {
+  _calls: { build_index: VaultId[] }
+} {
+  const mock = {
+    _calls: {
+      build_index: [] as VaultId[]
+    },
+    async build_index(vault_id: VaultId) {
+      mock._calls.build_index.push(vault_id)
+    },
     async search(_vault_id: VaultId, _query: string) {
       return []
     },
@@ -82,6 +95,7 @@ export function create_mock_index_port(): WorkspaceIndexPort {
       return []
     }
   }
+  return mock
 }
 
 export function create_mock_watcher_port(): WatcherPort {
