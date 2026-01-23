@@ -30,14 +30,6 @@
     }
     expanded = new Set(expanded);
   }
-
-  function handle_file_click(note: NoteMeta) {
-    onOpenNote(note.path);
-  }
-
-  function handle_delete_click(note: NoteMeta) {
-    onRequestDelete?.(note);
-  }
 </script>
 
 {#snippet render_tree(nodes: Map<string, FileTreeNode>)}
@@ -64,14 +56,14 @@
         <SidebarMenuItem>
           <ContextMenu.Root>
             <ContextMenu.Trigger class="w-full">
-              <SidebarMenuButton onclick={() => handle_file_click(node.note!)}>
+              <SidebarMenuButton onclick={() => onOpenNote(node.note!.path)}>
                 <File />
                 <span>{name}</span>
               </SidebarMenuButton>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
               <ContextMenu.Content>
-                <ContextMenu.Item onclick={() => handle_delete_click(node.note!)}>
+                <ContextMenu.Item onclick={() => onRequestDelete?.(node.note!)}>
                   <Trash2 class="mr-2 h-4 w-4" />
                   <span>Delete</span>
                 </ContextMenu.Item>

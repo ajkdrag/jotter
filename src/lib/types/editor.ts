@@ -18,10 +18,3 @@ export function to_open_note_state(doc: NoteDoc): OpenNoteState {
     last_saved_at_ms: Date.now()
   }
 }
-
-export type LinksState = {
-  loading: boolean
-  backlinks: NoteMeta[]
-  outlinks: NoteMeta[]
-}
-

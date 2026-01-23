@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { delete_note_flow_machine } from '$lib/flows/delete_note_flow'
+import { app_state_machine } from '$lib/flows/app_state_machine'
 import { create_mock_notes_port, create_mock_index_port } from '../helpers/mock_ports'
 import type { VaultId, VaultPath, NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
@@ -39,14 +40,11 @@ describe('delete_note_flow', () => {
   test('starts in idle state', () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
-    const app_state = {
-      vault: create_test_vault(),
-      notes: [] as NoteMeta[],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: {} })
+    model.start()
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
@@ -58,18 +56,17 @@ describe('delete_note_flow', () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
-    const app_state = {
-      vault: create_test_vault(),
-      notes: [note],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: {} })
+    model.start()
+    const vault = create_test_vault()
+    model.send({ type: 'VAULT_SET', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: false })
 
     expect(actor.getSnapshot().value).toBe('confirming')
     expect(actor.getSnapshot().context.note_to_delete).toEqual(note)
@@ -79,43 +76,40 @@ describe('delete_note_flow', () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
-    const app_state = {
-      vault: create_test_vault(),
-      notes: [note],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: {} })
+    model.start()
+    const vault = create_test_vault()
+    model.send({ type: 'VAULT_SET', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: false })
     actor.send({ type: 'CANCEL' })
 
     expect(actor.getSnapshot().value).toBe('idle')
     expect(actor.getSnapshot().context.note_to_delete).toBe(null)
   })
 
-  test('deletes note and updates app_state on CONFIRM', async () => {
+  test('deletes note and updates model on CONFIRM', async () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const other_note = create_test_note('note-2', 'Other Note')
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note, other_note])
-    const app_state = {
-      vault,
-      notes: [note, other_note],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    model.start()
+    model.send({ type: 'VAULT_SET', vault, notes: [note, other_note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: false })
     actor.send({ type: 'CONFIRM' })
 
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
@@ -125,7 +119,7 @@ describe('delete_note_flow', () => {
       vault_id: vault.id,
       note_id: note.id
     })
-    expect(app_state.notes).toEqual([other_note])
+    expect(model.getSnapshot().context.notes).toEqual([other_note])
     expect(index_port._calls.build_index).toContain(vault.id)
   })
 
@@ -135,25 +129,24 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
-    const app_state = {
-      vault,
-      notes: [note],
-      open_note: create_open_note_state(note)
-    }
+    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    model.start()
+    model.send({ type: 'VAULT_SET', vault, notes: [note] })
+    model.send({ type: 'OPEN_NOTE_SET', open_note: create_open_note_state(note) })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: true })
     actor.send({ type: 'CONFIRM' })
 
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(app_state.open_note).not.toBe(null)
-    expect(app_state.open_note?.meta.title).toBe('Untitled-1')
-    expect(app_state.open_note?.dirty).toBe(false)
+    expect(model.getSnapshot().context.open_note).not.toBe(null)
+    expect(model.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
+    expect(model.getSnapshot().context.open_note?.dirty).toBe(false)
   })
 
   test('does not clear open_note when different note deleted', async () => {
@@ -164,24 +157,23 @@ describe('delete_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note_to_delete, open_note])
     const open_note_state = create_open_note_state(open_note)
-    const app_state = {
-      vault,
-      notes: [note_to_delete, open_note],
-      open_note: open_note_state
-    }
+    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    model.start()
+    model.send({ type: 'VAULT_SET', vault, notes: [note_to_delete, open_note] })
+    model.send({ type: 'OPEN_NOTE_SET', open_note: open_note_state })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note: note_to_delete })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note: note_to_delete, is_note_currently_open: false })
     actor.send({ type: 'CONFIRM' })
 
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(app_state.open_note).toBe(open_note_state)
-    expect(app_state.notes).toEqual([open_note])
+    expect(model.getSnapshot().context.open_note).toBe(open_note_state)
+    expect(model.getSnapshot().context.notes).toEqual([open_note])
   })
 
   test('transitions to error state on delete failure and retains note_to_delete', async () => {
@@ -193,25 +185,23 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
-    const app_state = {
-      vault,
-      notes: [note],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    model.start()
+    model.send({ type: 'VAULT_SET', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: false })
     actor.send({ type: 'CONFIRM' })
 
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
     expect(actor.getSnapshot().context.note_to_delete).toEqual(note)
     expect(actor.getSnapshot().context.error).toContain('Network error')
-    expect(app_state.notes).toEqual([note])
+    expect(model.getSnapshot().context.notes).toEqual([note])
   })
 
   test('retries delete from error state', async () => {
@@ -227,18 +217,16 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
-    const app_state = {
-      vault,
-      notes: [note],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    model.start()
+    model.send({ type: 'VAULT_SET', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: false })
     actor.send({ type: 'CONFIRM' })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
@@ -246,7 +234,7 @@ describe('delete_note_flow', () => {
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
     expect(attempt).toBe(2)
-    expect(app_state.notes).toEqual([])
+    expect(model.getSnapshot().context.notes).toEqual([])
   })
 
   test('cancels from error state and clears context', async () => {
@@ -258,18 +246,16 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
-    const app_state = {
-      vault,
-      notes: [note],
-      open_note: null as OpenNoteState | null
-    }
+    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    model.start()
+    model.send({ type: 'VAULT_SET', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, app_state }
+      input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
     })
     actor.start()
 
-    actor.send({ type: 'REQUEST_DELETE', note })
+    actor.send({ type: 'REQUEST_DELETE', vault_id: vault.id, note, is_note_currently_open: false })
     actor.send({ type: 'CONFIRM' })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
@@ -278,6 +264,6 @@ describe('delete_note_flow', () => {
     expect(actor.getSnapshot().value).toBe('idle')
     expect(actor.getSnapshot().context.note_to_delete).toBe(null)
     expect(actor.getSnapshot().context.error).toBe(null)
-    expect(app_state.notes).toEqual([note])
+    expect(model.getSnapshot().context.notes).toEqual([note])
   })
 })

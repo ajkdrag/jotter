@@ -3,33 +3,31 @@ import { open_note } from '$lib/operations/open_note'
 import { to_open_note_state } from '$lib/types/editor'
 import { as_note_path } from '$lib/types/ids'
 import type { NotesPort } from '$lib/ports/notes_port'
-import type { Vault } from '$lib/types/vault'
-import type { OpenNoteState } from '$lib/types/editor'
+import type { VaultId } from '$lib/types/ids'
+import type { AppStateEvents } from '$lib/flows/app_state_machine'
 
 type OpenNotePorts = {
   notes: NotesPort
 }
 
-type OpenNoteAppState = {
-  vault: Vault | null
-  open_note: OpenNoteState | null
-}
+type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   error: string | null
   last_note_path: string | null
+  last_vault_id: VaultId | null
   ports: OpenNotePorts
-  app_state: OpenNoteAppState
+  dispatch: AppStateDispatch
 }
 
 type FlowEvents =
-  | { type: 'OPEN_NOTE'; note_path: string }
+  | { type: 'OPEN_NOTE'; vault_id: VaultId; note_path: string }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
 
 type FlowInput = {
   ports: OpenNotePorts
-  app_state: OpenNoteAppState
+  dispatch: AppStateDispatch
 }
 
 export const open_note_flow_machine = setup({
@@ -39,15 +37,19 @@ export const open_note_flow_machine = setup({
     input: {} as FlowInput
   },
   actors: {
-    perform_open: fromPromise(async ({ input }: { input: { ports: OpenNotePorts; app_state: OpenNoteAppState; note_path: string } }) => {
-      const vault = input.app_state.vault
-      if (!vault) throw new Error('No vault selected')
-      const doc = await open_note(
-        { notes: input.ports.notes },
-        { vault_id: vault.id, note_id: as_note_path(input.note_path) }
-      )
-      input.app_state.open_note = to_open_note_state(doc)
-    })
+    perform_open: fromPromise(
+      async ({
+        input
+      }: {
+        input: { ports: OpenNotePorts; dispatch: AppStateDispatch; vault_id: VaultId; note_path: string }
+      }) => {
+        const doc = await open_note(
+          { notes: input.ports.notes },
+          { vault_id: input.vault_id, note_id: as_note_path(input.note_path) }
+        )
+        input.dispatch({ type: 'OPEN_NOTE_SET', open_note: to_open_note_state(doc) })
+      }
+    )
   }
 }).createMachine({
   id: 'open_note_flow',
@@ -55,8 +57,9 @@ export const open_note_flow_machine = setup({
   context: ({ input }) => ({
     error: null,
     last_note_path: null,
+    last_vault_id: null,
     ports: input.ports,
-    app_state: input.app_state
+    dispatch: input.dispatch
   }),
   states: {
     idle: {
@@ -65,7 +68,8 @@ export const open_note_flow_machine = setup({
           target: 'opening',
           actions: assign({
             error: () => null,
-            last_note_path: ({ event }) => event.note_path
+            last_note_path: ({ event }) => event.note_path,
+            last_vault_id: ({ event }) => event.vault_id
           })
         }
       }
@@ -75,7 +79,8 @@ export const open_note_flow_machine = setup({
         src: 'perform_open',
         input: ({ context }) => ({
           ports: context.ports,
-          app_state: context.app_state,
+          dispatch: context.dispatch,
+          vault_id: context.last_vault_id!,
           note_path: context.last_note_path!
         }),
         onDone: 'idle',
@@ -94,11 +99,11 @@ export const open_note_flow_machine = setup({
           target: 'idle',
           actions: assign({
             error: () => null,
-            last_note_path: () => null
+            last_note_path: () => null,
+            last_vault_id: () => null
           })
         }
       }
     }
   }
 })
-

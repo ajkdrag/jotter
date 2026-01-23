@@ -1,41 +1,36 @@
 import { setup, assign, fromPromise } from 'xstate'
 import { delete_note } from '$lib/operations/delete_note'
-import { ensure_open_note } from '$lib/operations/ensure_open_note'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
-import type { OpenNoteState } from '$lib/types/editor'
-import type { Vault } from '$lib/types/vault'
+import type { VaultId } from '$lib/types/ids'
+import type { AppStateEvents } from '$lib/flows/app_state_machine'
 
 type DeleteNotePorts = {
   notes: NotesPort
   index: WorkspaceIndexPort
 }
 
-type DeleteNoteAppState = {
-  vault: Vault | null
-  notes: NoteMeta[]
-  open_note: OpenNoteState | null
-}
+type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   note_to_delete: NoteMeta | null
+  vault_id: VaultId | null
+  is_note_currently_open: boolean
   error: string | null
   ports: DeleteNotePorts
-  app_state: DeleteNoteAppState
-  now_ms: () => number
+  dispatch: AppStateDispatch
 }
 
 type FlowEvents =
-  | { type: 'REQUEST_DELETE'; note: NoteMeta }
+  | { type: 'REQUEST_DELETE'; vault_id: VaultId; note: NoteMeta; is_note_currently_open: boolean }
   | { type: 'CONFIRM' }
   | { type: 'CANCEL' }
   | { type: 'RETRY' }
 
 type FlowInput = {
   ports: DeleteNotePorts
-  app_state: DeleteNoteAppState
-  now_ms?: () => number
+  dispatch: AppStateDispatch
 }
 
 export const delete_note_flow_machine = setup({
@@ -49,28 +44,25 @@ export const delete_note_flow_machine = setup({
       async ({
         input
       }: {
-        input: { ports: DeleteNotePorts; app_state: DeleteNoteAppState; note: NoteMeta; now_ms: () => number }
+        input: {
+          ports: DeleteNotePorts
+          dispatch: AppStateDispatch
+          vault_id: VaultId
+          note: NoteMeta
+          is_note_currently_open: boolean
+        }
       }) => {
-        const { ports, app_state, note } = input
-        if (!app_state.vault) throw new Error('No vault selected')
+        const { ports, dispatch, vault_id, note } = input
 
-        await delete_note(ports, {
-          vault_id: app_state.vault.id,
-          note_id: note.id
-        })
+        await delete_note(ports, { vault_id, note_id: note.id })
 
-        app_state.notes = await ports.notes.list_notes(app_state.vault.id)
+        const notes = await ports.notes.list_notes(vault_id)
+        dispatch({ type: 'NOTES_SET', notes })
 
-        const was_open = app_state.open_note?.meta.id === note.id
-        if (was_open) app_state.open_note = null
-        app_state.open_note = ensure_open_note({
-          vault: app_state.vault,
-          notes: app_state.notes,
-          open_note: app_state.open_note,
-          now_ms: input.now_ms()
-        })
+        if (input.is_note_currently_open) dispatch({ type: 'OPEN_NOTE_CLEARED' })
+        dispatch({ type: 'ENSURE_OPEN_NOTE' })
 
-        void ports.index.build_index(app_state.vault.id)
+        void ports.index.build_index(vault_id)
       }
     )
   }
@@ -79,10 +71,11 @@ export const delete_note_flow_machine = setup({
   initial: 'idle',
   context: ({ input }) => ({
     note_to_delete: null,
+    vault_id: null,
+    is_note_currently_open: false,
     error: null,
     ports: input.ports,
-    app_state: input.app_state,
-    now_ms: input.now_ms ?? (() => Date.now())
+    dispatch: input.dispatch
   }),
   states: {
     idle: {
@@ -91,6 +84,8 @@ export const delete_note_flow_machine = setup({
           target: 'confirming',
           actions: assign({
             note_to_delete: ({ event }) => event.note,
+            vault_id: ({ event }) => event.vault_id,
+            is_note_currently_open: ({ event }) => event.is_note_currently_open,
             error: () => null
           })
         }
@@ -112,14 +107,17 @@ export const delete_note_flow_machine = setup({
         src: 'perform_delete',
         input: ({ context }) => ({
           ports: context.ports,
-          app_state: context.app_state,
+          dispatch: context.dispatch,
+          vault_id: context.vault_id!,
           note: context.note_to_delete!,
-          now_ms: context.now_ms
+          is_note_currently_open: context.is_note_currently_open
         }),
         onDone: {
           target: 'idle',
           actions: assign({
-            note_to_delete: () => null
+            note_to_delete: () => null,
+            vault_id: () => null,
+            is_note_currently_open: () => false
           })
         },
         onError: {
@@ -137,6 +135,8 @@ export const delete_note_flow_machine = setup({
           target: 'idle',
           actions: assign({
             note_to_delete: () => null,
+            vault_id: () => null,
+            is_note_currently_open: () => false,
             error: () => null
           })
         }

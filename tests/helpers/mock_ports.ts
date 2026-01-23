@@ -1,7 +1,6 @@
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
-import type { WatcherPort } from '$lib/ports/watcher_port'
 import type { NavigationPort } from '$lib/ports/navigation_port'
 import type { VaultId, VaultPath, NotePath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
@@ -89,26 +88,9 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
     },
     async build_index(vault_id: VaultId) {
       mock._calls.build_index.push(vault_id)
-    },
-    async search(_vault_id: VaultId, _query: string) {
-      return []
-    },
-    async backlinks(_vault_id: VaultId, _note_id: any) {
-      return []
-    },
-    async outlinks(_vault_id: VaultId, _note_id: any) {
-      return []
     }
   }
   return mock
-}
-
-export function create_mock_watcher_port(): WatcherPort {
-  return {
-    async watch_vault(_vault_id: VaultId, _on_event: any) {
-      return () => {}
-    }
-  }
 }
 
 export function create_mock_navigation_port(): NavigationPort & {
@@ -138,7 +120,6 @@ export function create_mock_ports() {
     vault: create_mock_vault_port(),
     notes: create_mock_notes_port(),
     index: create_mock_index_port(),
-    watcher: create_mock_watcher_port(),
     navigation: create_mock_navigation_port()
   }
 }

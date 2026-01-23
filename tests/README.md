@@ -43,7 +43,6 @@ await mock_ports.navigation._calls.navigate_to_home
 
 ## Current Coverage
 
-- ✅ Wiki link parsing and resolution
 - ✅ Image drop handling
 - ✅ Vault change flow
 - ✅ Delete note flow

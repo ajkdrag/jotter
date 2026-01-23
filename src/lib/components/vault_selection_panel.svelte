@@ -33,7 +33,6 @@
       event.preventDefault()
     }
     onChooseVaultDir()
-    if (onClose) onClose()
   }
 
   function handle_select_vault(vault: Vault, event?: Event) {
@@ -42,7 +41,6 @@
       event.preventDefault()
     }
     onSelectVault(vault.id)
-    if (onClose) onClose()
   }
 
   function format_path(path: string): string {
@@ -61,6 +59,7 @@
         <button
           type="button"
           onclick={onClose}
+          disabled={is_loading}
           class="ring-offset-background focus:ring-ring absolute end-0 top-0 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
         >
           <X class="h-4 w-4" />
