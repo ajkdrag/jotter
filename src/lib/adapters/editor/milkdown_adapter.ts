@@ -13,7 +13,9 @@ import { $view } from '@milkdown/kit/utils'
 import { codeBlockComponent } from '@milkdown/components/code-block'
 import { configure_codemirror_codeblocks } from '$lib/adapters/editor/codemirror_codeblock_nodeview'
 import { nord } from '@milkdown/theme-nord'
-import '@milkdown/theme-nord/style.css';
+import '@milkdown/theme-nord/style.css'
+import { history, undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
+import { EditorState } from '@milkdown/kit/prose/state'
 
 export type MilkdownHandle = {
   destroy: () => void
@@ -23,6 +25,8 @@ export type MilkdownHandle = {
   toggle_link: (href?: string) => void
   create_code_block: () => void
   insert_image: (args: { src: string; alt?: string }) => void
+  undo: () => void
+  redo: () => void
 }
 
 export async function create_milkdown_editor(
@@ -75,6 +79,7 @@ export async function create_milkdown_editor(
     .use(gfm)
     .use(codeBlockComponent)
     .use(listener)
+    .use(history)
     .create()
 
   return {
@@ -88,9 +93,12 @@ export async function create_milkdown_editor(
         const doc = parser(markdown)
         if (!doc) return
 
-        view.dispatch(
-          view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content)
-        )
+        const new_state = EditorState.create({
+          doc,
+          schema: view.state.schema,
+          plugins: view.state.plugins
+        })
+        view.updateState(new_state)
       })
     },
     toggle_bold: () => {
@@ -120,6 +128,12 @@ export async function create_milkdown_editor(
         const node = image_node.create({ src, alt: alt ?? '' })
         view.dispatch(view.state.tr.replaceSelectionWith(node).scrollIntoView())
       })
+    },
+    undo: () => {
+      editor.action((ctx) => ctx.get(commandsCtx).call(undoCommand.key))
+    },
+    redo: () => {
+      editor.action((ctx) => ctx.get(commandsCtx).call(redoCommand.key))
     }
   }
 }
