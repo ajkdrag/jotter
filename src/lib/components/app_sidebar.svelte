@@ -13,7 +13,6 @@
         vault: Vault | null;
         notes: NoteMeta[];
         open_note_title: string;
-        is_vault_dialog_open: boolean;
         open_note: OpenNoteState | null;
         onOpenNote: (note_path: string) => void;
         onRequestChangeVault: () => void;
@@ -25,7 +24,6 @@
         vault,
         notes,
         open_note_title,
-        is_vault_dialog_open,
         open_note,
         onOpenNote,
         onRequestChangeVault,

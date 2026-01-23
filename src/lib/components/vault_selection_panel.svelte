@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
   import type { Vault } from '$lib/types/vault'
   import type { VaultId } from '$lib/types/ids'
   import * as Card from '$lib/components/ui/card'
@@ -9,9 +8,10 @@
   interface Props {
     recent_vaults: Vault[]
     current_vault_id: VaultId | null
-    onChooseVaultDir: () => Promise<void>
-    onSelectVault: (vault_id: VaultId) => Promise<void>
-    onLoadRecent: () => Promise<void>
+    is_loading?: boolean
+    error?: string | null
+    onChooseVaultDir: () => void
+    onSelectVault: (vault_id: VaultId) => void
     onClose?: () => void
     isDialog?: boolean
   }
@@ -19,58 +19,30 @@
   let {
     recent_vaults,
     current_vault_id,
+    is_loading = false,
+    error = null,
     onChooseVaultDir,
     onSelectVault,
-    onLoadRecent,
     onClose,
     isDialog = false
   }: Props = $props()
 
-  let loading = $state(false)
-
-  onMount(async () => {
-    await onLoadRecent()
-  })
-
-  $effect(() => {
-    if (isDialog) {
-      void onLoadRecent()
-    }
-  })
-
-  async function handle_choose_vault(event?: Event) {
+  function handle_choose_vault(event?: Event) {
     if (event) {
       event.stopPropagation()
       event.preventDefault()
     }
-    loading = true
-    try {
-      await onChooseVaultDir()
-      if (onClose) {
-        onClose()
-      }
-    } finally {
-      loading = false
-    }
+    onChooseVaultDir()
+    if (onClose) onClose()
   }
 
-  async function handle_select_vault(vault: Vault, event?: Event) {
+  function handle_select_vault(vault: Vault, event?: Event) {
     if (event) {
       event.stopPropagation()
       event.preventDefault()
     }
-    loading = true
-    try {
-      await onSelectVault(vault.id)
-      if (onClose) {
-        onClose()
-      }
-    } catch (error) {
-      console.error('[VaultSelection] Error opening vault:', error)
-      alert(`Failed to open vault: ${error instanceof Error ? error.message : String(error)}`)
-    } finally {
-      loading = false
-    }
+    onSelectVault(vault.id)
+    if (onClose) onClose()
   }
 
   function format_path(path: string): string {
@@ -121,12 +93,18 @@
 {#snippet content()}
   <Button
     onclick={(e) => handle_choose_vault(e)}
-    disabled={loading}
+    disabled={is_loading}
     class="w-full"
   >
     <Plus />
     Choose Vault Directory
   </Button>
+
+  {#if error}
+    <div class="rounded-lg border border-border bg-card px-4 py-3 text-sm text-destructive">
+      {error}
+    </div>
+  {/if}
 
   {#if recent_vaults.length > 0}
     <div class="mt-4 space-y-3">
@@ -138,7 +116,7 @@
           <button
             type="button"
             onclick={(e) => handle_select_vault(vault, e)}
-            disabled={loading || current_vault_id === vault.id}
+            disabled={is_loading || current_vault_id === vault.id}
             class="flex min-h-14 items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-left outline-none transition-all hover:bg-muted/70 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/20 data-[active=true]:border-primary/30"
             data-active={current_vault_id === vault.id}
           >

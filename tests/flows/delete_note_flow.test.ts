@@ -103,6 +103,7 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const other_note = create_test_note('note-2', 'Other Note')
     const vault = create_test_vault()
+    notes_port._mock_notes.set(vault.id, [note, other_note])
     const app_state = {
       vault,
       notes: [note, other_note],
@@ -133,6 +134,7 @@ describe('delete_note_flow', () => {
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
+    notes_port._mock_notes.set(vault.id, [note])
     const app_state = {
       vault,
       notes: [note],
@@ -160,6 +162,7 @@ describe('delete_note_flow', () => {
     const note_to_delete = create_test_note('note-1', 'My Note')
     const open_note = create_test_note('note-2', 'Other Note')
     const vault = create_test_vault()
+    notes_port._mock_notes.set(vault.id, [note_to_delete, open_note])
     const open_note_state = create_open_note_state(open_note)
     const app_state = {
       vault,
@@ -189,6 +192,7 @@ describe('delete_note_flow', () => {
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
+    notes_port._mock_notes.set(vault.id, [note])
     const app_state = {
       vault,
       notes: [note],
@@ -213,14 +217,16 @@ describe('delete_note_flow', () => {
   test('retries delete from error state', async () => {
     const notes_port = create_mock_notes_port()
     let attempt = 0
+    const original_delete = notes_port.delete_note.bind(notes_port)
     notes_port.delete_note = async (vault_id, note_id) => {
       attempt++
       if (attempt === 1) throw new Error('Network error')
-      notes_port._calls.delete_note.push({ vault_id, note_id })
+      await original_delete(vault_id, note_id)
     }
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
+    notes_port._mock_notes.set(vault.id, [note])
     const app_state = {
       vault,
       notes: [note],
@@ -251,6 +257,7 @@ describe('delete_note_flow', () => {
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
+    notes_port._mock_notes.set(vault.id, [note])
     const app_state = {
       vault,
       notes: [note],

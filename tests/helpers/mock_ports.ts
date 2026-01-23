@@ -69,6 +69,11 @@ export function create_mock_notes_port(): NotesPort & {
     },
     async delete_note(vault_id: VaultId, note_id: any) {
       mock._calls.delete_note.push({ vault_id, note_id })
+      const current = mock._mock_notes.get(vault_id) || []
+      mock._mock_notes.set(
+        vault_id,
+        current.filter((note) => note.id !== note_id)
+      )
     },
     async rename_note(_vault_id: VaultId, _old_path: NotePath, _new_path: NotePath): Promise<void> {}
   }

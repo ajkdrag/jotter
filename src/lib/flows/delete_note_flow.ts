@@ -1,11 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
 import { delete_note } from '$lib/operations/delete_note'
+import { ensure_open_note } from '$lib/operations/ensure_open_note'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
-import { as_markdown_text, as_note_path } from '$lib/types/ids'
 
 type DeleteNotePorts = {
   notes: NotesPort
@@ -23,6 +23,7 @@ type FlowContext = {
   error: string | null
   ports: DeleteNotePorts
   app_state: DeleteNoteAppState
+  now_ms: () => number
 }
 
 type FlowEvents =
@@ -34,34 +35,7 @@ type FlowEvents =
 type FlowInput = {
   ports: DeleteNotePorts
   app_state: DeleteNoteAppState
-}
-
-function next_untitled_name(notes: NoteMeta[]): string {
-  let max = 0
-  for (const note of notes) {
-    const match = String(note.path).match(/^Untitled-(\d+)$/)
-    if (!match) continue
-    const value = Number(match[1])
-    if (!Number.isFinite(value)) continue
-    if (value > max) max = value
-  }
-  return `Untitled-${max + 1}`
-}
-
-function create_untitled_note(notes: NoteMeta[], now: number): OpenNoteState {
-  const name = next_untitled_name(notes)
-  return {
-    meta: {
-      id: as_note_path(name),
-      path: as_note_path(name),
-      title: name,
-      mtime_ms: now,
-      size_bytes: 0
-    },
-    markdown: as_markdown_text(''),
-    dirty: false,
-    last_saved_at_ms: now
-  }
+  now_ms?: () => number
 }
 
 export const delete_note_flow_machine = setup({
@@ -75,7 +49,7 @@ export const delete_note_flow_machine = setup({
       async ({
         input
       }: {
-        input: { ports: DeleteNotePorts; app_state: DeleteNoteAppState; note: NoteMeta }
+        input: { ports: DeleteNotePorts; app_state: DeleteNoteAppState; note: NoteMeta; now_ms: () => number }
       }) => {
         const { ports, app_state, note } = input
         if (!app_state.vault) throw new Error('No vault selected')
@@ -85,12 +59,16 @@ export const delete_note_flow_machine = setup({
           note_id: note.id
         })
 
-        app_state.notes = app_state.notes.filter((n) => n.id !== note.id)
+        app_state.notes = await ports.notes.list_notes(app_state.vault.id)
 
         const was_open = app_state.open_note?.meta.id === note.id
-        if (was_open) {
-          app_state.open_note = create_untitled_note(app_state.notes, Date.now())
-        }
+        if (was_open) app_state.open_note = null
+        app_state.open_note = ensure_open_note({
+          vault: app_state.vault,
+          notes: app_state.notes,
+          open_note: app_state.open_note,
+          now_ms: input.now_ms()
+        })
 
         void ports.index.build_index(app_state.vault.id)
       }
@@ -103,7 +81,8 @@ export const delete_note_flow_machine = setup({
     note_to_delete: null,
     error: null,
     ports: input.ports,
-    app_state: input.app_state
+    app_state: input.app_state,
+    now_ms: input.now_ms ?? (() => Date.now())
   }),
   states: {
     idle: {
@@ -134,7 +113,8 @@ export const delete_note_flow_machine = setup({
         input: ({ context }) => ({
           ports: context.ports,
           app_state: context.app_state,
-          note: context.note_to_delete!
+          note: context.note_to_delete!,
+          now_ms: context.now_ms
         }),
         onDone: {
           target: 'idle',

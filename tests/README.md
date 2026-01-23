@@ -14,12 +14,13 @@ pnpm check         # Run TypeScript checks
 
 - `tests/` - All test files
   - `helpers/` - Reusable test utilities and mocks
-  - `workflows/` - Tests for workflow logic
+  - `flows/` - Tests for XState flow logic
+  - `operations/` - Tests for operation logic
   - `*.test.ts` - Unit tests for specific modules
 
 ## Mock Ports
 
-Use `tests/helpers/mock_ports.ts` for testing workflows and operations that depend on ports:
+Use `tests/helpers/mock_ports.ts` for testing flows and operations that depend on ports:
 
 ```typescript
 import { create_mock_ports } from '../helpers/mock_ports'
@@ -44,6 +45,6 @@ await mock_ports.navigation._calls.navigate_to_home
 
 - ✅ Wiki link parsing and resolution
 - ✅ Image drop handling
-- ✅ Vault workflow navigation
-- 🚧 More workflow tests needed
+- ✅ Vault change flow
+- ✅ Delete note flow
 - 🚧 Integration tests needed

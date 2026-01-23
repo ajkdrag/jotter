@@ -5,5 +5,4 @@ export function reset_app_state_for_backend_switch(state: typeof app_state) {
   state.recent_vaults = []
   state.notes = []
   state.open_note = null
-  state.is_change_vault_dialog_open = false
 }

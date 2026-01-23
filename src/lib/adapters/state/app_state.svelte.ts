@@ -7,13 +7,11 @@ export type AppState = {
   recent_vaults: Vault[]
   notes: NoteMeta[]
   open_note: OpenNoteState | null
-  is_change_vault_dialog_open: boolean
 }
 
 export const app_state = $state<AppState>({
   vault: null,
   recent_vaults: [],
   notes: [],
-  open_note: null,
-  is_change_vault_dialog_open: false
+  open_note: null
 })

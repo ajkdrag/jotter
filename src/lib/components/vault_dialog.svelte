@@ -9,9 +9,10 @@
     onOpenChange: (open: boolean) => void
     recent_vaults: Vault[]
     current_vault_id: VaultId | null
-    onChooseVaultDir: () => Promise<void>
-    onSelectVault: (vault_id: VaultId) => Promise<void>
-    onLoadRecent: () => Promise<void>
+    is_loading?: boolean
+    error?: string | null
+    onChooseVaultDir: () => void
+    onSelectVault: (vault_id: VaultId) => void
   }
 
   let {
@@ -19,22 +20,24 @@
     onOpenChange,
     recent_vaults,
     current_vault_id,
+    is_loading = false,
+    error = null,
     onChooseVaultDir,
-    onSelectVault,
-    onLoadRecent
+    onSelectVault
   }: Props = $props()
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root {open} onOpenChange={onOpenChange}>
   <Dialog.Content class="max-w-[65ch]" showCloseButton={false}>
     {#snippet children()}
       <VaultSelectionPanel
         isDialog={true}
         recent_vaults={recent_vaults}
         current_vault_id={current_vault_id}
+        is_loading={is_loading}
+        error={error}
         onChooseVaultDir={onChooseVaultDir}
         onSelectVault={onSelectVault}
-        onLoadRecent={onLoadRecent}
         onClose={() => onOpenChange(false)}
       />
     {/snippet}
