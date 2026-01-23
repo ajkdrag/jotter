@@ -3,12 +3,12 @@
   import VaultDialog from "$lib/components/vault_dialog.svelte";
   import { app_state } from "$lib/adapters/state/app_state.svelte";
   import { create_prod_ports } from "$lib/adapters/create_prod_ports";
-  import { create_home_host } from "$lib/hosts/home_host";
+  import { create_home_controller } from "$lib/controllers/home_controller";
 
   let { children } = $props();
 
   const ports = create_prod_ports();
-  const host = create_home_host({ ports, state: app_state });
+  const controller = create_home_controller({ ports, state: app_state });
 </script>
 
 <main>
@@ -16,13 +16,11 @@
 </main>
 
 <VaultDialog
-  open={host.vault_dialog_open}
-  onOpenChange={(open) => {
-    app_state.vault_dialog_open = open;
-  }}
-  recent_vaults={host.recent_vaults}
-  current_vault_id={host.vault?.id ?? null}
-  onChooseVaultDir={host.on_choose_vault}
-  onSelectVault={host.on_select_vault}
-  onLoadRecent={host.on_load_recent}
+  open={controller.is_change_vault_dialog_open}
+  onOpenChange={controller.toggle_change_vault_dialog_state}
+  recent_vaults={controller.recent_vaults}
+  current_vault_id={controller.vault?.id ?? null}
+  onChooseVaultDir={controller.on_choose_vault}
+  onSelectVault={controller.on_select_vault}
+  onLoadRecent={controller.on_load_recent}
 />

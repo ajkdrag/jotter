@@ -3,45 +3,45 @@
   import { app_state } from '$lib/adapters/state/app_state.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import { create_test_ports } from '$lib/adapters/test/test_ports'
-  import { create_home_host } from '$lib/hosts/home_host'
-  import { reset_app_state_for_backend_switch } from '$lib/hosts/reset_app_state_for_backend_switch'
+  import { create_home_controller } from '$lib/controllers/home_controller'
+  import { reset_app_state_for_backend_switch } from '$lib/utils/reset_app_state_for_backend_switch'
   import { as_vault_path } from '$lib/types/ids'
 
-  let host: ReturnType<typeof create_home_host> | undefined = $state()
+  let controller: ReturnType<typeof create_home_controller> | undefined = $state()
 
   onMount(async () => {
     reset_app_state_for_backend_switch(app_state)
     const ports = create_test_ports()
-    host = create_home_host({ ports, state: app_state })
+    controller = create_home_controller({ ports, state: app_state })
     if (!app_state.vault) {
       const hardcoded_path = as_vault_path('test-vault')
-      await host.bootstrap_default_vault(hardcoded_path)
+      await controller.bootstrap_default_vault(hardcoded_path)
     }
   })
 
   $effect(() => {
-    if (host) {
-      const _vault = host.vault
-      const _notes = host.notes
-      const _open_note = host.open_note
-      host.ensure_open_note()
+    if (controller) {
+      const _vault = controller.vault
+      const _notes = controller.notes
+      const _open_note = controller.open_note
+      controller.ensure_open_note()
     }
   })
 </script>
 
-{#if host}
-  {@const h = host}
-  {#if h.vault}
+{#if controller}
+  {@const c = controller}
+  {#if c.vault}
     <main>
       <AppSidebar
-        vault={h.vault}
-        notes={h.notes}
-        open_note_title={h.open_note?.meta.title ?? "Notes"}
-        is_vault_dialog_open={h.vault_dialog_open}
-        open_note={h.open_note}
-        onOpenNote={(note_path) => void h.on_open_note(note_path)}
-        onRequestChangeVault={h.on_request_change_vault}
-        onMarkdownChange={h.on_markdown_change}
+        vault={c.vault}
+        notes={c.notes}
+        open_note_title={c.open_note?.meta.title ?? "Notes"}
+        is_vault_dialog_open={c.is_change_vault_dialog_open}
+        open_note={c.open_note}
+        onOpenNote={(note_path) => void c.on_open_note(note_path)}
+        onRequestChangeVault={c.on_request_change_vault}
+        onMarkdownChange={c.on_markdown_change}
       />
     </main>
   {:else}

@@ -8,16 +8,9 @@ import { create_change_vault_workflow } from '$lib/workflows/create_change_vault
 import { create_editor_session_workflow } from '$lib/workflows/create_editor_session_workflow'
 import { change_vault } from '$lib/operations/change_vault'
 import type { Ports } from '$lib/adapters/create_prod_ports'
+import type { AppState } from '$lib/adapters/state/app_state.svelte'
 
-type AppState = {
-  vault: Vault | null
-  recent_vaults: Vault[]
-  notes: NoteMeta[]
-  open_note: OpenNoteState | null
-  vault_dialog_open: boolean
-}
-
-export function create_home_host(args: {
+export function create_home_controller(args: {
   ports: Ports
   state: AppState
 }) {
@@ -37,8 +30,8 @@ export function create_home_host(args: {
     get open_note() {
       return state.open_note
     },
-    get vault_dialog_open() {
-      return state.vault_dialog_open
+    get is_change_vault_dialog_open() {
+      return state.is_change_vault_dialog_open
     },
     get recent_vaults() {
       return state.recent_vaults
@@ -47,10 +40,13 @@ export function create_home_host(args: {
       await open_note_workflow.open(note_path)
     },
     on_request_change_vault() {
-      state.vault_dialog_open = true
+      state.is_change_vault_dialog_open = true
     },
     on_close_vault_dialog() {
-      state.vault_dialog_open = false
+      state.is_change_vault_dialog_open = false
+    },
+    toggle_change_vault_dialog_state(open_state: boolean) {
+      state.is_change_vault_dialog_open = open_state
     },
     async on_choose_vault(onClose?: () => void) {
       const result = await change_vault_workflow.choose_and_change()
