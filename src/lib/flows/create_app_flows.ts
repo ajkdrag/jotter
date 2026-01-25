@@ -12,7 +12,7 @@ export function create_app_flows(ports: Ports) {
 
   const change_vault = create_flow_handle(change_vault_flow_machine, {
     input: {
-      ports: { vault: ports.vault, notes: ports.notes, index: ports.index, navigation: ports.navigation },
+      ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
       dispatch
     }
   })

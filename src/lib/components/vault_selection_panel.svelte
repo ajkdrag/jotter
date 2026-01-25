@@ -14,6 +14,7 @@
     onSelectVault: (vault_id: VaultId) => void
     onClose?: () => void
     isDialog?: boolean
+    hide_choose_vault_button?: boolean
   }
 
   let {
@@ -24,7 +25,8 @@
     onChooseVaultDir,
     onSelectVault,
     onClose,
-    isDialog = false
+    isDialog = false,
+    hide_choose_vault_button = false
   }: Props = $props()
 
   function handle_choose_vault(event?: Event) {
@@ -90,14 +92,16 @@
 {/if}
 
 {#snippet content()}
-  <Button
-    onclick={(e) => handle_choose_vault(e)}
-    disabled={is_loading}
-    class="w-full"
-  >
-    <Plus />
-    Choose Vault Directory
-  </Button>
+  {#if !hide_choose_vault_button}
+    <Button
+      onclick={(e) => handle_choose_vault(e)}
+      disabled={is_loading}
+      class="w-full"
+    >
+      <Plus />
+      Choose Vault Directory
+    </Button>
+  {/if}
 
   {#if error}
     <div class="rounded-lg border border-border bg-card px-4 py-3 text-sm text-destructive">

@@ -15,11 +15,12 @@
     ports: Ports
     bootstrap_default_vault_path?: VaultPath
     reset_state_on_mount?: boolean
+    hide_choose_vault_button?: boolean
   }
 
-  let { ports, bootstrap_default_vault_path, reset_state_on_mount = false }: Props = $props()
+  let { ports, bootstrap_default_vault_path, reset_state_on_mount = false, hide_choose_vault_button = false }: Props = $props()
 
-  const stable = untrack(() => ({ ports, bootstrap_default_vault_path, reset_state_on_mount }))
+  const stable = untrack(() => ({ ports, bootstrap_default_vault_path, reset_state_on_mount, hide_choose_vault_button }))
 
   const app = untrack(() => create_app_flows(stable.ports))
 
@@ -105,6 +106,7 @@
       error={change_vault.snapshot.context.error}
       onChooseVaultDir={actions.choose_vault_dir}
       onSelectVault={actions.select_vault}
+      hide_choose_vault_button={stable.hide_choose_vault_button}
     />
   </div>
 {:else}
@@ -136,6 +138,7 @@
     error={change_vault.snapshot.context.error}
     onChooseVaultDir={actions.choose_vault_dir}
     onSelectVault={actions.select_vault}
+    hide_choose_vault_button={stable.hide_choose_vault_button}
   />
 {/if}
 

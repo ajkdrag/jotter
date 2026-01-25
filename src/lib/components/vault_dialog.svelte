@@ -13,6 +13,7 @@
     error?: string | null
     onChooseVaultDir: () => void
     onSelectVault: (vault_id: VaultId) => void
+    hide_choose_vault_button?: boolean
   }
 
   let {
@@ -23,7 +24,8 @@
     is_loading = false,
     error = null,
     onChooseVaultDir,
-    onSelectVault
+    onSelectVault,
+    hide_choose_vault_button = false
   }: Props = $props()
 </script>
 
@@ -39,6 +41,7 @@
         onChooseVaultDir={onChooseVaultDir}
         onSelectVault={onSelectVault}
         onClose={() => onOpenChange(false)}
+        hide_choose_vault_button={hide_choose_vault_button}
       />
     {/snippet}
   </Dialog.Content>

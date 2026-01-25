@@ -4,7 +4,6 @@ import { open_last_vault } from '$lib/operations/open_last_vault'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
-import type { NavigationPort } from '$lib/ports/navigation_port'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
@@ -14,7 +13,6 @@ type ChangeVaultPorts = {
   vault: VaultPort
   notes: NotesPort
   index: WorkspaceIndexPort
-  navigation: NavigationPort
 }
 
 type AppStateDispatch = (event: AppStateEvents) => void
@@ -105,9 +103,8 @@ export const change_vault_flow_machine = setup({
 
         void ports.index.build_index(result.vault.id)
         const recent_vaults = await ports.vault.list_vaults()
-        dispatch({ type: 'RECENT_VAULTS_SET', recent_vaults })
         dispatch({ type: 'VAULT_SET', vault: result.vault, notes: result.notes })
-        await ports.navigation.navigate_to_home()
+        dispatch({ type: 'RECENT_VAULTS_SET', recent_vaults })
 
         return { changed: true }
       }
@@ -168,6 +165,20 @@ export const change_vault_flow_machine = setup({
         onError: {
           target: 'error',
           actions: assign({ error: ({ event }) => String(event.error) })
+        }
+      },
+      on: {
+        BOOTSTRAP_DEFAULT_VAULT: {
+          target: 'changing',
+          actions: assign({ change_mode: ({ event }) => ({ kind: 'bootstrap_default', vault_path: event.vault_path }) })
+        },
+        SELECT_VAULT: {
+          target: 'changing',
+          actions: assign({ change_mode: ({ event }) => ({ kind: 'select_recent', vault_id: event.vault_id }) })
+        },
+        CHOOSE_VAULT: {
+          target: 'changing',
+          actions: assign({ change_mode: () => ({ kind: 'choose_vault' }) })
         }
       }
     },

@@ -3,10 +3,11 @@ import { as_markdown_text, as_note_path, type MarkdownText, type NoteId, type No
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
 
 const TEST_FILES_BASE = '/test/files'
+const TEST_FILES_INDEX = '/test/files/index.json'
 
 async function discover_test_files(): Promise<string[]> {
   try {
-    const response = await fetch(`${TEST_FILES_BASE}`)
+    const response = await fetch(TEST_FILES_INDEX)
     if (response.ok) {
       const files = await response.json() as string[]
       return files

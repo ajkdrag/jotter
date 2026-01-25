@@ -1,7 +1,6 @@
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
-import type { NavigationPort } from '$lib/ports/navigation_port'
 import type { VaultId, VaultPath, NotePath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
@@ -93,33 +92,10 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
   return mock
 }
 
-export function create_mock_navigation_port(): NavigationPort & {
-  _calls: { navigate_to_home: number; navigate_to_vault_selection: number; navigate_to_note: string[] }
-} {
-  const mock = {
-    _calls: {
-      navigate_to_home: 0,
-      navigate_to_vault_selection: 0,
-      navigate_to_note: [] as string[]
-    },
-    async navigate_to_home() {
-      mock._calls.navigate_to_home++
-    },
-    async navigate_to_vault_selection() {
-      mock._calls.navigate_to_vault_selection++
-    },
-    async navigate_to_note(note_path: string) {
-      mock._calls.navigate_to_note.push(note_path)
-    }
-  }
-  return mock
-}
-
 export function create_mock_ports() {
   return {
     vault: create_mock_vault_port(),
     notes: create_mock_notes_port(),
-    index: create_mock_index_port(),
-    navigation: create_mock_navigation_port()
+    index: create_mock_index_port()
   }
 }

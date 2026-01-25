@@ -8,7 +8,7 @@ import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 
 describe('change_vault_flow', () => {
-  test('choosing a vault updates model and navigates', async () => {
+  test('choosing a vault updates model', async () => {
     const ports = create_mock_ports()
 
     const vault: Vault = {
@@ -41,11 +41,10 @@ describe('change_vault_flow', () => {
     expect(model.getSnapshot().context.notes).toEqual(notes)
     expect(model.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
     expect(ports.index._calls.build_index).toContain(vault.id)
-    expect(ports.navigation._calls.navigate_to_home).toBe(1)
     expect(model.getSnapshot().context.recent_vaults).toEqual([vault])
   })
 
-  test('cancelling vault chooser does not navigate', async () => {
+  test('cancelling vault chooser stays in no_vault state', async () => {
     const ports = create_mock_ports()
 
     const model = createActor(app_state_machine, { input: {} })
@@ -60,6 +59,5 @@ describe('change_vault_flow', () => {
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
     expect(model.getSnapshot().value).toBe('no_vault')
-    expect(ports.navigation._calls.navigate_to_home).toBe(0)
   })
 })
