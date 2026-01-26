@@ -45,13 +45,20 @@ export function create_mock_vault_port(): VaultPort & {
 
 export function create_mock_notes_port(): NotesPort & {
   _mock_notes: Map<VaultId, NoteMeta[]>
-  _calls: { delete_note: { vault_id: VaultId; note_id: NoteId }[]; rename_note: { vault_id: VaultId; from: NotePath; to: NotePath }[] }
+  _calls: {
+    delete_note: { vault_id: VaultId; note_id: NoteId }[]
+    rename_note: { vault_id: VaultId; from: NotePath; to: NotePath }[]
+    write_note: { vault_id: VaultId; note_id: NoteId; markdown: MarkdownText }[]
+    create_note: { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[]
+  }
 } {
   const mock = {
     _mock_notes: new Map<VaultId, NoteMeta[]>(),
     _calls: {
       delete_note: [] as { vault_id: VaultId; note_id: NoteId }[],
-      rename_note: [] as { vault_id: VaultId; from: NotePath; to: NotePath }[]
+      rename_note: [] as { vault_id: VaultId; from: NotePath; to: NotePath }[],
+      write_note: [] as { vault_id: VaultId; note_id: NoteId; markdown: MarkdownText }[],
+      create_note: [] as { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[]
     },
     async list_notes(vault_id: VaultId) {
       return mock._mock_notes.get(vault_id) || []
@@ -62,9 +69,21 @@ export function create_mock_notes_port(): NotesPort & {
         markdown: '' as MarkdownText
       }
     },
-    async write_note(_vault_id: VaultId, _note_id: NoteId, _markdown: MarkdownText) {},
-    async create_note(_vault_id: VaultId, _note_path: NotePath, _markdown: MarkdownText) {
-      return { id: _note_path, path: _note_path, title: '', mtime_ms: 0, size_bytes: 0 }
+    async write_note(vault_id: VaultId, note_id: NoteId, markdown: MarkdownText) {
+      mock._calls.write_note.push({ vault_id, note_id, markdown })
+    },
+    async create_note(vault_id: VaultId, note_path: NotePath, markdown: MarkdownText) {
+      mock._calls.create_note.push({ vault_id, note_path, markdown })
+      const new_note = {
+        id: note_path,
+        path: note_path,
+        title: note_path.replace('.md', ''),
+        mtime_ms: Date.now(),
+        size_bytes: markdown.length
+      }
+      const current = mock._mock_notes.get(vault_id) || []
+      mock._mock_notes.set(vault_id, [...current, new_note])
+      return new_note
     },
     async delete_note(vault_id: VaultId, note_id: NoteId) {
       mock._calls.delete_note.push({ vault_id, note_id })

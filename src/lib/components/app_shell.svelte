@@ -3,6 +3,7 @@
   import VaultDialog from '$lib/components/vault_dialog.svelte'
   import DeleteNoteDialog from '$lib/components/delete_note_dialog.svelte'
   import RenameNoteDialog from '$lib/components/rename_note_dialog.svelte'
+  import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
   import type { Ports } from '$lib/adapters/create_prod_ports'
@@ -31,6 +32,7 @@
   const open_note = use_flow_handle(app.flows.open_note)
   const delete_note = use_flow_handle(app.flows.delete_note)
   const rename_note = use_flow_handle(app.flows.rename_note)
+  const save_note = use_flow_handle(app.flows.save_note)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -51,6 +53,10 @@
       rename_note.snapshot.matches('conflict_confirm') ||
       rename_note.snapshot.matches('renaming') ||
       rename_note.snapshot.matches('error')
+  )
+
+  const save_dialog_open = $derived(
+    save_note.snapshot.matches('error')
   )
 
   const vault_selection_loading = $derived(
@@ -134,6 +140,22 @@
     },
     retry_rename() {
       rename_note.send({ type: 'RETRY' })
+    },
+    request_save() {
+      save_note.send({ type: 'REQUEST_SAVE' })
+    },
+    retry_save() {
+      save_note.send({ type: 'RETRY' })
+    },
+    cancel_save() {
+      save_note.send({ type: 'CANCEL' })
+    }
+  }
+
+  function handle_keydown(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+      event.preventDefault()
+      actions.request_save()
     }
   }
 
@@ -214,3 +236,13 @@
   onCancel={actions.cancel_rename}
   onRetry={actions.retry_rename}
 />
+
+<SaveNoteDialog
+  open={save_dialog_open}
+  is_saving={save_note.snapshot.matches('saving')}
+  error={save_note.snapshot.context.error}
+  onRetry={actions.retry_save}
+  onCancel={actions.cancel_save}
+/>
+
+<svelte:window onkeydown={handle_keydown} />

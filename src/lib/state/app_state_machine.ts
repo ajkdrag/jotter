@@ -29,6 +29,7 @@ export type AppStateEvents =
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
   | { type: 'NOTIFY_REVISION_CHANGED'; note_id: NoteId; revision_id: number; sticky_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
+  | { type: 'NOTE_SAVED'; note_id: NoteId; saved_revision_id: number; saved_at_ms: number }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -110,6 +111,27 @@ export function update_open_note_path(context: AppStateContext, new_path: NoteId
     open_note: {
       ...open_note,
       meta: { ...open_note.meta, id: new_path, path: new_path, title }
+    }
+  }
+}
+
+export function mark_note_saved(
+  context: AppStateContext,
+  note_id: NoteId,
+  saved_revision_id: number,
+  saved_at_ms: number
+): AppStateContext {
+  const open_note = context.open_note
+  if (!open_note || open_note.meta.id !== note_id) return context
+
+  return {
+    ...context,
+    open_note: {
+      ...open_note,
+      saved_revision_id,
+      dirty: false,
+      sticky_dirty: false,
+      last_saved_at_ms: saved_at_ms
     }
   }
 }
@@ -199,6 +221,11 @@ export const app_state_machine = setup({
         },
         COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
+        },
+        NOTE_SAVED: {
+          actions: assign(({ event, context }) =>
+            mark_note_saved(context, event.note_id, event.saved_revision_id, event.saved_at_ms)
+          )
         }
       }
     }

@@ -10,6 +10,8 @@ import { delete_note_flow_machine } from '$lib/flows/delete_note_flow'
 import type { DeleteNoteFlowContext, DeleteNoteFlowEvents } from '$lib/flows/delete_note_flow'
 import { rename_note_flow_machine } from '$lib/flows/rename_note_flow'
 import type { RenameNoteFlowContext, RenameNoteFlowEvents } from '$lib/flows/rename_note_flow'
+import { save_note_flow_machine } from '$lib/flows/save_note_flow'
+import type { SaveNoteFlowContext, SaveNoteFlowEvents } from '$lib/flows/save_note_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
 
@@ -21,6 +23,7 @@ export type AppFlows = {
     open_note: FlowHandle<OpenNoteFlowEvents, FlowSnapshot<OpenNoteFlowContext>>
     delete_note: FlowHandle<DeleteNoteFlowEvents, FlowSnapshot<DeleteNoteFlowContext>>
     rename_note: FlowHandle<RenameNoteFlowEvents, FlowSnapshot<RenameNoteFlowContext>>
+    save_note: FlowHandle<SaveNoteFlowEvents, FlowSnapshot<SaveNoteFlowContext>>
   }
 }
 
@@ -55,6 +58,10 @@ export function create_app_flows(ports: Ports): AppFlows {
     input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
   })
 
+  const save_note = create_flow_handle(save_note_flow_machine, {
+    input: { ports: { notes: ports.notes }, dispatch, get_app_state_snapshot: app_state.get_snapshot }
+  })
+
   return {
     app_state,
     flows: {
@@ -62,7 +69,8 @@ export function create_app_flows(ports: Ports): AppFlows {
       change_vault,
       open_note,
       delete_note,
-      rename_note
+      rename_note,
+      save_note
     }
   }
 }
