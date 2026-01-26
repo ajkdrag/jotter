@@ -1,4 +1,4 @@
-.cursor/
+.cursor/**
 .claude/
 node_modules/
 .svelte-kit/
