@@ -14,6 +14,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:css:fix": "stylelint \"src/**/*.css\" --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri": "tauri"
@@ -48,6 +50,9 @@
     "globals": "^17.1.0",
     "paneforge": "^1.0.2",
     "shadcn-svelte": "^1.1.1",
+    "stylelint": "^17.0.0",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-config-tailwindcss": "^1.0.1",
     "svelte": "^5.47.0",
     "svelte-check": "^4.3.5",
     "svelte-eslint-parser": "^1.4.1",
