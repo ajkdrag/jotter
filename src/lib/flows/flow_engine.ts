@@ -25,7 +25,7 @@ export function create_flow_handle<TMachine extends AnyStateMachine>(
     const snapshotWithMethods = snapshot as SnapshotWithContextAndMatches
     return {
       context: snapshotWithMethods.context,
-      matches: snapshotWithMethods.matches
+      matches: (state: string) => snapshotWithMethods.matches(state)
     }
   }
 
