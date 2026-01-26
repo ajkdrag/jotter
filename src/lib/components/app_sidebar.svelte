@@ -2,6 +2,7 @@
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
+    import { Badge } from "$lib/components/ui/badge/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
     import type { Vault } from "$lib/types/vault";
@@ -116,10 +117,10 @@
                         class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                     >
                         <Sidebar.Trigger />
-                        <div class="text-sm font-medium flex items-center gap-1 min-w-0">
+                        <div class="text-sm font-medium flex items-center gap-2 min-w-0">
                             <span class="truncate">{open_note_title}</span>
                             {#if open_note?.dirty}
-                                <span class="text-muted-foreground">•</span>
+                                <Badge variant="secondary" class="h-1.5 w-1.5 rounded-full p-0 bg-primary/40 border-none shrink-0" />
                             {/if}
                         </div>
                     </header>
