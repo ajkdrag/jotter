@@ -16,11 +16,11 @@
         notes: NoteMeta[];
         open_note_title: string;
         open_note: OpenNoteState | null;
-        onOpenNote: (note_path: string) => void;
-        onRequestChangeVault: () => void;
-        onMarkdownChange: (markdown: string) => void;
-        onRevisionChange: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
-        onRequestDeleteNote?: (note: NoteMeta) => void;
+        on_open_note: (note_path: string) => void;
+        on_request_change_vault: () => void;
+        on_markdown_change: (markdown: string) => void;
+        on_revision_change: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
+        on_request_delete_note?: (note: NoteMeta) => void;
     };
 
     let {
@@ -28,11 +28,11 @@
         notes,
         open_note_title,
         open_note,
-        onOpenNote,
-        onRequestChangeVault,
-        onMarkdownChange,
-        onRevisionChange,
-        onRequestDeleteNote
+        on_open_note,
+        on_request_change_vault,
+        on_markdown_change,
+        on_revision_change,
+        on_request_delete_note
     }: Props = $props();
 
     let open = $state(true);
@@ -66,7 +66,7 @@
                                             <Sidebar.MenuAction
                                                 {...props}
                                                 showOnHover={true}
-                                                onclick={onRequestChangeVault}
+                                                onclick={on_request_change_vault}
                                             >
                                                 <ArrowLeftRight />
                                             </Sidebar.MenuAction>
@@ -83,10 +83,10 @@
                     <Sidebar.Content>
                         <Sidebar.Group>
                             <Sidebar.GroupContent>
-                                {#if onRequestDeleteNote}
-                                  <FileTree notes={notes} onOpenNote={onOpenNote} onRequestDelete={onRequestDeleteNote} />
+                                {#if on_request_delete_note}
+                                  <FileTree notes={notes} on_open_note={on_open_note} on_request_delete={on_request_delete_note} />
                                 {:else}
-                                  <FileTree notes={notes} onOpenNote={onOpenNote} />
+                                  <FileTree notes={notes} on_open_note={on_open_note} />
                                 {/if}
                             </Sidebar.GroupContent>
                         </Sidebar.Group>
@@ -113,8 +113,8 @@
                     <div class="flex flex-1 flex-col min-h-0">
                         <NoteEditor
                             open_note={open_note}
-                            onMarkdownChange={onMarkdownChange}
-                            onRevisionChange={onRevisionChange}
+                            on_markdown_change={on_markdown_change}
+                            on_revision_change={on_revision_change}
                         />
                     </div>
                 </Sidebar.Inset>

@@ -14,11 +14,11 @@
 
   type Props = {
     notes: NoteMeta[];
-    onOpenNote: (note_path: string) => void;
-    onRequestDelete?: (note: NoteMeta) => void;
+    on_open_note: (note_path: string) => void;
+    on_request_delete?: (note: NoteMeta) => void;
   };
 
-  let { notes, onOpenNote, onRequestDelete }: Props = $props();
+  let { notes, on_open_note, on_request_delete }: Props = $props();
 
   let expanded = new SvelteSet<string>();
   let tree = $derived(sort_tree(build_filetree(notes)));
@@ -56,14 +56,14 @@
         <SidebarMenuItem>
           <ContextMenu.Root>
             <ContextMenu.Trigger class="w-full">
-              <SidebarMenuButton onclick={() => onOpenNote(node.note!.path)}>
+              <SidebarMenuButton onclick={() => on_open_note(node.note!.path)}>
                 <File />
                 <span>{name}</span>
               </SidebarMenuButton>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
               <ContextMenu.Content>
-                <ContextMenu.Item onclick={() => onRequestDelete?.(node.note!)}>
+                <ContextMenu.Item onclick={() => on_request_delete?.(node.note!)}>
                   <Trash2 class="mr-2 h-4 w-4" />
                   <span>Delete</span>
                 </ContextMenu.Item>

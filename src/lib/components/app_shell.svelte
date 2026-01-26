@@ -131,11 +131,11 @@
       notes={app.notes}
       open_note_title={app.open_note?.meta.title ?? 'Notes'}
       open_note={app.open_note}
-      onOpenNote={actions.open_note}
-      onRequestChangeVault={actions.request_change_vault}
-      onMarkdownChange={actions.markdown_change}
-      onRevisionChange={actions.revision_change}
-      onRequestDeleteNote={actions.request_delete}
+      on_open_note={actions.open_note}
+      on_request_change_vault={actions.request_change_vault}
+      on_markdown_change={actions.markdown_change}
+      on_revision_change={actions.revision_change}
+      on_request_delete_note={actions.request_delete}
     />
   </main>
 {/if}

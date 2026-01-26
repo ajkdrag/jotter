@@ -8,11 +8,11 @@
 
     interface Props {
         open_note: OpenNoteState | null;
-        onMarkdownChange: (markdown: string) => void;
-        onRevisionChange: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
+        on_markdown_change: (markdown: string) => void;
+        on_revision_change: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
     }
 
-    let { open_note, onMarkdownChange, onRevisionChange }: Props = $props();
+    let { open_note, on_markdown_change, on_revision_change }: Props = $props();
 
     let editor_root: HTMLDivElement;
     let editor_handle: MilkdownHandle | null = $state(null);
@@ -32,12 +32,12 @@
             const handle = await create_milkdown_editor(editor_root, {
                 initial_markdown: note.markdown,
                 on_markdown_change: (markdown) => {
-                    onMarkdownChange(markdown);
+                    on_markdown_change(markdown);
                 },
                 on_revision_change: ({ revision_id, sticky_dirty }) => {
                     const note_id = current_note_id;
                     if (!note_id) return;
-                    onRevisionChange({ note_id, revision_id, sticky_dirty });
+                    on_revision_change({ note_id, revision_id, sticky_dirty });
                 },
             });
              // If user navigated away while we were awaiting,
