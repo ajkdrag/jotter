@@ -85,15 +85,10 @@ export async function create_milkdown_editor(
     .use(history)
     .create()
 
-  let last_revision_id = 0
   let sticky_dirty = false
-  let last_sticky_dirty = false
 
-  function maybe_emit_revision(view: EditorView) {
+  function emit_revision(view: EditorView) {
     const revision_id = undoDepth(view.state)
-    if (revision_id === last_revision_id && sticky_dirty === last_sticky_dirty) return
-    last_revision_id = revision_id
-    last_sticky_dirty = sticky_dirty
     args.on_revision_change?.({ revision_id, sticky_dirty })
   }
 
@@ -115,11 +110,11 @@ export async function create_milkdown_editor(
         const moved_in_history = next_revision_id !== prev_revision_id
         if (add_to_history === false && !moved_in_history) sticky_dirty = true
 
-        maybe_emit_revision(view)
+        emit_revision(view)
       }
     })
 
-    maybe_emit_revision(view)
+    emit_revision(view)
   })
 
   return {
@@ -141,7 +136,7 @@ export async function create_milkdown_editor(
         view.updateState(new_state)
 
         sticky_dirty = false
-        maybe_emit_revision(view as unknown as EditorView)
+        emit_revision(view as unknown as EditorView)
       })
     },
     toggle_bold: () => {
