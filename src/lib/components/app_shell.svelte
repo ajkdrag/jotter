@@ -6,7 +6,7 @@
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
   import type { Ports } from '$lib/adapters/create_prod_ports'
   import type { NoteId, VaultId, VaultPath } from '$lib/types/ids'
-  import { as_markdown_text } from '$lib/types/ids'
+  import { as_markdown_text, as_note_path } from '$lib/types/ids'
   import type { NoteMeta } from '$lib/types/note'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
   import { create_app_flows } from '$lib/flows/create_app_flows'
@@ -70,6 +70,10 @@
     open_note(note_path: string) {
       const vault_id = model.snapshot.context.vault?.id
       if (!vault_id) return
+
+      const current_note_id = model.snapshot.context.open_note?.meta.id
+      if (current_note_id && current_note_id === as_note_path(note_path)) return
+
       open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
     },
     markdown_change(markdown: string) {
