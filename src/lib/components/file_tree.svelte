@@ -10,15 +10,16 @@
     SidebarMenuSub,
   } from "$lib/components/ui/sidebar";
   import * as ContextMenu from "$lib/components/ui/context-menu";
-  import { ChevronRight, ChevronDown, Folder, File, Trash2 } from "@lucide/svelte";
+  import { ChevronRight, ChevronDown, Folder, File, Trash2, Pencil } from "@lucide/svelte";
 
   type Props = {
     notes: NoteMeta[];
     on_open_note: (note_path: string) => void;
-    on_request_delete?: (note: NoteMeta) => void;
+    on_request_delete: ((note: NoteMeta) => void) | undefined;
+    on_request_rename: ((note: NoteMeta) => void) | undefined;
   };
 
-  let { notes, on_open_note, on_request_delete }: Props = $props();
+  let { notes, on_open_note, on_request_delete, on_request_rename }: Props = $props();
 
   let expanded = new SvelteSet<string>();
   let tree = $derived(sort_tree(build_filetree(notes)));
@@ -63,6 +64,10 @@
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
               <ContextMenu.Content>
+                <ContextMenu.Item onclick={() => on_request_rename?.(node.note!)}>
+                  <Pencil class="mr-2 h-4 w-4" />
+                  <span>Rename</span>
+                </ContextMenu.Item>
                 <ContextMenu.Item onclick={() => on_request_delete?.(node.note!)}>
                   <Trash2 class="mr-2 h-4 w-4" />
                   <span>Delete</span>

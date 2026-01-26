@@ -25,6 +25,7 @@ export type AppStateEvents =
   | { type: 'UPDATE_NOTES_LIST'; notes: NoteMeta[] }
   | { type: 'SET_OPEN_NOTE'; open_note: OpenNoteState }
   | { type: 'CLEAR_OPEN_NOTE' }
+  | { type: 'UPDATE_OPEN_NOTE_PATH'; path: NoteId }
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
   | { type: 'NOTIFY_REVISION_CHANGED'; note_id: NoteId; revision_id: number; sticky_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
@@ -93,6 +94,23 @@ export function ensure_open_note_in_context(context: AppStateContext): AppStateC
       open_note: context.open_note,
       now_ms: context.now_ms()
     })
+  }
+}
+
+export function update_open_note_path(context: AppStateContext, new_path: NoteId): AppStateContext {
+  const open_note = context.open_note
+  if (!open_note) return context
+
+  const parts = new_path.split('/')
+  const leaf = parts[parts.length - 1] ?? ''
+  const title = leaf.endsWith('.md') ? leaf.slice(0, -3) : leaf
+
+  return {
+    ...context,
+    open_note: {
+      ...open_note,
+      meta: { ...open_note.meta, id: new_path, path: new_path, title }
+    }
   }
 }
 
@@ -167,6 +185,9 @@ export const app_state_machine = setup({
           actions: assign({
             open_note: () => null
           })
+        },
+        UPDATE_OPEN_NOTE_PATH: {
+          actions: assign(({ event, context }) => update_open_note_path(context, event.path))
         },
         NOTIFY_MARKDOWN_CHANGED: {
           actions: assign(({ event, context }) => update_markdown(context, event.markdown))

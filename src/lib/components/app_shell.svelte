@@ -2,6 +2,7 @@
   import { onMount, untrack } from 'svelte'
   import VaultDialog from '$lib/components/vault_dialog.svelte'
   import DeleteNoteDialog from '$lib/components/delete_note_dialog.svelte'
+  import RenameNoteDialog from '$lib/components/rename_note_dialog.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
   import type { Ports } from '$lib/adapters/create_prod_ports'
@@ -29,6 +30,7 @@
   const change_vault = use_flow_handle(app.flows.change_vault)
   const open_note = use_flow_handle(app.flows.open_note)
   const delete_note = use_flow_handle(app.flows.delete_note)
+  const rename_note = use_flow_handle(app.flows.rename_note)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -41,6 +43,14 @@
     delete_note.snapshot.matches('confirming') ||
       delete_note.snapshot.matches('deleting') ||
       delete_note.snapshot.matches('error')
+  )
+
+  const rename_dialog_open = $derived(
+    rename_note.snapshot.matches('confirming') ||
+      rename_note.snapshot.matches('checking_conflict') ||
+      rename_note.snapshot.matches('conflict_confirm') ||
+      rename_note.snapshot.matches('renaming') ||
+      rename_note.snapshot.matches('error')
   )
 
   const vault_selection_loading = $derived(
@@ -103,6 +113,27 @@
     },
     retry_delete() {
       delete_note.send({ type: 'RETRY' })
+    },
+    request_rename(note: NoteMeta) {
+      const vault_id = app_state.snapshot.context.vault?.id
+      if (!vault_id) return
+      const is_note_currently_open = app_state.snapshot.context.open_note?.meta.id === note.id
+      rename_note.send({ type: 'REQUEST_RENAME', vault_id, note, is_note_currently_open })
+    },
+    update_rename_path(path: string) {
+      rename_note.send({ type: 'UPDATE_NEW_PATH', path: as_note_path(path) })
+    },
+    confirm_rename() {
+      rename_note.send({ type: 'CONFIRM' })
+    },
+    confirm_rename_overwrite() {
+      rename_note.send({ type: 'CONFIRM_OVERWRITE' })
+    },
+    cancel_rename() {
+      rename_note.send({ type: 'CANCEL' })
+    },
+    retry_rename() {
+      rename_note.send({ type: 'RETRY' })
     }
   }
 
@@ -136,6 +167,7 @@
       on_markdown_change={actions.markdown_change}
       on_revision_change={actions.revision_change}
       on_request_delete_note={actions.request_delete}
+      on_request_rename_note={actions.request_rename}
     />
   </main>
 {/if}
@@ -165,4 +197,20 @@
   onConfirm={actions.confirm_delete}
   onCancel={actions.cancel_delete}
   onRetry={actions.retry_delete}
+/>
+
+<RenameNoteDialog
+  open={rename_dialog_open}
+  note={rename_note.snapshot.context.note_to_rename}
+  new_path={rename_note.snapshot.context.new_path}
+  is_renaming={rename_note.snapshot.matches('renaming')}
+  is_checking_conflict={rename_note.snapshot.matches('checking_conflict')}
+  target_exists={rename_note.snapshot.context.target_exists}
+  error={rename_note.snapshot.context.error}
+  show_overwrite_confirm={rename_note.snapshot.matches('conflict_confirm')}
+  onUpdatePath={actions.update_rename_path}
+  onConfirm={actions.confirm_rename}
+  onConfirmOverwrite={actions.confirm_rename_overwrite}
+  onCancel={actions.cancel_rename}
+  onRetry={actions.retry_rename}
 />

@@ -45,12 +45,13 @@ export function create_mock_vault_port(): VaultPort & {
 
 export function create_mock_notes_port(): NotesPort & {
   _mock_notes: Map<VaultId, NoteMeta[]>
-  _calls: { delete_note: { vault_id: VaultId; note_id: NoteId }[] }
+  _calls: { delete_note: { vault_id: VaultId; note_id: NoteId }[]; rename_note: { vault_id: VaultId; from: NotePath; to: NotePath }[] }
 } {
   const mock = {
     _mock_notes: new Map<VaultId, NoteMeta[]>(),
     _calls: {
-      delete_note: [] as { vault_id: VaultId; note_id: NoteId }[]
+      delete_note: [] as { vault_id: VaultId; note_id: NoteId }[],
+      rename_note: [] as { vault_id: VaultId; from: NotePath; to: NotePath }[]
     },
     async list_notes(vault_id: VaultId) {
       return mock._mock_notes.get(vault_id) || []
@@ -73,7 +74,14 @@ export function create_mock_notes_port(): NotesPort & {
         current.filter((note) => note.id !== note_id)
       )
     },
-    async rename_note(_vault_id: VaultId, _old_path: NotePath, _new_path: NotePath): Promise<void> {}
+    async rename_note(vault_id: VaultId, old_path: NotePath, new_path: NotePath): Promise<void> {
+      mock._calls.rename_note.push({ vault_id, from: old_path, to: new_path })
+      const current = mock._mock_notes.get(vault_id) || []
+      const updated = current.map((note) =>
+        note.path === old_path ? { ...note, path: new_path, id: new_path } : note
+      )
+      mock._mock_notes.set(vault_id, updated)
+    }
   }
   return mock
 }

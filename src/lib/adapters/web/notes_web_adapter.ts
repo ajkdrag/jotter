@@ -155,25 +155,32 @@ export function create_notes_web_adapter(): NotesPort {
 
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath): Promise<void> {
       const root = await get_vault_handle(vault_id)
-      const from_resolved = await resolve_note_path(root, from)
-      const to_parts = to.split('/').filter(Boolean)
-      let to_parent = root
-      let to_name = ''
 
-      for (let i = 0; i < to_parts.length; i++) {
-        const part = to_parts[i]
-        if (!part) continue
-        const is_last = i === to_parts.length - 1
-
-        if (is_last) {
-          to_name = part.endsWith('.md') ? part : `${part}.md`
-        } else {
-          to_parent = await to_parent.getDirectoryHandle(part, { create: true })
-        }
+      // Normalize and short-circuit when paths are identical
+      const normalize = (path: NotePath) => {
+        const parts = path.split('/').filter(Boolean)
+        if (parts.length === 0) throw new Error(`Invalid note path: ${path}`)
+        const last = parts[parts.length - 1]
+        parts[parts.length - 1] = last.endsWith('.md') ? last : `${last}.md`
+        return { parts, leaf: parts[parts.length - 1] }
       }
+
+      const from_norm = normalize(from)
+      const to_norm = normalize(to)
+      if (from_norm.parts.join('/') === to_norm.parts.join('/')) return
+
+      const from_resolved = await resolve_note_path(root, as_note_path(from_norm.parts.join('/')))
+
+      let to_parent = root
+      for (let i = 0; i < to_norm.parts.length - 1; i++) {
+        const part = to_norm.parts[i]
+        to_parent = await to_parent.getDirectoryHandle(part, { create: true })
+      }
+      const to_name = to_norm.leaf
 
       const from_file_handle = from_resolved.handle as FileSystemFileHandle
       const from_file = await from_file_handle.getFile()
+
       const to_file_handle = await to_parent.getFileHandle(to_name, { create: true })
       const writable = await to_file_handle.createWritable()
       await writable.write(await from_file.text())

@@ -21,6 +21,7 @@
         on_markdown_change: (markdown: string) => void;
         on_revision_change: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
+        on_request_rename_note?: (note: NoteMeta) => void;
     };
 
     let {
@@ -32,7 +33,8 @@
         on_request_change_vault,
         on_markdown_change,
         on_revision_change,
-        on_request_delete_note
+        on_request_delete_note,
+        on_request_rename_note
     }: Props = $props();
 
     let open = $state(true);
@@ -80,17 +82,18 @@
                         </Sidebar.Menu>
                     </Sidebar.Header>
 
-                    <Sidebar.Content>
-                        <Sidebar.Group>
-                            <Sidebar.GroupContent>
-                                {#if on_request_delete_note}
-                                  <FileTree notes={notes} on_open_note={on_open_note} on_request_delete={on_request_delete_note} />
-                                {:else}
-                                  <FileTree notes={notes} on_open_note={on_open_note} />
-                                {/if}
-                            </Sidebar.GroupContent>
-                        </Sidebar.Group>
-                    </Sidebar.Content>
+                                        <Sidebar.Content>
+                                                <Sidebar.Group>
+                                                        <Sidebar.GroupContent>
+                                                                <FileTree
+                                                                    notes={notes}
+                                                                    on_open_note={on_open_note}
+                                                                    on_request_delete={on_request_delete_note}
+                                                                    on_request_rename={on_request_rename_note}
+                                                                />
+                                                        </Sidebar.GroupContent>
+                                                </Sidebar.Group>
+                                        </Sidebar.Content>
 
                     <Sidebar.Rail />
                 </Sidebar.Root>

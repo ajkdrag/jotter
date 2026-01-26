@@ -20,7 +20,7 @@ export function create_notes_tauri_adapter(): NotesPort {
       })
     },
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath) {
-      await tauri_invoke<void>('rename_note', { args: { vaultId: vault_id, from, to } })
+      await tauri_invoke<void>('rename_note', { args: { vault_id, from, to } })
     },
     async delete_note(vault_id: VaultId, note_id: NoteId) {
       await tauri_invoke<void>('delete_note', { args: { vaultId: vault_id, noteId: note_id } })
