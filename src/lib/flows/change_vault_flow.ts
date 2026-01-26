@@ -1,10 +1,9 @@
 import { setup, assign, fromPromise } from 'xstate'
 import { change_vault } from '$lib/operations/change_vault'
-import { open_last_vault } from '$lib/operations/open_last_vault'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
-import type { VaultId, VaultPath } from '$lib/types/ids'
+import type { VaultId } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 import type { AppStateEvents } from '$lib/flows/app_state_machine'
@@ -20,8 +19,6 @@ type AppStateDispatch = (event: AppStateEvents) => void
 type ChangeMode =
   | { kind: 'choose_vault' }
   | { kind: 'select_recent'; vault_id: VaultId }
-  | { kind: 'open_last' }
-  | { kind: 'bootstrap_default'; vault_path: VaultPath }
 
 type FlowContext = {
   error: string | null
@@ -33,11 +30,8 @@ type FlowContext = {
 type FlowEvents =
   | { type: 'OPEN_DIALOG' }
   | { type: 'CLOSE_DIALOG' }
-  | { type: 'LOAD_RECENT' }
   | { type: 'CHOOSE_VAULT' }
   | { type: 'SELECT_VAULT'; vault_id: VaultId }
-  | { type: 'OPEN_LAST_VAULT' }
-  | { type: 'BOOTSTRAP_DEFAULT_VAULT'; vault_path: VaultPath }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
 
@@ -53,10 +47,6 @@ export const change_vault_flow_machine = setup({
     input: {} as FlowInput
   },
   actors: {
-    load_recent: fromPromise(async ({ input }: { input: { ports: ChangeVaultPorts; dispatch: AppStateDispatch } }) => {
-      const recent_vaults = await input.ports.vault.list_vaults()
-      input.dispatch({ type: 'RECENT_VAULTS_SET', recent_vaults })
-    }),
     perform_change: fromPromise(
       async ({
         input
@@ -83,18 +73,6 @@ export const change_vault_flow_machine = setup({
             const notes = await ports.notes.list_notes(vault.id)
             await ports.vault.remember_last_vault(vault.id)
             result = { vault, notes }
-            break
-          }
-          case 'open_last': {
-            result = await open_last_vault({ vault: ports.vault, notes: ports.notes })
-            if (!result) return { changed: false }
-            break
-          }
-          case 'bootstrap_default': {
-            result = await change_vault(
-              { vault: ports.vault, notes: ports.notes },
-              { vault_path: change_mode.vault_path }
-            )
             break
           }
         }
@@ -124,7 +102,6 @@ export const change_vault_flow_machine = setup({
       entry: assign({ error: () => null, change_mode: () => null }),
       on: {
         OPEN_DIALOG: 'dialog_open',
-        LOAD_RECENT: 'loading_recent',
         CHOOSE_VAULT: {
           target: 'changing',
           actions: assign({ change_mode: () => ({ kind: 'choose_vault' }) })
@@ -132,21 +109,12 @@ export const change_vault_flow_machine = setup({
         SELECT_VAULT: {
           target: 'changing',
           actions: assign({ change_mode: ({ event }) => ({ kind: 'select_recent', vault_id: event.vault_id }) })
-        },
-        OPEN_LAST_VAULT: {
-          target: 'changing',
-          actions: assign({ change_mode: () => ({ kind: 'open_last' }) })
-        },
-        BOOTSTRAP_DEFAULT_VAULT: {
-          target: 'changing',
-          actions: assign({ change_mode: ({ event }) => ({ kind: 'bootstrap_default', vault_path: event.vault_path }) })
         }
       }
     },
     dialog_open: {
       on: {
         CLOSE_DIALOG: 'idle',
-        LOAD_RECENT: 'loading_recent',
         CHOOSE_VAULT: {
           target: 'changing',
           actions: assign({ change_mode: () => ({ kind: 'choose_vault' }) })
@@ -154,31 +122,6 @@ export const change_vault_flow_machine = setup({
         SELECT_VAULT: {
           target: 'changing',
           actions: assign({ change_mode: ({ event }) => ({ kind: 'select_recent', vault_id: event.vault_id }) })
-        }
-      }
-    },
-    loading_recent: {
-      invoke: {
-        src: 'load_recent',
-        input: ({ context }) => ({ ports: context.ports, dispatch: context.dispatch }),
-        onDone: 'idle',
-        onError: {
-          target: 'error',
-          actions: assign({ error: ({ event }) => String(event.error) })
-        }
-      },
-      on: {
-        BOOTSTRAP_DEFAULT_VAULT: {
-          target: 'changing',
-          actions: assign({ change_mode: ({ event }) => ({ kind: 'bootstrap_default', vault_path: event.vault_path }) })
-        },
-        SELECT_VAULT: {
-          target: 'changing',
-          actions: assign({ change_mode: ({ event }) => ({ kind: 'select_recent', vault_id: event.vault_id }) })
-        },
-        CHOOSE_VAULT: {
-          target: 'changing',
-          actions: assign({ change_mode: () => ({ kind: 'choose_vault' }) })
         }
       }
     },

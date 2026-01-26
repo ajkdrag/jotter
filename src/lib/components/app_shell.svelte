@@ -25,6 +25,7 @@
   const app = untrack(() => create_app_flows(stable.ports))
 
   const model = use_flow_handle(app.model)
+  const open_app = use_flow_handle(app.flows.open_app)
   const change_vault = use_flow_handle(app.flows.change_vault)
   const open_note = use_flow_handle(app.flows.open_note)
   const delete_note = use_flow_handle(app.flows.delete_note)
@@ -43,17 +44,15 @@
   )
 
   const vault_selection_loading = $derived(
-    change_vault.snapshot.matches('loading_recent') || change_vault.snapshot.matches('changing')
+    open_app.snapshot.matches('starting') || change_vault.snapshot.matches('changing')
   )
 
   const actions = {
     mount() {
       if (stable.reset_state_on_mount) model.send({ type: 'RESET' })
-      change_vault.send({ type: 'LOAD_RECENT' })
-
-      if (stable.bootstrap_default_vault_path && model.snapshot.matches('no_vault')) {
-        change_vault.send({ type: 'BOOTSTRAP_DEFAULT_VAULT', vault_path: stable.bootstrap_default_vault_path })
-      }
+      const should_bootstrap = model.snapshot.matches('no_vault') && stable.bootstrap_default_vault_path != null
+      const bootstrap_path: VaultPath | null = should_bootstrap ? (stable.bootstrap_default_vault_path ?? null) : null
+      open_app.send({ type: 'START', bootstrap_default_vault_path: bootstrap_path })
     },
     request_change_vault() {
       change_vault.send({ type: 'OPEN_DIALOG' })
@@ -115,7 +114,7 @@
       recent_vaults={model.snapshot.context.recent_vaults}
       current_vault_id={null}
       is_loading={vault_selection_loading}
-      error={change_vault.snapshot.context.error}
+      error={open_app.snapshot.context.error ?? change_vault.snapshot.context.error}
       onChooseVaultDir={actions.choose_vault_dir}
       onSelectVault={actions.select_vault}
       hide_choose_vault_button={stable.hide_choose_vault_button}
