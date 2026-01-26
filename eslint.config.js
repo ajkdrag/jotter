@@ -11,7 +11,8 @@ export default [
 			'build/**',
 			'dist/**',
 			'node_modules/**',
-			'src-tauri/target/**'
+			'src-tauri/target/**',
+			'src/lib/components/ui/**'
 		]
 	},
 	js.configs.recommended,

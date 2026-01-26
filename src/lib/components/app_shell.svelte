@@ -24,14 +24,14 @@
 
   const app = untrack(() => create_app_flows(stable.ports))
 
-  const model = use_flow_handle(app.model)
+  const app_state = use_flow_handle(app.app_state)
   const open_app = use_flow_handle(app.flows.open_app)
   const change_vault = use_flow_handle(app.flows.change_vault)
   const open_note = use_flow_handle(app.flows.open_note)
   const delete_note = use_flow_handle(app.flows.delete_note)
 
   const vault_dialog_open = $derived(
-    model.snapshot.matches('vault_open') &&
+    app_state.snapshot.matches('vault_open') &&
       (change_vault.snapshot.matches('dialog_open') ||
         change_vault.snapshot.matches('changing') ||
         change_vault.snapshot.matches('error'))
@@ -70,19 +70,19 @@
       change_vault.send({ type: 'SELECT_VAULT', vault_id })
     },
     open_note(note_path: string) {
-      const vault_id = model.snapshot.context.vault?.id
+      const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
 
-      const current_note_id = model.snapshot.context.open_note?.meta.id
+      const current_note_id = app_state.snapshot.context.open_note?.meta.id
       if (current_note_id && current_note_id === as_note_path(note_path)) return
 
       open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
     },
     markdown_change(markdown: string) {
-      model.send({ type: 'NOTIFY_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
+      app_state.send({ type: 'NOTIFY_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
     },
     revision_change(args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) {
-      model.send({
+      app_state.send({
         type: 'NOTIFY_REVISION_CHANGED',
         note_id: args.note_id,
         revision_id: args.revision_id,
@@ -90,9 +90,9 @@
       })
     },
     request_delete(note: NoteMeta) {
-      const vault_id = model.snapshot.context.vault?.id
+      const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
-      const is_note_currently_open = model.snapshot.context.open_note?.meta.id === note.id
+      const is_note_currently_open = app_state.snapshot.context.open_note?.meta.id === note.id
       delete_note.send({ type: 'REQUEST_DELETE', vault_id, note, is_note_currently_open })
     },
     confirm_delete() {
@@ -111,10 +111,10 @@
   })
 </script>
 
-{#if model.snapshot.matches('no_vault')}
+{#if app_state.snapshot.matches('no_vault')}
   <div class="mx-auto max-w-[65ch] p-8">
     <VaultSelectionPanel
-      recent_vaults={model.snapshot.context.recent_vaults}
+      recent_vaults={app_state.snapshot.context.recent_vaults}
       current_vault_id={null}
       is_loading={vault_selection_loading}
       error={open_app.snapshot.context.error ?? change_vault.snapshot.context.error}
@@ -124,7 +124,7 @@
     />
   </div>
 {:else}
-  {@const app = model.snapshot.context}
+  {@const app = app_state.snapshot.context}
   <main>
     <AppSidebar
       vault={app.vault}
@@ -140,8 +140,8 @@
   </main>
 {/if}
 
-{#if model.snapshot.matches('vault_open')}
-  {@const app = model.snapshot.context}
+{#if app_state.snapshot.matches('vault_open')}
+  {@const app = app_state.snapshot.context}
   <VaultDialog
     open={vault_dialog_open}
     onOpenChange={(open) => {

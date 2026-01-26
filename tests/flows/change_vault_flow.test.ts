@@ -8,7 +8,7 @@ import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 
 describe('change_vault_flow', () => {
-  test('choosing a vault updates model', async () => {
+  test('choosing a vault updates app_state', async () => {
     const ports = create_mock_ports()
 
     const vault: Vault = {
@@ -26,38 +26,38 @@ describe('change_vault_flow', () => {
     ports.notes._mock_notes.set(vault.id, notes)
     ports.vault.choose_vault = async () => vault.path
 
-    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    app_state.start()
 
     const actor = createActor(change_vault_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: { ports, dispatch: app_state.send }
     })
     actor.start()
 
     actor.send({ type: 'CHOOSE_VAULT' })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(model.getSnapshot().context.vault).toEqual(vault)
-    expect(model.getSnapshot().context.notes).toEqual(notes)
-    expect(model.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
+    expect(app_state.getSnapshot().context.vault).toEqual(vault)
+    expect(app_state.getSnapshot().context.notes).toEqual(notes)
+    expect(app_state.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
     expect(ports.index._calls.build_index).toContain(vault.id)
-    expect(model.getSnapshot().context.recent_vaults).toEqual([vault])
+    expect(app_state.getSnapshot().context.recent_vaults).toEqual([vault])
   })
 
   test('cancelling vault chooser stays in no_vault state', async () => {
     const ports = create_mock_ports()
 
-    const model = createActor(app_state_machine, { input: {} })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: {} })
+    app_state.start()
 
     const actor = createActor(change_vault_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: { ports, dispatch: app_state.send }
     })
     actor.start()
 
     actor.send({ type: 'CHOOSE_VAULT' })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(model.getSnapshot().value).toBe('no_vault')
+    expect(app_state.getSnapshot().value).toBe('no_vault')
   })
 })

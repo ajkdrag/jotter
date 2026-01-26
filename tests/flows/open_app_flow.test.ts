@@ -27,16 +27,16 @@ describe('open_app_flow', () => {
 
     ports.vault._mock_vaults = [vault1, vault2]
 
-    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    app_state.start()
 
     const actor = createActor(open_app_flow_machine, {
       input: {
         ports,
-        dispatch: model.send,
+        dispatch: app_state.send,
         get_app_state_snapshot: () => ({
-          context: model.getSnapshot().context,
-          matches: (state) => model.getSnapshot().matches(state as any)
+          context: app_state.getSnapshot().context,
+          matches: (state) => app_state.getSnapshot().matches(state as any)
         })
       }
     })
@@ -48,8 +48,8 @@ describe('open_app_flow', () => {
     })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(model.getSnapshot().context.recent_vaults).toEqual([vault1, vault2])
-    expect(model.getSnapshot().context.vault).toBeNull()
+    expect(app_state.getSnapshot().context.recent_vaults).toEqual([vault1, vault2])
+    expect(app_state.getSnapshot().context.vault).toBeNull()
   })
 
   test('when bootstrap path is provided, opens vault and dispatches VAULT_SET', async () => {
@@ -69,16 +69,16 @@ describe('open_app_flow', () => {
     ports.vault._mock_vaults = [vault]
     ports.notes._mock_notes.set(vault.id, notes)
 
-    const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    app_state.start()
 
     const actor = createActor(open_app_flow_machine, {
       input: {
         ports,
-        dispatch: model.send,
+        dispatch: app_state.send,
         get_app_state_snapshot: () => ({
-          context: model.getSnapshot().context,
-          matches: (state) => model.getSnapshot().matches(state as any)
+          context: app_state.getSnapshot().context,
+          matches: (state) => app_state.getSnapshot().matches(state as any)
         })
       }
     })
@@ -90,11 +90,11 @@ describe('open_app_flow', () => {
     })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(model.getSnapshot().context.vault).toEqual(vault)
-    expect(model.getSnapshot().context.notes).toEqual(notes)
-    expect(model.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
+    expect(app_state.getSnapshot().context.vault).toEqual(vault)
+    expect(app_state.getSnapshot().context.notes).toEqual(notes)
+    expect(app_state.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
     expect(ports.index._calls.build_index).toContain(vault.id)
-    expect(model.getSnapshot().context.recent_vaults).toEqual([vault])
+    expect(app_state.getSnapshot().context.recent_vaults).toEqual([vault])
   })
 
   test('error handling when list_vaults throws', async () => {
@@ -104,16 +104,16 @@ describe('open_app_flow', () => {
       throw new Error('Failed to list vaults')
     }
 
-    const model = createActor(app_state_machine, { input: {} })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: {} })
+    app_state.start()
 
     const actor = createActor(open_app_flow_machine, {
       input: {
         ports,
-        dispatch: model.send,
+        dispatch: app_state.send,
         get_app_state_snapshot: () => ({
-          context: model.getSnapshot().context,
-          matches: (state) => model.getSnapshot().matches(state as any)
+          context: app_state.getSnapshot().context,
+          matches: (state) => app_state.getSnapshot().matches(state as any)
         })
       }
     })
@@ -143,16 +143,16 @@ describe('open_app_flow', () => {
       throw new Error('Failed to open vault')
     }
 
-    const model = createActor(app_state_machine, { input: {} })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: {} })
+    app_state.start()
 
     const actor = createActor(open_app_flow_machine, {
       input: {
         ports,
-        dispatch: model.send,
+        dispatch: app_state.send,
         get_app_state_snapshot: () => ({
-          context: model.getSnapshot().context,
-          matches: (state) => model.getSnapshot().matches(state as any)
+          context: app_state.getSnapshot().context,
+          matches: (state) => app_state.getSnapshot().matches(state as any)
         })
       }
     })
@@ -174,16 +174,16 @@ describe('open_app_flow', () => {
       throw new Error('Failed to list vaults')
     }
 
-    const model = createActor(app_state_machine, { input: {} })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: {} })
+    app_state.start()
 
     const actor = createActor(open_app_flow_machine, {
       input: {
         ports,
-        dispatch: model.send,
+        dispatch: app_state.send,
         get_app_state_snapshot: () => ({
-          context: model.getSnapshot().context,
-          matches: (state) => model.getSnapshot().matches(state as any)
+          context: app_state.getSnapshot().context,
+          matches: (state) => app_state.getSnapshot().matches(state as any)
         })
       }
     })
@@ -207,16 +207,16 @@ describe('open_app_flow', () => {
       throw new Error('Failed to list vaults')
     }
 
-    const model = createActor(app_state_machine, { input: {} })
-    model.start()
+    const app_state = createActor(app_state_machine, { input: {} })
+    app_state.start()
 
     const actor = createActor(open_app_flow_machine, {
       input: {
         ports,
-        dispatch: model.send,
+        dispatch: app_state.send,
         get_app_state_snapshot: () => ({
-          context: model.getSnapshot().context,
-          matches: (state) => model.getSnapshot().matches(state as any)
+          context: app_state.getSnapshot().context,
+          matches: (state) => app_state.getSnapshot().matches(state as any)
         })
       }
     })

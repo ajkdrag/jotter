@@ -9,5 +9,6 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["vitest/globals"]
-  }
+  },
+  "exclude": ["src/lib/components/ui/**"]
 }

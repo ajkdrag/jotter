@@ -12,7 +12,7 @@ import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
 
 export type AppFlows = {
-  model: FlowHandle<AppStateEvents, FlowSnapshot<AppStateContext>>
+  app_state: FlowHandle<AppStateEvents, FlowSnapshot<AppStateContext>>
   flows: {
     open_app: FlowHandle<OpenAppFlowEvents, FlowSnapshot<OpenAppFlowContext>>
     change_vault: FlowHandle<ChangeVaultFlowEvents, FlowSnapshot<ChangeVaultFlowContext>>
@@ -22,14 +22,14 @@ export type AppFlows = {
 }
 
 export function create_app_flows(ports: Ports): AppFlows {
-  const model = create_flow_handle(app_state_machine, { input: {} })
-  const dispatch = (event: AppStateEvents) => model.send(event)
+  const app_state = create_flow_handle(app_state_machine, { input: {} })
+  const dispatch = (event: AppStateEvents) => app_state.send(event)
 
   const open_app = create_flow_handle(open_app_flow_machine, {
     input: {
       ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
       dispatch,
-      get_app_state_snapshot: model.get_snapshot
+      get_app_state_snapshot: app_state.get_snapshot
     }
   })
 
@@ -49,7 +49,7 @@ export function create_app_flows(ports: Ports): AppFlows {
   })
 
   return {
-    model,
+    app_state,
     flows: {
       open_app,
       change_vault,
