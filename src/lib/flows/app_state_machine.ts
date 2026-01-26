@@ -1,3 +1,7 @@
+// The app_state_machine is the Model.
+// It should be "dumb" and "pure." It doesn't fetch files, it doesn't show dialogs, and it doesn't "invoke" async processes. 
+// It just reacts to events and calculates the next state
+
 import { setup, assign } from 'xstate'
 import { ensure_open_note } from '$lib/operations/ensure_open_note'
 import type { MarkdownText, NoteId } from '$lib/types/ids'
@@ -27,7 +31,60 @@ export type AppStateEvents =
 
 export type AppStateInput = { now_ms?: () => number }
 
-function ensure_open_note_in_context(context: AppStateContext): AppStateContext {
+export function reset_app(context: AppStateContext): AppStateContext {
+  return {
+    ...context,
+    vault: null,
+    recent_vaults: [],
+    notes: [],
+    open_note: null
+  }
+}
+
+export function set_active_vault(
+  context: AppStateContext,
+  vault: Vault,
+  notes: NoteMeta[]
+): AppStateContext {
+  return ensure_open_note_in_context({
+    ...context,
+    vault,
+    notes,
+    open_note: null
+  })
+}
+
+export function update_markdown(context: AppStateContext, markdown: MarkdownText): AppStateContext {
+  if (!context.open_note) return context
+  return {
+    ...context,
+    open_note: { ...context.open_note, markdown }
+  }
+}
+
+export function update_revision(
+  context: AppStateContext,
+  note_id: NoteId,
+  revision_id: number,
+  sticky_dirty: boolean
+): AppStateContext {
+  const open_note = context.open_note
+  if (!open_note || open_note.meta.id !== note_id) return context
+
+  const dirty = sticky_dirty || revision_id !== open_note.saved_revision_id
+
+  return {
+    ...context,
+    open_note: {
+      ...open_note,
+      revision_id,
+      sticky_dirty,
+      dirty
+    }
+  }
+}
+
+export function ensure_open_note_in_context(context: AppStateContext): AppStateContext {
   return {
     ...context,
     open_note: ensure_open_note({
@@ -59,12 +116,7 @@ export const app_state_machine = setup({
     no_vault: {
       on: {
         RESET_APP: {
-          actions: assign({
-            vault: () => null,
-            recent_vaults: () => [],
-            notes: () => [],
-            open_note: () => null
-          })
+          actions: assign(({ context }) => reset_app(context))
         },
         SET_RECENT_VAULTS: {
           actions: assign({
@@ -73,14 +125,7 @@ export const app_state_machine = setup({
         },
         SET_ACTIVE_VAULT: {
           target: 'vault_open',
-          actions: assign(({ event, context }) =>
-            ensure_open_note_in_context({
-              ...context,
-              vault: event.vault,
-              notes: event.notes,
-              open_note: null
-            })
-          )
+          actions: assign(({ event, context }) => set_active_vault(context, event.vault, event.notes))
         }
       }
     },
@@ -88,12 +133,7 @@ export const app_state_machine = setup({
       on: {
         RESET_APP: {
           target: 'no_vault',
-          actions: assign({
-            vault: () => null,
-            recent_vaults: () => [],
-            notes: () => [],
-            open_note: () => null
-          })
+          actions: assign(({ context }) => reset_app(context))
         },
         SET_RECENT_VAULTS: {
           actions: assign({
@@ -101,22 +141,16 @@ export const app_state_machine = setup({
           })
         },
         SET_ACTIVE_VAULT: {
-          actions: assign(({ event, context }) =>
-            ensure_open_note_in_context({
-              ...context,
-              vault: event.vault,
-              notes: event.notes,
-              open_note: null
-            })
-          )
+          actions: assign(({ event, context }) => set_active_vault(context, event.vault, event.notes))
         },
         CLEAR_ACTIVE_VAULT: {
           target: 'no_vault',
-          actions: assign({
-            vault: () => null,
-            notes: () => [],
-            open_note: () => null
-          })
+          actions: assign(({ context }) => ({
+            ...context,
+            vault: null,
+            notes: [],
+            open_note: null
+          }))
         },
         UPDATE_NOTES_LIST: {
           actions: assign(({ event, context }) => ({
@@ -135,36 +169,12 @@ export const app_state_machine = setup({
           })
         },
         NOTIFY_MARKDOWN_CHANGED: {
-          actions: assign(({ event, context }) => {
-            const open_note = context.open_note
-            if (!open_note) return context
-            return {
-              ...context,
-              open_note: {
-                ...open_note,
-                markdown: event.markdown
-              }
-            }
-          })
+          actions: assign(({ event, context }) => update_markdown(context, event.markdown))
         },
         NOTIFY_REVISION_CHANGED: {
-          actions: assign(({ event, context }) => {
-            const open_note = context.open_note
-            if (!open_note) return context
-            if (open_note.meta.id !== event.note_id) return context
-
-            const dirty = event.sticky_dirty || event.revision_id !== open_note.saved_revision_id
-
-            return {
-              ...context,
-              open_note: {
-                ...open_note,
-                revision_id: event.revision_id,
-                sticky_dirty: event.sticky_dirty,
-                dirty
-              }
-            }
-          })
+          actions: assign(({ event, context }) =>
+            update_revision(context, event.note_id, event.revision_id, event.sticky_dirty)
+          )
         },
         COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
