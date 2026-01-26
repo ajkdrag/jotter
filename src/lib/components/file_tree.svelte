@@ -10,7 +10,7 @@
     SidebarMenuSub,
   } from "$lib/components/ui/sidebar";
   import * as ContextMenu from "$lib/components/ui/context-menu";
-  import { ChevronRight, ChevronDown, Folder, File, Trash2 } from "lucide-svelte";
+  import { ChevronRight, ChevronDown, Folder, File, Trash2 } from "@lucide/svelte";
 
   type Props = {
     notes: NoteMeta[];
