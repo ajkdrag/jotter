@@ -4,7 +4,7 @@ import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/flows/app_state_machine'
+import type { AppStateEvents } from '$lib/state/app_state_machine'
 
 type DeleteNotePorts = {
   notes: NotesPort

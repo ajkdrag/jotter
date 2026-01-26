@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { change_vault_flow_machine } from '$lib/flows/change_vault_flow'
-import { app_state_machine } from '$lib/flows/app_state_machine'
+import { app_state_machine } from '$lib/state/app_state_machine'
 import { create_mock_ports } from '../helpers/mock_ports'
 import type { VaultId, VaultPath, NotePath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'

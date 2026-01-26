@@ -1,5 +1,5 @@
 import type { Ports } from '$lib/adapters/create_prod_ports'
-import { app_state_machine, type AppStateEvents, type AppStateContext } from '$lib/flows/app_state_machine'
+import { app_state_machine, type AppStateEvents, type AppStateContext } from '$lib/state/app_state_machine'
 import { change_vault_flow_machine } from '$lib/flows/change_vault_flow'
 import type { ChangeVaultFlowContext, ChangeVaultFlowEvents } from '$lib/flows/change_vault_flow'
 import { open_app_flow_machine } from '$lib/flows/open_app_flow'

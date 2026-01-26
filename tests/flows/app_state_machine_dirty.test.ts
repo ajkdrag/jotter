@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createActor } from 'xstate'
-import { app_state_machine } from '$lib/flows/app_state_machine'
+import { app_state_machine } from '$lib/state/app_state_machine'
 import type { Vault } from '$lib/types/vault'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 

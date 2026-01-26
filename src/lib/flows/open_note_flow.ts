@@ -4,7 +4,7 @@ import { to_open_note_state } from '$lib/types/editor'
 import { as_note_path } from '$lib/types/ids'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/flows/app_state_machine'
+import type { AppStateEvents } from '$lib/state/app_state_machine'
 
 type OpenNotePorts = {
   notes: NotesPort

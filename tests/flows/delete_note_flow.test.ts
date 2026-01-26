@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { delete_note_flow_machine } from '$lib/flows/delete_note_flow'
-import { app_state_machine } from '$lib/flows/app_state_machine'
+import { app_state_machine } from '$lib/state/app_state_machine'
 import { create_mock_notes_port, create_mock_index_port } from '../helpers/mock_ports'
 import type { VaultId, VaultPath, NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'

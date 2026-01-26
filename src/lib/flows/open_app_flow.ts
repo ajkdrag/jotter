@@ -4,9 +4,9 @@ import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultPath } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/flows/app_state_machine'
+import type { AppStateEvents } from '$lib/state/app_state_machine'
 import type { FlowSnapshot } from '$lib/flows/flow_handle'
-import type { AppStateContext } from '$lib/flows/app_state_machine'
+import type { AppStateContext } from '$lib/state/app_state_machine'
 
 type OpenAppPorts = {
   vault: VaultPort
