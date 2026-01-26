@@ -156,13 +156,15 @@ export function create_notes_web_adapter(): NotesPort {
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath): Promise<void> {
       const root = await get_vault_handle(vault_id)
 
-      // Normalize and short-circuit when paths are identical
       const normalize = (path: NotePath) => {
         const parts = path.split('/').filter(Boolean)
         if (parts.length === 0) throw new Error(`Invalid note path: ${path}`)
-        const last = parts[parts.length - 1]
-        parts[parts.length - 1] = last.endsWith('.md') ? last : `${last}.md`
-        return { parts, leaf: parts[parts.length - 1] }
+        const last_index = parts.length - 1
+        const last_part = parts[last_index]
+        if (!last_part) throw new Error(`Invalid note path: ${path}`)
+        const leaf = last_part.endsWith('.md') ? last_part : `${last_part}.md`
+        parts[last_index] = leaf
+        return { parts, leaf }
       }
 
       const from_norm = normalize(from)
@@ -174,6 +176,7 @@ export function create_notes_web_adapter(): NotesPort {
       let to_parent = root
       for (let i = 0; i < to_norm.parts.length - 1; i++) {
         const part = to_norm.parts[i]
+        if (!part) continue
         to_parent = await to_parent.getDirectoryHandle(part, { create: true })
       }
       const to_name = to_norm.leaf
