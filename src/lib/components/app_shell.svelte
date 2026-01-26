@@ -5,7 +5,7 @@
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
   import type { Ports } from '$lib/adapters/create_prod_ports'
-  import type { VaultId, VaultPath } from '$lib/types/ids'
+  import type { NoteId, VaultId, VaultPath } from '$lib/types/ids'
   import { as_markdown_text } from '$lib/types/ids'
   import type { NoteMeta } from '$lib/types/note'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
@@ -75,6 +75,14 @@
     markdown_change(markdown: string) {
       model.send({ type: 'OPEN_NOTE_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
     },
+    revision_change(args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) {
+      model.send({
+        type: 'OPEN_NOTE_REVISION_CHANGED',
+        note_id: args.note_id,
+        revision_id: args.revision_id,
+        sticky_dirty: args.sticky_dirty
+      })
+    },
     request_delete(note: NoteMeta) {
       const vault_id = model.snapshot.context.vault?.id
       if (!vault_id) return
@@ -120,6 +128,7 @@
       onOpenNote={actions.open_note}
       onRequestChangeVault={actions.request_change_vault}
       onMarkdownChange={actions.markdown_change}
+      onRevisionChange={actions.revision_change}
       onRequestDeleteNote={actions.request_delete}
     />
   </main>

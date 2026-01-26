@@ -89,6 +89,9 @@ describe('ensure_open_note', () => {
       },
       markdown: 'hello' as any,
       dirty: false,
+      revision_id: 0,
+      saved_revision_id: 0,
+      sticky_dirty: false,
       last_saved_at_ms: 0
     }
 

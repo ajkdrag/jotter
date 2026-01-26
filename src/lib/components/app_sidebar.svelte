@@ -7,6 +7,7 @@
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
+    import type { NoteId } from "$lib/types/ids";
     import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
     type Props = {
@@ -17,6 +18,7 @@
         onOpenNote: (note_path: string) => void;
         onRequestChangeVault: () => void;
         onMarkdownChange: (markdown: string) => void;
+        onRevisionChange: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
         onRequestDeleteNote?: (note: NoteMeta) => void;
     };
 
@@ -28,6 +30,7 @@
         onOpenNote,
         onRequestChangeVault,
         onMarkdownChange,
+        onRevisionChange,
         onRequestDeleteNote
     }: Props = $props();
 
@@ -113,10 +116,19 @@
                         class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                     >
                         <Sidebar.Trigger />
-                        <div class="text-sm font-medium">{open_note_title}</div>
+                        <div class="text-sm font-medium flex items-center gap-1 min-w-0">
+                            <span class="truncate">{open_note_title}</span>
+                            {#if open_note?.dirty}
+                                <span class="text-muted-foreground">•</span>
+                            {/if}
+                        </div>
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">
-                        <NoteEditor open_note={open_note} onMarkdownChange={onMarkdownChange} />
+                        <NoteEditor
+                            open_note={open_note}
+                            onMarkdownChange={onMarkdownChange}
+                            onRevisionChange={onRevisionChange}
+                        />
                     </div>
                 </Sidebar.Inset>
             </Resizable.Pane>

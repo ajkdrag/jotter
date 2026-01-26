@@ -27,6 +27,9 @@ export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: num
     },
     markdown: as_markdown_text(''),
     dirty: false,
+    revision_id: 0,
+    saved_revision_id: 0,
+    sticky_dirty: false,
     last_saved_at_ms: args.now_ms
   }
 }

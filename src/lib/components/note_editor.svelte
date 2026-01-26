@@ -4,17 +4,19 @@
         type MilkdownHandle,
     } from "$lib/adapters/editor/milkdown_adapter";
     import type { OpenNoteState } from "$lib/types/editor";
+    import type { NoteId } from "$lib/types/ids";
 
     interface Props {
         open_note: OpenNoteState | null;
         onMarkdownChange: (markdown: string) => void;
+        onRevisionChange: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
     }
 
-    let { open_note, onMarkdownChange }: Props = $props();
+    let { open_note, onMarkdownChange, onRevisionChange }: Props = $props();
 
     let editor_root: HTMLDivElement;
     let editor_handle: MilkdownHandle | null = $state(null);
-    let current_note_id: string | null = $state(null);
+    let current_note_id: NoteId | null = $state(null);
     let is_initializing = false;
 
     async function initialize_editor() {
@@ -22,12 +24,20 @@
 
         const note = open_note;
         if (!note) return;
+
+        const expected_note_id = note.meta.id;
+        current_note_id = expected_note_id;
         is_initializing = true;
         try {
             const handle = await create_milkdown_editor(editor_root, {
                 initial_markdown: note.markdown,
                 on_markdown_change: (markdown) => {
                     onMarkdownChange(markdown);
+                },
+                on_revision_change: ({ revision_id, sticky_dirty }) => {
+                    const note_id = current_note_id;
+                    if (!note_id) return;
+                    onRevisionChange({ note_id, revision_id, sticky_dirty });
                 },
             });
              // If user navigated away while we were awaiting,
@@ -38,7 +48,7 @@
                 return;
             }
             editor_handle = handle;
-            current_note_id = note.meta.id;
+            current_note_id = expected_note_id;
         } finally {
             is_initializing = false;
         }
@@ -48,8 +58,8 @@
         if (!editor_handle) return;
         if (current_note_id === note.meta.id) return;
 
-        editor_handle.set_markdown(note.markdown);
         current_note_id = note.meta.id;
+        editor_handle.set_markdown(note.markdown);
     }
 
     $effect(() => {

@@ -1,6 +1,6 @@
 import { setup, assign } from 'xstate'
 import { ensure_open_note } from '$lib/operations/ensure_open_note'
-import type { MarkdownText } from '$lib/types/ids'
+import type { MarkdownText, NoteId } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
@@ -22,6 +22,7 @@ export type AppStateEvents =
   | { type: 'OPEN_NOTE_SET'; open_note: OpenNoteState }
   | { type: 'OPEN_NOTE_CLEARED' }
   | { type: 'OPEN_NOTE_MARKDOWN_CHANGED'; markdown: MarkdownText }
+  | { type: 'OPEN_NOTE_REVISION_CHANGED'; note_id: NoteId; revision_id: number; sticky_dirty: boolean }
   | { type: 'ENSURE_OPEN_NOTE' }
 
 export type AppStateInput = { now_ms?: () => number }
@@ -146,6 +147,25 @@ export const app_state_machine = setup({
             }
           })
         },
+        OPEN_NOTE_REVISION_CHANGED: {
+          actions: assign(({ event, context }) => {
+            const open_note = context.open_note
+            if (!open_note) return context
+            if (open_note.meta.id !== event.note_id) return context
+
+            const dirty = event.sticky_dirty || event.revision_id !== open_note.saved_revision_id
+
+            return {
+              ...context,
+              open_note: {
+                ...open_note,
+                revision_id: event.revision_id,
+                sticky_dirty: event.sticky_dirty,
+                dirty
+              }
+            }
+          })
+        },
         ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
         }
@@ -153,4 +173,5 @@ export const app_state_machine = setup({
     }
   }
 })
+
 

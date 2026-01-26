@@ -15,7 +15,9 @@ import { configure_codemirror_codeblocks } from '$lib/adapters/editor/codemirror
 import { nord } from '@milkdown/theme-nord'
 import '@milkdown/theme-nord/style.css'
 import { history, undoCommand, redoCommand } from '@milkdown/kit/plugin/history'
-import { EditorState } from '@milkdown/kit/prose/state'
+import { EditorState, type Transaction } from '@milkdown/kit/prose/state'
+import { undoDepth } from '@milkdown/kit/prose/history'
+import type { EditorView } from '@milkdown/kit/prose/view'
 
 export type MilkdownHandle = {
   destroy: () => void
@@ -34,6 +36,7 @@ export async function create_milkdown_editor(
   args: {
     initial_markdown: string
     on_markdown_change: (markdown: string) => void
+    on_revision_change?: (args: { revision_id: number; sticky_dirty: boolean }) => void
     resolve_image_src?: (src: string) => string | null
   }
 ): Promise<MilkdownHandle> {
@@ -82,6 +85,43 @@ export async function create_milkdown_editor(
     .use(history)
     .create()
 
+  let last_revision_id = 0
+  let sticky_dirty = false
+  let last_sticky_dirty = false
+
+  function maybe_emit_revision(view: EditorView) {
+    const revision_id = undoDepth(view.state)
+    if (revision_id === last_revision_id && sticky_dirty === last_sticky_dirty) return
+    last_revision_id = revision_id
+    last_sticky_dirty = sticky_dirty
+    args.on_revision_change?.({ revision_id, sticky_dirty })
+  }
+
+  editor.action((ctx) => {
+    const view = ctx.get(editorViewCtx) as unknown as EditorView
+    const original_dispatch = view.props.dispatchTransaction
+
+    view.setProps({
+      dispatchTransaction: (tr: Transaction) => {
+        const prev_revision_id = undoDepth(view.state)
+
+        if (original_dispatch) original_dispatch(tr)
+        else view.updateState(view.state.apply(tr))
+
+        if (!tr.docChanged) return
+
+        const next_revision_id = undoDepth(view.state)
+        const add_to_history = tr.getMeta('addToHistory')
+        const moved_in_history = next_revision_id !== prev_revision_id
+        if (add_to_history === false && !moved_in_history) sticky_dirty = true
+
+        maybe_emit_revision(view)
+      }
+    })
+
+    maybe_emit_revision(view)
+  })
+
   return {
     destroy: () => {
       editor.destroy()
@@ -99,6 +139,9 @@ export async function create_milkdown_editor(
           plugins: view.state.plugins
         })
         view.updateState(new_state)
+
+        sticky_dirty = false
+        maybe_emit_revision(view as unknown as EditorView)
       })
     },
     toggle_bold: () => {
