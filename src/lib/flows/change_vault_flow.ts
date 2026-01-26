@@ -27,6 +27,8 @@ type FlowContext = {
   dispatch: AppStateDispatch
 }
 
+export type ChangeVaultFlowContext = FlowContext
+
 type FlowEvents =
   | { type: 'OPEN_DIALOG' }
   | { type: 'CLOSE_DIALOG' }
@@ -34,6 +36,8 @@ type FlowEvents =
   | { type: 'SELECT_VAULT'; vault_id: VaultId }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
+
+export type ChangeVaultFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: ChangeVaultPorts
@@ -81,8 +85,8 @@ export const change_vault_flow_machine = setup({
 
         void ports.index.build_index(result.vault.id)
         const recent_vaults = await ports.vault.list_vaults()
-        dispatch({ type: 'VAULT_SET', vault: result.vault, notes: result.notes })
-        dispatch({ type: 'RECENT_VAULTS_SET', recent_vaults })
+        dispatch({ type: 'SET_ACTIVE_VAULT', vault: result.vault, notes: result.notes })
+        dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults })
 
         return { changed: true }
       }

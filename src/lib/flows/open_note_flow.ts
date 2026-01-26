@@ -20,10 +20,14 @@ type FlowContext = {
   dispatch: AppStateDispatch
 }
 
+export type OpenNoteFlowContext = FlowContext
+
 type FlowEvents =
   | { type: 'OPEN_NOTE'; vault_id: VaultId; note_path: string }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
+
+export type OpenNoteFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: OpenNotePorts
@@ -47,7 +51,7 @@ export const open_note_flow_machine = setup({
           { notes: input.ports.notes },
           { vault_id: input.vault_id, note_id: as_note_path(input.note_path) }
         )
-        input.dispatch({ type: 'OPEN_NOTE_SET', open_note: to_open_note_state(doc) })
+        input.dispatch({ type: 'SET_OPEN_NOTE', open_note: to_open_note_state(doc) })
       }
     )
   }

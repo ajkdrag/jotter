@@ -14,16 +14,16 @@ export type AppStateContext = {
 }
 
 export type AppStateEvents =
-  | { type: 'RESET' }
-  | { type: 'RECENT_VAULTS_SET'; recent_vaults: Vault[] }
-  | { type: 'VAULT_SET'; vault: Vault; notes: NoteMeta[] }
-  | { type: 'VAULT_CLEARED' }
-  | { type: 'NOTES_SET'; notes: NoteMeta[] }
-  | { type: 'OPEN_NOTE_SET'; open_note: OpenNoteState }
-  | { type: 'OPEN_NOTE_CLEARED' }
-  | { type: 'OPEN_NOTE_MARKDOWN_CHANGED'; markdown: MarkdownText }
-  | { type: 'OPEN_NOTE_REVISION_CHANGED'; note_id: NoteId; revision_id: number; sticky_dirty: boolean }
-  | { type: 'ENSURE_OPEN_NOTE' }
+  | { type: 'RESET_APP' }
+  | { type: 'SET_RECENT_VAULTS'; recent_vaults: Vault[] }
+  | { type: 'SET_ACTIVE_VAULT'; vault: Vault; notes: NoteMeta[] }
+  | { type: 'CLEAR_ACTIVE_VAULT' }
+  | { type: 'UPDATE_NOTES_LIST'; notes: NoteMeta[] }
+  | { type: 'SET_OPEN_NOTE'; open_note: OpenNoteState }
+  | { type: 'CLEAR_OPEN_NOTE' }
+  | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
+  | { type: 'NOTIFY_REVISION_CHANGED'; note_id: NoteId; revision_id: number; sticky_dirty: boolean }
+  | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -58,7 +58,7 @@ export const app_state_machine = setup({
   states: {
     no_vault: {
       on: {
-        RESET: {
+        RESET_APP: {
           actions: assign({
             vault: () => null,
             recent_vaults: () => [],
@@ -66,12 +66,12 @@ export const app_state_machine = setup({
             open_note: () => null
           })
         },
-        RECENT_VAULTS_SET: {
+        SET_RECENT_VAULTS: {
           actions: assign({
             recent_vaults: ({ event }) => event.recent_vaults
           })
         },
-        VAULT_SET: {
+        SET_ACTIVE_VAULT: {
           target: 'vault_open',
           actions: assign(({ event, context }) =>
             ensure_open_note_in_context({
@@ -86,7 +86,7 @@ export const app_state_machine = setup({
     },
     vault_open: {
       on: {
-        RESET: {
+        RESET_APP: {
           target: 'no_vault',
           actions: assign({
             vault: () => null,
@@ -95,12 +95,12 @@ export const app_state_machine = setup({
             open_note: () => null
           })
         },
-        RECENT_VAULTS_SET: {
+        SET_RECENT_VAULTS: {
           actions: assign({
             recent_vaults: ({ event }) => event.recent_vaults
           })
         },
-        VAULT_SET: {
+        SET_ACTIVE_VAULT: {
           actions: assign(({ event, context }) =>
             ensure_open_note_in_context({
               ...context,
@@ -110,7 +110,7 @@ export const app_state_machine = setup({
             })
           )
         },
-        VAULT_CLEARED: {
+        CLEAR_ACTIVE_VAULT: {
           target: 'no_vault',
           actions: assign({
             vault: () => null,
@@ -118,23 +118,23 @@ export const app_state_machine = setup({
             open_note: () => null
           })
         },
-        NOTES_SET: {
+        UPDATE_NOTES_LIST: {
           actions: assign(({ event, context }) => ({
             ...context,
             notes: event.notes
           }))
         },
-        OPEN_NOTE_SET: {
+        SET_OPEN_NOTE: {
           actions: assign({
             open_note: ({ event }) => event.open_note
           })
         },
-        OPEN_NOTE_CLEARED: {
+        CLEAR_OPEN_NOTE: {
           actions: assign({
             open_note: () => null
           })
         },
-        OPEN_NOTE_MARKDOWN_CHANGED: {
+        NOTIFY_MARKDOWN_CHANGED: {
           actions: assign(({ event, context }) => {
             const open_note = context.open_note
             if (!open_note) return context
@@ -147,7 +147,7 @@ export const app_state_machine = setup({
             }
           })
         },
-        OPEN_NOTE_REVISION_CHANGED: {
+        NOTIFY_REVISION_CHANGED: {
           actions: assign(({ event, context }) => {
             const open_note = context.open_note
             if (!open_note) return context
@@ -166,7 +166,7 @@ export const app_state_machine = setup({
             }
           })
         },
-        ENSURE_OPEN_NOTE: {
+        COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
         }
       }

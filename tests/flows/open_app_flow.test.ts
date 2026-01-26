@@ -31,11 +31,21 @@ describe('open_app_flow', () => {
     model.start()
 
     const actor = createActor(open_app_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: {
+        ports,
+        dispatch: model.send,
+        get_app_state_snapshot: () => ({
+          context: model.getSnapshot().context,
+          matches: (state) => model.getSnapshot().matches(state as any)
+        })
+      }
     })
     actor.start()
 
-    actor.send({ type: 'START' })
+    actor.send({
+      type: 'START',
+      config: { reset_app_state: false, bootstrap_default_vault_path: null }
+    })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
     expect(model.getSnapshot().context.recent_vaults).toEqual([vault1, vault2])
@@ -63,11 +73,21 @@ describe('open_app_flow', () => {
     model.start()
 
     const actor = createActor(open_app_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: {
+        ports,
+        dispatch: model.send,
+        get_app_state_snapshot: () => ({
+          context: model.getSnapshot().context,
+          matches: (state) => model.getSnapshot().matches(state as any)
+        })
+      }
     })
     actor.start()
 
-    actor.send({ type: 'START', bootstrap_default_vault_path: vault.path })
+    actor.send({
+      type: 'START',
+      config: { reset_app_state: false, bootstrap_default_vault_path: vault.path }
+    })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
     expect(model.getSnapshot().context.vault).toEqual(vault)
@@ -88,11 +108,21 @@ describe('open_app_flow', () => {
     model.start()
 
     const actor = createActor(open_app_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: {
+        ports,
+        dispatch: model.send,
+        get_app_state_snapshot: () => ({
+          context: model.getSnapshot().context,
+          matches: (state) => model.getSnapshot().matches(state as any)
+        })
+      }
     })
     actor.start()
 
-    actor.send({ type: 'START' })
+    actor.send({
+      type: 'START',
+      config: { reset_app_state: false, bootstrap_default_vault_path: null }
+    })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
     expect(actor.getSnapshot().context.error).toBe('Error: Failed to list vaults')
@@ -117,11 +147,21 @@ describe('open_app_flow', () => {
     model.start()
 
     const actor = createActor(open_app_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: {
+        ports,
+        dispatch: model.send,
+        get_app_state_snapshot: () => ({
+          context: model.getSnapshot().context,
+          matches: (state) => model.getSnapshot().matches(state as any)
+        })
+      }
     })
     actor.start()
 
-    actor.send({ type: 'START', bootstrap_default_vault_path: vault.path })
+    actor.send({
+      type: 'START',
+      config: { reset_app_state: false, bootstrap_default_vault_path: vault.path }
+    })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
     expect(actor.getSnapshot().context.error).toBe('Error: Failed to open vault')
@@ -138,11 +178,21 @@ describe('open_app_flow', () => {
     model.start()
 
     const actor = createActor(open_app_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: {
+        ports,
+        dispatch: model.send,
+        get_app_state_snapshot: () => ({
+          context: model.getSnapshot().context,
+          matches: (state) => model.getSnapshot().matches(state as any)
+        })
+      }
     })
     actor.start()
 
-    actor.send({ type: 'START' })
+    actor.send({
+      type: 'START',
+      config: { reset_app_state: false, bootstrap_default_vault_path: null }
+    })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
     ports.vault.list_vaults = async () => []
@@ -161,11 +211,21 @@ describe('open_app_flow', () => {
     model.start()
 
     const actor = createActor(open_app_flow_machine, {
-      input: { ports, dispatch: model.send }
+      input: {
+        ports,
+        dispatch: model.send,
+        get_app_state_snapshot: () => ({
+          context: model.getSnapshot().context,
+          matches: (state) => model.getSnapshot().matches(state as any)
+        })
+      }
     })
     actor.start()
 
-    actor.send({ type: 'START' })
+    actor.send({
+      type: 'START',
+      config: { reset_app_state: false, bootstrap_default_vault_path: null }
+    })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
     actor.send({ type: 'CANCEL' })

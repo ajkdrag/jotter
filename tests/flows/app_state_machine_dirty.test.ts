@@ -16,7 +16,7 @@ describe('app_state_machine dirty tracking', () => {
       created_at: 0
     }
 
-    model.send({ type: 'VAULT_SET', vault, notes: [] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
 
     const open_note = model.getSnapshot().context.open_note
     expect(open_note).not.toBeNull()
@@ -24,10 +24,10 @@ describe('app_state_machine dirty tracking', () => {
 
     const note_id = open_note!.meta.id
 
-    model.send({ type: 'OPEN_NOTE_REVISION_CHANGED', note_id, revision_id: 1, sticky_dirty: false })
+    model.send({ type: 'NOTIFY_REVISION_CHANGED', note_id, revision_id: 1, sticky_dirty: false })
     expect(model.getSnapshot().context.open_note?.dirty).toBe(true)
 
-    model.send({ type: 'OPEN_NOTE_REVISION_CHANGED', note_id, revision_id: 0, sticky_dirty: false })
+    model.send({ type: 'NOTIFY_REVISION_CHANGED', note_id, revision_id: 0, sticky_dirty: false })
     expect(model.getSnapshot().context.open_note?.dirty).toBe(false)
   })
 
@@ -42,14 +42,14 @@ describe('app_state_machine dirty tracking', () => {
       created_at: 0
     }
 
-    model.send({ type: 'VAULT_SET', vault, notes: [] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
 
     const open_note = model.getSnapshot().context.open_note
     expect(open_note).not.toBeNull()
 
     const note_id = open_note!.meta.id
 
-    model.send({ type: 'OPEN_NOTE_REVISION_CHANGED', note_id, revision_id: 0, sticky_dirty: true })
+    model.send({ type: 'NOTIFY_REVISION_CHANGED', note_id, revision_id: 0, sticky_dirty: true })
     expect(model.getSnapshot().context.open_note?.dirty).toBe(true)
   })
 })

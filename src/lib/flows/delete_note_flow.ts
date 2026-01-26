@@ -22,11 +22,15 @@ type FlowContext = {
   dispatch: AppStateDispatch
 }
 
+export type DeleteNoteFlowContext = FlowContext
+
 type FlowEvents =
   | { type: 'REQUEST_DELETE'; vault_id: VaultId; note: NoteMeta; is_note_currently_open: boolean }
   | { type: 'CONFIRM' }
   | { type: 'CANCEL' }
   | { type: 'RETRY' }
+
+export type DeleteNoteFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: DeleteNotePorts
@@ -57,10 +61,10 @@ export const delete_note_flow_machine = setup({
         await delete_note(ports, { vault_id, note_id: note.id })
 
         const notes = await ports.notes.list_notes(vault_id)
-        dispatch({ type: 'NOTES_SET', notes })
+        dispatch({ type: 'UPDATE_NOTES_LIST', notes })
 
-        if (input.is_note_currently_open) dispatch({ type: 'OPEN_NOTE_CLEARED' })
-        dispatch({ type: 'ENSURE_OPEN_NOTE' })
+        if (input.is_note_currently_open) dispatch({ type: 'CLEAR_OPEN_NOTE' })
+        dispatch({ type: 'COMMAND_ENSURE_OPEN_NOTE' })
 
         void ports.index.build_index(vault_id)
       }

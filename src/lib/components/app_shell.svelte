@@ -49,10 +49,13 @@
 
   const actions = {
     mount() {
-      if (stable.reset_state_on_mount) model.send({ type: 'RESET' })
-      const should_bootstrap = model.snapshot.matches('no_vault') && stable.bootstrap_default_vault_path != null
-      const bootstrap_path: VaultPath | null = should_bootstrap ? (stable.bootstrap_default_vault_path ?? null) : null
-      open_app.send({ type: 'START', bootstrap_default_vault_path: bootstrap_path })
+      open_app.send({
+        type: 'START',
+        config: {
+          reset_app_state: stable.reset_state_on_mount,
+          bootstrap_default_vault_path: stable.bootstrap_default_vault_path ?? null
+        }
+      })
     },
     request_change_vault() {
       change_vault.send({ type: 'OPEN_DIALOG' })
@@ -76,11 +79,11 @@
       open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
     },
     markdown_change(markdown: string) {
-      model.send({ type: 'OPEN_NOTE_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
+      model.send({ type: 'NOTIFY_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
     },
     revision_change(args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) {
       model.send({
-        type: 'OPEN_NOTE_REVISION_CHANGED',
+        type: 'NOTIFY_REVISION_CHANGED',
         note_id: args.note_id,
         revision_id: args.revision_id,
         sticky_dirty: args.sticky_dirty

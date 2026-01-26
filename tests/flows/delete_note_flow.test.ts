@@ -62,7 +62,7 @@ describe('delete_note_flow', () => {
     const model = createActor(app_state_machine, { input: {} })
     model.start()
     const vault = create_test_vault()
-    model.send({ type: 'VAULT_SET', vault, notes: [note] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -82,7 +82,7 @@ describe('delete_note_flow', () => {
     const model = createActor(app_state_machine, { input: {} })
     model.start()
     const vault = create_test_vault()
-    model.send({ type: 'VAULT_SET', vault, notes: [note] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -105,7 +105,7 @@ describe('delete_note_flow', () => {
     notes_port._mock_notes.set(vault.id, [note, other_note])
     const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
     model.start()
-    model.send({ type: 'VAULT_SET', vault, notes: [note, other_note] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note, other_note] })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -134,8 +134,8 @@ describe('delete_note_flow', () => {
     notes_port._mock_notes.set(vault.id, [note])
     const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
     model.start()
-    model.send({ type: 'VAULT_SET', vault, notes: [note] })
-    model.send({ type: 'OPEN_NOTE_SET', open_note: create_open_note_state(note) })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
+    model.send({ type: 'SET_OPEN_NOTE', open_note: create_open_note_state(note) })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -162,8 +162,8 @@ describe('delete_note_flow', () => {
     const open_note_state = create_open_note_state(open_note)
     const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
     model.start()
-    model.send({ type: 'VAULT_SET', vault, notes: [note_to_delete, open_note] })
-    model.send({ type: 'OPEN_NOTE_SET', open_note: open_note_state })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note_to_delete, open_note] })
+    model.send({ type: 'SET_OPEN_NOTE', open_note: open_note_state })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -190,7 +190,7 @@ describe('delete_note_flow', () => {
     notes_port._mock_notes.set(vault.id, [note])
     const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
     model.start()
-    model.send({ type: 'VAULT_SET', vault, notes: [note] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -222,7 +222,7 @@ describe('delete_note_flow', () => {
     notes_port._mock_notes.set(vault.id, [note])
     const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
     model.start()
-    model.send({ type: 'VAULT_SET', vault, notes: [note] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
@@ -251,7 +251,7 @@ describe('delete_note_flow', () => {
     notes_port._mock_notes.set(vault.id, [note])
     const model = createActor(app_state_machine, { input: { now_ms: () => 123 } })
     model.start()
-    model.send({ type: 'VAULT_SET', vault, notes: [note] })
+    model.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
       input: { ports: { notes: notes_port, index: index_port }, dispatch: model.send }
