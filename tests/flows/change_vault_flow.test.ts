@@ -19,7 +19,7 @@ describe('change_vault_flow', () => {
     }
 
     const notes: NoteMeta[] = [
-      { id: 'note1.md' as any, path: 'note1.md' as NotePath, title: 'Note 1', mtime_ms: 0, size_bytes: 0 }
+      { id: 'note1.md' as NotePath, path: 'note1.md' as NotePath, title: 'Note 1', mtime_ms: 0, size_bytes: 0 }
     ]
 
     ports.vault._mock_vaults = [vault]

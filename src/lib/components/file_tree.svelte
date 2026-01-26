@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SvelteSet } from "svelte/reactivity";
   import type { NoteMeta } from "$lib/types/note";
   import type { FileTreeNode } from "$lib/utils/filetree";
   import { build_filetree, sort_tree } from "$lib/utils/filetree";
@@ -19,7 +20,7 @@
 
   let { notes, onOpenNote, onRequestDelete }: Props = $props();
 
-  let expanded = $state(new Set<string>());
+  let expanded = new SvelteSet<string>();
   let tree = $derived(sort_tree(build_filetree(notes)));
 
   function toggle_folder(path: string) {
@@ -28,13 +29,12 @@
     } else {
       expanded.add(path);
     }
-    expanded = new Set(expanded);
   }
 </script>
 
 {#snippet render_tree(nodes: Map<string, FileTreeNode>)}
   <SidebarMenu>
-    {#each Array.from(nodes.entries()) as [name, node]}
+    {#each Array.from(nodes.entries()) as [name, node] (name)}
       {#if node.isFolder}
         <SidebarMenuItem>
           <SidebarMenuButton onclick={() => toggle_folder(node.path)}>

@@ -1,5 +1,5 @@
 import type { AssetsPort, AssetImportSource } from '$lib/ports/assets_port'
-import { as_asset_path, type AssetPath, type VaultId } from '$lib/types/ids'
+import type { AssetPath, VaultId } from '$lib/types/ids'
 import { get_vault } from './storage'
 
 const blob_url_cache = new Map<string, string>()

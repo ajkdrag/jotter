@@ -5,7 +5,7 @@ export type FlowSnapshot<TContext> = {
   matches: (state: string) => boolean
 }
 
-export type FlowHandle<TEvent, TSnapshot extends FlowSnapshot<any>> = {
+export type FlowHandle<TEvent, TSnapshot extends FlowSnapshot<unknown>> = {
   send: (event: TEvent) => void
   get_snapshot: () => TSnapshot
   subscribe: (listener: (snapshot: TSnapshot) => void) => FlowUnsubscribe

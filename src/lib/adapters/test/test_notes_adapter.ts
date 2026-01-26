@@ -43,7 +43,7 @@ async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtim
 
 export function create_test_notes_adapter(): NotesPort {
   return {
-    async list_notes(vault_id: VaultId): Promise<NoteMeta[]> {
+    async list_notes(_vault_id: VaultId): Promise<NoteMeta[]> {
       const notes = await load_base_files()
       const result: NoteMeta[] = []
 

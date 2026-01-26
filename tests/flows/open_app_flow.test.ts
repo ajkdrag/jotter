@@ -36,7 +36,12 @@ describe('open_app_flow', () => {
         dispatch: app_state.send,
         get_app_state_snapshot: () => ({
           context: app_state.getSnapshot().context,
-          matches: (state) => app_state.getSnapshot().matches(state as any)
+          matches: (state: string) => {
+            if (state === 'no_vault' || state === 'vault_open') {
+              return app_state.getSnapshot().matches(state)
+            }
+            return false
+          }
         })
       }
     })
@@ -63,7 +68,7 @@ describe('open_app_flow', () => {
     }
 
     const notes: NoteMeta[] = [
-      { id: 'note1.md' as any, path: 'note1.md' as NotePath, title: 'Note 1', mtime_ms: 0, size_bytes: 0 }
+      { id: 'note1.md' as NotePath, path: 'note1.md' as NotePath, title: 'Note 1', mtime_ms: 0, size_bytes: 0 }
     ]
 
     ports.vault._mock_vaults = [vault]
@@ -78,7 +83,12 @@ describe('open_app_flow', () => {
         dispatch: app_state.send,
         get_app_state_snapshot: () => ({
           context: app_state.getSnapshot().context,
-          matches: (state) => app_state.getSnapshot().matches(state as any)
+          matches: (state: string) => {
+            if (state === 'no_vault' || state === 'vault_open') {
+              return app_state.getSnapshot().matches(state)
+            }
+            return false
+          }
         })
       }
     })
@@ -113,7 +123,12 @@ describe('open_app_flow', () => {
         dispatch: app_state.send,
         get_app_state_snapshot: () => ({
           context: app_state.getSnapshot().context,
-          matches: (state) => app_state.getSnapshot().matches(state as any)
+          matches: (state: string) => {
+            if (state === 'no_vault' || state === 'vault_open') {
+              return app_state.getSnapshot().matches(state)
+            }
+            return false
+          }
         })
       }
     })
@@ -152,7 +167,12 @@ describe('open_app_flow', () => {
         dispatch: app_state.send,
         get_app_state_snapshot: () => ({
           context: app_state.getSnapshot().context,
-          matches: (state) => app_state.getSnapshot().matches(state as any)
+          matches: (state: string) => {
+            if (state === 'no_vault' || state === 'vault_open') {
+              return app_state.getSnapshot().matches(state)
+            }
+            return false
+          }
         })
       }
     })
@@ -183,7 +203,12 @@ describe('open_app_flow', () => {
         dispatch: app_state.send,
         get_app_state_snapshot: () => ({
           context: app_state.getSnapshot().context,
-          matches: (state) => app_state.getSnapshot().matches(state as any)
+          matches: (state: string) => {
+            if (state === 'no_vault' || state === 'vault_open') {
+              return app_state.getSnapshot().matches(state)
+            }
+            return false
+          }
         })
       }
     })
@@ -216,7 +241,12 @@ describe('open_app_flow', () => {
         dispatch: app_state.send,
         get_app_state_snapshot: () => ({
           context: app_state.getSnapshot().context,
-          matches: (state) => app_state.getSnapshot().matches(state as any)
+          matches: (state: string) => {
+            if (state === 'no_vault' || state === 'vault_open') {
+              return app_state.getSnapshot().matches(state)
+            }
+            return false
+          }
         })
       }
     })

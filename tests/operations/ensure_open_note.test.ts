@@ -4,6 +4,7 @@ import type { Vault } from '$lib/types/vault'
 import type { VaultId, VaultPath, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
+import { as_note_path, as_markdown_text } from '$lib/types/ids'
 
 describe('ensure_open_note', () => {
   test('does nothing without vault', () => {
@@ -33,7 +34,7 @@ describe('ensure_open_note', () => {
     })
 
     expect(result?.meta.path).toBe('Untitled-1' as NotePath)
-    expect(result?.markdown).toBe('' as any)
+    expect(result?.markdown).toBe(as_markdown_text(''))
   })
 
   test('creates next Untitled-N based on existing notes', () => {
@@ -46,15 +47,15 @@ describe('ensure_open_note', () => {
 
     const notes: NoteMeta[] = [
       {
-        id: 'Untitled-2' as any,
-        path: 'Untitled-2' as any,
+        id: as_note_path('Untitled-2'),
+        path: as_note_path('Untitled-2'),
         title: 'Untitled-2',
         mtime_ms: 0,
         size_bytes: 0
       },
       {
-        id: 'welcome.md' as any,
-        path: 'welcome.md' as any,
+        id: as_note_path('welcome.md'),
+        path: as_note_path('welcome.md'),
         title: 'Welcome',
         mtime_ms: 0,
         size_bytes: 0
@@ -68,7 +69,7 @@ describe('ensure_open_note', () => {
       now_ms: 1000
     })
 
-    expect(result?.meta.path).toBe('Untitled-3' as any)
+    expect(result?.meta.path).toBe(as_note_path('Untitled-3'))
   })
 
   test('does not overwrite existing open_note', () => {
@@ -81,13 +82,13 @@ describe('ensure_open_note', () => {
 
     const existing: OpenNoteState = {
       meta: {
-        id: 'welcome.md' as any,
-        path: 'welcome.md' as any,
+        id: as_note_path('welcome.md'),
+        path: as_note_path('welcome.md'),
         title: 'Welcome',
         mtime_ms: 0,
         size_bytes: 0
       },
-      markdown: 'hello' as any,
+      markdown: as_markdown_text('hello'),
       dirty: false,
       revision_id: 0,
       saved_revision_id: 0,

@@ -51,27 +51,22 @@ async function list_markdown_files(
 ): Promise<NoteMeta[]> {
   const notes: NoteMeta[] = []
 
-  const entries: [string, FileSystemHandle][] = []
-  for await (const [name, handle] of dir as any) {
-    entries.push([name, handle])
-  }
-
-  for (const [name, handle] of entries) {
-    if (handle.kind === 'file' && name.endsWith('.md')) {
+  for await (const handle of dir.values()) {
+    if (handle.kind === 'file' && handle.name.endsWith('.md')) {
       const file_handle = handle as FileSystemFileHandle
       const file = await file_handle.getFile()
-      const full_path = prefix ? `${prefix}/${name}` : name
+      const full_path = prefix ? `${prefix}/${handle.name}` : handle.name
       const note_path = as_note_path(full_path)
 
       notes.push({
         id: note_path,
         path: note_path,
-        title: name.replace(/\.md$/, ''),
+        title: handle.name.replace(/\.md$/, ''),
         mtime_ms: file.lastModified,
         size_bytes: file.size
       })
     } else if (handle.kind === 'directory') {
-      const sub_prefix = prefix ? `${prefix}/${name}` : name
+      const sub_prefix = prefix ? `${prefix}/${handle.name}` : handle.name
       const sub_notes = await list_markdown_files(handle as FileSystemDirectoryHandle, sub_prefix)
       notes.push(...sub_notes)
     }
@@ -113,7 +108,7 @@ export function create_notes_web_adapter(): NotesPort {
 
     async write_note(vault_id: VaultId, note_id: NoteId, markdown: MarkdownText): Promise<void> {
       const root = await get_vault_handle(vault_id)
-      const { handle, parent, name } = await resolve_note_path(root, note_id)
+      const { handle } = await resolve_note_path(root, note_id)
       const file_handle = handle as FileSystemFileHandle
 
       const writable = await file_handle.createWritable()
@@ -189,7 +184,7 @@ export function create_notes_web_adapter(): NotesPort {
 
     async delete_note(vault_id: VaultId, note_id: NoteId): Promise<void> {
       const root = await get_vault_handle(vault_id)
-      const { handle, parent, name } = await resolve_note_path(root, note_id)
+      const { parent, name } = await resolve_note_path(root, note_id)
       await parent.removeEntry(name)
     }
   }

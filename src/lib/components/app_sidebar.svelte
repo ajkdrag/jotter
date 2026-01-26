@@ -36,20 +36,6 @@
     }: Props = $props();
 
     let open = $state(true);
-    let pane: any = $state();
-    let isCurrentlyCollapsed = true;
-
-    $effect(() => {
-        if (!pane) return;
-
-        if (open && isCurrentlyCollapsed) {
-            pane.expand();
-            isCurrentlyCollapsed = false;
-        } else if (!open && !isCurrentlyCollapsed) {
-            pane.collapse();
-            isCurrentlyCollapsed = true;
-        }
-    });
 </script>
 
 {#if vault}

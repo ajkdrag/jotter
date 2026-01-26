@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { join, resolve, relative } from 'path'
+import { join, resolve } from 'path'
 import { error } from '@sveltejs/kit'
 
 export async function GET({ params }) {

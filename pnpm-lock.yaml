@@ -99,6 +99,9 @@ importers:
       svelte-check:
         specifier: ^4.3.5
         version: 4.3.5(picomatch@4.0.3)(svelte@5.47.0)(typescript@5.9.3)
+      svelte-eslint-parser:
+        specifier: ^1.4.1
+        version: 1.4.1(svelte@5.47.0)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0

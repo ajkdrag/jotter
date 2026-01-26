@@ -1,4 +1,4 @@
-import type { NoteDoc, NoteMeta } from '$lib/types/note'
+import type { NoteDoc } from '$lib/types/note'
 
 export type EditorSelection = {
   anchor: number

@@ -27,10 +27,12 @@ function create_test_note(id: string, title: string): NoteMeta {
   }
 }
 
+import { as_markdown_text } from '$lib/types/ids'
+
 function create_open_note_state(note: NoteMeta): OpenNoteState {
   return {
     meta: note,
-    markdown: 'content' as any,
+    markdown: as_markdown_text('content'),
     dirty: false,
     revision_id: 0,
     saved_revision_id: 0,

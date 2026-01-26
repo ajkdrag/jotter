@@ -1,5 +1,9 @@
 declare global {
   namespace App {}
+
+  interface FileSystemDirectoryHandle {
+    values(): AsyncIterableIterator<FileSystemHandle>
+  }
 }
 
 declare module '@typescript-eslint/types' {

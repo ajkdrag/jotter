@@ -1,5 +1,5 @@
 import { readdirSync } from 'fs'
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import { error } from '@sveltejs/kit'
 
 export async function GET() {
@@ -14,7 +14,7 @@ export async function GET() {
         'Content-Type': 'application/json'
       }
     })
-  } catch (e) {
+  } catch {
     throw error(500, 'Failed to list test files')
   }
 }

@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'vitest'
-import { build_filetree, sort_tree, type FileTreeNode } from '$lib/utils/filetree'
+import { build_filetree, sort_tree } from '$lib/utils/filetree'
 import type { NoteMeta } from '$lib/types/note'
+import { as_note_path } from '$lib/types/ids'
 
 function create_note(path: string, title: string = ''): NoteMeta {
   return {
-    id: path as any,
-    path: path as any,
+    id: as_note_path(path),
+    path: as_note_path(path),
     title: title || path.replace(/\.md$/, ''),
     mtime_ms: 0,
     size_bytes: 0

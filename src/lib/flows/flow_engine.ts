@@ -17,10 +17,15 @@ export function create_flow_handle<TMachine extends AnyStateMachine>(
 
   actor.start()
 
-  function wrap(snapshot: any): FlowSnapshot<ContextFrom<TMachine>> {
+  function wrap(snapshot: ReturnType<typeof actor.getSnapshot>): FlowSnapshot<ContextFrom<TMachine>> {
+    interface SnapshotWithContextAndMatches {
+      context: ContextFrom<TMachine>
+      matches: (state: string) => boolean
+    }
+    const snapshotWithMethods = snapshot as SnapshotWithContextAndMatches
     return {
-      context: snapshot.context as ContextFrom<TMachine>,
-      matches: (state: string) => snapshot.matches(state)
+      context: snapshotWithMethods.context,
+      matches: snapshotWithMethods.matches
     }
   }
 

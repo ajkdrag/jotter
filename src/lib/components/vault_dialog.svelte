@@ -31,18 +31,16 @@
 
 <Dialog.Root {open} onOpenChange={onOpenChange}>
   <Dialog.Content class="max-w-[65ch]" showCloseButton={false}>
-    {#snippet children()}
-      <VaultSelectionPanel
-        isDialog={true}
-        recent_vaults={recent_vaults}
-        current_vault_id={current_vault_id}
-        is_loading={is_loading}
-        error={error}
-        onChooseVaultDir={onChooseVaultDir}
-        onSelectVault={onSelectVault}
-        onClose={() => onOpenChange(false)}
-        hide_choose_vault_button={hide_choose_vault_button}
-      />
-    {/snippet}
+    <VaultSelectionPanel
+      isDialog={true}
+      recent_vaults={recent_vaults}
+      current_vault_id={current_vault_id}
+      is_loading={is_loading}
+      error={error}
+      onChooseVaultDir={onChooseVaultDir}
+      onSelectVault={onSelectVault}
+      onClose={() => onOpenChange(false)}
+      hide_choose_vault_button={hide_choose_vault_button}
+    />
   </Dialog.Content>
 </Dialog.Root>
