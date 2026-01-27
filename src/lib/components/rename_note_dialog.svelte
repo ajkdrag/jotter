@@ -61,7 +61,7 @@
   }
 </script>
 
-<Dialog.Root {open} on_open_change={(value: boolean) => { if (!value) on_cancel() }}>
+<Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_cancel() }}>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>{get_display_title()}</Dialog.Title>

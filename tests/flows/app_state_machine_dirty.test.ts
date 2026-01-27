@@ -77,6 +77,7 @@ describe('app_state_machine dirty tracking', () => {
         size_bytes: 0
       },
       markdown: as_markdown_text('content'),
+      buffer_id: 'buffer-note-1',
       dirty: false,
       revision_id: 5,
       saved_revision_id: 5,
@@ -90,10 +91,57 @@ describe('app_state_machine dirty tracking', () => {
     app_state.send({
       type: 'NOTIFY_REVISION_CHANGED',
       note_id: as_note_path('renamed.md'),
-      revision_id: 0,
+      revision_id: 5,
       sticky_dirty: false
     })
 
+    expect(app_state.getSnapshot().context.open_note?.dirty).toBe(false)
+  })
+
+  test('renaming a dirty note keeps it dirty (and supports undo via revision baseline)', () => {
+    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    app_state.start()
+
+    const vault: Vault = {
+      id: 'v1' as VaultId,
+      name: 'Vault',
+      path: '/vault' as VaultPath,
+      created_at: 0
+    }
+
+    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+
+    const open_note: OpenNoteState = {
+      meta: {
+        id: as_note_path('note-1.md'),
+        path: as_note_path('note-1.md'),
+        title: 'note-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      markdown: as_markdown_text('content'),
+      buffer_id: 'buffer-note-1',
+      dirty: true,
+      revision_id: 6,
+      saved_revision_id: 5,
+      sticky_dirty: false,
+      last_saved_at_ms: 0
+    }
+
+    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+
+    app_state.send({ type: 'UPDATE_OPEN_NOTE_PATH', path: as_note_path('renamed.md') })
+    const after_rename = app_state.getSnapshot().context.open_note
+    expect(after_rename?.dirty).toBe(true)
+    expect(after_rename?.saved_revision_id).toBe(5)
+    expect(after_rename?.revision_id).toBe(6)
+
+    app_state.send({
+      type: 'NOTIFY_REVISION_CHANGED',
+      note_id: as_note_path('renamed.md'),
+      revision_id: 5,
+      sticky_dirty: false
+    })
     expect(app_state.getSnapshot().context.open_note?.dirty).toBe(false)
   })
 })

@@ -33,6 +33,7 @@ function create_open_note_state(note: NoteMeta): OpenNoteState {
   return {
     meta: note,
     markdown: as_markdown_text('content'),
+    buffer_id: note.id,
     dirty: false,
     revision_id: 0,
     saved_revision_id: 0,

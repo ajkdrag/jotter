@@ -29,8 +29,8 @@
   }: Props = $props()
 </script>
 
-<Dialog.Root {open} on_open_change={on_open_change}>
-  <Dialog.Content class="max-w-[65ch]" show_close_button={false}>
+<Dialog.Root {open} onOpenChange={on_open_change}>
+  <Dialog.Content class="max-w-[65ch]" showCloseButton={false}>
     <VaultSelectionPanel
       is_dialog={true}
       recent_vaults={recent_vaults}

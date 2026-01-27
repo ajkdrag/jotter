@@ -40,6 +40,7 @@ function create_open_note_state(note: NoteMeta, dirty = false): OpenNoteState {
   return {
     meta: note,
     markdown: as_markdown_text('content'),
+    buffer_id: note.id,
     dirty,
     revision_id: dirty ? 1 : 0,
     saved_revision_id: 0,
@@ -58,6 +59,7 @@ function create_untitled_note_state(title: string, dirty = true): OpenNoteState 
       size_bytes: 0
     },
     markdown: as_markdown_text('untitled content'),
+    buffer_id: `untitled-test:${title}`,
     dirty,
     revision_id: 1,
     saved_revision_id: 0,
@@ -203,12 +205,12 @@ describe('save_note_flow', () => {
     expect(final_state?.meta.id).toBe('Untitled-1.md')
     expect(final_state?.meta.title).toBe('Untitled-1')
     expect(final_state?.dirty).toBe(false)
-    expect(final_state?.saved_revision_id).toBe(0)
+    expect(final_state?.saved_revision_id).toBe(1)
 
     app_state.send({
       type: 'NOTIFY_REVISION_CHANGED',
       note_id: as_note_path('Untitled-1.md'),
-      revision_id: 0,
+      revision_id: 1,
       sticky_dirty: false
     })
     expect(app_state.getSnapshot().context.open_note?.dirty).toBe(false)

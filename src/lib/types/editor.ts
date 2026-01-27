@@ -6,6 +6,9 @@ export type EditorSelection = {
 }
 
 export type OpenNoteState = NoteDoc & {
+  // Stable identity for the in-memory editor buffer.
+  // This must remain unchanged across renames so undo history and dirty tracking survive.
+  buffer_id: string
   dirty: boolean
   revision_id: number
   saved_revision_id: number
@@ -17,6 +20,7 @@ export type OpenNoteState = NoteDoc & {
 export function to_open_note_state(doc: NoteDoc): OpenNoteState {
   return {
     ...doc,
+    buffer_id: doc.meta.id,
     dirty: false,
     revision_id: 0,
     saved_revision_id: 0,

@@ -16,7 +16,7 @@
   let { open, note, is_deleting, error, on_confirm, on_cancel, on_retry }: Props = $props()
 </script>
 
-<Dialog.Root {open} on_open_change={(value: boolean) => { if (!value) on_cancel() }}>
+<Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_cancel() }}>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>{error ? 'Delete Failed' : 'Delete Note'}</Dialog.Title>

@@ -13,7 +13,7 @@
   let { open, is_saving, error, on_retry, on_cancel }: Props = $props()
 </script>
 
-<Dialog.Root {open} on_open_change={(value: boolean) => { if (!value && !is_saving) on_cancel() }}>
+<Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value && !is_saving) on_cancel() }}>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>Save Failed</Dialog.Title>

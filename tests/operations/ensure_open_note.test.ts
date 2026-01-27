@@ -89,6 +89,7 @@ describe('ensure_open_note', () => {
         size_bytes: 0
       },
       markdown: as_markdown_text('hello'),
+      buffer_id: 'welcome-buffer',
       dirty: false,
       revision_id: 0,
       saved_revision_id: 0,

@@ -66,7 +66,7 @@ export const save_note_flow_machine = setup({
         const is_untitled = !note_path.endsWith('.md')
 
         let final_note_id: NoteId = note_id
-        const saved_revision_id = is_untitled ? 0 : current_revision_id
+        const saved_revision_id = current_revision_id
 
         if (is_untitled) {
           const final_note_path = as_note_path(`${open_note.meta.title}.md`)
