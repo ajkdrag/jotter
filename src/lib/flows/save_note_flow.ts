@@ -1,6 +1,6 @@
 import { setup, assign, fromPromise } from 'xstate'
 import type { NotesPort } from '$lib/ports/notes_port'
-import type { VaultId, NoteId, MarkdownText, NotePath } from '$lib/types/ids'
+import type { NoteId } from '$lib/types/ids'
 import { as_note_path } from '$lib/types/ids'
 import type { AppStateEvents, AppStateContext } from '$lib/state/app_state_machine'
 import type { FlowSnapshot } from '$lib/flows/flow_handle'
@@ -66,12 +66,14 @@ export const save_note_flow_machine = setup({
         const is_untitled = !note_path.endsWith('.md')
 
         let final_note_id: NoteId = note_id
+        const saved_revision_id = is_untitled ? 0 : current_revision_id
 
         if (is_untitled) {
-          const note_path = as_note_path(`${open_note.meta.title}.md`)
-          const created_note = await ports.notes.create_note(vault_id, note_path, markdown)
+          const final_note_path = as_note_path(`${open_note.meta.title}.md`)
+          const created_note = await ports.notes.create_note(vault_id, final_note_path, markdown)
           final_note_id = created_note.id
 
+          // Important: update the open note id/path before NOTE_SAVED so the reducer applies.
           dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: final_note_id })
         } else {
           await ports.notes.write_note(vault_id, note_id, markdown)
@@ -81,7 +83,7 @@ export const save_note_flow_machine = setup({
         dispatch({
           type: 'NOTE_SAVED',
           note_id: final_note_id,
-          saved_revision_id: current_revision_id,
+          saved_revision_id,
           saved_at_ms
         })
 

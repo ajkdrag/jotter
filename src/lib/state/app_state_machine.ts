@@ -102,6 +102,11 @@ export function update_open_note_path(context: AppStateContext, new_path: NoteId
   const open_note = context.open_note
   if (!open_note) return context
 
+  const is_clean =
+    !open_note.dirty &&
+    !open_note.sticky_dirty &&
+    open_note.revision_id === open_note.saved_revision_id
+
   const parts = new_path.split('/')
   const leaf = parts[parts.length - 1] ?? ''
   const title = leaf.endsWith('.md') ? leaf.slice(0, -3) : leaf
@@ -110,7 +115,15 @@ export function update_open_note_path(context: AppStateContext, new_path: NoteId
     ...context,
     open_note: {
       ...open_note,
-      meta: { ...open_note.meta, id: new_path, path: new_path, title }
+      meta: { ...open_note.meta, id: new_path, path: new_path, title },
+      ...(is_clean
+        ? {
+            revision_id: 0,
+            saved_revision_id: 0,
+            sticky_dirty: false,
+            dirty: false
+          }
+        : {})
     }
   }
 }

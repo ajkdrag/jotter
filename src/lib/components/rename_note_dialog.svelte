@@ -10,7 +10,6 @@
     new_path: NotePath | null
     is_renaming: boolean
     is_checking_conflict: boolean
-    target_exists: boolean
     error: string | null
     show_overwrite_confirm: boolean
     onUpdatePath: (path: NotePath) => void
@@ -26,7 +25,6 @@
     new_path,
     is_renaming,
     is_checking_conflict,
-    target_exists,
     error,
     show_overwrite_confirm,
     onUpdatePath,

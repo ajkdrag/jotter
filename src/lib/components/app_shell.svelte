@@ -227,7 +227,6 @@
   new_path={rename_note.snapshot.context.new_path}
   is_renaming={rename_note.snapshot.matches('renaming')}
   is_checking_conflict={rename_note.snapshot.matches('checking_conflict')}
-  target_exists={rename_note.snapshot.context.target_exists}
   error={rename_note.snapshot.context.error}
   show_overwrite_confirm={rename_note.snapshot.matches('conflict_confirm')}
   onUpdatePath={actions.update_rename_path}
