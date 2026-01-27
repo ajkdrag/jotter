@@ -5,7 +5,7 @@ export type FileTreeNode = {
   path: string
   children: Map<string, FileTreeNode>
   note: NoteMeta | null
-  isFolder: boolean
+  is_folder: boolean
 }
 
 export function build_filetree(notes: NoteMeta[]): FileTreeNode {
@@ -14,7 +14,7 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
     path: '',
     children: new Map(),
     note: null,
-    isFolder: true
+    is_folder: true
   }
 
   for (const note of notes) {
@@ -25,22 +25,22 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
       const part = parts[i]
       if (!part) continue
       
-      const isLast = i === parts.length - 1
+      const is_last = i === parts.length - 1
 
       if (!current.children.has(part)) {
-        const nodePath = parts.slice(0, i + 1).join('/')
+        const node_path = parts.slice(0, i + 1).join('/')
         current.children.set(part, {
           name: part,
-          path: nodePath,
+          path: node_path,
           children: new Map(),
-          note: isLast ? note : null,
-          isFolder: !isLast
+          note: is_last ? note : null,
+          is_folder: !is_last
         })
       }
 
-      const nextNode = current.children.get(part)
-      if (nextNode) {
-        current = nextNode
+      const next_node = current.children.get(part)
+      if (next_node) {
+        current = next_node
       }
     }
   }
@@ -49,22 +49,22 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
 }
 
 export function sort_tree(node: FileTreeNode): FileTreeNode {
-  const sortedChildren = new Map<string, FileTreeNode>()
+  const sorted_children = new Map<string, FileTreeNode>()
   const entries = Array.from(node.children.entries())
   
-  entries.sort(([aName, aNode], [bName, bNode]) => {
-    if (aNode.isFolder !== bNode.isFolder) {
-      return aNode.isFolder ? -1 : 1
+  entries.sort(([a_name, a_node], [b_name, b_node]) => {
+    if (a_node.is_folder !== b_node.is_folder) {
+      return a_node.is_folder ? -1 : 1
     }
-    return aName.localeCompare(bName)
+    return a_name.localeCompare(b_name)
   })
 
   for (const [name, child] of entries) {
-    sortedChildren.set(name, sort_tree(child))
+    sorted_children.set(name, sort_tree(child))
   }
 
   return {
     ...node,
-    children: sortedChildren
+    children: sorted_children
   }
 }

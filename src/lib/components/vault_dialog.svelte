@@ -6,40 +6,40 @@
 
   interface Props {
     open: boolean
-    onOpenChange: (open: boolean) => void
+    on_open_change: (open: boolean) => void
     recent_vaults: Vault[]
     current_vault_id: VaultId | null
     is_loading?: boolean
     error?: string | null
-    onChooseVaultDir: () => void
-    onSelectVault: (vault_id: VaultId) => void
+    on_choose_vault_dir: () => void
+    on_select_vault: (vault_id: VaultId) => void
     hide_choose_vault_button?: boolean
   }
 
   let {
     open,
-    onOpenChange,
+    on_open_change,
     recent_vaults,
     current_vault_id,
     is_loading = false,
     error = null,
-    onChooseVaultDir,
-    onSelectVault,
+    on_choose_vault_dir,
+    on_select_vault,
     hide_choose_vault_button = false
   }: Props = $props()
 </script>
 
-<Dialog.Root {open} onOpenChange={onOpenChange}>
-  <Dialog.Content class="max-w-[65ch]" showCloseButton={false}>
+<Dialog.Root {open} on_open_change={on_open_change}>
+  <Dialog.Content class="max-w-[65ch]" show_close_button={false}>
     <VaultSelectionPanel
-      isDialog={true}
+      is_dialog={true}
       recent_vaults={recent_vaults}
       current_vault_id={current_vault_id}
       is_loading={is_loading}
       error={error}
-      onChooseVaultDir={onChooseVaultDir}
-      onSelectVault={onSelectVault}
-      onClose={() => onOpenChange(false)}
+      on_choose_vault_dir={on_choose_vault_dir}
+      on_select_vault={on_select_vault}
+      on_close={() => on_open_change(false)}
       hide_choose_vault_button={hide_choose_vault_button}
     />
   </Dialog.Content>

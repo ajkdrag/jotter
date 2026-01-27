@@ -10,10 +10,10 @@
     current_vault_id: VaultId | null
     is_loading?: boolean
     error?: string | null
-    onChooseVaultDir: () => void
-    onSelectVault: (vault_id: VaultId) => void
-    onClose?: () => void
-    isDialog?: boolean
+    on_choose_vault_dir: () => void
+    on_select_vault: (vault_id: VaultId) => void
+    on_close?: () => void
+    is_dialog?: boolean
     hide_choose_vault_button?: boolean
   }
 
@@ -22,10 +22,10 @@
     current_vault_id,
     is_loading = false,
     error = null,
-    onChooseVaultDir,
-    onSelectVault,
-    onClose,
-    isDialog = false,
+    on_choose_vault_dir,
+    on_select_vault,
+    on_close,
+    is_dialog = false,
     hide_choose_vault_button = false
   }: Props = $props()
 
@@ -34,7 +34,7 @@
       event.stopPropagation()
       event.preventDefault()
     }
-    onChooseVaultDir()
+    on_choose_vault_dir()
   }
 
   function handle_select_vault(vault: Vault, event?: Event) {
@@ -42,11 +42,11 @@
       event.stopPropagation()
       event.preventDefault()
     }
-    onSelectVault(vault.id)
+    on_select_vault(vault.id)
   }
 
   function format_path(path: string): string {
-    const parts = path.split(/[/\\]/)
+    const parts = path.split(/[/\\\\]/)
     if (parts.length > 3) {
       return `.../${parts.slice(-2).join('/')}`
     }
@@ -54,13 +54,13 @@
   }
 </script>
 
-{#if isDialog}
+{#if is_dialog}
   <div class="flex flex-col gap-6">
     <div class="relative">
-      {#if onClose}
+      {#if on_close}
         <button
           type="button"
-          onclick={onClose}
+          onclick={on_close}
           disabled={is_loading}
           class="ring-offset-background focus:ring-ring absolute end-0 top-0 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
         >

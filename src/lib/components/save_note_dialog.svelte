@@ -6,14 +6,14 @@
     open: boolean
     is_saving: boolean
     error: string | null
-    onRetry: () => void
-    onCancel: () => void
+    on_retry: () => void
+    on_cancel: () => void
   }
 
-  let { open, is_saving, error, onRetry, onCancel }: Props = $props()
+  let { open, is_saving, error, on_retry, on_cancel }: Props = $props()
 </script>
 
-<Dialog.Root {open} onOpenChange={(value) => { if (!value && !is_saving) onCancel() }}>
+<Dialog.Root {open} on_open_change={(value: boolean) => { if (!value && !is_saving) on_cancel() }}>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>Save Failed</Dialog.Title>
@@ -26,10 +26,10 @@
       </Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="outline" onclick={onCancel} disabled={is_saving}>
+      <Button variant="outline" onclick={on_cancel} disabled={is_saving}>
         Cancel
       </Button>
-      <Button onclick={onRetry} disabled={is_saving}>
+      <Button onclick={on_retry} disabled={is_saving}>
         {#if is_saving}
           Saving...
         {:else}

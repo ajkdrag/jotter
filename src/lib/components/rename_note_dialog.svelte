@@ -12,11 +12,11 @@
     is_checking_conflict: boolean
     error: string | null
     show_overwrite_confirm: boolean
-    onUpdatePath: (path: NotePath) => void
-    onConfirm: () => void
-    onConfirmOverwrite: () => void
-    onCancel: () => void
-    onRetry: () => void
+    on_update_path: (path: NotePath) => void
+    on_confirm: () => void
+    on_confirm_overwrite: () => void
+    on_cancel: () => void
+    on_retry: () => void
   }
 
   let {
@@ -27,17 +27,17 @@
     is_checking_conflict,
     error,
     show_overwrite_confirm,
-    onUpdatePath,
-    onConfirm,
-    onConfirmOverwrite,
-    onCancel,
-    onRetry
+    on_update_path,
+    on_confirm,
+    on_confirm_overwrite,
+    on_cancel,
+    on_retry
   }: Props = $props()
 
   let input_value = $derived(new_path ?? '')
 
   function update_input(value: string) {
-    onUpdatePath(value as NotePath)
+    on_update_path(value as NotePath)
   }
 
   function get_display_title() {
@@ -61,7 +61,7 @@
   }
 </script>
 
-<Dialog.Root {open} onOpenChange={(value) => { if (!value) onCancel() }}>
+<Dialog.Root {open} on_open_change={(value: boolean) => { if (!value) on_cancel() }}>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>{get_display_title()}</Dialog.Title>
@@ -86,10 +86,10 @@
 
     <Dialog.Footer>
       {#if show_overwrite_confirm}
-        <Button variant="outline" onclick={onCancel} disabled={is_renaming}>
+        <Button variant="outline" onclick={on_cancel} disabled={is_renaming}>
           Cancel
         </Button>
-        <Button variant="destructive" onclick={onConfirmOverwrite} disabled={is_renaming}>
+        <Button variant="destructive" onclick={on_confirm_overwrite} disabled={is_renaming}>
           {#if is_renaming}
             Renaming...
           {:else}
@@ -97,19 +97,19 @@
           {/if}
         </Button>
       {:else if error}
-        <Button variant="outline" onclick={onCancel} disabled={is_renaming}>
+        <Button variant="outline" onclick={on_cancel} disabled={is_renaming}>
           Cancel
         </Button>
-        <Button variant="default" onclick={onRetry} disabled={is_renaming}>
+        <Button variant="default" onclick={on_retry} disabled={is_renaming}>
           Retry
         </Button>
       {:else}
-        <Button variant="outline" onclick={onCancel} disabled={is_renaming || is_checking_conflict}>
+        <Button variant="outline" onclick={on_cancel} disabled={is_renaming || is_checking_conflict}>
           Cancel
         </Button>
         <Button
           variant="default"
-          onclick={onConfirm}
+          onclick={on_confirm}
           disabled={!is_input_valid() || is_renaming || is_checking_conflict}
         >
           {#if is_renaming || is_checking_conflict}

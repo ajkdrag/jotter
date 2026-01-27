@@ -10,10 +10,10 @@ export function create_assets_tauri_adapter(): AssetsPort {
       const payload =
         source.kind === 'path'
           ? { kind: 'path', path: source.path }
-          : { kind: 'bytes', bytes: Array.from(source.bytes), fileName: source.file_name }
+          : { kind: 'bytes', bytes: Array.from(source.bytes), file_name: source.file_name }
 
       const rel = await tauri_invoke<string>('import_asset', {
-        args: { vaultId: vault_id, targetPath: target_path, source: payload }
+        args: { vault_id, target_path, source: payload }
       })
       return as_asset_path(rel)
     },

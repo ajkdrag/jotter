@@ -171,8 +171,8 @@
       current_vault_id={null}
       is_loading={vault_selection_loading}
       error={open_app.snapshot.context.error ?? change_vault.snapshot.context.error}
-      onChooseVaultDir={actions.choose_vault_dir}
-      onSelectVault={actions.select_vault}
+      on_choose_vault_dir={actions.choose_vault_dir}
+      on_select_vault={actions.select_vault}
       hide_choose_vault_button={stable.hide_choose_vault_button}
     />
   </div>
@@ -198,15 +198,15 @@
   {@const app = app_state.snapshot.context}
   <VaultDialog
     open={vault_dialog_open}
-    onOpenChange={(open) => {
+    on_open_change={(open) => {
       if (!open) actions.close_change_vault_dialog()
     }}
     recent_vaults={app.recent_vaults}
     current_vault_id={app.vault!.id}
     is_loading={vault_selection_loading}
     error={change_vault.snapshot.context.error}
-    onChooseVaultDir={actions.choose_vault_dir}
-    onSelectVault={actions.select_vault}
+    on_choose_vault_dir={actions.choose_vault_dir}
+    on_select_vault={actions.select_vault}
     hide_choose_vault_button={stable.hide_choose_vault_button}
   />
 {/if}
@@ -216,9 +216,9 @@
   note={delete_note.snapshot.context.note_to_delete}
   is_deleting={delete_note.snapshot.matches('deleting')}
   error={delete_note.snapshot.context.error}
-  onConfirm={actions.confirm_delete}
-  onCancel={actions.cancel_delete}
-  onRetry={actions.retry_delete}
+  on_confirm={actions.confirm_delete}
+  on_cancel={actions.cancel_delete}
+  on_retry={actions.retry_delete}
 />
 
 <RenameNoteDialog
@@ -229,19 +229,19 @@
   is_checking_conflict={rename_note.snapshot.matches('checking_conflict')}
   error={rename_note.snapshot.context.error}
   show_overwrite_confirm={rename_note.snapshot.matches('conflict_confirm')}
-  onUpdatePath={actions.update_rename_path}
-  onConfirm={actions.confirm_rename}
-  onConfirmOverwrite={actions.confirm_rename_overwrite}
-  onCancel={actions.cancel_rename}
-  onRetry={actions.retry_rename}
+  on_update_path={actions.update_rename_path}
+  on_confirm={actions.confirm_rename}
+  on_confirm_overwrite={actions.confirm_rename_overwrite}
+  on_cancel={actions.cancel_rename}
+  on_retry={actions.retry_rename}
 />
 
 <SaveNoteDialog
   open={save_dialog_open}
   is_saving={save_note.snapshot.matches('saving')}
   error={save_note.snapshot.context.error}
-  onRetry={actions.retry_save}
-  onCancel={actions.cancel_save}
+  on_retry={actions.retry_save}
+  on_cancel={actions.cancel_save}
 />
 
 <svelte:window onkeydown={handle_keydown} />

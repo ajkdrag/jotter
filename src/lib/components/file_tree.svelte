@@ -36,7 +36,7 @@
 {#snippet render_tree(nodes: Map<string, FileTreeNode>)}
   <SidebarMenu>
     {#each Array.from(nodes.entries()) as [name, node] (name)}
-      {#if node.isFolder}
+      {#if node.is_folder}
         <SidebarMenuItem>
           <SidebarMenuButton onclick={() => toggle_folder(node.path)}>
             {#if expanded.has(node.path)}
