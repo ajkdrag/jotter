@@ -34,15 +34,15 @@ export const milkdown_editor_port: EditorPort = {
       .use(dirty_state_plugin)
       .config((ctx) => {
         ctx.set(dirty_state_plugin_config_key.key, {
-          on_dirty_state_change: (is_dirty: boolean) => {
+          on_dirty_state_change: (is_dirty) => {
             current_is_dirty = is_dirty
             on_dirty_state_change(is_dirty)
           }
         })
 
         const listener_instance = ctx.get(listenerCtx)
-        listener_instance.markdownUpdated((_ctx, markdown, prevMarkdown) => {
-          if (markdown !== prevMarkdown && markdown !== current_markdown) {
+        listener_instance.markdownUpdated((_ctx, markdown, prev_markdown) => {
+          if (markdown !== prev_markdown && markdown !== current_markdown) {
             current_markdown = markdown
             on_markdown_change(markdown)
           }
@@ -50,38 +50,37 @@ export const milkdown_editor_port: EditorPort = {
       })
       .create()
 
+    function mark_clean() {
+      if (!editor) return
+      editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        const tr = view.state.tr
+        tr.setMeta(dirty_state_plugin_key, { action: 'mark_clean' })
+        view.dispatch(tr)
+      })
+    }
+
     const handle = {
-      destroy: () => {
-        if (editor) {
-          editor.destroy()
-          editor = null
-        }
+      destroy() {
+        if (!editor) return
+        editor.destroy()
+        editor = null
       },
-      set_markdown: (markdown: string) => {
-        if (editor) {
-          current_markdown = markdown
-          editor.action(replaceAll(markdown))
-        }
+      set_markdown(markdown: string) {
+        if (!editor) return
+        current_markdown = markdown
+        editor.action(replaceAll(markdown))
       },
-      get_markdown: () => {
+      get_markdown() {
         return current_markdown
       },
-      mark_clean: () => {
-        if (editor) {
-          editor.action((ctx) => {
-            const view = ctx.get(editorViewCtx)
-            const tr = view.state.tr
-            tr.setMeta(dirty_state_plugin_key, { action: 'mark_clean' })
-            view.dispatch(tr)
-          })
-        }
-      },
-      is_dirty: () => {
+      mark_clean,
+      is_dirty() {
         return current_is_dirty
       }
     }
 
-    handle.mark_clean()
+    mark_clean()
 
     return handle
   }

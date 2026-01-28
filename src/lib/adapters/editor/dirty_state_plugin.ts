@@ -1,5 +1,6 @@
 import { $ctx, $prose } from '@milkdown/kit/utils'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import type { Node } from '@milkdown/kit/prose/model'
 
 export type DirtyStateChangeCallback = (is_dirty: boolean) => void
 
@@ -16,15 +17,20 @@ export const dirty_state_plugin_config_key = $ctx<DirtyStatePluginConfig, 'dirty
   'dirty_state_plugin_config'
 )
 
+type PluginState = {
+  saved_doc: Node | null
+  is_dirty: boolean
+}
+
 export const dirty_state_plugin = $prose((ctx) => {
   const config = ctx.get(dirty_state_plugin_config_key.key)
 
-  return new Plugin({
+  return new Plugin<PluginState>({
     key: dirty_state_plugin_key,
     state: {
       init() {
         return {
-          saved_doc: null as any,
+          saved_doc: null,
           is_dirty: false
         }
       },
@@ -37,18 +43,17 @@ export const dirty_state_plugin = $prose((ctx) => {
         }
 
         if (tr.getMeta(dirty_state_plugin_key)?.action === 'mark_clean') {
-          const new_plugin_state = {
+          if (plugin_state.is_dirty) {
+            config.on_dirty_state_change(false)
+          }
+          return {
             saved_doc: new_state.doc,
             is_dirty: false
           }
-          if (plugin_state.is_dirty !== false) {
-            config.on_dirty_state_change(false)
-          }
-          return new_plugin_state
         }
 
         if (tr.docChanged) {
-          const current_is_dirty = !new_state.doc.eq(plugin_state.saved_doc as any)
+          const current_is_dirty = !new_state.doc.eq(plugin_state.saved_doc)
 
           if (current_is_dirty !== plugin_state.is_dirty) {
             config.on_dirty_state_change(current_is_dirty)

@@ -158,12 +158,12 @@
   }
 
   $effect(() => {
-    const is_saving = save_note.snapshot.matches('saving')
-    const is_idle = save_note.snapshot.matches('idle')
-
-    if (is_saving) {
+    if (save_note.snapshot.matches('saving')) {
       save_was_in_progress = true
-    } else if (is_idle && save_was_in_progress) {
+      return
+    }
+
+    if (save_note.snapshot.matches('idle') && save_was_in_progress) {
       save_was_in_progress = false
       mark_editor_clean_trigger++
       app_state.send({ type: 'NOTIFY_DIRTY_STATE_CHANGED', is_dirty: false })

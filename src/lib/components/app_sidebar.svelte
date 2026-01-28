@@ -45,7 +45,7 @@
     const editor_manager = $derived(create_editor_manager(editor_port));
 
     $effect(() => {
-        if (mark_editor_clean_trigger > 0) {
+        if (mark_editor_clean_trigger) {
             editor_manager.mark_clean()
         }
     })
