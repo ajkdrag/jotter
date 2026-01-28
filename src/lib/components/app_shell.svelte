@@ -7,7 +7,7 @@
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
   import type { Ports } from '$lib/adapters/create_prod_ports'
-  import type { NoteId, VaultId, VaultPath } from '$lib/types/ids'
+  import type { VaultId, VaultPath } from '$lib/types/ids'
   import { as_markdown_text, as_note_path } from '$lib/types/ids'
   import type { NoteMeta } from '$lib/types/note'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
@@ -172,6 +172,7 @@
   {@const app = app_state.snapshot.context}
   <main>
     <AppSidebar
+      editor_port={stable.ports.editor}
       vault={app.vault}
       notes={app.notes}
       open_note_title={app.open_note?.meta.title ?? 'Notes'}

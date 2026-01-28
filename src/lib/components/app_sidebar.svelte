@@ -4,12 +4,15 @@
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
+    import type { EditorPort } from "$lib/ports/editor_port";
+    import { create_editor_manager } from "$lib/operations/manage_editor";
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
     import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
     type Props = {
+        editor_port: EditorPort;
         vault: Vault | null;
         notes: NoteMeta[];
         open_note_title: string;
@@ -22,6 +25,7 @@
     };
 
     let {
+        editor_port,
         vault,
         notes,
         open_note_title,
@@ -34,6 +38,7 @@
     }: Props = $props();
 
     let open = $state(true);
+    const editor_manager = create_editor_manager(editor_port);
 </script>
 
 {#if vault}
@@ -108,6 +113,7 @@
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">
                         <NoteEditor
+                            editor_manager={editor_manager}
                             open_note={open_note}
                             on_markdown_change={on_markdown_change}
                         />

@@ -8,10 +8,12 @@ import { create_notes_web_adapter } from '$lib/adapters/web/notes_web_adapter'
 import { create_vault_web_adapter } from '$lib/adapters/web/vault_web_adapter'
 import { create_workspace_index_web_adapter } from '$lib/adapters/web/workspace_index_web_adapter'
 import type { AssetsPort } from '$lib/ports/assets_port'
+import type { EditorPort } from '$lib/ports/editor_port'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { SettingsPort } from '$lib/ports/settings_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
+import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
 
 const settings_stub: SettingsPort = {
   async get_setting<T>(_key: string): Promise<T | null> {
@@ -26,6 +28,7 @@ export type Ports = {
   index: WorkspaceIndexPort
   settings: SettingsPort
   assets: AssetsPort
+  editor: EditorPort
 }
 
 export function create_prod_ports(): Ports {
@@ -34,6 +37,7 @@ export function create_prod_ports(): Ports {
     notes: is_tauri ? create_notes_tauri_adapter() : create_notes_web_adapter(),
     index: is_tauri ? create_workspace_index_tauri_adapter() : create_workspace_index_web_adapter(),
     settings: settings_stub,
-    assets: is_tauri ? create_assets_tauri_adapter() : create_assets_web_adapter()
+    assets: is_tauri ? create_assets_tauri_adapter() : create_assets_web_adapter(),
+    editor: milkdown_editor_port
   }
 }
