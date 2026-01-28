@@ -18,24 +18,8 @@ function next_untitled_name_in_folder(notes: NoteMeta[], folder_prefix: string):
   return `Untitled-${max + 1}`
 }
 
-function next_untitled_name(notes: NoteMeta[]): string {
-  return next_untitled_name_in_folder(notes, '')
-}
-
 export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: number }): OpenNoteState {
-  const name = next_untitled_name(args.notes)
-  return {
-    meta: {
-      id: as_note_path(name),
-      path: as_note_path(name),
-      title: name,
-      mtime_ms: args.now_ms,
-      size_bytes: 0
-    },
-    markdown: as_markdown_text(''),
-    buffer_id: `untitled:${args.now_ms}:${name}`,
-    is_dirty: false
-  }
+  return create_untitled_open_note_in_folder({ ...args, folder_prefix: '' })
 }
 
 export function create_untitled_open_note_in_folder(args: {

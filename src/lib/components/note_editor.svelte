@@ -7,19 +7,16 @@
         open_note: OpenNoteState | null;
         on_markdown_change: (markdown: string) => void;
         on_dirty_state_change: (is_dirty: boolean) => void;
-        on_register_focus?: (focus: () => void) => void;
     }
 
-    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change, on_register_focus }: Props = $props();
+    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change }: Props = $props();
 
     function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-        void editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change);
+        const mount_promise = editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change);
 
-        if (on_register_focus) {
-            on_register_focus(() => {
-                editor_manager.focus();
-            });
-        }
+        mount_promise.then(() => {
+            editor_manager.focus();
+        });
 
         return {
             destroy() {

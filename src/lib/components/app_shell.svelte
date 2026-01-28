@@ -40,7 +40,6 @@
   let mark_editor_clean_trigger = $state(0)
   let palette_open = $state(false)
   let palette_selected_index = $state(0)
-  let focus_editor: (() => void) | null = $state(null)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -83,8 +82,9 @@
     },
     create_new_note() {
       const app = app_state.snapshot.context
-      const current_note_path = app.open_note?.meta.path ?? ''
-      const folder_prefix = current_note_path.includes('/') ? current_note_path.substring(0, current_note_path.lastIndexOf('/')) : ''
+      const current_path = app.open_note?.meta.path ?? ''
+      const last_slash = current_path.lastIndexOf('/')
+      const folder_prefix = last_slash >= 0 ? current_path.substring(0, last_slash) : ''
 
       const new_note = create_untitled_open_note_in_folder({
         notes: app.notes,
@@ -93,14 +93,7 @@
       })
 
       app_state.send({ type: 'SET_OPEN_NOTE', open_note: new_note })
-
       palette_open = false
-
-      if (focus_editor) {
-        queueMicrotask(() => {
-          focus_editor?.()
-        })
-      }
     },
     request_change_vault() {
       change_vault.send({ type: 'OPEN_DIALOG' })
@@ -242,7 +235,6 @@
       on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
-      on_register_editor_focus={(focus_fn) => { focus_editor = focus_fn }}
     />
   </main>
 {/if}
