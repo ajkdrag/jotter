@@ -2,9 +2,15 @@ import type { EditorHandle, EditorPort } from '$lib/ports/editor_port'
 import type { OpenNoteState } from '$lib/types/editor'
 
 export type EditorManager = {
-  mount: (root: HTMLElement, note: OpenNoteState, on_change: (md: string) => void) => Promise<void>
+  mount: (
+    root: HTMLElement,
+    note: OpenNoteState,
+    on_change: (md: string) => void,
+    on_dirty_change: (is_dirty: boolean) => void
+  ) => Promise<void>
   update: (note: OpenNoteState) => void
   destroy: () => void
+  mark_clean: () => void
 }
 
 export function create_editor_manager(editor_port: EditorPort): EditorManager {
@@ -12,7 +18,12 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
   let current_buffer_id: string | null = null
 
   return {
-    async mount(root: HTMLElement, note: OpenNoteState, on_change: (md: string) => void) {
+    async mount(
+      root: HTMLElement,
+      note: OpenNoteState,
+      on_change: (md: string) => void,
+      on_dirty_change: (is_dirty: boolean) => void
+    ) {
       if (editor_handle) {
         editor_handle.destroy()
         editor_handle = null
@@ -22,6 +33,7 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       editor_handle = await editor_port.create_editor(root, {
         initial_markdown: note.markdown,
         on_markdown_change: on_change,
+        on_dirty_state_change: on_dirty_change
       })
     },
 
@@ -31,6 +43,7 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
 
       current_buffer_id = note.buffer_id
       editor_handle.set_markdown(note.markdown)
+      editor_handle.mark_clean()
     },
 
     destroy() {
@@ -40,5 +53,11 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       }
       current_buffer_id = null
     },
+
+    mark_clean() {
+      if (editor_handle) {
+        editor_handle.mark_clean()
+      }
+    }
   }
 }

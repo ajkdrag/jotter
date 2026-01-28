@@ -9,7 +9,7 @@
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
-    import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
+    import { FolderOpen, ArrowLeftRight, Circle } from "@lucide/svelte";
 
     type Props = {
         editor_port: EditorPort;
@@ -17,9 +17,11 @@
         notes: NoteMeta[];
         open_note_title: string;
         open_note: OpenNoteState | null;
+        mark_editor_clean_trigger?: number;
         on_open_note: (note_path: string) => void;
         on_request_change_vault: () => void;
         on_markdown_change: (markdown: string) => void;
+        on_dirty_state_change: (is_dirty: boolean) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
         on_request_rename_note?: (note: NoteMeta) => void;
     };
@@ -30,15 +32,23 @@
         notes,
         open_note_title,
         open_note,
+        mark_editor_clean_trigger = 0,
         on_open_note,
         on_request_change_vault,
         on_markdown_change,
+        on_dirty_state_change,
         on_request_delete_note,
         on_request_rename_note
     }: Props = $props();
 
     let open = $state(true);
     const editor_manager = $derived(create_editor_manager(editor_port));
+
+    $effect(() => {
+        if (mark_editor_clean_trigger > 0) {
+            editor_manager.mark_clean()
+        }
+    })
 </script>
 
 {#if vault}
@@ -109,6 +119,9 @@
                         <Sidebar.Trigger />
                         <div class="text-sm font-medium flex items-center gap-2 min-w-0">
                             <span class="truncate">{open_note_title}</span>
+                            {#if open_note?.is_dirty}
+                                <Circle class="h-2 w-2 fill-current shrink-0" />
+                            {/if}
                         </div>
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">
@@ -116,6 +129,7 @@
                             editor_manager={editor_manager}
                             open_note={open_note}
                             on_markdown_change={on_markdown_change}
+                            on_dirty_state_change={on_dirty_state_change}
                         />
                     </div>
                 </Sidebar.Inset>

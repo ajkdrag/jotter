@@ -27,6 +27,7 @@ export type AppStateEvents =
   | { type: 'CLEAR_OPEN_NOTE' }
   | { type: 'UPDATE_OPEN_NOTE_PATH'; path: NoteId }
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
+  | { type: 'NOTIFY_DIRTY_STATE_CHANGED'; is_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
 
 export type AppStateInput = { now_ms?: () => number }
@@ -59,6 +60,14 @@ export function update_markdown(context: AppStateContext, markdown: MarkdownText
   return {
     ...context,
     open_note: { ...context.open_note, markdown }
+  }
+}
+
+export function update_dirty_state(context: AppStateContext, is_dirty: boolean): AppStateContext {
+  if (!context.open_note) return context
+  return {
+    ...context,
+    open_note: { ...context.open_note, is_dirty }
   }
 }
 
@@ -170,6 +179,9 @@ export const app_state_machine = setup({
         },
         NOTIFY_MARKDOWN_CHANGED: {
           actions: assign(({ event, context }) => update_markdown(context, event.markdown))
+        },
+        NOTIFY_DIRTY_STATE_CHANGED: {
+          actions: assign(({ event, context }) => update_dirty_state(context, event.is_dirty))
         },
         COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))

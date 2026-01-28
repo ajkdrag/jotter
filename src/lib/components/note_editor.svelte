@@ -6,12 +6,13 @@
         editor_manager: EditorManager;
         open_note: OpenNoteState | null;
         on_markdown_change: (markdown: string) => void;
+        on_dirty_state_change: (is_dirty: boolean) => void;
     }
 
-    let { editor_manager, open_note, on_markdown_change }: Props = $props();
+    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change }: Props = $props();
 
     function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-        void editor_manager.mount(node, note, on_markdown_change);
+        void editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change);
         return {
             destroy() {
                 editor_manager.destroy();

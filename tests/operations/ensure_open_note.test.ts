@@ -89,7 +89,8 @@ describe('ensure_open_note', () => {
         size_bytes: 0
       },
       markdown: as_markdown_text('hello'),
-      buffer_id: 'welcome-buffer'
+      buffer_id: 'welcome-buffer',
+      is_dirty: false
     }
 
     const result = ensure_open_note({

@@ -34,6 +34,9 @@
   const rename_note = use_flow_handle(app.flows.rename_note)
   const save_note = use_flow_handle(app.flows.save_note)
 
+  let save_was_in_progress = $state(false)
+  let mark_editor_clean_trigger = $state(0)
+
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
       (change_vault.snapshot.matches('dialog_open') ||
@@ -97,6 +100,9 @@
     markdown_change(markdown: string) {
       app_state.send({ type: 'NOTIFY_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
     },
+    dirty_state_change(is_dirty: boolean) {
+      app_state.send({ type: 'NOTIFY_DIRTY_STATE_CHANGED', is_dirty })
+    },
     request_delete(note: NoteMeta) {
       const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
@@ -151,6 +157,19 @@
     }
   }
 
+  $effect(() => {
+    const is_saving = save_note.snapshot.matches('saving')
+    const is_idle = save_note.snapshot.matches('idle')
+
+    if (is_saving) {
+      save_was_in_progress = true
+    } else if (is_idle && save_was_in_progress) {
+      save_was_in_progress = false
+      mark_editor_clean_trigger++
+      app_state.send({ type: 'NOTIFY_DIRTY_STATE_CHANGED', is_dirty: false })
+    }
+  })
+
   onMount(() => {
     actions.mount()
   })
@@ -177,9 +196,11 @@
       notes={app.notes}
       open_note_title={app.open_note?.meta.title ?? 'Notes'}
       open_note={app.open_note}
+      mark_editor_clean_trigger={mark_editor_clean_trigger}
       on_open_note={actions.open_note}
       on_request_change_vault={actions.request_change_vault}
       on_markdown_change={actions.markdown_change}
+      on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
     />

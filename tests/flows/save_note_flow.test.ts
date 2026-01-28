@@ -40,7 +40,8 @@ function create_open_note_state(note: NoteMeta): OpenNoteState {
   return {
     meta: note,
     markdown: as_markdown_text('content'),
-    buffer_id: note.id
+    buffer_id: note.id,
+    is_dirty: false
   }
 }
 
@@ -54,7 +55,8 @@ function create_untitled_note_state(title: string): OpenNoteState {
       size_bytes: 0
     },
     markdown: as_markdown_text('untitled content'),
-    buffer_id: `untitled-test:${title}`
+    buffer_id: `untitled-test:${title}`,
+    is_dirty: false
   }
 }
 
