@@ -38,7 +38,7 @@
     }: Props = $props();
 
     let open = $state(true);
-    const editor_manager = create_editor_manager(editor_port);
+    const editor_manager = $derived(create_editor_manager(editor_port));
 </script>
 
 {#if vault}
