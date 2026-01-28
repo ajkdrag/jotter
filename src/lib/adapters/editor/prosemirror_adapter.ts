@@ -1,13 +1,13 @@
 import { EditorState } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
-import { Schema, DOMParser, DOMSerializer } from 'prosemirror-model'
+import { Schema } from 'prosemirror-model'
 import { schema as basicSchema } from 'prosemirror-schema-basic'
 import { addListNodes } from 'prosemirror-schema-list'
 import { keymap } from 'prosemirror-keymap'
 import { history, undo, redo } from 'prosemirror-history'
 import { baseKeymap } from 'prosemirror-commands'
 import { MarkdownParser, MarkdownSerializer, defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown'
-import type { EditorPort, EditorHandle } from '$lib/ports/editor_port'
+import type { EditorPort } from '$lib/ports/editor_port'
 import './prosemirror.css'
 
 const schema = new Schema({
