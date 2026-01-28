@@ -2,13 +2,11 @@
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-    import { Badge } from "$lib/components/ui/badge/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
-    import type { NoteId } from "$lib/types/ids";
     import { FolderOpen, ArrowLeftRight } from "@lucide/svelte";
 
     type Props = {
@@ -19,7 +17,6 @@
         on_open_note: (note_path: string) => void;
         on_request_change_vault: () => void;
         on_markdown_change: (markdown: string) => void;
-        on_revision_change: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
         on_request_rename_note?: (note: NoteMeta) => void;
     };
@@ -32,7 +29,6 @@
         on_open_note,
         on_request_change_vault,
         on_markdown_change,
-        on_revision_change,
         on_request_delete_note,
         on_request_rename_note
     }: Props = $props();
@@ -108,16 +104,12 @@
                         <Sidebar.Trigger />
                         <div class="text-sm font-medium flex items-center gap-2 min-w-0">
                             <span class="truncate">{open_note_title}</span>
-                            {#if open_note?.dirty}
-                                <Badge variant="secondary" class="h-1.5 w-1.5 rounded-full p-0 bg-primary/40 border-none shrink-0" />
-                            {/if}
                         </div>
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">
                         <NoteEditor
                             open_note={open_note}
                             on_markdown_change={on_markdown_change}
-                            on_revision_change={on_revision_change}
                         />
                     </div>
                 </Sidebar.Inset>

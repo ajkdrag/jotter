@@ -55,37 +55,25 @@ export const save_note_flow_machine = setup({
         const { vault, open_note } = app_snapshot.context
 
         if (!vault || !open_note) return
-        if (!open_note.dirty) return
 
         const vault_id = vault.id
         const note_id = open_note.meta.id
         const note_path = open_note.meta.path
         const markdown = open_note.markdown
-        const current_revision_id = open_note.revision_id
 
         const is_untitled = !note_path.endsWith('.md')
 
         let final_note_id: NoteId = note_id
-        const saved_revision_id = current_revision_id
 
         if (is_untitled) {
           const final_note_path = as_note_path(`${open_note.meta.title}.md`)
           const created_note = await ports.notes.create_note(vault_id, final_note_path, markdown)
           final_note_id = created_note.id
 
-          // Important: update the open note id/path before NOTE_SAVED so the reducer applies.
           dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: final_note_id })
         } else {
           await ports.notes.write_note(vault_id, note_id, markdown)
         }
-
-        const saved_at_ms = Date.now()
-        dispatch({
-          type: 'NOTE_SAVED',
-          note_id: final_note_id,
-          saved_revision_id,
-          saved_at_ms
-        })
 
         const notes = await ports.notes.list_notes(vault_id)
         dispatch({ type: 'UPDATE_NOTES_LIST', notes })

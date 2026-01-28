@@ -26,12 +26,7 @@ export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: num
       size_bytes: 0
     },
     markdown: as_markdown_text(''),
-    buffer_id: `untitled:${args.now_ms}:${name}`,
-    dirty: false,
-    revision_id: 0,
-    saved_revision_id: 0,
-    sticky_dirty: false,
-    last_saved_at_ms: args.now_ms
+    buffer_id: `untitled:${args.now_ms}:${name}`
   }
 }
 

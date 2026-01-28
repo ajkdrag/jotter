@@ -97,14 +97,6 @@
     markdown_change(markdown: string) {
       app_state.send({ type: 'NOTIFY_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
     },
-    revision_change(args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) {
-      app_state.send({
-        type: 'NOTIFY_REVISION_CHANGED',
-        note_id: args.note_id,
-        revision_id: args.revision_id,
-        sticky_dirty: args.sticky_dirty
-      })
-    },
     request_delete(note: NoteMeta) {
       const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
@@ -187,7 +179,6 @@
       on_open_note={actions.open_note}
       on_request_change_vault={actions.request_change_vault}
       on_markdown_change={actions.markdown_change}
-      on_revision_change={actions.revision_change}
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
     />

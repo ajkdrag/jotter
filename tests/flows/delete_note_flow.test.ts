@@ -33,12 +33,7 @@ function create_open_note_state(note: NoteMeta): OpenNoteState {
   return {
     meta: note,
     markdown: as_markdown_text('content'),
-    buffer_id: note.id,
-    dirty: false,
-    revision_id: 0,
-    saved_revision_id: 0,
-    sticky_dirty: false,
-    last_saved_at_ms: 0
+    buffer_id: note.id
   }
 }
 
@@ -152,7 +147,6 @@ describe('delete_note_flow', () => {
 
     expect(app_state.getSnapshot().context.open_note).not.toBe(null)
     expect(app_state.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
-    expect(app_state.getSnapshot().context.open_note?.dirty).toBe(false)
   })
 
   test('does not clear open_note when different note deleted', async () => {

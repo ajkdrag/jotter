@@ -1,21 +1,18 @@
 <script lang="ts">
-    import {
-        create_milkdown_editor,
-        type MilkdownHandle,
-    } from "$lib/adapters/editor/milkdown_adapter";
+    import { prosemirror_editor_port } from "$lib/adapters/editor/prosemirror_adapter";
+    import type { EditorHandle } from "$lib/ports/editor_port";
     import type { OpenNoteState } from "$lib/types/editor";
     import type { NoteId } from "$lib/types/ids";
 
     interface Props {
         open_note: OpenNoteState | null;
         on_markdown_change: (markdown: string) => void;
-        on_revision_change: (args: { note_id: NoteId; revision_id: number; sticky_dirty: boolean }) => void;
     }
 
-    let { open_note, on_markdown_change, on_revision_change }: Props = $props();
+    let { open_note, on_markdown_change }: Props = $props();
 
     let editor_root: HTMLDivElement;
-    let editor_handle: MilkdownHandle | null = $state(null);
+    let editor_handle: EditorHandle | null = $state(null);
     let current_note_id: NoteId | null = $state(null);
     let current_buffer_id: string | null = $state(null);
     let is_initializing = false;
@@ -31,19 +28,12 @@
         current_buffer_id = note.buffer_id;
         is_initializing = true;
         try {
-            const handle = await create_milkdown_editor(editor_root, {
+            const handle = await prosemirror_editor_port.create_editor(editor_root, {
                 initial_markdown: note.markdown,
                 on_markdown_change: (markdown) => {
                     on_markdown_change(markdown);
                 },
-                on_revision_change: ({ revision_id, sticky_dirty }) => {
-                    const note_id = current_note_id;
-                    if (!note_id) return;
-                    on_revision_change({ note_id, revision_id, sticky_dirty });
-                },
             });
-             // If user navigated away while we were awaiting,
-             // destroy the instance to prevent a memory leak/ghost editor.
 
             if (!editor_root) {
                 handle.destroy();

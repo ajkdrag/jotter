@@ -27,9 +27,7 @@ export type AppStateEvents =
   | { type: 'CLEAR_OPEN_NOTE' }
   | { type: 'UPDATE_OPEN_NOTE_PATH'; path: NoteId }
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
-  | { type: 'NOTIFY_REVISION_CHANGED'; note_id: NoteId; revision_id: number; sticky_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
-  | { type: 'NOTE_SAVED'; note_id: NoteId; saved_revision_id: number; saved_at_ms: number }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -64,27 +62,6 @@ export function update_markdown(context: AppStateContext, markdown: MarkdownText
   }
 }
 
-export function update_revision(
-  context: AppStateContext,
-  note_id: NoteId,
-  revision_id: number,
-  sticky_dirty: boolean
-): AppStateContext {
-  const open_note = context.open_note
-  if (!open_note || open_note.meta.id !== note_id) return context
-
-  const dirty = sticky_dirty || revision_id !== open_note.saved_revision_id
-
-  return {
-    ...context,
-    open_note: {
-      ...open_note,
-      revision_id,
-      sticky_dirty,
-      dirty
-    }
-  }
-}
 
 export function ensure_open_note_in_context(context: AppStateContext): AppStateContext {
   return {
@@ -115,26 +92,6 @@ export function update_open_note_path(context: AppStateContext, new_path: NoteId
   }
 }
 
-export function mark_note_saved(
-  context: AppStateContext,
-  note_id: NoteId,
-  saved_revision_id: number,
-  saved_at_ms: number
-): AppStateContext {
-  const open_note = context.open_note
-  if (!open_note || open_note.meta.id !== note_id) return context
-
-  return {
-    ...context,
-    open_note: {
-      ...open_note,
-      saved_revision_id,
-      dirty: false,
-      sticky_dirty: false,
-      last_saved_at_ms: saved_at_ms
-    }
-  }
-}
 
 export const app_state_machine = setup({
   types: {
@@ -214,18 +171,8 @@ export const app_state_machine = setup({
         NOTIFY_MARKDOWN_CHANGED: {
           actions: assign(({ event, context }) => update_markdown(context, event.markdown))
         },
-        NOTIFY_REVISION_CHANGED: {
-          actions: assign(({ event, context }) =>
-            update_revision(context, event.note_id, event.revision_id, event.sticky_dirty)
-          )
-        },
         COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
-        },
-        NOTE_SAVED: {
-          actions: assign(({ event, context }) =>
-            mark_note_saved(context, event.note_id, event.saved_revision_id, event.saved_at_ms)
-          )
         }
       }
     }
