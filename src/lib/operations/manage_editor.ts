@@ -11,6 +11,7 @@ export type EditorManager = {
   update: (note: OpenNoteState) => void
   destroy: () => void
   mark_clean: () => void
+  focus: () => void
 }
 
 export function create_editor_manager(editor_port: EditorPort): EditorManager {
@@ -57,6 +58,12 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
     mark_clean() {
       if (editor_handle) {
         editor_handle.mark_clean()
+      }
+    },
+
+    focus() {
+      if (editor_handle) {
+        editor_handle.focus()
       }
     }
   }

@@ -77,6 +77,13 @@ export const milkdown_editor_port: EditorPort = {
       mark_clean,
       is_dirty() {
         return current_is_dirty
+      },
+      focus() {
+        if (!editor) return
+        editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx)
+          view.focus()
+        })
       }
     }
 

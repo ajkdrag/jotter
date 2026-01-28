@@ -4,6 +4,7 @@ export type EditorHandle = {
   get_markdown: () => string
   mark_clean: () => void
   is_dirty: () => boolean
+  focus: () => void
 }
 
 export type EditorPort = {

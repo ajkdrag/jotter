@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { ensure_open_note } from '$lib/operations/ensure_open_note'
+import { ensure_open_note, create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
 import type { Vault } from '$lib/types/vault'
 import type { VaultId, VaultPath, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
@@ -47,8 +47,8 @@ describe('ensure_open_note', () => {
 
     const notes: NoteMeta[] = [
       {
-        id: as_note_path('Untitled-2'),
-        path: as_note_path('Untitled-2'),
+        id: as_note_path('Untitled-2.md'),
+        path: as_note_path('Untitled-2.md'),
         title: 'Untitled-2',
         mtime_ms: 0,
         size_bytes: 0
@@ -101,6 +101,117 @@ describe('ensure_open_note', () => {
     })
 
     expect(result).toBe(existing)
+  })
+})
+
+describe('create_untitled_open_note_in_folder', () => {
+  test('creates Untitled-1 in root folder when no notes exist', () => {
+    const result = create_untitled_open_note_in_folder({
+      notes: [] as NoteMeta[],
+      folder_prefix: '',
+      now_ms: 1000
+    })
+
+    expect(result.meta.path).toBe('Untitled-1' as NotePath)
+    expect(result.meta.title).toBe('Untitled-1')
+    expect(result.markdown).toBe(as_markdown_text(''))
+  })
+
+  test('creates next Untitled in root folder independent of subfolder numbering', () => {
+    const notes: NoteMeta[] = [
+      {
+        id: as_note_path('Untitled-1.md'),
+        path: as_note_path('Untitled-1.md'),
+        title: 'Untitled-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      {
+        id: as_note_path('foo/Untitled-1.md'),
+        path: as_note_path('foo/Untitled-1.md'),
+        title: 'Untitled-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      {
+        id: as_note_path('foo/Untitled-5.md'),
+        path: as_note_path('foo/Untitled-5.md'),
+        title: 'Untitled-5',
+        mtime_ms: 0,
+        size_bytes: 0
+      }
+    ]
+
+    const result = create_untitled_open_note_in_folder({
+      notes,
+      folder_prefix: '',
+      now_ms: 1000
+    })
+
+    expect(result.meta.path).toBe('Untitled-2' as NotePath)
+  })
+
+  test('creates Untitled-1 in subfolder when folder has no untitled notes', () => {
+    const notes: NoteMeta[] = [
+      {
+        id: as_note_path('Untitled-1.md'),
+        path: as_note_path('Untitled-1.md'),
+        title: 'Untitled-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      {
+        id: as_note_path('foo/bar/note.md'),
+        path: as_note_path('foo/bar/note.md'),
+        title: 'Note',
+        mtime_ms: 0,
+        size_bytes: 0
+      }
+    ]
+
+    const result = create_untitled_open_note_in_folder({
+      notes,
+      folder_prefix: 'foo/bar',
+      now_ms: 1000
+    })
+
+    expect(result.meta.path).toBe('foo/bar/Untitled-1' as NotePath)
+    expect(result.meta.title).toBe('Untitled-1')
+  })
+
+  test('creates next Untitled in subfolder based on existing foldered untitled notes', () => {
+    const notes: NoteMeta[] = [
+      {
+        id: as_note_path('Untitled-1.md'),
+        path: as_note_path('Untitled-1.md'),
+        title: 'Untitled-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      {
+        id: as_note_path('foo/Untitled-1.md'),
+        path: as_note_path('foo/Untitled-1.md'),
+        title: 'Untitled-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      {
+        id: as_note_path('foo/Untitled-3.md'),
+        path: as_note_path('foo/Untitled-3.md'),
+        title: 'Untitled-3',
+        mtime_ms: 0,
+        size_bytes: 0
+      }
+    ]
+
+    const result = create_untitled_open_note_in_folder({
+      notes,
+      folder_prefix: 'foo',
+      now_ms: 1000
+    })
+
+    expect(result.meta.path).toBe('foo/Untitled-4' as NotePath)
+    expect(result.meta.title).toBe('Untitled-4')
   })
 })
 

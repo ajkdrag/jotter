@@ -24,6 +24,7 @@
         on_dirty_state_change: (is_dirty: boolean) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
         on_request_rename_note?: (note: NoteMeta) => void;
+        on_register_editor_focus?: (focus: () => void) => void;
     };
 
     let {
@@ -38,7 +39,8 @@
         on_markdown_change,
         on_dirty_state_change,
         on_request_delete_note,
-        on_request_rename_note
+        on_request_rename_note,
+        on_register_editor_focus
     }: Props = $props();
 
     let open = $state(true);
@@ -125,12 +127,22 @@
                         </div>
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">
-                        <NoteEditor
-                            editor_manager={editor_manager}
-                            open_note={open_note}
-                            on_markdown_change={on_markdown_change}
-                            on_dirty_state_change={on_dirty_state_change}
-                        />
+                        {#if on_register_editor_focus}
+                            <NoteEditor
+                                editor_manager={editor_manager}
+                                open_note={open_note}
+                                on_markdown_change={on_markdown_change}
+                                on_dirty_state_change={on_dirty_state_change}
+                                on_register_focus={on_register_editor_focus}
+                            />
+                        {:else}
+                            <NoteEditor
+                                editor_manager={editor_manager}
+                                open_note={open_note}
+                                on_markdown_change={on_markdown_change}
+                                on_dirty_state_change={on_dirty_state_change}
+                            />
+                        {/if}
                     </div>
                 </Sidebar.Inset>
             </Resizable.Pane>

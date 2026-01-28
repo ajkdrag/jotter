@@ -167,4 +167,45 @@ describe('save_note_flow', () => {
     expect(final_state?.meta.id).toBe('Untitled-1.md')
     expect(final_state?.meta.title).toBe('Untitled-1')
   })
+
+  test('saves foldered untitled note with folder path preserved', async () => {
+    const notes_port = create_mock_notes_port()
+    const vault = create_test_vault()
+    const open_note: OpenNoteState = {
+      meta: {
+        id: as_note_path('foo/Untitled-1'),
+        path: as_note_path('foo/Untitled-1'),
+        title: 'Untitled-1',
+        mtime_ms: 0,
+        size_bytes: 0
+      },
+      markdown: as_markdown_text('foldered untitled content'),
+      buffer_id: 'untitled-test:foo/Untitled-1',
+      is_dirty: false
+    }
+    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    app_state.start()
+
+    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+
+    const actor = createActor(save_note_flow_machine, {
+      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+    })
+    actor.start()
+
+    actor.send({ type: 'REQUEST_SAVE' })
+    await waitFor(actor, state => state.matches('idle'))
+
+    expect(notes_port._calls.create_note).toHaveLength(1)
+    expect(notes_port._calls.create_note[0]).toEqual({
+      vault_id: vault.id,
+      note_path: 'foo/Untitled-1.md',
+      markdown: open_note.markdown
+    })
+
+    const final_state = app_state.getSnapshot().context.open_note
+    expect(final_state?.meta.id).toBe('foo/Untitled-1.md')
+    expect(final_state?.meta.path).toBe('foo/Untitled-1.md')
+  })
 })

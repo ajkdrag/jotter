@@ -3,16 +3,23 @@ import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
 
-function next_untitled_name(notes: NoteMeta[]): string {
+function next_untitled_name_in_folder(notes: NoteMeta[], folder_prefix: string): string {
   let max = 0
+  const folder_path = folder_prefix ? `${folder_prefix}/` : ''
+  const pattern = new RegExp(`^${folder_path.replace(/[/\\^$*+?.()|[\]{}]/g, '\\$&')}Untitled-(\\d+)\\.md$`)
+
   for (const note of notes) {
-    const match = String(note.path).match(/^Untitled-(\d+)$/)
+    const match = String(note.path).match(pattern)
     if (!match) continue
     const value = Number(match[1])
     if (!Number.isFinite(value)) continue
     if (value > max) max = value
   }
   return `Untitled-${max + 1}`
+}
+
+function next_untitled_name(notes: NoteMeta[]): string {
+  return next_untitled_name_in_folder(notes, '')
 }
 
 export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: number }): OpenNoteState {
@@ -27,6 +34,28 @@ export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: num
     },
     markdown: as_markdown_text(''),
     buffer_id: `untitled:${args.now_ms}:${name}`,
+    is_dirty: false
+  }
+}
+
+export function create_untitled_open_note_in_folder(args: {
+  notes: NoteMeta[]
+  folder_prefix: string
+  now_ms: number
+}): OpenNoteState {
+  const name = next_untitled_name_in_folder(args.notes, args.folder_prefix)
+  const path_with_folder = args.folder_prefix ? `${args.folder_prefix}/${name}` : name
+
+  return {
+    meta: {
+      id: as_note_path(path_with_folder),
+      path: as_note_path(path_with_folder),
+      title: name,
+      mtime_ms: args.now_ms,
+      size_bytes: 0
+    },
+    markdown: as_markdown_text(''),
+    buffer_id: `untitled:${args.now_ms}:${path_with_folder}`,
     is_dirty: false
   }
 }

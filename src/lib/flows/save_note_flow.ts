@@ -66,7 +66,7 @@ export const save_note_flow_machine = setup({
         let final_note_id: NoteId = note_id
 
         if (is_untitled) {
-          const final_note_path = as_note_path(`${open_note.meta.title}.md`)
+          const final_note_path = as_note_path(`${open_note.meta.path}.md`)
           const created_note = await ports.notes.create_note(vault_id, final_note_path, markdown)
           final_note_id = created_note.id
 

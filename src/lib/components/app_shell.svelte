@@ -4,6 +4,7 @@
   import DeleteNoteDialog from '$lib/components/delete_note_dialog.svelte'
   import RenameNoteDialog from '$lib/components/rename_note_dialog.svelte'
   import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
+  import CommandPalette from '$lib/components/command_palette.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
   import type { Ports } from '$lib/adapters/create_prod_ports'
@@ -12,6 +13,7 @@
   import type { NoteMeta } from '$lib/types/note'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
   import { create_app_flows } from '$lib/flows/create_app_flows'
+  import { create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
 
   type Props = {
     ports: Ports
@@ -36,6 +38,9 @@
 
   let save_was_in_progress = $state(false)
   let mark_editor_clean_trigger = $state(0)
+  let palette_open = $state(false)
+  let palette_selected_index = $state(0)
+  let focus_editor: (() => void) | null = $state(null)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -75,6 +80,27 @@
           bootstrap_default_vault_path: stable.bootstrap_default_vault_path ?? null
         }
       })
+    },
+    create_new_note() {
+      const app = app_state.snapshot.context
+      const current_note_path = app.open_note?.meta.path ?? ''
+      const folder_prefix = current_note_path.includes('/') ? current_note_path.substring(0, current_note_path.lastIndexOf('/')) : ''
+
+      const new_note = create_untitled_open_note_in_folder({
+        notes: app.notes,
+        folder_prefix,
+        now_ms: Date.now()
+      })
+
+      app_state.send({ type: 'SET_OPEN_NOTE', open_note: new_note })
+
+      palette_open = false
+
+      if (focus_editor) {
+        queueMicrotask(() => {
+          focus_editor?.()
+        })
+      }
     },
     request_change_vault() {
       change_vault.send({ type: 'OPEN_DIALOG' })
@@ -150,6 +176,19 @@
     }
   }
 
+  function handle_keydown_capture(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'p') {
+      if (app_state.snapshot.matches('no_vault')) {
+        return
+      }
+      event.preventDefault()
+      palette_open = !palette_open
+      if (palette_open) {
+        palette_selected_index = 0
+      }
+    }
+  }
+
   function handle_keydown(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key === 's') {
       event.preventDefault()
@@ -203,6 +242,7 @@
       on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
+      on_register_editor_focus={(focus_fn) => { focus_editor = focus_fn }}
     />
   </main>
 {/if}
@@ -257,4 +297,19 @@
   on_cancel={actions.cancel_save}
 />
 
-<svelte:window onkeydown={handle_keydown} />
+<CommandPalette
+  open={palette_open}
+  on_open_change={(open) => { palette_open = open }}
+  selected_index={palette_selected_index}
+  on_selected_index_change={(index) => { palette_selected_index = index }}
+  on_select_command={(cmd) => {
+    if (cmd === 'create_new_note') {
+      actions.create_new_note()
+    } else if (cmd === 'change_vault') {
+      palette_open = false
+      actions.request_change_vault()
+    }
+  }}
+/>
+
+<svelte:window onkeydowncapture={handle_keydown_capture} onkeydown={handle_keydown} />
