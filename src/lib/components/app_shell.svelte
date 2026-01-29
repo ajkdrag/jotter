@@ -4,6 +4,7 @@
   import DeleteNoteDialog from '$lib/components/delete_note_dialog.svelte'
   import RenameNoteDialog from '$lib/components/rename_note_dialog.svelte'
   import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
+  import SettingsDialog from '$lib/components/settings_dialog.svelte'
   import CommandPalette from '$lib/components/command_palette.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
@@ -41,6 +42,7 @@
   let mark_editor_clean_trigger = $state(0)
   let palette_open = $state(false)
   let palette_selected_index = $state(0)
+  let settings_dialog_open = $state(false)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -170,6 +172,16 @@
     },
     cancel_save() {
       save_note.send({ type: 'CANCEL' })
+    },
+    open_settings() {
+      settings_dialog_open = true
+    },
+    close_settings() {
+      settings_dialog_open = false
+    },
+    handle_theme_change(theme: 'light' | 'dark' | 'system') {
+      stable.ports.theme.set_theme(theme)
+      app_state.send({ type: 'SET_THEME', theme })
     }
   }
 
@@ -293,6 +305,13 @@
   on_cancel={actions.cancel_save}
 />
 
+<SettingsDialog
+  open={settings_dialog_open}
+  on_open_change={actions.close_settings}
+  current_theme={app_state.snapshot.context.theme}
+  on_theme_change={actions.handle_theme_change}
+/>
+
 <CommandPalette
   open={palette_open}
   on_open_change={(open) => { palette_open = open }}
@@ -304,6 +323,9 @@
     } else if (cmd === 'change_vault') {
       palette_open = false
       actions.request_change_vault()
+    } else if (cmd === 'open_settings') {
+      palette_open = false
+      actions.open_settings()
     }
   }}
 />

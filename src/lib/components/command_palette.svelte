@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js"
 
-  type CommandId = 'create_new_note' | 'change_vault'
+  type CommandId = 'create_new_note' | 'change_vault' | 'open_settings'
 
   type Props = {
     open: boolean
@@ -29,6 +29,11 @@
       id: 'change_vault',
       label: 'Change vault',
       description: 'Switch to a different vault'
+    },
+    {
+      id: 'open_settings',
+      label: 'Settings',
+      description: 'Open application settings'
     }
   ]
 
@@ -59,7 +64,7 @@
 </script>
 
 <Dialog.Root {open} onOpenChange={on_open_change}>
-  <Dialog.Content class="max-w-[500px]" showCloseButton={false}>
+  <Dialog.Content class="max-w-125" showCloseButton={false}>
     <Dialog.Header>
       <Dialog.Title>Command Palette</Dialog.Title>
     </Dialog.Header>
