@@ -38,6 +38,9 @@ importers:
       formsnap:
         specifier: ^2.0.1
         version: 2.0.1(svelte@5.47.0)(sveltekit-superforms@2.29.1(@sveltejs/kit@2.50.0(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.47.0)(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)))(svelte@5.47.0)(typescript@5.9.3)(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)))(@types/json-schema@7.0.15)(svelte@5.47.0)(typescript@5.9.3))
+      lucide-static:
+        specifier: ^0.563.0
+        version: 0.563.0
       svelte-themes:
         specifier: ^2.0.10
         version: 2.0.10(svelte@5.47.0)
@@ -1898,6 +1901,9 @@ packages:
 
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
+
+  lucide-static@0.563.0:
+    resolution: {integrity: sha512-O7ZlK+VFfc/G5KYwUb9jO60RlPNKV6Dyu+OgQC/QCiO4FMPIK9qrIIkYHHG6PLgLKvmELmf1eKSAso+D/vAvcg==, tarball: https://artifactory.corp.ebay.com/artifactory/api/npm/npm-corp/lucide-static/-/lucide-static-0.563.0.tgz}
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==, tarball: https://artifactory.corp.ebay.com/artifactory/api/npm/npm-corp/lz-string/-/lz-string-1.5.0.tgz}
@@ -4787,6 +4793,8 @@ snapshots:
   longest-streak@3.1.0: {}
 
   loupe@3.2.1: {}
+
+  lucide-static@0.563.0: {}
 
   lz-string@1.5.0: {}
 
