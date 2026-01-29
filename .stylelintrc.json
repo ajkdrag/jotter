@@ -24,6 +24,8 @@
     ],
     "lightness-notation": null,
     "hue-degree-notation": null,
-    "at-rule-empty-line-before": null
+    "at-rule-empty-line-before": null,
+    "selector-class-pattern": null,
+    "comment-empty-line-before": null
   }
 }

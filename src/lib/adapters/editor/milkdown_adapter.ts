@@ -1,6 +1,5 @@
 import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
-import { nord } from '@milkdown/theme-nord'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { replaceAll } from '@milkdown/kit/utils'
@@ -10,7 +9,6 @@ import {
   dirty_state_plugin_config_key,
   dirty_state_plugin_key
 } from './dirty_state_plugin'
-import '@milkdown/theme-nord/style.css'
 
 export const milkdown_editor_port: EditorPort = {
   create_editor: async (root, config) => {
@@ -26,7 +24,6 @@ export const milkdown_editor_port: EditorPort = {
         ctx.set(defaultValueCtx, initial_markdown)
         ctx.set(editorViewOptionsCtx, { editable: () => true })
       })
-      .config(nord)
       .use(commonmark)
       .use(listener)
       .use(history)

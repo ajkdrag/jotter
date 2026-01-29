@@ -16,6 +16,8 @@
   import { create_app_flows } from '$lib/flows/create_app_flows'
   import { create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
   import { init_theme } from '$lib/operations/init_theme'
+  import { load_editor_settings } from '$lib/operations/load_editor_settings'
+  import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
 
   type Props = {
     ports: Ports
@@ -74,9 +76,12 @@
   )
 
   const actions = {
-    mount() {
+    async mount() {
       const theme_mode = init_theme(stable.ports.theme)
       app_state.send({ type: 'SET_THEME', theme: theme_mode })
+
+      const editor_settings = await load_editor_settings(stable.ports.settings)
+      apply_editor_styles(editor_settings)
 
       open_app.send({
         type: 'START',
@@ -310,6 +315,7 @@
 <SettingsDialog
   open={settings_dialog_open}
   on_open_change={actions.close_settings}
+  settings_port={stable.ports.settings}
 />
 
 <CommandPalette
