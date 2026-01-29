@@ -9,11 +9,14 @@ import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
 
+export type ThemeMode = 'light' | 'dark' | 'system'
+
 export type AppStateContext = {
   vault: Vault | null
   recent_vaults: Vault[]
   notes: NoteMeta[]
   open_note: OpenNoteState | null
+  theme: ThemeMode
   now_ms: () => number
 }
 
@@ -29,6 +32,7 @@ export type AppStateEvents =
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
   | { type: 'NOTIFY_DIRTY_STATE_CHANGED'; is_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
+  | { type: 'SET_THEME'; theme: ThemeMode }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -38,7 +42,8 @@ export function reset_app(context: AppStateContext): AppStateContext {
     vault: null,
     recent_vaults: [],
     notes: [],
-    open_note: null
+    open_note: null,
+    theme: 'system'
   }
 }
 
@@ -116,6 +121,7 @@ export const app_state_machine = setup({
     recent_vaults: [],
     notes: [],
     open_note: null,
+    theme: 'system' as ThemeMode,
     now_ms: input.now_ms ?? (() => Date.now())
   }),
   states: {
@@ -132,6 +138,11 @@ export const app_state_machine = setup({
         SET_ACTIVE_VAULT: {
           target: 'vault_open',
           actions: assign(({ event, context }) => set_active_vault(context, event.vault, event.notes))
+        },
+        SET_THEME: {
+          actions: assign({
+            theme: ({ event }) => event.theme
+          })
         }
       }
     },
@@ -185,6 +196,11 @@ export const app_state_machine = setup({
         },
         COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
+        },
+        SET_THEME: {
+          actions: assign({
+            theme: ({ event }) => event.theme
+          })
         }
       }
     }

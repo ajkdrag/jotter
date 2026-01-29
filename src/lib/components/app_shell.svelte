@@ -14,6 +14,7 @@
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
   import { create_app_flows } from '$lib/flows/create_app_flows'
   import { create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
+  import { init_theme } from '$lib/operations/init_theme'
 
   type Props = {
     ports: Ports
@@ -72,6 +73,9 @@
 
   const actions = {
     mount() {
+      const theme_mode = init_theme(stable.ports.theme)
+      app_state.send({ type: 'SET_THEME', theme: theme_mode })
+
       open_app.send({
         type: 'START',
         config: {
