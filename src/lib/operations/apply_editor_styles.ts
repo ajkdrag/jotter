@@ -7,13 +7,13 @@ export function apply_editor_styles(settings: EditorSettings): void {
   root.style.setProperty("--editor-font-size", `${settings.font_size}rem`);
   root.style.setProperty("--editor-line-height", `${settings.line_height}`);
 
-  const heading_color_value =
-    settings.heading_color === "inherit"
-      ? computed_styles.getPropertyValue("--foreground").trim()
-      : settings.heading_color === "primary"
-        ? computed_styles.getPropertyValue("--primary").trim()
-        : computed_styles.getPropertyValue("--accent-foreground").trim();
-
+  const heading_color_map = {
+    inherit: "--foreground",
+    primary: "--primary",
+    accent: "--accent-foreground",
+  };
+  const color_var = heading_color_map[settings.heading_color];
+  const heading_color_value = computed_styles.getPropertyValue(color_var).trim();
   root.style.setProperty("--editor-heading-color", heading_color_value);
 
   const spacing_map = {

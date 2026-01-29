@@ -39,12 +39,12 @@
   const delete_note = use_flow_handle(app.flows.delete_note)
   const rename_note = use_flow_handle(app.flows.rename_note)
   const save_note = use_flow_handle(app.flows.save_note)
+  const settings = use_flow_handle(app.flows.settings)
 
   let save_was_in_progress = $state(false)
   let mark_editor_clean_trigger = $state(0)
   let palette_open = $state(false)
   let palette_selected_index = $state(0)
-  let settings_dialog_open = $state(false)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -69,6 +69,13 @@
 
   const save_dialog_open = $derived(
     save_note.snapshot.matches('error')
+  )
+
+  const settings_dialog_open = $derived(
+    settings.snapshot.matches('loading') ||
+      settings.snapshot.matches('editing') ||
+      settings.snapshot.matches('saving') ||
+      settings.snapshot.matches('error')
   )
 
   const vault_selection_loading = $derived(
@@ -179,10 +186,16 @@
       save_note.send({ type: 'CANCEL' })
     },
     open_settings() {
-      settings_dialog_open = true
+      settings.send({ type: 'OPEN_DIALOG' })
     },
     close_settings() {
-      settings_dialog_open = false
+      settings.send({ type: 'CLOSE_DIALOG' })
+    },
+    update_settings(new_settings: import('$lib/types/editor_settings').EditorSettings) {
+      settings.send({ type: 'UPDATE_SETTINGS', settings: new_settings })
+    },
+    save_settings() {
+      settings.send({ type: 'SAVE' })
     },
     handle_theme_change(theme: 'light' | 'dark' | 'system') {
       stable.ports.theme.set_theme(theme)
@@ -314,8 +327,13 @@
 
 <SettingsDialog
   open={settings_dialog_open}
-  on_open_change={actions.close_settings}
-  settings_port={stable.ports.settings}
+  editor_settings={settings.snapshot.context.current_settings}
+  is_saving={settings.snapshot.matches('saving')}
+  has_unsaved_changes={settings.snapshot.context.has_unsaved_changes}
+  error={settings.snapshot.context.error}
+  on_update_settings={actions.update_settings}
+  on_save={actions.save_settings}
+  on_close={actions.close_settings}
 />
 
 <CommandPalette

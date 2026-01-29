@@ -2,46 +2,27 @@
 import * as Dialog from '$lib/components/ui/dialog/index.js'
 import { Card } from '$lib/components/ui/card'
 import { Button } from '$lib/components/ui/button'
-import { onMount } from 'svelte'
-import { load_editor_settings, save_editor_settings } from '$lib/operations/load_editor_settings'
-import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
 import type { EditorSettings } from '$lib/types/editor_settings'
-import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 
 type Props = {
   open: boolean
-  on_open_change: (open: boolean) => void
-  settings_port: import('$lib/ports/settings_port').SettingsPort
+  editor_settings: EditorSettings
+  is_saving: boolean
+  has_unsaved_changes: boolean
+  error: string | null
+  on_update_settings: (settings: EditorSettings) => void
+  on_save: () => void
+  on_close: () => void
 }
 
-let { open, on_open_change, settings_port }: Props = $props()
-
-let editor_settings = $state<EditorSettings>(DEFAULT_EDITOR_SETTINGS)
-let has_unsaved_changes = $state(false)
-let is_saving = $state(false)
-
-onMount(async () => {
-  editor_settings = await load_editor_settings(settings_port)
-  apply_editor_styles(editor_settings)
-})
+let { open, editor_settings, is_saving, has_unsaved_changes, error, on_update_settings, on_save, on_close }: Props = $props()
 
 function handle_setting_change() {
-  apply_editor_styles(editor_settings)
-  has_unsaved_changes = true
-}
-
-async function handle_save() {
-  is_saving = true
-  try {
-    await save_editor_settings(settings_port, editor_settings)
-    has_unsaved_changes = false
-  } finally {
-    is_saving = false
-  }
+  on_update_settings(editor_settings)
 }
 </script>
 
-<Dialog.Root {open} onOpenChange={on_open_change}>
+<Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_close() }}>
   <Dialog.Content class="max-w-200 max-h-[80vh] overflow-y-auto">
     <Dialog.Header>
       <Dialog.Title>Settings</Dialog.Title>
@@ -136,8 +117,11 @@ async function handle_save() {
     </div>
 
     <Dialog.Footer class="settings__footer">
+      {#if error}
+        <span class="text-destructive text-sm">{error}</span>
+      {/if}
       <Button
-        onclick={handle_save}
+        onclick={on_save}
         disabled={!has_unsaved_changes || is_saving}
         class="settings__save-button"
       >
