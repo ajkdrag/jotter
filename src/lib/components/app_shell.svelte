@@ -245,6 +245,8 @@
       open_note_title={app.open_note?.meta.title ?? 'Notes'}
       open_note={app.open_note}
       mark_editor_clean_trigger={mark_editor_clean_trigger}
+      current_theme={app.theme}
+      on_theme_change={actions.handle_theme_change}
       on_open_note={actions.open_note}
       on_request_change_vault={actions.request_change_vault}
       on_markdown_change={actions.markdown_change}
@@ -308,8 +310,6 @@
 <SettingsDialog
   open={settings_dialog_open}
   on_open_change={actions.close_settings}
-  current_theme={app_state.snapshot.context.theme}
-  on_theme_change={actions.handle_theme_change}
 />
 
 <CommandPalette

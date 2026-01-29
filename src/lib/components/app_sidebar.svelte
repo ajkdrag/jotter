@@ -4,6 +4,7 @@
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
+    import ThemeToggle from "$lib/components/theme_toggle.svelte";
     import type { EditorPort } from "$lib/ports/editor_port";
     import { create_editor_manager } from "$lib/operations/manage_editor";
     import type { Vault } from "$lib/types/vault";
@@ -18,6 +19,8 @@
         open_note_title: string;
         open_note: OpenNoteState | null;
         mark_editor_clean_trigger?: number;
+        current_theme: 'light' | 'dark' | 'system';
+        on_theme_change: (theme: 'light' | 'dark' | 'system') => void;
         on_open_note: (note_path: string) => void;
         on_request_change_vault: () => void;
         on_markdown_change: (markdown: string) => void;
@@ -33,6 +36,8 @@
         open_note_title,
         open_note,
         mark_editor_clean_trigger = 0,
+        current_theme,
+        on_theme_change,
         on_open_note,
         on_request_change_vault,
         on_markdown_change,
@@ -117,11 +122,14 @@
                         class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                     >
                         <Sidebar.Trigger />
-                        <div class="text-sm font-medium flex items-center gap-2 min-w-0">
+                        <div class="text-sm font-medium flex items-center gap-2 min-w-0 flex-1">
                             <span class="truncate">{open_note_title}</span>
                             {#if open_note?.is_dirty}
                                 <Circle class="h-2 w-2 fill-current shrink-0" />
                             {/if}
+                        </div>
+                        <div class="shrink-0">
+                            <ThemeToggle mode={current_theme} on_change={on_theme_change} />
                         </div>
                     </header>
                     <div class="flex flex-1 flex-col min-h-0">

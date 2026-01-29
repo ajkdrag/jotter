@@ -1,16 +1,13 @@
 <script lang="ts">
 import * as Dialog from '$lib/components/ui/dialog/index.js'
 import { Card } from '$lib/components/ui/card'
-import ThemeToggle from '$lib/components/theme_toggle.svelte'
 
 type Props = {
   open: boolean
   on_open_change: (open: boolean) => void
-  current_theme: 'light' | 'dark' | 'system'
-  on_theme_change: (theme: 'light' | 'dark' | 'system') => void
 }
 
-let { open, on_open_change, current_theme, on_theme_change }: Props = $props()
+let { open, on_open_change }: Props = $props()
 </script>
 
 <Dialog.Root {open} onOpenChange={on_open_change}>
@@ -20,21 +17,6 @@ let { open, on_open_change, current_theme, on_theme_change }: Props = $props()
     </Dialog.Header>
 
     <div class="settings__section-wrapper">
-      <Card class="settings__section-card">
-        <div class="settings__section-header">
-          <h2 class="settings__section-title">Appearance</h2>
-        </div>
-        <div class="settings__section-content">
-          <div class="settings__row">
-            <div class="settings__label">
-              <span>Theme</span>
-              <span class="settings__description">Choose your preferred color scheme</span>
-            </div>
-            <ThemeToggle mode={current_theme} on_change={on_theme_change} />
-          </div>
-        </div>
-      </Card>
-
       <Card class="settings__section-card">
         <div class="settings__section-header">
           <h2 class="settings__section-title">Typography</h2>
