@@ -7,7 +7,7 @@ This is another **test** note _loaded_
 
 * Test vault with hardcoded path
 * localStorage-based storage for edits
-* Files initially loaded from \`test/files/\` directory
+* Files initially loaded from `test/files/` directory
 
 
 ## Headings
@@ -30,6 +30,13 @@ This is another **test** note _loaded_
 > * item 3 with some `code` .
 
 
+## Links
+
+This is a [test link](http://example.com) in a paragraph.
+
+Visit [Google](https://www.google.com) for more information.
+
+
 ## Code Blocks
 
 ```
@@ -40,3 +47,7 @@ def foo():
    print("bar")
 ```
 
+## Lists
+
+- [ ] abc
+- [ ] def

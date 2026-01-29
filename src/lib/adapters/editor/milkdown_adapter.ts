@@ -1,5 +1,7 @@
 import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
+import { gfm } from '@milkdown/kit/preset/gfm'
+import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { replaceAll } from '@milkdown/kit/utils'
@@ -25,6 +27,8 @@ export const milkdown_editor_port: EditorPort = {
         ctx.set(editorViewOptionsCtx, { editable: () => true })
       })
       .use(commonmark)
+      .use(gfm)
+      .use(listItemBlockComponent)
       .use(listener)
       .use(history)
       .use(dirty_state_plugin_config_key)
