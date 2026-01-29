@@ -1,4 +1,9 @@
 import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx } from '@milkdown/kit/core'
+import {
+  configureLinkTooltip,
+  linkTooltipPlugin,
+  linkTooltipConfig,
+} from '@milkdown/kit/component/link-tooltip'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block'
@@ -11,6 +16,14 @@ import {
   dirty_state_plugin_config_key,
   dirty_state_plugin_key
 } from './dirty_state_plugin'
+import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
+
+const LINK_TOOLTIP_ICONS = {
+  link: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  edit: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>',
+  trash: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+  check: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+} as const
 
 export const milkdown_editor_port: EditorPort = {
   create_editor: async (root, config) => {
@@ -26,9 +39,22 @@ export const milkdown_editor_port: EditorPort = {
         ctx.set(defaultValueCtx, initial_markdown)
         ctx.set(editorViewOptionsCtx, { editable: () => true })
       })
+      .config(configureLinkTooltip)
+      .config((ctx) => {
+        ctx.update(linkTooltipConfig.key, (defaultConfig) => ({
+          ...defaultConfig,
+          linkIcon: LINK_TOOLTIP_ICONS.link,
+          editButton: LINK_TOOLTIP_ICONS.edit,
+          removeButton: LINK_TOOLTIP_ICONS.trash,
+          confirmButton: LINK_TOOLTIP_ICONS.check,
+          inputPlaceholder: 'Enter URL...',
+        }))
+      })
       .use(commonmark)
       .use(gfm)
+      .use(linkTooltipPlugin)
       .use(listItemBlockComponent)
+      .use(markdown_link_input_rule_plugin)
       .use(listener)
       .use(history)
       .use(dirty_state_plugin_config_key)

@@ -40,6 +40,14 @@
 }
 
 /* ============================================
+   MILKDOWN CONTAINER
+   ============================================ */
+
+.milkdown {
+  position: relative;
+}
+
+/* ============================================
    PROSEMIRROR BASE STYLES
    ============================================ */
 
@@ -530,4 +538,151 @@
 
 .ProseMirror:focus {
   outline: none;
+}
+
+/* ============================================
+   LINK TOOLTIP COMPONENT
+   ============================================ */
+
+.milkdown-link-preview {
+  position: absolute;
+  z-index: 50;
+  overflow: hidden;
+  border-radius: calc(var(--radius) * 0.5);
+  box-shadow: 0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
+              0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
+  border: 1px solid var(--border);
+  background: var(--popover);
+}
+
+.milkdown-link-preview[data-show='false'] {
+  display: none;
+}
+
+.milkdown-link-preview > .link-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: default;
+  min-height: 2.25rem;
+  background: var(--popover);
+}
+
+.milkdown-link-preview > .link-preview > .link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.milkdown-link-preview > .link-preview > .link-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.milkdown-link-preview > .link-preview > .link-display {
+  max-width: 280px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--editor-link);
+  cursor: pointer;
+}
+
+.milkdown-link-preview > .link-preview > .link-display:hover {
+  text-decoration: underline;
+}
+
+.milkdown-link-preview > .link-preview > .button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: calc(var(--radius) * 0.35);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.milkdown-link-preview > .link-preview > .button svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.milkdown-link-preview > .link-preview > .button:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.milkdown-link-edit {
+  position: absolute;
+  z-index: 50;
+  overflow: hidden;
+  border-radius: calc(var(--radius) * 0.5);
+  box-shadow: 0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
+              0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
+  border: 1px solid var(--border);
+  background: var(--popover);
+}
+
+.milkdown-link-edit[data-show='false'] {
+  display: none;
+}
+
+.milkdown-link-edit > .link-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.25rem;
+  background: var(--popover);
+}
+
+.milkdown-link-edit > .link-edit > .input-area {
+  outline: none;
+  background: transparent;
+  width: 16rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  border: none;
+}
+
+.milkdown-link-edit > .link-edit > .input-area::placeholder {
+  color: var(--muted-foreground);
+}
+
+.milkdown-link-edit > .link-edit > .button {
+  cursor: pointer;
+  border-radius: calc(var(--radius) * 0.35);
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  color: var(--muted-foreground);
+  transition: all 0.15s ease;
+}
+
+.milkdown-link-edit > .link-edit > .button svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.milkdown-link-edit > .link-edit > .button:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.milkdown-link-edit > .link-edit > .button.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ProseMirror a {
+  cursor: pointer;
+  pointer-events: auto;
 }
