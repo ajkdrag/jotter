@@ -1,7 +1,11 @@
 <script lang="ts">
 import * as Dialog from '$lib/components/ui/dialog/index.js'
-import { Card } from '$lib/components/ui/card'
+import * as Select from '$lib/components/ui/select/index.js'
+import * as Slider from '$lib/components/ui/slider/index.js'
 import { Button } from '$lib/components/ui/button'
+import { Separator } from '$lib/components/ui/separator'
+import TypeIcon from '@lucide/svelte/icons/type'
+import LayoutIcon from '@lucide/svelte/icons/layout-template'
 import type { EditorSettings } from '$lib/types/editor_settings'
 
 type Props = {
@@ -17,113 +21,145 @@ type Props = {
 
 let { open, editor_settings, is_saving, has_unsaved_changes, error, on_update_settings, on_save, on_close }: Props = $props()
 
-function handle_setting_change() {
+let font_size_value = $derived(editor_settings.font_size)
+let line_height_value = $derived(editor_settings.line_height)
+
+function handle_font_size_change(value: number) {
+  editor_settings.font_size = value
   on_update_settings(editor_settings)
 }
+
+function handle_line_height_change(value: number) {
+  editor_settings.line_height = value
+  on_update_settings(editor_settings)
+}
+
+function handle_heading_color_change(value: string | undefined) {
+  if (value) {
+    editor_settings.heading_color = value as EditorSettings['heading_color']
+    on_update_settings(editor_settings)
+  }
+}
+
+function handle_spacing_change(value: string | undefined) {
+  if (value) {
+    editor_settings.spacing = value as EditorSettings['spacing']
+    on_update_settings(editor_settings)
+  }
+}
+
+const heading_color_options = [
+  { value: 'inherit', label: 'Inherit' },
+  { value: 'primary', label: 'Primary' },
+  { value: 'accent', label: 'Accent' }
+]
+
+const spacing_options = [
+  { value: 'compact', label: 'Compact' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'spacious', label: 'Spacious' }
+]
 </script>
 
 <Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_close() }}>
-  <Dialog.Content class="max-w-200 max-h-[80vh] overflow-y-auto">
+  <Dialog.Content class="max-w-md">
     <Dialog.Header>
-      <Dialog.Title>Settings</Dialog.Title>
+      <Dialog.Title class="text-lg font-semibold">Settings</Dialog.Title>
+      <Dialog.Description class="text-sm text-muted-foreground">
+        Customize your editor experience
+      </Dialog.Description>
     </Dialog.Header>
 
-    <div class="settings__section-wrapper">
-      <Card class="settings__section-card">
+    <div class="settings">
+      <section class="settings__section">
         <div class="settings__section-header">
-          <h2 class="settings__section-title">Editor Typography</h2>
+          <TypeIcon class="size-4 text-muted-foreground" />
+          <span class="settings__section-label">Typography</span>
         </div>
-        <div class="settings__section-content">
-          <div class="settings__row">
-            <div class="settings__label">
-              <span>Font Size</span>
-              <span class="settings__description">Base font size: {editor_settings.font_size.toFixed(2)}rem</span>
+        
+        <div class="settings__group">
+          <div class="settings__field">
+            <div class="settings__field-header">
+              <span class="settings__field-label">Font Size</span>
+              <span class="settings__field-value">{editor_settings.font_size.toFixed(2)}rem</span>
             </div>
-            <div class="settings__control">
-              <input
-                type="range"
-                min="0.875"
-                max="1.25"
-                step="0.0625"
-                bind:value={editor_settings.font_size}
-                oninput={handle_setting_change}
-                class="settings__slider"
-              />
-            </div>
+            <Slider.Root
+              type="single"
+              value={font_size_value}
+              onValueChange={handle_font_size_change}
+              min={0.875}
+              max={1.25}
+              step={0.0625}
+              class="w-full"
+            />
           </div>
 
-          <div class="settings__row">
-            <div class="settings__label">
-              <span>Line Height</span>
-              <span class="settings__description">Line spacing: {editor_settings.line_height.toFixed(2)}</span>
+          <div class="settings__field">
+            <div class="settings__field-header">
+              <span class="settings__field-label">Line Height</span>
+              <span class="settings__field-value">{editor_settings.line_height.toFixed(2)}</span>
             </div>
-            <div class="settings__control">
-              <input
-                type="range"
-                min="1.5"
-                max="2.0"
-                step="0.05"
-                bind:value={editor_settings.line_height}
-                oninput={handle_setting_change}
-                class="settings__slider"
-              />
-            </div>
+            <Slider.Root
+              type="single"
+              value={line_height_value}
+              onValueChange={handle_line_height_change}
+              min={1.5}
+              max={2.0}
+              step={0.05}
+              class="w-full"
+            />
           </div>
 
-          <div class="settings__row">
-            <div class="settings__label">
-              <span>Heading Color</span>
-              <span class="settings__description">Color scheme for headings</span>
-            </div>
-            <div class="settings__control">
-              <select
-                bind:value={editor_settings.heading_color}
-                onchange={handle_setting_change}
-                class="settings__select"
-              >
-                <option value="inherit">Inherit</option>
-                <option value="primary">Primary</option>
-                <option value="accent">Accent</option>
-              </select>
-            </div>
+          <div class="settings__field settings__field--inline">
+            <span class="settings__field-label">Heading Color</span>
+            <Select.Root type="single" value={editor_settings.heading_color} onValueChange={handle_heading_color_change}>
+              <Select.Trigger class="w-32">
+                {heading_color_options.find(o => o.value === editor_settings.heading_color)?.label}
+              </Select.Trigger>
+              <Select.Content>
+                {#each heading_color_options as option}
+                  <Select.Item value={option.value}>{option.label}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
         </div>
-      </Card>
+      </section>
 
-      <Card class="settings__section-card">
+      <Separator />
+
+      <section class="settings__section">
         <div class="settings__section-header">
-          <h2 class="settings__section-title">Editor Layout</h2>
+          <LayoutIcon class="size-4 text-muted-foreground" />
+          <span class="settings__section-label">Layout</span>
         </div>
-        <div class="settings__section-content">
-          <div class="settings__row">
-            <div class="settings__label">
-              <span>Spacing</span>
-              <span class="settings__description">Content density and margins</span>
-            </div>
-            <div class="settings__control">
-              <select
-                bind:value={editor_settings.spacing}
-                onchange={handle_setting_change}
-                class="settings__select"
-              >
-                <option value="compact">Compact</option>
-                <option value="normal">Normal</option>
-                <option value="spacious">Spacious</option>
-              </select>
-            </div>
+        
+        <div class="settings__group">
+          <div class="settings__field settings__field--inline">
+            <span class="settings__field-label">Content Spacing</span>
+            <Select.Root type="single" value={editor_settings.spacing} onValueChange={handle_spacing_change}>
+              <Select.Trigger class="w-32">
+                {spacing_options.find(o => o.value === editor_settings.spacing)?.label}
+              </Select.Trigger>
+              <Select.Content>
+                {#each spacing_options as option}
+                  <Select.Item value={option.value}>{option.label}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
         </div>
-      </Card>
+      </section>
     </div>
 
     <Dialog.Footer class="settings__footer">
       {#if error}
-        <span class="text-destructive text-sm">{error}</span>
+        <span class="text-destructive text-sm mr-auto">{error}</span>
       {/if}
+      <Button variant="outline" onclick={on_close}>Cancel</Button>
       <Button
         onclick={on_save}
         disabled={!has_unsaved_changes || is_saving}
-        class="settings__save-button"
       >
         {is_saving ? 'Saving...' : has_unsaved_changes ? 'Save Changes' : 'Saved'}
       </Button>
@@ -132,118 +168,75 @@ function handle_setting_change() {
 </Dialog.Root>
 
 <style>
-.settings__section-wrapper {
+.settings {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-top: 1rem;
+  padding: 0.5rem 0;
 }
 
-:global(.settings__section-card) {
-  padding: 1.5rem;
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .settings__section-header {
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.settings__section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+.settings__section-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
 }
 
-.settings__section-content {
+.settings__group {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-.settings__row {
+.settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings__field--inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings__field-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.settings__label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.settings__description {
+.settings__field-label {
   font-size: 0.875rem;
-  color: var(--muted-foreground);
-}
-
-.settings__control {
-  min-width: 200px;
-}
-
-.settings__slider {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--muted);
-  outline: none;
-  cursor: pointer;
-}
-
-.settings__slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--primary);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.settings__slider::-webkit-slider-thumb:hover {
-  background: var(--primary);
-  opacity: 0.9;
-}
-
-.settings__slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--primary);
-  border: none;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.settings__slider::-moz-range-thumb:hover {
-  background: var(--primary);
-  opacity: 0.9;
-}
-
-.settings__select {
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--background);
+  font-weight: 500;
   color: var(--foreground);
-  font-size: 0.875rem;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
 }
 
-.settings__select:hover {
-  border-color: var(--border-strong);
-}
-
-.settings__select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 20%, transparent);
+.settings__field-value {
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
 }
 
 :global(.settings__footer) {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
 </style>
