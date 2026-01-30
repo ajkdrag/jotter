@@ -344,7 +344,7 @@
   margin-top: -1px;
 }
 
-.milkdown-list-item-block > .list-item:has(.label.checked) > .children {
+.milkdown-list-item-block > .list-item:has(> .label-wrapper .label.checked) > .children {
   color: var(--editor-text-muted);
   text-decoration: line-through;
   text-decoration-color: color-mix(in oklch, var(--editor-text-muted) 50%, transparent);
