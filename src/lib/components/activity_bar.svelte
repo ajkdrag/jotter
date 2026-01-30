@@ -19,12 +19,12 @@
       variant="ghost"
       size="icon"
       onclick={on_toggle_sidebar}
-      class="relative size-12 rounded-none text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground before:absolute before:inset-y-3 before:start-0 before:w-0.5 before:bg-sidebar-primary before:opacity-0 data-[active=true]:before:opacity-100"
+      class="relative size-12 rounded-none text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground before:absolute before:inset-y-3 before:start-0 before:w-0.5 before:bg-sidebar-foreground before:opacity-0 data-[active=true]:before:opacity-100 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       data-active={sidebar_open}
       aria-pressed={sidebar_open}
       aria-label="Toggle Explorer"
     >
-      <Files class="h-5 w-5" />
+      <Files class="size-6" />
     </Button>
   </div>
 
@@ -33,10 +33,10 @@
       variant="ghost"
       size="icon"
       onclick={on_open_settings}
-      class="size-12 rounded-none text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring"
+      class="size-12 rounded-none text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       aria-label="Settings"
     >
-      <Settings class="h-5 w-5" />
+      <Settings class="size-6" />
     </Button>
   </div>
 </div>
