@@ -8,6 +8,13 @@ export function create_notes_tauri_adapter(): NotesPort {
     async list_notes(vault_id: VaultId) {
       return await tauri_invoke<NoteMeta[]>('list_notes', { vault_id })
     },
+    async list_folders(vault_id: VaultId) {
+      try {
+        return await tauri_invoke<string[]>('list_folders', { vault_id })
+      } catch {
+        return []
+      }
+    },
     async read_note(vault_id: VaultId, note_id: NoteId) {
       return await tauri_invoke<NoteDoc>('read_note', { vault_id, note_id })
     },
@@ -18,6 +25,15 @@ export function create_notes_tauri_adapter(): NotesPort {
       return await tauri_invoke<NoteMeta>('create_note', {
         args: { vault_id, note_path, initial_markdown }
       })
+    },
+    async create_folder(vault_id: VaultId, parent_path: string, folder_name: string) {
+      try {
+        await tauri_invoke<void>('create_folder', {
+          args: { vault_id, parent_path, folder_name }
+        })
+      } catch {
+        // no-op if backend not implemented
+      }
     },
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath) {
       await tauri_invoke<void>('rename_note', { args: { vault_id, from, to } })

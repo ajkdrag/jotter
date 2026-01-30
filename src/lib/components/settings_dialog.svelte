@@ -117,7 +117,7 @@ const spacing_options = [
                 {heading_color_options.find(o => o.value === editor_settings.heading_color)?.label}
               </Select.Trigger>
               <Select.Content>
-                {#each heading_color_options as option}
+                {#each heading_color_options as option (option.value)}
                   <Select.Item value={option.value}>{option.label}</Select.Item>
                 {/each}
               </Select.Content>
@@ -142,7 +142,7 @@ const spacing_options = [
                 {spacing_options.find(o => o.value === editor_settings.spacing)?.label}
               </Select.Trigger>
               <Select.Content>
-                {#each spacing_options as option}
+                {#each spacing_options as option (option.value)}
                   <Select.Item value={option.value}>{option.label}</Select.Item>
                 {/each}
               </Select.Content>

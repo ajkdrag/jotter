@@ -75,11 +75,34 @@ async function list_markdown_files(
   return notes
 }
 
+async function list_directory_paths(
+  dir: FileSystemDirectoryHandle,
+  prefix: string = ''
+): Promise<string[]> {
+  const paths: string[] = []
+
+  for await (const handle of dir.values()) {
+    if (handle.kind === 'directory') {
+      const rel_path = prefix ? `${prefix}/${handle.name}` : handle.name
+      paths.push(rel_path)
+      const sub = await list_directory_paths(handle as FileSystemDirectoryHandle, rel_path)
+      paths.push(...sub)
+    }
+  }
+
+  return paths.sort((a, b) => a.localeCompare(b))
+}
+
 export function create_notes_web_adapter(): NotesPort {
   return {
     async list_notes(vault_id: VaultId): Promise<NoteMeta[]> {
       const handle = await get_vault_handle(vault_id)
       return list_markdown_files(handle)
+    },
+
+    async list_folders(vault_id: VaultId): Promise<string[]> {
+      const handle = await get_vault_handle(vault_id)
+      return list_directory_paths(handle)
     },
 
     async read_note(vault_id: VaultId, note_id: NoteId): Promise<NoteDoc> {
@@ -151,6 +174,16 @@ export function create_notes_web_adapter(): NotesPort {
       }
 
       throw new Error(`Invalid note path: ${note_path}`)
+    },
+
+    async create_folder(vault_id: VaultId, parent_path: string, folder_name: string): Promise<void> {
+      const root = await get_vault_handle(vault_id)
+      let current = root
+      const parts = parent_path ? parent_path.split('/').filter(Boolean) : []
+      for (const part of parts) {
+        current = await current.getDirectoryHandle(part, { create: false })
+      }
+      await current.getDirectoryHandle(folder_name, { create: true })
     },
 
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath): Promise<void> {

@@ -81,7 +81,12 @@ export const open_app_flow_machine = setup({
             { vault_path: config.bootstrap_default_vault_path }
           )
           void ports.index.build_index(result.vault.id)
-          dispatch({ type: 'SET_ACTIVE_VAULT', vault: result.vault, notes: result.notes })
+          dispatch({
+            type: 'SET_ACTIVE_VAULT',
+            vault: result.vault,
+            notes: result.notes,
+            folder_paths: result.folder_paths
+          })
           const updated_recent_vaults = await ports.vault.list_vaults()
           dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults: updated_recent_vaults })
         }

@@ -63,7 +63,7 @@ export const change_vault_flow_machine = setup({
       }) => {
         const { ports, change_mode, dispatch } = input
 
-        let result: { vault: Vault; notes: NoteMeta[] } | null = null
+        let result: { vault: Vault; notes: NoteMeta[]; folder_paths: string[] } | null = null
 
         switch (change_mode.kind) {
           case 'choose_vault': {
@@ -74,9 +74,12 @@ export const change_vault_flow_machine = setup({
           }
           case 'select_recent': {
             const vault = await ports.vault.open_vault_by_id(change_mode.vault_id)
-            const notes = await ports.notes.list_notes(vault.id)
+            const [notes, folder_paths] = await Promise.all([
+              ports.notes.list_notes(vault.id),
+              ports.notes.list_folders(vault.id)
+            ])
             await ports.vault.remember_last_vault(vault.id)
-            result = { vault, notes }
+            result = { vault, notes, folder_paths }
             break
           }
         }
@@ -85,7 +88,12 @@ export const change_vault_flow_machine = setup({
 
         void ports.index.build_index(result.vault.id)
         const recent_vaults = await ports.vault.list_vaults()
-        dispatch({ type: 'SET_ACTIVE_VAULT', vault: result.vault, notes: result.notes })
+        dispatch({
+          type: 'SET_ACTIVE_VAULT',
+          vault: result.vault,
+          notes: result.notes,
+          folder_paths: result.folder_paths
+        })
         dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults })
 
         return { changed: true }

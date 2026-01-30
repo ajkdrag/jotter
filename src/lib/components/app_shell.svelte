@@ -5,6 +5,7 @@
   import RenameNoteDialog from '$lib/components/rename_note_dialog.svelte'
   import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
   import SettingsDialog from '$lib/components/settings_dialog.svelte'
+  import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
   import CommandPalette from '$lib/components/command_palette.svelte'
   import AppSidebar from '$lib/components/app_sidebar.svelte'
   import VaultSelectionPanel from '$lib/components/vault_selection_panel.svelte'
@@ -45,6 +46,11 @@
   let mark_editor_clean_trigger = $state(0)
   let palette_open = $state(false)
   let palette_selected_index = $state(0)
+  let create_folder_dialog_open = $state(false)
+  let create_folder_parent_path = $state('')
+  let create_folder_name = $state('')
+  let create_folder_creating = $state(false)
+  let create_folder_error = $state<string | null>(null)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -200,6 +206,41 @@
     handle_theme_change(theme: 'light' | 'dark' | 'system') {
       stable.ports.theme.set_theme(theme)
       app_state.send({ type: 'SET_THEME', theme })
+    },
+    request_create_folder(parent_path: string) {
+      create_folder_parent_path = parent_path
+      create_folder_name = ''
+      create_folder_error = null
+      create_folder_dialog_open = true
+    },
+    async confirm_create_folder() {
+      const vault_id = app_state.snapshot.context.vault?.id
+      if (!vault_id) return
+      create_folder_creating = true
+      create_folder_error = null
+      try {
+        await stable.ports.notes.create_folder(
+          vault_id,
+          create_folder_parent_path,
+          create_folder_name.trim()
+        )
+        const folder_paths = await stable.ports.notes.list_folders(vault_id)
+        app_state.send({ type: 'UPDATE_FOLDER_LIST', folder_paths })
+        create_folder_dialog_open = false
+        create_folder_name = ''
+      } catch (e) {
+        create_folder_error = e instanceof Error ? e.message : String(e)
+      } finally {
+        create_folder_creating = false
+      }
+    },
+    cancel_create_folder() {
+      create_folder_dialog_open = false
+      create_folder_name = ''
+      create_folder_error = null
+    },
+    update_create_folder_name(name: string) {
+      create_folder_name = name
     }
   }
 
@@ -260,6 +301,7 @@
       editor_port={stable.ports.editor}
       vault={app.vault}
       notes={app.notes}
+      folder_paths={app.folder_paths}
       open_note_title={app.open_note?.meta.title ?? 'Notes'}
       open_note={app.open_note}
       mark_editor_clean_trigger={mark_editor_clean_trigger}
@@ -268,6 +310,7 @@
       on_open_note={actions.open_note}
       on_request_change_vault={actions.request_change_vault}
       on_create_note={actions.create_new_note}
+      on_request_create_folder={actions.request_create_folder}
       on_markdown_change={actions.markdown_change}
       on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}
@@ -336,6 +379,17 @@
   on_update_settings={actions.update_settings}
   on_save={actions.save_settings}
   on_close={actions.close_settings}
+/>
+
+<CreateFolderDialog
+  open={create_folder_dialog_open}
+  parent_path={create_folder_parent_path}
+  folder_name={create_folder_name}
+  is_creating={create_folder_creating}
+  error={create_folder_error}
+  on_folder_name_change={actions.update_create_folder_name}
+  on_confirm={actions.confirm_create_folder}
+  on_cancel={actions.cancel_create_folder}
 />
 
 <CommandPalette

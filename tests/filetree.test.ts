@@ -142,4 +142,50 @@ describe('filetree', () => {
     expect(tree.children.get('root.md')?.is_folder).toBe(false)
     expect(tree.children.get('root.md')?.note).toBeTruthy()
   })
+
+  test('folder_paths adds empty folder nodes', () => {
+    const notes: NoteMeta[] = []
+    const folder_paths = ['empty', 'nested/child']
+
+    const tree = build_filetree(notes, folder_paths)
+
+    const empty = tree.children.get('empty')
+    expect(empty?.is_folder).toBe(true)
+    expect(empty?.note).toBeNull()
+    expect(empty?.path).toBe('empty')
+
+    const nested = tree.children.get('nested')
+    expect(nested?.is_folder).toBe(true)
+    expect(nested?.note).toBeNull()
+    const child = nested?.children.get('child')
+    expect(child?.is_folder).toBe(true)
+    expect(child?.note).toBeNull()
+    expect(child?.path).toBe('nested/child')
+  })
+
+  test('folder_paths does not overwrite existing file nodes', () => {
+    const notes: NoteMeta[] = [create_note('foo/bar.md')]
+    const folder_paths = ['foo']
+
+    const tree = build_filetree(notes, folder_paths)
+
+    const foo = tree.children.get('foo')
+    expect(foo?.is_folder).toBe(true)
+    const bar = foo?.children.get('bar.md')
+    expect(bar?.is_folder).toBe(false)
+    expect(bar?.note).toBeTruthy()
+  })
+
+  test('notes and folder_paths merge: empty sibling folder appears', () => {
+    const notes: NoteMeta[] = [create_note('a/file.md')]
+    const folder_paths = ['b']
+
+    const tree = build_filetree(notes, folder_paths)
+
+    expect(tree.children.get('a')?.is_folder).toBe(true)
+    expect(tree.children.get('a')?.children.get('file.md')?.note).toBeTruthy()
+    expect(tree.children.get('b')?.is_folder).toBe(true)
+    expect(tree.children.get('b')?.note).toBeNull()
+    expect(tree.children.get('b')?.children.size).toBe(0)
+  })
 })

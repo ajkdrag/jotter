@@ -3,9 +3,11 @@ import type { NoteDoc, NoteMeta } from '$lib/types/note'
 
 export interface NotesPort {
   list_notes(vault_id: VaultId): Promise<NoteMeta[]>
+  list_folders(vault_id: VaultId): Promise<string[]>
   read_note(vault_id: VaultId, note_id: NoteId): Promise<NoteDoc>
   write_note(vault_id: VaultId, note_id: NoteId, markdown: MarkdownText): Promise<void>
   create_note(vault_id: VaultId, note_path: NotePath, initial_markdown: MarkdownText): Promise<NoteMeta>
+  create_folder(vault_id: VaultId, parent_path: string, folder_name: string): Promise<void>
   rename_note(vault_id: VaultId, from: NotePath, to: NotePath): Promise<void>
   delete_note(vault_id: VaultId, note_id: NoteId): Promise<void>
 }

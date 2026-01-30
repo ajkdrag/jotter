@@ -15,6 +15,7 @@ export type AppStateContext = {
   vault: Vault | null
   recent_vaults: Vault[]
   notes: NoteMeta[]
+  folder_paths: string[]
   open_note: OpenNoteState | null
   theme: ThemeMode
   now_ms: () => number
@@ -23,9 +24,10 @@ export type AppStateContext = {
 export type AppStateEvents =
   | { type: 'RESET_APP' }
   | { type: 'SET_RECENT_VAULTS'; recent_vaults: Vault[] }
-  | { type: 'SET_ACTIVE_VAULT'; vault: Vault; notes: NoteMeta[] }
+  | { type: 'SET_ACTIVE_VAULT'; vault: Vault; notes: NoteMeta[]; folder_paths?: string[] }
   | { type: 'CLEAR_ACTIVE_VAULT' }
   | { type: 'UPDATE_NOTES_LIST'; notes: NoteMeta[] }
+  | { type: 'UPDATE_FOLDER_LIST'; folder_paths: string[] }
   | { type: 'SET_OPEN_NOTE'; open_note: OpenNoteState }
   | { type: 'CLEAR_OPEN_NOTE' }
   | { type: 'UPDATE_OPEN_NOTE_PATH'; path: NoteId }
@@ -42,6 +44,7 @@ export function reset_app(context: AppStateContext): AppStateContext {
     vault: null,
     recent_vaults: [],
     notes: [],
+    folder_paths: [],
     open_note: null,
     theme: 'system'
   }
@@ -50,12 +53,14 @@ export function reset_app(context: AppStateContext): AppStateContext {
 export function set_active_vault(
   context: AppStateContext,
   vault: Vault,
-  notes: NoteMeta[]
+  notes: NoteMeta[],
+  folder_paths: string[] = []
 ): AppStateContext {
   return ensure_open_note_in_context({
     ...context,
     vault,
     notes,
+    folder_paths,
     open_note: null
   })
 }
@@ -120,6 +125,7 @@ export const app_state_machine = setup({
     vault: null,
     recent_vaults: [],
     notes: [],
+    folder_paths: [],
     open_note: null,
     theme: 'system' as ThemeMode,
     now_ms: input.now_ms ?? (() => Date.now())
@@ -137,7 +143,9 @@ export const app_state_machine = setup({
         },
         SET_ACTIVE_VAULT: {
           target: 'vault_open',
-          actions: assign(({ event, context }) => set_active_vault(context, event.vault, event.notes))
+          actions: assign(({ event, context }) =>
+            set_active_vault(context, event.vault, event.notes, event.folder_paths ?? [])
+          )
         },
         SET_THEME: {
           actions: assign({
@@ -158,7 +166,9 @@ export const app_state_machine = setup({
           })
         },
         SET_ACTIVE_VAULT: {
-          actions: assign(({ event, context }) => set_active_vault(context, event.vault, event.notes))
+          actions: assign(({ event, context }) =>
+            set_active_vault(context, event.vault, event.notes, event.folder_paths ?? [])
+          )
         },
         CLEAR_ACTIVE_VAULT: {
           target: 'no_vault',
@@ -166,6 +176,7 @@ export const app_state_machine = setup({
             ...context,
             vault: null,
             notes: [],
+            folder_paths: [],
             open_note: null
           }))
         },
@@ -173,6 +184,12 @@ export const app_state_machine = setup({
           actions: assign(({ event, context }) => ({
             ...context,
             notes: event.notes
+          }))
+        },
+        UPDATE_FOLDER_LIST: {
+          actions: assign(({ event, context }) => ({
+            ...context,
+            folder_paths: event.folder_paths
           }))
         },
         SET_OPEN_NOTE: {

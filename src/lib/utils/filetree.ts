@@ -8,7 +8,7 @@ export type FileTreeNode = {
   is_folder: boolean
 }
 
-export function build_filetree(notes: NoteMeta[]): FileTreeNode {
+export function build_filetree(notes: NoteMeta[], folder_paths: string[] = []): FileTreeNode {
   const root: FileTreeNode = {
     name: '',
     path: '',
@@ -20,15 +20,12 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
   for (const note of notes) {
     const parts = note.path.split('/').filter(Boolean)
     let current = root
-
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i]
       if (!part) continue
-      
       const is_last = i === parts.length - 1
-
+      const node_path = parts.slice(0, i + 1).join('/')
       if (!current.children.has(part)) {
-        const node_path = parts.slice(0, i + 1).join('/')
         current.children.set(part, {
           name: part,
           path: node_path,
@@ -37,11 +34,31 @@ export function build_filetree(notes: NoteMeta[]): FileTreeNode {
           is_folder: !is_last
         })
       }
-
-      const next_node = current.children.get(part)
-      if (next_node) {
-        current = next_node
+      const next = current.children.get(part)!
+      if (is_last) {
+        next.note = note
+        next.is_folder = false
       }
+      current = next
+    }
+  }
+
+  for (const rel_path of folder_paths) {
+    const parts = rel_path.split('/').filter(Boolean)
+    let current = root
+    for (const part of parts) {
+      if (!part) continue
+      const node_path = current.path ? `${current.path}/${part}` : part
+      if (!current.children.has(part)) {
+        current.children.set(part, {
+          name: part,
+          path: node_path,
+          children: new Map(),
+          note: null,
+          is_folder: true
+        })
+      }
+      current = current.children.get(part)!
     }
   }
 

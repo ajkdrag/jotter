@@ -16,6 +16,7 @@
         editor_port: EditorPort;
         vault: Vault | null;
         notes: NoteMeta[];
+        folder_paths: string[];
         open_note_title: string;
         open_note: OpenNoteState | null;
         mark_editor_clean_trigger?: number;
@@ -24,6 +25,7 @@
         on_open_note: (note_path: string) => void;
         on_request_change_vault: () => void;
         on_create_note: () => void;
+        on_request_create_folder: (parent_path: string) => void;
         on_markdown_change: (markdown: string) => void;
         on_dirty_state_change: (is_dirty: boolean) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
@@ -35,14 +37,16 @@
         editor_port,
         vault,
         notes,
+        folder_paths,
         open_note_title,
         open_note,
         mark_editor_clean_trigger = 0,
         current_theme,
         on_theme_change,
         on_open_note,
-        on_request_change_vault,
+        on_request_change_vault: _on_request_change_vault,
         on_create_note,
+        on_request_create_folder,
         on_markdown_change,
         on_dirty_state_change,
         on_request_delete_note,
@@ -51,6 +55,7 @@
     }: Props = $props();
 
     let open = $state(true);
+    let selected_root = $state('');
     const editor_manager = $derived(create_editor_manager(editor_port));
 
     $effect(() => {
@@ -79,7 +84,14 @@
                     <Sidebar.Root collapsible="none" class="w-full">
                         <Sidebar.Header>
                             <div class="flex items-center justify-between w-full px-4 py-2 gap-2">
-                                <span class="font-semibold truncate min-w-0">{vault.name}</span>
+                                <button
+                                    type="button"
+                                    class="font-semibold truncate min-w-0 text-left hover:text-foreground/90 transition-colors"
+                                    onclick={() => { selected_root = '' }}
+                                    aria-label="Select vault root"
+                                >
+                                    {vault.name}
+                                </button>
                                 <div class="flex items-center gap-1.5 shrink-0">
                                     <button
                                         type="button"
@@ -91,7 +103,7 @@
                                     </button>
                                     <button
                                         type="button"
-                                        onclick={() => console.log('New Folder triggered')}
+                                        onclick={() => on_request_create_folder(selected_root)}
                                         class="text-muted-foreground/70 hover:text-foreground transition-colors"
                                         aria-label="New Folder"
                                     >
@@ -122,6 +134,9 @@
                                 <Sidebar.GroupContent>
                                     <FileTree
                                         notes={notes}
+                                        folder_paths={folder_paths}
+                                        selected_root={selected_root}
+                                        on_select_root={(path) => { selected_root = path }}
                                         on_open_note={on_open_note}
                                         on_request_delete={on_request_delete_note}
                                         on_request_rename={on_request_rename_note}

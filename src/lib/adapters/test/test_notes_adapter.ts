@@ -64,6 +64,18 @@ export function create_test_notes_adapter(): NotesPort {
       return result.sort((a, b) => a.path.localeCompare(b.path))
     },
 
+    async list_folders(_vault_id: VaultId): Promise<string[]> {
+      const notes = await load_base_files()
+      const dirs = new Set<string>()
+      for (const note_path of notes.keys()) {
+        const parts = note_path.split('/').filter(Boolean)
+        for (let i = 1; i < parts.length; i++) {
+          dirs.add(parts.slice(0, i).join('/'))
+        }
+      }
+      return Array.from(dirs).sort((a, b) => a.localeCompare(b))
+    },
+
     async read_note(vault_id: VaultId, note_id: NoteId): Promise<NoteDoc> {
       const notes = await load_base_files()
       const note_path = as_note_path(note_id)
@@ -105,6 +117,8 @@ export function create_test_notes_adapter(): NotesPort {
         size_bytes: new Blob([initial_markdown]).size
       }
     },
+
+    async create_folder(_vault_id: VaultId, _parent_path: string, _folder_name: string): Promise<void> {},
 
     async rename_note(_vault_id: VaultId, _from: NotePath, _to: NotePath): Promise<void> {
     },

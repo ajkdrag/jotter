@@ -45,23 +45,30 @@ export function create_mock_vault_port(): VaultPort & {
 
 export function create_mock_notes_port(): NotesPort & {
   _mock_notes: Map<VaultId, NoteMeta[]>
+  _mock_folders: Map<VaultId, string[]>
   _calls: {
     delete_note: { vault_id: VaultId; note_id: NoteId }[]
     rename_note: { vault_id: VaultId; from: NotePath; to: NotePath }[]
     write_note: { vault_id: VaultId; note_id: NoteId; markdown: MarkdownText }[]
     create_note: { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[]
+    create_folder: { vault_id: VaultId; parent_path: string; folder_name: string }[]
   }
 } {
   const mock = {
     _mock_notes: new Map<VaultId, NoteMeta[]>(),
+    _mock_folders: new Map<VaultId, string[]>(),
     _calls: {
       delete_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       rename_note: [] as { vault_id: VaultId; from: NotePath; to: NotePath }[],
       write_note: [] as { vault_id: VaultId; note_id: NoteId; markdown: MarkdownText }[],
-      create_note: [] as { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[]
+      create_note: [] as { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[],
+      create_folder: [] as { vault_id: VaultId; parent_path: string; folder_name: string }[]
     },
     async list_notes(vault_id: VaultId) {
       return mock._mock_notes.get(vault_id) || []
+    },
+    async list_folders(vault_id: VaultId) {
+      return mock._mock_folders.get(vault_id) || []
     },
     async read_note(_vault_id: VaultId, _note_id: NoteId) {
       return {
@@ -100,6 +107,14 @@ export function create_mock_notes_port(): NotesPort & {
         note.path === old_path ? { ...note, path: new_path, id: new_path } : note
       )
       mock._mock_notes.set(vault_id, updated)
+    },
+    async create_folder(vault_id: VaultId, parent_path: string, folder_name: string): Promise<void> {
+      mock._calls.create_folder.push({ vault_id, parent_path, folder_name })
+      const full_path = parent_path ? `${parent_path}/${folder_name}` : folder_name
+      const current = mock._mock_folders.get(vault_id) || []
+      if (!current.includes(full_path)) {
+        mock._mock_folders.set(vault_id, [...current, full_path].sort((a, b) => a.localeCompare(b)))
+      }
     }
   }
   return mock
