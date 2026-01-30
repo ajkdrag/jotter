@@ -12,3 +12,4 @@ src-tauri/Cargo.lock
 devlog/
 .design-engineer/
 .ignore
+.ralph/

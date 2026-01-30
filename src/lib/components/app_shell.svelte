@@ -267,6 +267,7 @@
       on_theme_change={actions.handle_theme_change}
       on_open_note={actions.open_note}
       on_request_change_vault={actions.request_change_vault}
+      on_create_note={actions.create_new_note}
       on_markdown_change={actions.markdown_change}
       on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}

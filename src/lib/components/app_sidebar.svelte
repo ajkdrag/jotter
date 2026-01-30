@@ -1,7 +1,6 @@
 <script lang="ts">
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
-    import * as Tooltip from "$lib/components/ui/tooltip/index.js";
     import FileTree from "$lib/components/file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
     import ThemeToggle from "$lib/components/theme_toggle.svelte";
@@ -10,7 +9,7 @@
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
-    import { FolderOpen, ArrowLeftRight, Circle } from "@lucide/svelte";
+    import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical } from "@lucide/svelte";
 
     type Props = {
         editor_port: EditorPort;
@@ -23,6 +22,7 @@
         on_theme_change: (theme: 'light' | 'dark' | 'system') => void;
         on_open_note: (note_path: string) => void;
         on_request_change_vault: () => void;
+        on_create_note: () => void;
         on_markdown_change: (markdown: string) => void;
         on_dirty_state_change: (is_dirty: boolean) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
@@ -40,6 +40,7 @@
         on_theme_change,
         on_open_note,
         on_request_change_vault,
+        on_create_note,
         on_markdown_change,
         on_dirty_state_change,
         on_request_delete_note,
@@ -68,34 +69,43 @@
             >
                 <Sidebar.Root collapsible="none" class="w-full">
                     <Sidebar.Header>
-                        <Sidebar.Menu>
-                            <Sidebar.MenuItem>
-                                <Sidebar.MenuButton size="lg">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <FolderOpen class="h-5 w-5 shrink-0" />
-                                        <span class="font-semibold truncate"
-                                            >{vault.name}</span
-                                        >
-                                    </div>
-                                </Sidebar.MenuButton>
-                                <Tooltip.Root>
-                                    <Tooltip.Trigger>
-                                        {#snippet child({ props })}
-                                            <Sidebar.MenuAction
-                                                {...props}
-                                                showOnHover={true}
-                                                onclick={on_request_change_vault}
-                                            >
-                                                <ArrowLeftRight />
-                                            </Sidebar.MenuAction>
-                                        {/snippet}
-                                    </Tooltip.Trigger>
-                                    <Tooltip.Content side="right">
-                                        Change Vault
-                                    </Tooltip.Content>
-                                </Tooltip.Root>
-                            </Sidebar.MenuItem>
-                        </Sidebar.Menu>
+                        <div class="flex items-center justify-between w-full px-4 py-2 gap-2">
+                            <span class="font-semibold truncate min-w-0">{vault.name}</span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button
+                                    type="button"
+                                    onclick={on_create_note}
+                                    class="text-muted-foreground/70 hover:text-foreground transition-colors"
+                                    aria-label="New Note"
+                                >
+                                    <FilePlus class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick={() => console.log('New Folder triggered')}
+                                    class="text-muted-foreground/70 hover:text-foreground transition-colors"
+                                    aria-label="New Folder"
+                                >
+                                    <FolderPlus class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick={() => console.log('Refresh triggered')}
+                                    class="text-muted-foreground/70 hover:text-foreground transition-colors"
+                                    aria-label="Refresh"
+                                >
+                                    <RefreshCw class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick={() => console.log('Collapse All triggered')}
+                                    class="text-muted-foreground/70 hover:text-foreground transition-colors"
+                                    aria-label="Collapse All"
+                                >
+                                    <FoldVertical class="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
                     </Sidebar.Header>
 
                                         <Sidebar.Content>
