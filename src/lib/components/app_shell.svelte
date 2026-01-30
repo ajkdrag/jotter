@@ -272,6 +272,7 @@
       on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
+      on_open_settings={actions.open_settings}
     />
   </main>
 {/if}
