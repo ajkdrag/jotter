@@ -1,9 +1,5 @@
-// The app_state_machine is the Model.
-// It should be "dumb" and "pure." It doesn't fetch files, it doesn't show dialogs, and it doesn't "invoke" async processes. 
-// It just reacts to events and calculates the next state
-
 import { setup, assign } from 'xstate'
-import { ensure_open_note } from '$lib/operations/ensure_open_note'
+import { ensure_open_note, create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
 import type { MarkdownText, NoteId } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
@@ -18,6 +14,8 @@ export type AppStateContext = {
   folder_paths: string[]
   open_note: OpenNoteState | null
   theme: ThemeMode
+  sidebar_open: boolean
+  selected_folder_path: string
   now_ms: () => number
 }
 
@@ -34,7 +32,11 @@ export type AppStateEvents =
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
   | { type: 'NOTIFY_DIRTY_STATE_CHANGED'; is_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
+  | { type: 'CREATE_NEW_NOTE_IN_CURRENT_FOLDER' }
   | { type: 'SET_THEME'; theme: ThemeMode }
+  | { type: 'TOGGLE_SIDEBAR' }
+  | { type: 'SET_SIDEBAR_OPEN'; open: boolean }
+  | { type: 'SET_SELECTED_FOLDER_PATH'; path: string }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -46,7 +48,9 @@ export function reset_app(context: AppStateContext): AppStateContext {
     notes: [],
     folder_paths: [],
     open_note: null,
-    theme: 'system'
+    theme: 'system',
+    sidebar_open: true,
+    selected_folder_path: ''
   }
 }
 
@@ -81,7 +85,6 @@ export function update_dirty_state(context: AppStateContext, is_dirty: boolean):
   }
 }
 
-
 export function ensure_open_note_in_context(context: AppStateContext): AppStateContext {
   return {
     ...context,
@@ -111,6 +114,19 @@ export function update_open_note_path(context: AppStateContext, new_path: NoteId
   }
 }
 
+export function create_new_note_in_current_folder(context: AppStateContext): AppStateContext {
+  const current_path = context.open_note?.meta.path ?? ''
+  const last_slash = current_path.lastIndexOf('/')
+  const folder_prefix = last_slash >= 0 ? current_path.substring(0, last_slash) : ''
+
+  const new_note = create_untitled_open_note_in_folder({
+    notes: context.notes,
+    folder_prefix,
+    now_ms: context.now_ms()
+  })
+
+  return { ...context, open_note: new_note }
+}
 
 export const app_state_machine = setup({
   types: {
@@ -128,6 +144,8 @@ export const app_state_machine = setup({
     folder_paths: [],
     open_note: null,
     theme: 'system' as ThemeMode,
+    sidebar_open: true,
+    selected_folder_path: '',
     now_ms: input.now_ms ?? (() => Date.now())
   }),
   states: {
@@ -147,9 +165,27 @@ export const app_state_machine = setup({
             set_active_vault(context, event.vault, event.notes, event.folder_paths ?? [])
           )
         },
+        CREATE_NEW_NOTE_IN_CURRENT_FOLDER: {
+          actions: assign(({ context }) => create_new_note_in_current_folder(context))
+        },
         SET_THEME: {
           actions: assign({
             theme: ({ event }) => event.theme
+          })
+        },
+        TOGGLE_SIDEBAR: {
+          actions: assign({
+            sidebar_open: ({ context }) => !context.sidebar_open
+          })
+        },
+        SET_SIDEBAR_OPEN: {
+          actions: assign({
+            sidebar_open: ({ event }) => event.open
+          })
+        },
+        SET_SELECTED_FOLDER_PATH: {
+          actions: assign({
+            selected_folder_path: ({ event }) => event.path
           })
         }
       }
@@ -214,9 +250,27 @@ export const app_state_machine = setup({
         COMMAND_ENSURE_OPEN_NOTE: {
           actions: assign(({ context }) => ensure_open_note_in_context(context))
         },
+        CREATE_NEW_NOTE_IN_CURRENT_FOLDER: {
+          actions: assign(({ context }) => create_new_note_in_current_folder(context))
+        },
         SET_THEME: {
           actions: assign({
             theme: ({ event }) => event.theme
+          })
+        },
+        TOGGLE_SIDEBAR: {
+          actions: assign({
+            sidebar_open: ({ context }) => !context.sidebar_open
+          })
+        },
+        SET_SIDEBAR_OPEN: {
+          actions: assign({
+            sidebar_open: ({ event }) => event.open
+          })
+        },
+        SET_SELECTED_FOLDER_PATH: {
+          actions: assign({
+            selected_folder_path: ({ event }) => event.path
           })
         }
       }

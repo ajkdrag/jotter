@@ -73,13 +73,7 @@ export const change_vault_flow_machine = setup({
             break
           }
           case 'select_recent': {
-            const vault = await ports.vault.open_vault_by_id(change_mode.vault_id)
-            const [notes, folder_paths] = await Promise.all([
-              ports.notes.list_notes(vault.id),
-              ports.notes.list_folders(vault.id)
-            ])
-            await ports.vault.remember_last_vault(vault.id)
-            result = { vault, notes, folder_paths }
+            result = await change_vault({ vault: ports.vault, notes: ports.notes }, { vault_id: change_mode.vault_id })
             break
           }
         }

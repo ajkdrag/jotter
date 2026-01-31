@@ -13,6 +13,8 @@ const TEST_VAULT_2_NAME = 'Another Vault'
 const LAST_VAULT_KEY = 'imdown_test_last_vault_id'
 
 export function create_test_vault_adapter(): VaultPort {
+  let last_vault_id: VaultId | null = null
+
   return {
     async choose_vault(): Promise<VaultPath | null> {
       return TEST_VAULT_PATH
@@ -80,12 +82,18 @@ export function create_test_vault_adapter(): VaultPort {
     },
 
     async remember_last_vault(vault_id: VaultId): Promise<void> {
-      localStorage.setItem(LAST_VAULT_KEY, vault_id)
+      last_vault_id = vault_id
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(LAST_VAULT_KEY, vault_id)
+      }
     },
 
     async get_last_vault_id(): Promise<VaultId | null> {
-      const stored = localStorage.getItem(LAST_VAULT_KEY)
-      return stored ? as_vault_id(stored) : null
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(LAST_VAULT_KEY)
+        return stored ? as_vault_id(stored) : null
+      }
+      return last_vault_id
     }
   }
 }

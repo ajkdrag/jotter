@@ -1,6 +1,10 @@
 import type { EditorSettings } from "$lib/types/editor_settings";
 
 export function apply_editor_styles(settings: EditorSettings): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
   const root = document.documentElement;
 
   root.style.setProperty("--editor-font-size", `${settings.font_size}rem`);

@@ -1,9 +1,8 @@
 import { setup, assign, fromPromise } from 'xstate'
 import type { NotesPort } from '$lib/ports/notes_port'
-import type { NoteId } from '$lib/types/ids'
-import { as_note_path } from '$lib/types/ids'
 import type { AppStateEvents, AppStateContext } from '$lib/state/app_state_machine'
 import type { FlowSnapshot } from '$lib/flows/flow_handle'
+import { save_note_with_untitled_handling } from '$lib/operations/save_note_operation'
 
 type SaveNotePorts = {
   notes: NotesPort
@@ -18,6 +17,7 @@ type FlowContext = {
   ports: SaveNotePorts
   dispatch: AppStateDispatch
   get_app_state_snapshot: GetAppStateSnapshot
+  on_save_complete: (() => void) | undefined
 }
 
 export type SaveNoteFlowContext = FlowContext
@@ -30,6 +30,7 @@ type FlowInput = {
   ports: SaveNotePorts
   dispatch: AppStateDispatch
   get_app_state_snapshot: GetAppStateSnapshot
+  on_save_complete?: () => void
 }
 
 export const save_note_flow_machine = setup({
@@ -56,26 +57,16 @@ export const save_note_flow_machine = setup({
 
         if (!vault || !open_note) return
 
-        const vault_id = vault.id
-        const note_id = open_note.meta.id
-        const note_path = open_note.meta.path
-        const markdown = open_note.markdown
+        const result = await save_note_with_untitled_handling(
+          { notes: ports.notes },
+          { vault_id: vault.id, note: open_note }
+        )
 
-        const is_untitled = !note_path.endsWith('.md')
-
-        let final_note_id: NoteId = note_id
-
-        if (is_untitled) {
-          const final_note_path = as_note_path(`${open_note.meta.path}.md`)
-          const created_note = await ports.notes.create_note(vault_id, final_note_path, markdown)
-          final_note_id = created_note.id
-
-          dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: final_note_id })
-        } else {
-          await ports.notes.write_note(vault_id, note_id, markdown)
+        if (result.needs_path_update) {
+          dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: result.final_note_id })
         }
 
-        const notes = await ports.notes.list_notes(vault_id)
+        const notes = await ports.notes.list_notes(vault.id)
         dispatch({ type: 'UPDATE_NOTES_LIST', notes })
       }
     )
@@ -83,11 +74,12 @@ export const save_note_flow_machine = setup({
 }).createMachine({
   id: 'save_note_flow',
   initial: 'idle',
-  context: ({ input }) => ({
+  context: ({ input }): FlowContext => ({
     error: null,
     ports: input.ports,
     dispatch: input.dispatch,
-    get_app_state_snapshot: input.get_app_state_snapshot
+    get_app_state_snapshot: input.get_app_state_snapshot,
+    on_save_complete: input.on_save_complete
   }),
   states: {
     idle: {
@@ -109,7 +101,10 @@ export const save_note_flow_machine = setup({
           get_app_state_snapshot: context.get_app_state_snapshot
         }),
         onDone: {
-          target: 'idle'
+          target: 'idle',
+          actions: ({ context }) => {
+            context.on_save_complete?.()
+          }
         },
         onError: {
           target: 'error',

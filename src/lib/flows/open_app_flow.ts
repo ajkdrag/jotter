@@ -1,5 +1,5 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { change_vault } from '$lib/operations/change_vault'
+import { startup_app } from '$lib/operations/startup_app'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
@@ -70,22 +70,22 @@ export const open_app_flow_machine = setup({
 
         if (config.reset_app_state) dispatch({ type: 'RESET_APP' })
 
-        const recent_vaults = await ports.vault.list_vaults()
-        dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults })
+        const app_snapshot = get_app_state_snapshot()
+        const current_state = app_snapshot.matches('no_vault') ? 'no_vault' : 'vault_open'
 
-        const is_no_vault = get_app_state_snapshot().matches('no_vault')
+        const result = await startup_app(ports, {
+          bootstrap_vault_path: config.bootstrap_default_vault_path,
+          current_app_state: current_state
+        })
 
-        if (is_no_vault && config.bootstrap_default_vault_path) {
-          const result = await change_vault(
-            { vault: ports.vault, notes: ports.notes },
-            { vault_path: config.bootstrap_default_vault_path }
-          )
-          void ports.index.build_index(result.vault.id)
+        dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults: result.recent_vaults })
+
+        if (result.bootstrapped_vault) {
           dispatch({
             type: 'SET_ACTIVE_VAULT',
-            vault: result.vault,
-            notes: result.notes,
-            folder_paths: result.folder_paths
+            vault: result.bootstrapped_vault.vault,
+            notes: result.bootstrapped_vault.notes,
+            folder_paths: result.bootstrapped_vault.folder_paths
           })
           const updated_recent_vaults = await ports.vault.list_vaults()
           dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults: updated_recent_vaults })

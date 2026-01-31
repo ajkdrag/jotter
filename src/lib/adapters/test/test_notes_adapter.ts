@@ -5,7 +5,16 @@ import type { NoteDoc, NoteMeta } from '$lib/types/note'
 const TEST_FILES_BASE = '/test/files'
 const TEST_FILES_INDEX = '/test/files/index.json'
 
+const FALLBACK_TEST_NOTES = new Map<NotePath, { markdown: string; mtime_ms: number }>([
+  [as_note_path('welcome.md'), { markdown: as_markdown_text('# Welcome\n\nWelcome to your notes.'), mtime_ms: Date.now() }],
+  [as_note_path('getting-started.md'), { markdown: as_markdown_text('# Getting Started\n\nStart taking notes!'), mtime_ms: Date.now() }]
+])
+
 async function discover_test_files(): Promise<string[]> {
+  if (typeof fetch === 'undefined') {
+    return ['welcome.md', 'getting-started.md']
+  }
+
   try {
     const response = await fetch(TEST_FILES_INDEX)
     if (response.ok) {
@@ -19,9 +28,13 @@ async function discover_test_files(): Promise<string[]> {
 }
 
 async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtime_ms: number }>> {
+  if (typeof fetch === 'undefined') {
+    return new Map(FALLBACK_TEST_NOTES)
+  }
+
   const notes = new Map<NotePath, { markdown: string; mtime_ms: number }>()
   const test_files = await discover_test_files()
-  
+
   for (const file_name of test_files) {
     try {
       const response = await fetch(`${TEST_FILES_BASE}/${file_name}`, { cache: 'no-store' })
@@ -37,11 +50,17 @@ async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtim
       console.warn(`Failed to load test file ${file_name}:`, error)
     }
   }
-  
+
+  if (notes.size === 0) {
+    return new Map(FALLBACK_TEST_NOTES)
+  }
+
   return notes
 }
 
 export function create_test_notes_adapter(): NotesPort {
+  const created_folders = new Set<string>()
+
   return {
     async list_notes(_vault_id: VaultId): Promise<NoteMeta[]> {
       const notes = await load_base_files()
@@ -72,6 +91,9 @@ export function create_test_notes_adapter(): NotesPort {
         for (let i = 1; i < parts.length; i++) {
           dirs.add(parts.slice(0, i).join('/'))
         }
+      }
+      for (const folder of created_folders) {
+        dirs.add(folder)
       }
       return Array.from(dirs).sort((a, b) => a.localeCompare(b))
     },
@@ -118,7 +140,10 @@ export function create_test_notes_adapter(): NotesPort {
       }
     },
 
-    async create_folder(_vault_id: VaultId, _parent_path: string, _folder_name: string): Promise<void> {},
+    async create_folder(_vault_id: VaultId, parent_path: string, folder_name: string): Promise<void> {
+      const full_path = parent_path ? `${parent_path}/${folder_name}` : folder_name
+      created_folders.add(full_path)
+    },
 
     async rename_note(_vault_id: VaultId, _from: NotePath, _to: NotePath): Promise<void> {
     },

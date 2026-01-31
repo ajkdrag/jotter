@@ -14,23 +14,36 @@ import { save_note_flow_machine } from '$lib/flows/save_note_flow'
 import type { SaveNoteFlowContext, SaveNoteFlowEvents } from '$lib/flows/save_note_flow'
 import { settings_flow_machine } from '$lib/flows/settings_flow'
 import type { SettingsFlowContext, SettingsFlowEvents } from '$lib/flows/settings_flow'
+import { create_folder_flow_machine } from '$lib/flows/create_folder_flow'
+import type { CreateFolderFlowContext, CreateFolderFlowEvents } from '$lib/flows/create_folder_flow'
+import { app_startup_flow_machine } from '$lib/flows/app_startup_flow'
+import type { AppStartupFlowContext, AppStartupFlowEvents } from '$lib/flows/app_startup_flow'
+import { command_palette_flow_machine } from '$lib/flows/command_palette_flow'
+import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
+
+export type CreateAppFlowsCallbacks = {
+  on_save_complete?: () => void
+}
 
 export type AppFlows = {
   app_state: FlowHandle<AppStateEvents, FlowSnapshot<AppStateContext>>
   flows: {
+    app_startup: FlowHandle<AppStartupFlowEvents, FlowSnapshot<AppStartupFlowContext>>
     open_app: FlowHandle<OpenAppFlowEvents, FlowSnapshot<OpenAppFlowContext>>
     change_vault: FlowHandle<ChangeVaultFlowEvents, FlowSnapshot<ChangeVaultFlowContext>>
     open_note: FlowHandle<OpenNoteFlowEvents, FlowSnapshot<OpenNoteFlowContext>>
     delete_note: FlowHandle<DeleteNoteFlowEvents, FlowSnapshot<DeleteNoteFlowContext>>
     rename_note: FlowHandle<RenameNoteFlowEvents, FlowSnapshot<RenameNoteFlowContext>>
     save_note: FlowHandle<SaveNoteFlowEvents, FlowSnapshot<SaveNoteFlowContext>>
+    create_folder: FlowHandle<CreateFolderFlowEvents, FlowSnapshot<CreateFolderFlowContext>>
     settings: FlowHandle<SettingsFlowEvents, FlowSnapshot<SettingsFlowContext>>
+    command_palette: FlowHandle<CommandPaletteFlowEvents, FlowSnapshot<CommandPaletteFlowContext>>
   }
 }
 
-export function create_app_flows(ports: Ports): AppFlows {
+export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbacks): AppFlows {
   const app_state = create_flow_handle(app_state_machine, { input: {} })
   const dispatch = (event: AppStateEvents) => app_state.send(event)
 
@@ -62,23 +75,41 @@ export function create_app_flows(ports: Ports): AppFlows {
   })
 
   const save_note = create_flow_handle(save_note_flow_machine, {
-    input: { ports: { notes: ports.notes }, dispatch, get_app_state_snapshot: app_state.get_snapshot }
+    input: {
+      ports: { notes: ports.notes },
+      dispatch,
+      get_app_state_snapshot: app_state.get_snapshot,
+      ...callbacks?.on_save_complete ? { on_save_complete: callbacks.on_save_complete } : {}
+    }
   })
 
   const settings = create_flow_handle(settings_flow_machine, {
     input: { ports: { settings: ports.settings } }
   })
 
+  const create_folder = create_flow_handle(create_folder_flow_machine, {
+    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+  })
+
+  const app_startup = create_flow_handle(app_startup_flow_machine, {
+    input: { ports: { theme: ports.theme, settings: ports.settings }, dispatch }
+  })
+
+  const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
+
   return {
     app_state,
     flows: {
+      app_startup,
       open_app,
       change_vault,
       open_note,
       delete_note,
       rename_note,
       save_note,
-      settings
+      create_folder,
+      settings,
+      command_palette
     }
   }
 }

@@ -1,5 +1,6 @@
 import { setup, assign, fromPromise } from 'xstate'
 import { rename_note } from '$lib/operations/rename_note'
+import { check_note_path_exists } from '$lib/operations/check_note_path_exists'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
@@ -59,8 +60,10 @@ export const rename_note_flow_machine = setup({
         }
       }) => {
         const { ports, vault_id, new_path } = input
-        const notes = await ports.notes.list_notes(vault_id)
-        return notes.some(note => note.path === new_path)
+        return await check_note_path_exists(
+          { notes: ports.notes },
+          { vault_id, note_path: new_path }
+        )
       }
     ),
     perform_rename: fromPromise(

@@ -15,10 +15,7 @@
   import type { NoteMeta } from '$lib/types/note'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
   import { create_app_flows } from '$lib/flows/create_app_flows'
-  import { create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
-  import { init_theme } from '$lib/operations/init_theme'
-  import { load_editor_settings } from '$lib/operations/load_editor_settings'
-  import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
+  import { create_editor_manager } from '$lib/operations/manage_editor'
 
   type Props = {
     ports: Ports
@@ -31,26 +28,25 @@
 
   const stable = untrack(() => ({ ports, bootstrap_default_vault_path, reset_state_on_mount, hide_choose_vault_button }))
 
-  const app = untrack(() => create_app_flows(stable.ports))
+  const editor_manager = untrack(() => create_editor_manager(stable.ports.editor))
+  const app = untrack(() => create_app_flows(stable.ports, {
+    on_save_complete: () => editor_manager.mark_clean()
+  }))
 
   const app_state = use_flow_handle(app.app_state)
+  const app_startup = use_flow_handle(app.flows.app_startup)
   const open_app = use_flow_handle(app.flows.open_app)
   const change_vault = use_flow_handle(app.flows.change_vault)
   const open_note = use_flow_handle(app.flows.open_note)
   const delete_note = use_flow_handle(app.flows.delete_note)
   const rename_note = use_flow_handle(app.flows.rename_note)
   const save_note = use_flow_handle(app.flows.save_note)
+  const create_folder = use_flow_handle(app.flows.create_folder)
   const settings = use_flow_handle(app.flows.settings)
+  const command_palette = use_flow_handle(app.flows.command_palette)
 
-  let save_was_in_progress = $state(false)
-  let mark_editor_clean_trigger = $state(0)
-  let palette_open = $state(false)
-  let palette_selected_index = $state(0)
-  let create_folder_dialog_open = $state(false)
-  let create_folder_parent_path = $state('')
-  let create_folder_name = $state('')
-  let create_folder_creating = $state(false)
-  let create_folder_error = $state<string | null>(null)
+  const palette_open = $derived(command_palette.snapshot.matches('open'))
+  const palette_selected_index = $derived(command_palette.snapshot.context.selected_index)
 
   const vault_dialog_open = $derived(
     app_state.snapshot.matches('vault_open') &&
@@ -84,17 +80,19 @@
       settings.snapshot.matches('error')
   )
 
+  const create_folder_dialog_open = $derived(
+    create_folder.snapshot.matches('dialog_open') ||
+      create_folder.snapshot.matches('creating') ||
+      create_folder.snapshot.matches('error')
+  )
+
   const vault_selection_loading = $derived(
     open_app.snapshot.matches('starting') || change_vault.snapshot.matches('changing')
   )
 
   const actions = {
-    async mount() {
-      const theme_mode = init_theme(stable.ports.theme)
-      app_state.send({ type: 'SET_THEME', theme: theme_mode })
-
-      const editor_settings = await load_editor_settings(stable.ports.settings)
-      apply_editor_styles(editor_settings)
+    mount() {
+      app_startup.send({ type: 'INITIALIZE' })
 
       open_app.send({
         type: 'START',
@@ -105,19 +103,7 @@
       })
     },
     create_new_note() {
-      const app = app_state.snapshot.context
-      const current_path = app.open_note?.meta.path ?? ''
-      const last_slash = current_path.lastIndexOf('/')
-      const folder_prefix = last_slash >= 0 ? current_path.substring(0, last_slash) : ''
-
-      const new_note = create_untitled_open_note_in_folder({
-        notes: app.notes,
-        folder_prefix,
-        now_ms: Date.now()
-      })
-
-      app_state.send({ type: 'SET_OPEN_NOTE', open_note: new_note })
-      palette_open = false
+      app_state.send({ type: 'CREATE_NEW_NOTE_IN_CURRENT_FOLDER' })
     },
     request_change_vault() {
       change_vault.send({ type: 'OPEN_DIALOG' })
@@ -208,39 +194,24 @@
       app_state.send({ type: 'SET_THEME', theme })
     },
     request_create_folder(parent_path: string) {
-      create_folder_parent_path = parent_path
-      create_folder_name = ''
-      create_folder_error = null
-      create_folder_dialog_open = true
-    },
-    async confirm_create_folder() {
       const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
-      create_folder_creating = true
-      create_folder_error = null
-      try {
-        await stable.ports.notes.create_folder(
-          vault_id,
-          create_folder_parent_path,
-          create_folder_name.trim()
-        )
-        const folder_paths = await stable.ports.notes.list_folders(vault_id)
-        app_state.send({ type: 'UPDATE_FOLDER_LIST', folder_paths })
-        create_folder_dialog_open = false
-        create_folder_name = ''
-      } catch (e) {
-        create_folder_error = e instanceof Error ? e.message : String(e)
-      } finally {
-        create_folder_creating = false
-      }
+      create_folder.send({ type: 'REQUEST_CREATE', vault_id, parent_path })
+    },
+    confirm_create_folder() {
+      create_folder.send({ type: 'CONFIRM' })
     },
     cancel_create_folder() {
-      create_folder_dialog_open = false
-      create_folder_name = ''
-      create_folder_error = null
+      create_folder.send({ type: 'CANCEL' })
     },
     update_create_folder_name(name: string) {
-      create_folder_name = name
+      create_folder.send({ type: 'UPDATE_FOLDER_NAME', name })
+    },
+    toggle_sidebar() {
+      app_state.send({ type: 'TOGGLE_SIDEBAR' })
+    },
+    select_folder_path(path: string) {
+      app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path })
     }
   }
 
@@ -250,10 +221,7 @@
         return
       }
       event.preventDefault()
-      palette_open = !palette_open
-      if (palette_open) {
-        palette_selected_index = 0
-      }
+      command_palette.send({ type: 'TOGGLE' })
     }
   }
 
@@ -263,19 +231,6 @@
       actions.request_save()
     }
   }
-
-  $effect(() => {
-    if (save_note.snapshot.matches('saving')) {
-      save_was_in_progress = true
-      return
-    }
-
-    if (save_note.snapshot.matches('idle') && save_was_in_progress) {
-      save_was_in_progress = false
-      mark_editor_clean_trigger++
-      app_state.send({ type: 'NOTIFY_DIRTY_STATE_CHANGED', is_dirty: false })
-    }
-  })
 
   onMount(() => {
     actions.mount()
@@ -298,17 +253,17 @@
   {@const app = app_state.snapshot.context}
   <main>
     <AppSidebar
-      editor_port={stable.ports.editor}
+      editor_manager={editor_manager}
       vault={app.vault}
       notes={app.notes}
       folder_paths={app.folder_paths}
       open_note_title={app.open_note?.meta.title ?? 'Notes'}
       open_note={app.open_note}
-      mark_editor_clean_trigger={mark_editor_clean_trigger}
+      sidebar_open={app.sidebar_open}
+      selected_folder_path={app.selected_folder_path}
       current_theme={app.theme}
       on_theme_change={actions.handle_theme_change}
       on_open_note={actions.open_note}
-      on_request_change_vault={actions.request_change_vault}
       on_create_note={actions.create_new_note}
       on_request_create_folder={actions.request_create_folder}
       on_markdown_change={actions.markdown_change}
@@ -316,6 +271,8 @@
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
       on_open_settings={actions.open_settings}
+      on_toggle_sidebar={actions.toggle_sidebar}
+      on_select_folder_path={actions.select_folder_path}
     />
   </main>
 {/if}
@@ -383,10 +340,10 @@
 
 <CreateFolderDialog
   open={create_folder_dialog_open}
-  parent_path={create_folder_parent_path}
-  folder_name={create_folder_name}
-  is_creating={create_folder_creating}
-  error={create_folder_error}
+  parent_path={create_folder.snapshot.context.parent_path}
+  folder_name={create_folder.snapshot.context.folder_name}
+  is_creating={create_folder.snapshot.matches('creating')}
+  error={create_folder.snapshot.context.error}
   on_folder_name_change={actions.update_create_folder_name}
   on_confirm={actions.confirm_create_folder}
   on_cancel={actions.cancel_create_folder}
@@ -394,18 +351,27 @@
 
 <CommandPalette
   open={palette_open}
-  on_open_change={(open) => { palette_open = open }}
+  on_open_change={(open) => {
+    if (open) {
+      command_palette.send({ type: 'OPEN' })
+    } else {
+      command_palette.send({ type: 'CLOSE' })
+    }
+  }}
   selected_index={palette_selected_index}
-  on_selected_index_change={(index) => { palette_selected_index = index }}
+  on_selected_index_change={(index) => { command_palette.send({ type: 'SET_SELECTED_INDEX', index }) }}
   on_select_command={(cmd) => {
-    if (cmd === 'create_new_note') {
-      actions.create_new_note()
-    } else if (cmd === 'change_vault') {
-      palette_open = false
-      actions.request_change_vault()
-    } else if (cmd === 'open_settings') {
-      palette_open = false
-      actions.open_settings()
+    command_palette.send({ type: 'CLOSE' })
+    switch (cmd) {
+      case 'create_new_note':
+        actions.create_new_note()
+        break
+      case 'change_vault':
+        actions.request_change_vault()
+        break
+      case 'open_settings':
+        actions.open_settings()
+        break
     }
   }}
 />
