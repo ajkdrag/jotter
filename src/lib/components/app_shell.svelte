@@ -223,6 +223,13 @@
       event.preventDefault()
       command_palette.send({ type: 'TOGGLE' })
     }
+    if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+      if (app_state.snapshot.matches('no_vault')) {
+        return
+      }
+      event.preventDefault()
+      actions.toggle_sidebar()
+    }
   }
 
   function handle_keydown(event: KeyboardEvent) {
