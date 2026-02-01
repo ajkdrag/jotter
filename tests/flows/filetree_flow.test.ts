@@ -25,7 +25,10 @@ function create_mock_input() {
         create_note: vi.fn(),
         delete_note: vi.fn(),
         rename_note: vi.fn(),
-        create_folder: vi.fn()
+        create_folder: vi.fn(),
+        rename_folder: vi.fn(),
+        delete_folder: vi.fn(async () => ({ deleted_notes: [], deleted_folders: [] })),
+        get_folder_stats: vi.fn(async () => ({ note_count: 0, folder_count: 0 }))
       }
     },
     dispatch,

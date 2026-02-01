@@ -22,6 +22,10 @@ import { command_palette_flow_machine } from '$lib/flows/command_palette_flow'
 import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
 import { filetree_flow_machine } from '$lib/flows/filetree_flow'
 import type { FiletreeFlowContext, FiletreeFlowEvents } from '$lib/flows/filetree_flow'
+import { delete_folder_flow_machine } from '$lib/flows/delete_folder_flow'
+import type { DeleteFolderFlowContext, DeleteFolderFlowEvents } from '$lib/flows/delete_folder_flow'
+import { rename_folder_flow_machine } from '$lib/flows/rename_folder_flow'
+import type { RenameFolderFlowContext, RenameFolderFlowEvents } from '$lib/flows/rename_folder_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
 
@@ -38,6 +42,8 @@ export type AppFlows = {
     open_note: FlowHandle<OpenNoteFlowEvents, FlowSnapshot<OpenNoteFlowContext>>
     delete_note: FlowHandle<DeleteNoteFlowEvents, FlowSnapshot<DeleteNoteFlowContext>>
     rename_note: FlowHandle<RenameNoteFlowEvents, FlowSnapshot<RenameNoteFlowContext>>
+    delete_folder: FlowHandle<DeleteFolderFlowEvents, FlowSnapshot<DeleteFolderFlowContext>>
+    rename_folder: FlowHandle<RenameFolderFlowEvents, FlowSnapshot<RenameFolderFlowContext>>
     save_note: FlowHandle<SaveNoteFlowEvents, FlowSnapshot<SaveNoteFlowContext>>
     create_folder: FlowHandle<CreateFolderFlowEvents, FlowSnapshot<CreateFolderFlowContext>>
     settings: FlowHandle<SettingsFlowEvents, FlowSnapshot<SettingsFlowContext>>
@@ -114,6 +120,14 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
 
+  const delete_folder = create_flow_handle(delete_folder_flow_machine, {
+    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+  })
+
+  const rename_folder = create_flow_handle(rename_folder_flow_machine, {
+    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+  })
+
   return {
     app_state,
     flows: {
@@ -123,6 +137,8 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       open_note,
       delete_note,
       rename_note,
+      delete_folder,
+      rename_folder,
       save_note,
       create_folder,
       settings,

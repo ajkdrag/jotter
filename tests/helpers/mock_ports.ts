@@ -1,5 +1,5 @@
 import type { VaultPort } from '$lib/ports/vault_port'
-import type { NotesPort } from '$lib/ports/notes_port'
+import type { NotesPort, FolderStats } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId, VaultPath, NotePath, NoteId, MarkdownText } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
@@ -135,6 +135,16 @@ export function create_mock_notes_port(): NotesPort & {
       })
 
       return { notes, subfolders }
+    },
+    async rename_folder(_vault_id: VaultId, from_path: string, to_path: string) {
+      mock._calls.rename_note.push({ vault_id: _vault_id, from: from_path as NotePath, to: to_path as NotePath })
+    },
+    async delete_folder(_vault_id: VaultId, folder_path: string) {
+      mock._calls.delete_note.push({ vault_id: _vault_id, note_id: folder_path as NotePath })
+      return { deleted_notes: [], deleted_folders: [] }
+    },
+    async get_folder_stats(_vault_id: VaultId, _folder_path: string): Promise<FolderStats> {
+      return { note_count: 0, folder_count: 0 }
     }
   }
   return mock

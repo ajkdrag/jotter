@@ -22,6 +22,8 @@
     on_select_folder: (path: string) => void;
     on_request_delete?: ((note: NoteMeta) => void) | undefined;
     on_request_rename?: ((note: NoteMeta) => void) | undefined;
+    on_request_delete_folder?: ((folder_path: string) => void) | undefined;
+    on_request_rename_folder?: ((folder_path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
   };
 
@@ -33,6 +35,8 @@
     on_select_folder,
     on_request_delete,
     on_request_rename,
+    on_request_delete_folder,
+    on_request_rename_folder,
     on_retry_load
   }: Props = $props();
 
@@ -124,7 +128,23 @@
 {/snippet}
 
 {#if node.is_folder}
-  {@render row_content()}
+  <ContextMenu.Root>
+    <ContextMenu.Trigger class="w-full">
+      {@render row_content()}
+    </ContextMenu.Trigger>
+    <ContextMenu.Portal>
+      <ContextMenu.Content>
+        <ContextMenu.Item onclick={() => on_request_rename_folder?.(node.path)}>
+          <Pencil class="mr-2 h-4 w-4" />
+          <span>Rename</span>
+        </ContextMenu.Item>
+        <ContextMenu.Item onclick={() => on_request_delete_folder?.(node.path)}>
+          <Trash2 class="mr-2 h-4 w-4" />
+          <span>Delete</span>
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Portal>
+  </ContextMenu.Root>
 {:else if node.note}
   <ContextMenu.Root>
     <ContextMenu.Trigger class="w-full">

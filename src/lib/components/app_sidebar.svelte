@@ -35,6 +35,8 @@
         on_dirty_state_change: (is_dirty: boolean) => void;
         on_request_delete_note?: (note: NoteMeta) => void;
         on_request_rename_note?: (note: NoteMeta) => void;
+        on_request_delete_folder?: (folder_path: string) => void;
+        on_request_rename_folder?: (folder_path: string) => void;
         on_open_settings: () => void;
         on_toggle_sidebar: () => void;
         on_select_folder_path: (path: string) => void;
@@ -63,6 +65,8 @@
         on_dirty_state_change,
         on_request_delete_note,
         on_request_rename_note,
+        on_request_delete_folder,
+        on_request_rename_folder,
         on_open_settings,
         on_toggle_sidebar,
         on_select_folder_path,
@@ -162,6 +166,8 @@
                                         on_select_folder={on_select_folder_path}
                                         on_request_delete={on_request_delete_note}
                                         on_request_rename={on_request_rename_note}
+                                        on_request_delete_folder={on_request_delete_folder}
+                                        on_request_rename_folder={on_request_rename_folder}
                                         on_retry_load={on_retry_load}
                                     />
                                 </Sidebar.GroupContent>

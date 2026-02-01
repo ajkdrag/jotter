@@ -1,4 +1,4 @@
-import type { NotesPort } from '$lib/ports/notes_port'
+import type { NotesPort, FolderStats } from '$lib/ports/notes_port'
 import { as_markdown_text, as_note_path, type MarkdownText, type NoteId, type NotePath, type VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
 import type { FolderContents } from '$lib/types/filetree'
@@ -270,6 +270,107 @@ export function create_notes_web_adapter(): NotesPort {
       subfolders.sort((a, b) => a.localeCompare(b))
 
       return { notes, subfolders }
+    },
+
+    async rename_folder(vault_id: VaultId, from_path: string, to_path: string): Promise<void> {
+      const root = await get_vault_handle(vault_id)
+
+      const from_parts = from_path.split('/').filter(Boolean)
+      const to_parts = to_path.split('/').filter(Boolean)
+
+      let from_parent = root
+      for (let i = 0; i < from_parts.length - 1; i++) {
+        from_parent = await from_parent.getDirectoryHandle(from_parts[i]!, { create: false })
+      }
+      const from_name = from_parts[from_parts.length - 1]!
+      const from_handle = await from_parent.getDirectoryHandle(from_name, { create: false })
+
+      let to_parent = root
+      for (let i = 0; i < to_parts.length - 1; i++) {
+        to_parent = await to_parent.getDirectoryHandle(to_parts[i]!, { create: true })
+      }
+      const to_name = to_parts[to_parts.length - 1]!
+      const to_handle = await to_parent.getDirectoryHandle(to_name, { create: true })
+
+      async function copy_dir_contents(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle) {
+        for await (const entry of source.values()) {
+          if (entry.kind === 'file') {
+            const file_handle = entry as FileSystemFileHandle
+            const file = await file_handle.getFile()
+            const target_file = await target.getFileHandle(entry.name, { create: true })
+            const writable = await target_file.createWritable()
+            await writable.write(await file.text())
+            await writable.close()
+          } else if (entry.kind === 'directory') {
+            const sub_target = await target.getDirectoryHandle(entry.name, { create: true })
+            await copy_dir_contents(entry as FileSystemDirectoryHandle, sub_target)
+          }
+        }
+      }
+
+      await copy_dir_contents(from_handle, to_handle)
+      await from_parent.removeEntry(from_name, { recursive: true })
+    },
+
+    async delete_folder(vault_id: VaultId, folder_path: string): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }> {
+      const root = await get_vault_handle(vault_id)
+
+      const parts = folder_path.split('/').filter(Boolean)
+      let parent = root
+      for (let i = 0; i < parts.length - 1; i++) {
+        parent = await parent.getDirectoryHandle(parts[i]!, { create: false })
+      }
+      const folder_name = parts[parts.length - 1]!
+
+      const deleted_notes: NotePath[] = []
+      const deleted_folders: string[] = []
+
+      async function collect_items(dir: FileSystemDirectoryHandle, prefix: string) {
+        for await (const entry of dir.values()) {
+          const entry_path = prefix ? `${prefix}/${entry.name}` : entry.name
+
+          if (entry.kind === 'file' && entry.name.endsWith('.md')) {
+            deleted_notes.push(as_note_path(entry_path))
+          } else if (entry.kind === 'directory') {
+            deleted_folders.push(entry_path)
+            await collect_items(entry as FileSystemDirectoryHandle, entry_path)
+          }
+        }
+      }
+
+      const folder_handle = await parent.getDirectoryHandle(folder_name, { create: false })
+      await collect_items(folder_handle, folder_path)
+
+      await parent.removeEntry(folder_name, { recursive: true })
+
+      return { deleted_notes, deleted_folders }
+    },
+
+    async get_folder_stats(vault_id: VaultId, folder_path: string): Promise<FolderStats> {
+      const root = await get_vault_handle(vault_id)
+
+      const parts = folder_path.split('/').filter(Boolean)
+      let target = root
+      for (const part of parts) {
+        target = await target.getDirectoryHandle(part, { create: false })
+      }
+
+      let note_count = 0
+      let folder_count = 0
+
+      async function count_items(dir: FileSystemDirectoryHandle) {
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.md')) {
+            note_count++
+          } else if (entry.kind === 'directory') {
+            folder_count++
+            await count_items(entry as FileSystemDirectoryHandle)
+          }
+        }
+      }
+
+      await count_items(target)
+      return { note_count, folder_count }
     }
   }
 }

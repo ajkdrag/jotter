@@ -1,4 +1,4 @@
-import type { NotesPort } from '$lib/ports/notes_port'
+import type { NotesPort, FolderStats } from '$lib/ports/notes_port'
 import { as_markdown_text, as_note_path, type MarkdownText, type NoteId, type NotePath, type VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
 import type { FolderContents } from '$lib/types/filetree'
@@ -198,6 +198,61 @@ export function create_test_notes_adapter(): NotesPort {
         notes: result_notes.sort((a, b) => a.path.localeCompare(b.path)),
         subfolders: Array.from(subfolders).sort((a, b) => a.localeCompare(b))
       }
+    },
+
+    async rename_folder(_vault_id: VaultId, from_path: string, to_path: string): Promise<void> {
+      if (created_folders.has(from_path)) {
+        created_folders.delete(from_path)
+        created_folders.add(to_path)
+      }
+    },
+
+    async delete_folder(_vault_id: VaultId, folder_path: string): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }> {
+      const deleted_notes: NotePath[] = []
+      const deleted_folders: string[] = []
+
+      const notes = await load_base_files()
+      const prefix = folder_path + '/'
+
+      for (const note_path of notes.keys()) {
+        if (note_path.startsWith(prefix)) {
+          deleted_notes.push(note_path)
+        }
+      }
+
+      for (const folder of created_folders) {
+        if (folder === folder_path || folder.startsWith(prefix)) {
+          deleted_folders.push(folder)
+        }
+      }
+
+      for (const folder of deleted_folders) {
+        created_folders.delete(folder)
+      }
+
+      return { deleted_notes, deleted_folders }
+    },
+
+    async get_folder_stats(_vault_id: VaultId, folder_path: string): Promise<FolderStats> {
+      const notes = await load_base_files()
+      const prefix = folder_path + '/'
+
+      let note_count = 0
+      let folder_count = 0
+
+      for (const note_path of notes.keys()) {
+        if (note_path.startsWith(prefix)) {
+          note_count++
+        }
+      }
+
+      for (const folder of created_folders) {
+        if (folder.startsWith(prefix)) {
+          folder_count++
+        }
+      }
+
+      return { note_count, folder_count }
     }
   }
 }

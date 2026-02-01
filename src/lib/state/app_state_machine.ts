@@ -27,9 +27,13 @@ export type AppStateEvents =
   | { type: 'CLEAR_ACTIVE_VAULT' }
   | { type: 'UPDATE_NOTES_LIST'; notes: NoteMeta[] }
   | { type: 'UPDATE_FOLDER_LIST'; folder_paths: string[] }
+  | { type: 'UPDATE_FOLDERS_LIST'; folders: string[] }
+  | { type: 'RENAME_FOLDER_IN_STATE'; old_path: string; new_path: string }
+  | { type: 'REMOVE_FOLDER_FROM_STATE'; folder_path: string }
   | { type: 'SET_OPEN_NOTE'; open_note: OpenNoteState }
   | { type: 'CLEAR_OPEN_NOTE' }
   | { type: 'UPDATE_OPEN_NOTE_PATH'; path: NoteId }
+  | { type: 'UPDATE_OPEN_NOTE_PATH_PREFIX'; old_prefix: string; new_prefix: string }
   | { type: 'NOTIFY_MARKDOWN_CHANGED'; markdown: MarkdownText }
   | { type: 'NOTIFY_DIRTY_STATE_CHANGED'; is_dirty: boolean }
   | { type: 'COMMAND_ENSURE_OPEN_NOTE' }
@@ -114,6 +118,71 @@ export function update_open_note_path(context: AppStateContext, new_path: NoteId
       ...open_note,
       meta: { ...open_note.meta, id: new_path, path: new_path, title }
     }
+  }
+}
+
+export function update_open_note_path_prefix(context: AppStateContext, old_prefix: string, new_prefix: string): AppStateContext {
+  const open_note = context.open_note
+  if (!open_note) return context
+
+  const current_path = open_note.meta.path
+  if (!current_path.startsWith(old_prefix)) return context
+
+  const new_path = new_prefix + current_path.slice(old_prefix.length)
+  const parts = new_path.split('/')
+  const leaf = parts[parts.length - 1] ?? ''
+  const title = leaf.endsWith('.md') ? leaf.slice(0, -3) : leaf
+
+  return {
+    ...context,
+    open_note: {
+      ...open_note,
+      meta: { ...open_note.meta, id: new_path as NoteId, path: new_path as NoteId, title }
+    }
+  }
+}
+
+export function rename_folder_in_state(context: AppStateContext, old_path: string, new_path: string): AppStateContext {
+  const old_prefix = old_path + '/'
+  const new_prefix = new_path + '/'
+
+  const updated_notes = context.notes.map(note => {
+    if (note.path.startsWith(old_prefix)) {
+      const updated_path = new_prefix + note.path.slice(old_prefix.length)
+      return { ...note, id: updated_path as NoteId, path: updated_path as NoteId }
+    }
+    return note
+  })
+
+  const updated_folders = context.folder_paths.map(fp => {
+    if (fp === old_path) return new_path
+    if (fp.startsWith(old_prefix)) return new_prefix + fp.slice(old_prefix.length)
+    return fp
+  })
+
+  let result: AppStateContext = {
+    ...context,
+    notes: updated_notes,
+    folder_paths: updated_folders
+  }
+
+  if (context.open_note?.meta.path.startsWith(old_prefix)) {
+    result = update_open_note_path_prefix(result, old_prefix, new_prefix)
+  }
+
+  return result
+}
+
+export function remove_folder_from_state(context: AppStateContext, folder_path: string): AppStateContext {
+  const prefix = folder_path + '/'
+
+  const updated_notes = context.notes.filter(note => !note.path.startsWith(prefix))
+  const updated_folders = context.folder_paths.filter(fp => fp !== folder_path && !fp.startsWith(prefix))
+
+  return {
+    ...context,
+    notes: updated_notes,
+    folder_paths: updated_folders
   }
 }
 
@@ -259,6 +328,17 @@ export const app_state_machine = setup({
             folder_paths: ({ event }) => event.folder_paths
           })
         },
+        UPDATE_FOLDERS_LIST: {
+          actions: assign({
+            folder_paths: ({ event }) => event.folders
+          })
+        },
+        RENAME_FOLDER_IN_STATE: {
+          actions: assign(({ event, context }) => rename_folder_in_state(context, event.old_path, event.new_path))
+        },
+        REMOVE_FOLDER_FROM_STATE: {
+          actions: assign(({ event, context }) => remove_folder_from_state(context, event.folder_path))
+        },
         SET_OPEN_NOTE: {
           actions: assign({
             open_note: ({ event }) => event.open_note
@@ -271,6 +351,9 @@ export const app_state_machine = setup({
         },
         UPDATE_OPEN_NOTE_PATH: {
           actions: assign(({ event, context }) => update_open_note_path(context, event.path))
+        },
+        UPDATE_OPEN_NOTE_PATH_PREFIX: {
+          actions: assign(({ event, context }) => update_open_note_path_prefix(context, event.old_prefix, event.new_prefix))
         },
         NOTIFY_MARKDOWN_CHANGED: {
           actions: assign(({ event, context }) => update_markdown(context, event.markdown))

@@ -1,4 +1,4 @@
-import type { NotesPort } from '$lib/ports/notes_port'
+import type { NotesPort, FolderStats } from '$lib/ports/notes_port'
 import { tauri_invoke } from '$lib/adapters/tauri/tauri_invoke'
 import type { MarkdownText, NoteId, NotePath, VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
@@ -47,6 +47,24 @@ export function create_notes_tauri_adapter(): NotesPort {
         vault_id,
         folder_path
       })
+    },
+    async rename_folder(vault_id: VaultId, from_path: string, to_path: string) {
+      await tauri_invoke<void>('rename_folder', { args: { vault_id, from_path, to_path } })
+    },
+    async delete_folder(vault_id: VaultId, folder_path: string) {
+      return await tauri_invoke<{ deleted_notes: NotePath[]; deleted_folders: string[] }>('delete_folder', {
+        args: { vault_id, folder_path }
+      })
+    },
+    async get_folder_stats(vault_id: VaultId, folder_path: string): Promise<FolderStats> {
+      try {
+        return await tauri_invoke<FolderStats>('get_folder_stats', {
+          vault_id,
+          folder_path
+        })
+      } catch {
+        return { note_count: 0, folder_count: 0 }
+      }
     }
   }
 }

@@ -3,6 +3,8 @@
   import VaultDialog from '$lib/components/vault_dialog.svelte'
   import DeleteNoteDialog from '$lib/components/delete_note_dialog.svelte'
   import RenameNoteDialog from '$lib/components/rename_note_dialog.svelte'
+  import DeleteFolderDialog from '$lib/components/delete_folder_dialog.svelte'
+  import RenameFolderDialog from '$lib/components/rename_folder_dialog.svelte'
   import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
   import SettingsDialog from '$lib/components/settings_dialog.svelte'
   import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
@@ -40,6 +42,8 @@
   const open_note = use_flow_handle(app.flows.open_note)
   const delete_note = use_flow_handle(app.flows.delete_note)
   const rename_note = use_flow_handle(app.flows.rename_note)
+  const delete_folder = use_flow_handle(app.flows.delete_folder)
+  const rename_folder = use_flow_handle(app.flows.rename_folder)
   const save_note = use_flow_handle(app.flows.save_note)
   const create_folder = use_flow_handle(app.flows.create_folder)
   const settings = use_flow_handle(app.flows.settings)
@@ -85,6 +89,19 @@
     create_folder.snapshot.matches('dialog_open') ||
       create_folder.snapshot.matches('creating') ||
       create_folder.snapshot.matches('error')
+  )
+
+  const delete_folder_dialog_open = $derived(
+    delete_folder.snapshot.matches('fetching_stats') ||
+      delete_folder.snapshot.matches('confirming') ||
+      delete_folder.snapshot.matches('deleting') ||
+      delete_folder.snapshot.matches('error')
+  )
+
+  const rename_folder_dialog_open = $derived(
+    rename_folder.snapshot.matches('confirming') ||
+      rename_folder.snapshot.matches('renaming') ||
+      rename_folder.snapshot.matches('error')
   )
 
   const vault_selection_loading = $derived(
@@ -222,6 +239,31 @@
     },
     collapse_all_folders() {
       filetree.send({ type: 'COLLAPSE_ALL' })
+    },
+    request_delete_folder(folder_path: string) {
+      const vault_id = app_state.snapshot.context.vault?.id
+      if (!vault_id) return
+
+      const open_note_path = app_state.snapshot.context.open_note?.meta.path ?? ''
+      const prefix = folder_path + '/'
+      const contains_open_note = open_note_path.startsWith(prefix)
+
+      delete_folder.send({
+        type: 'REQUEST_DELETE',
+        vault_id,
+        folder_path,
+        contains_open_note
+      })
+    },
+    request_rename_folder(folder_path: string) {
+      const vault_id = app_state.snapshot.context.vault?.id
+      if (!vault_id) return
+
+      const open_note_path = app_state.snapshot.context.open_note?.meta.path ?? ''
+      const prefix = folder_path + '/'
+      const contains_open_note = open_note_path.startsWith(prefix)
+
+      rename_folder.send({ type: 'REQUEST_RENAME', vault_id, folder_path, contains_open_note })
     }
   }
 
@@ -290,6 +332,8 @@
       on_dirty_state_change={actions.dirty_state_change}
       on_request_delete_note={actions.request_delete}
       on_request_rename_note={actions.request_rename}
+      on_request_delete_folder={actions.request_delete_folder}
+      on_request_rename_folder={actions.request_rename_folder}
       on_open_settings={actions.open_settings}
       on_toggle_sidebar={actions.toggle_sidebar}
       on_select_folder_path={actions.select_folder_path}
@@ -340,6 +384,16 @@
   on_confirm_overwrite={actions.confirm_rename_overwrite}
   on_cancel={actions.cancel_rename}
   on_retry={actions.retry_rename}
+/>
+
+<DeleteFolderDialog
+  snapshot={delete_folder.snapshot}
+  send={delete_folder.send}
+/>
+
+<RenameFolderDialog
+  snapshot={rename_folder.snapshot}
+  send={rename_folder.send}
 />
 
 <SaveNoteDialog
