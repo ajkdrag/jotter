@@ -54,6 +54,7 @@ export type AppFlows = {
 
 export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbacks): AppFlows {
   const app_state = create_flow_handle(app_state_machine, { input: {} })
+  let last_vault_id: string | null = app_state.get_snapshot().context.vault?.id ?? null
 
   const filetree = create_flow_handle(filetree_flow_machine, {
     input: {
@@ -61,6 +62,14 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       dispatch: (event: AppStateEvents) => app_state.send(event),
       get_vault_id: () => app_state.get_snapshot().context.vault?.id ?? null
     }
+  })
+
+  app_state.subscribe((snapshot) => {
+    const next_vault_id = snapshot.context.vault?.id ?? null
+    if (next_vault_id && next_vault_id !== last_vault_id) {
+      filetree.send({ type: 'VAULT_CHANGED' })
+    }
+    last_vault_id = next_vault_id
   })
 
   const dispatch = (event: AppStateEvents) => {

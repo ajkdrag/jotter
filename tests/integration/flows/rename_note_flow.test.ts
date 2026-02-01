@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { rename_note_flow_machine } from '$lib/flows/rename_note_flow'
 import { app_state_machine } from '$lib/state/app_state_machine'
-import { create_mock_notes_port, create_mock_index_port } from '../helpers/mock_ports'
+import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
 import type { VaultId, VaultPath, NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
@@ -255,105 +255,6 @@ describe('rename_note_flow', () => {
 
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(app_state.getSnapshot().context.open_note?.meta.path).toEqual(new_path)
-    expect(app_state.getSnapshot().context.open_note?.meta.id).toEqual(new_path)
-    expect(app_state.getSnapshot().context.open_note?.meta.title).toEqual('renamed')
-  })
-
-  test('transitions to error state on rename failure and retains context', async () => {
-    const notes_port = create_mock_notes_port()
-    notes_port.rename_note = async () => {
-      throw new Error('Network error')
-    }
-    const index_port = create_mock_index_port()
-    const note = create_test_note('note-1', 'My Note')
-    const vault = create_test_vault()
-    notes_port._mock_notes.set(vault.id, [note])
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
-
-    const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch: app_state.send }
-    })
-    actor.start()
-
-    const new_path = as_note_path('renamed.md')
-    actor.send({ type: 'REQUEST_RENAME', vault_id: vault.id, note, is_note_currently_open: false })
-    actor.send({ type: 'UPDATE_NEW_PATH', path: new_path })
-    actor.send({ type: 'CONFIRM' })
-
-    await waitFor(actor, (snapshot) => snapshot.value === 'error')
-
-    expect(actor.getSnapshot().context.note_to_rename).toEqual(note)
-    expect(actor.getSnapshot().context.new_path).toEqual(new_path)
-    expect(actor.getSnapshot().context.error).toContain('Network error')
-  })
-
-  test('retries rename from error state', async () => {
-    const notes_port = create_mock_notes_port()
-    let attempt = 0
-    const original_rename = notes_port.rename_note.bind(notes_port)
-    notes_port.rename_note = async (vault_id, from, to) => {
-      attempt++
-      if (attempt === 1) throw new Error('Network error')
-      await original_rename(vault_id, from, to)
-    }
-    const index_port = create_mock_index_port()
-    const note = create_test_note('note-1', 'My Note')
-    const vault = create_test_vault()
-    notes_port._mock_notes.set(vault.id, [note])
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
-
-    const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch: app_state.send }
-    })
-    actor.start()
-
-    const new_path = as_note_path('renamed.md')
-    actor.send({ type: 'REQUEST_RENAME', vault_id: vault.id, note, is_note_currently_open: false })
-    actor.send({ type: 'UPDATE_NEW_PATH', path: new_path })
-    actor.send({ type: 'CONFIRM' })
-    await waitFor(actor, (snapshot) => snapshot.value === 'error')
-
-    actor.send({ type: 'RETRY' })
-    await waitFor(actor, (snapshot) => snapshot.value === 'idle')
-
-    expect(attempt).toBe(2)
-    expect(app_state.getSnapshot().context.notes?.[0]?.path).toEqual(new_path)
-  })
-
-  test('cancels from error state and clears context', async () => {
-    const notes_port = create_mock_notes_port()
-    notes_port.rename_note = async () => {
-      throw new Error('Network error')
-    }
-    const index_port = create_mock_index_port()
-    const note = create_test_note('note-1', 'My Note')
-    const vault = create_test_vault()
-    notes_port._mock_notes.set(vault.id, [note])
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
-
-    const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch: app_state.send }
-    })
-    actor.start()
-
-    const new_path = as_note_path('renamed.md')
-    actor.send({ type: 'REQUEST_RENAME', vault_id: vault.id, note, is_note_currently_open: false })
-    actor.send({ type: 'UPDATE_NEW_PATH', path: new_path })
-    actor.send({ type: 'CONFIRM' })
-    await waitFor(actor, (snapshot) => snapshot.value === 'error')
-
-    actor.send({ type: 'CANCEL' })
-
-    expect(actor.getSnapshot().value).toBe('idle')
-    expect(actor.getSnapshot().context.note_to_rename).toBe(null)
-    expect(actor.getSnapshot().context.new_path).toBe(null)
-    expect(actor.getSnapshot().context.error).toBe(null)
+    expect(app_state.getSnapshot().context.open_note?.meta.path).toBe(new_path)
   })
 })

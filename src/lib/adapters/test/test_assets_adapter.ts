@@ -3,6 +3,19 @@ import type { AssetPath, VaultId } from '$lib/types/ids'
 
 const STORAGE_KEY_PREFIX = 'imdown_test_assets_'
 const blob_url_cache = new Map<string, string>()
+const memory_storage = new Map<string, string>()
+
+const storage = typeof localStorage === 'undefined'
+  ? {
+    getItem: (key: string) => memory_storage.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      memory_storage.set(key, value)
+    },
+    removeItem: (key: string) => {
+      memory_storage.delete(key)
+    }
+  }
+  : localStorage
 
 function get_storage_key(vault_id: VaultId, asset_path: AssetPath): string {
   return `${STORAGE_KEY_PREFIX}${vault_id}_${asset_path}`
@@ -28,7 +41,7 @@ export function create_test_assets_adapter(): AssetsPort {
       }
       blob_url_cache.set(cache_key, blob_url)
 
-      localStorage.setItem(key, JSON.stringify({
+      storage.setItem(key, JSON.stringify({
         bytes: Array.from(source.bytes),
         file_name: source.file_name
       }))
@@ -44,7 +57,7 @@ export function create_test_assets_adapter(): AssetsPort {
       }
 
       const key = get_storage_key(vault_id, asset_path)
-      const stored = localStorage.getItem(key)
+      const stored = storage.getItem(key)
       
       if (!stored) {
         throw new Error(`Asset not found: ${asset_path}`)

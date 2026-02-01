@@ -54,4 +54,3 @@ describe('insert_dropped_image', () => {
     expect(res.asset_path).toBe('.assets/x-42.jpeg')
   })
 })
-

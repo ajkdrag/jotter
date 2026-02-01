@@ -50,12 +50,28 @@ type LoadFolderInput = {
   path: string
 }
 
-const load_folder_actor = fromCallback<FlowEvents, LoadFolderInput>(({ sendBack, input }) => {
+const load_folder_actor = fromCallback<FlowEvents, LoadFolderInput>(({ sendBack, input, self }) => {
   const { ports, vault_id, path } = input
+  let active = true
+  const parent = (self as { _parent?: { getSnapshot: () => { status: string } } })._parent
+
+  const send_if_active = (event: FlowEvents) => {
+    if (!active) return
+    if (parent?.getSnapshot().status === 'stopped') return
+    sendBack(event)
+  }
+
   ports.notes.list_folder_contents(vault_id, path)
-    .then((contents) => sendBack({ type: 'FOLDER_LOAD_DONE', path, contents }))
-    .catch((error) => sendBack({ type: 'FOLDER_LOAD_ERROR', path, error: String(error) }))
-  return () => {}
+    .then((contents) => {
+      send_if_active({ type: 'FOLDER_LOAD_DONE', path, contents })
+    })
+    .catch((error) => {
+      send_if_active({ type: 'FOLDER_LOAD_ERROR', path, error: String(error) })
+    })
+
+  return () => {
+    active = false
+  }
 })
 
 function should_load_folder(load_state: FolderLoadState | undefined): boolean {

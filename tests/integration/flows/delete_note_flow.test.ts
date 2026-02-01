@@ -2,11 +2,12 @@ import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { delete_note_flow_machine } from '$lib/flows/delete_note_flow'
 import { app_state_machine } from '$lib/state/app_state_machine'
-import { create_mock_notes_port, create_mock_index_port } from '../helpers/mock_ports'
+import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
 import type { VaultId, VaultPath, NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
+import { as_markdown_text } from '$lib/types/ids'
 
 function create_test_vault(): Vault {
   return {
@@ -26,8 +27,6 @@ function create_test_note(id: string, title: string): NoteMeta {
     size_bytes: 0
   }
 }
-
-import { as_markdown_text } from '$lib/types/ids'
 
 function create_open_note_state(note: NoteMeta): OpenNoteState {
   return {

@@ -33,6 +33,7 @@
     "codemirror": "^6.0.2",
     "formsnap": "^2.0.1",
     "lucide-static": "^0.563.0",
+    "mode-watcher": "^1.1.0",
     "svelte-themes": "^2.0.10",
     "xstate": "^5.25.1"
   },

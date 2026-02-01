@@ -214,4 +214,3 @@ describe('create_untitled_open_note_in_folder', () => {
     expect(result.meta.title).toBe('Untitled-4')
   })
 })
-

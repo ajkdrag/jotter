@@ -53,6 +53,9 @@ export function create_mock_notes_port(): NotesPort & {
     write_note: { vault_id: VaultId; note_id: NoteId; markdown: MarkdownText }[]
     create_note: { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[]
     create_folder: { vault_id: VaultId; parent_path: string; folder_name: string }[]
+    rename_folder: { vault_id: VaultId; from_path: string; to_path: string }[]
+    delete_folder: { vault_id: VaultId; folder_path: string }[]
+    get_folder_stats: { vault_id: VaultId; folder_path: string }[]
   }
 } {
   const mock = {
@@ -63,7 +66,10 @@ export function create_mock_notes_port(): NotesPort & {
       rename_note: [] as { vault_id: VaultId; from: NotePath; to: NotePath }[],
       write_note: [] as { vault_id: VaultId; note_id: NoteId; markdown: MarkdownText }[],
       create_note: [] as { vault_id: VaultId; note_path: NotePath; markdown: MarkdownText }[],
-      create_folder: [] as { vault_id: VaultId; parent_path: string; folder_name: string }[]
+      create_folder: [] as { vault_id: VaultId; parent_path: string; folder_name: string }[],
+      rename_folder: [] as { vault_id: VaultId; from_path: string; to_path: string }[],
+      delete_folder: [] as { vault_id: VaultId; folder_path: string }[],
+      get_folder_stats: [] as { vault_id: VaultId; folder_path: string }[]
     },
     async list_notes(vault_id: VaultId) {
       return mock._mock_notes.get(vault_id) || []
@@ -136,14 +142,24 @@ export function create_mock_notes_port(): NotesPort & {
 
       return { notes, subfolders }
     },
-    async rename_folder(_vault_id: VaultId, from_path: string, to_path: string) {
-      mock._calls.rename_note.push({ vault_id: _vault_id, from: from_path as NotePath, to: to_path as NotePath })
+    async rename_folder(vault_id: VaultId, from_path: string, to_path: string) {
+      mock._calls.rename_folder.push({ vault_id, from_path, to_path })
+      const current = mock._mock_folders.get(vault_id) || []
+      const updated = current.map((path) => (path === from_path ? to_path : path))
+      mock._mock_folders.set(vault_id, updated)
     },
-    async delete_folder(_vault_id: VaultId, folder_path: string) {
-      mock._calls.delete_note.push({ vault_id: _vault_id, note_id: folder_path as NotePath })
+    async delete_folder(vault_id: VaultId, folder_path: string) {
+      mock._calls.delete_folder.push({ vault_id, folder_path })
+      const prefix = folder_path + '/'
+      const current_folders = mock._mock_folders.get(vault_id) || []
+      const updated_folders = current_folders.filter(
+        (path) => path !== folder_path && !path.startsWith(prefix)
+      )
+      mock._mock_folders.set(vault_id, updated_folders)
       return { deleted_notes: [], deleted_folders: [] }
     },
-    async get_folder_stats(_vault_id: VaultId, _folder_path: string): Promise<FolderStats> {
+    async get_folder_stats(vault_id: VaultId, folder_path: string): Promise<FolderStats> {
+      mock._calls.get_folder_stats.push({ vault_id, folder_path })
       return { note_count: 0, folder_count: 0 }
     }
   }

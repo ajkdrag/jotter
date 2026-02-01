@@ -11,13 +11,22 @@ const FALLBACK_TEST_NOTES = new Map<NotePath, { markdown: string; mtime_ms: numb
   [as_note_path('getting-started.md'), { markdown: as_markdown_text('# Getting Started\n\nStart taking notes!'), mtime_ms: Date.now() }]
 ])
 
+function resolve_test_url(path: string): string | null {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return new URL(path, window.location.origin).toString()
+  }
+
+  return null
+}
+
 async function discover_test_files(): Promise<string[]> {
-  if (typeof fetch === 'undefined') {
+  const url = resolve_test_url(TEST_FILES_INDEX)
+  if (!url || typeof fetch === 'undefined') {
     return ['welcome.md', 'getting-started.md']
   }
 
   try {
-    const response = await fetch(TEST_FILES_INDEX)
+    const response = await fetch(url)
     if (response.ok) {
       const files = await response.json() as string[]
       return files
@@ -29,7 +38,8 @@ async function discover_test_files(): Promise<string[]> {
 }
 
 async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtime_ms: number }>> {
-  if (typeof fetch === 'undefined') {
+  const base_url = resolve_test_url(TEST_FILES_BASE)
+  if (!base_url || typeof fetch === 'undefined') {
     return new Map(FALLBACK_TEST_NOTES)
   }
 
@@ -38,7 +48,7 @@ async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtim
 
   for (const file_name of test_files) {
     try {
-      const response = await fetch(`${TEST_FILES_BASE}/${file_name}`, { cache: 'no-store' })
+      const response = await fetch(`${base_url}/${file_name}`, { cache: 'no-store' })
       if (response.ok) {
         const content = await response.text()
         const note_path = as_note_path(file_name)

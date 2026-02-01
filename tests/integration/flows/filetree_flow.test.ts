@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createActor } from 'xstate'
+import { createActor, waitFor } from 'xstate'
 import { filetree_flow_machine } from '$lib/flows/filetree_flow'
 import type { VaultId } from '$lib/types/ids'
 import type { FolderContents } from '$lib/types/filetree'
@@ -49,15 +49,17 @@ describe('filetree_flow', () => {
     actor.stop()
   })
 
-  it('expands folder and marks for loading on TOGGLE_FOLDER', () => {
+  it('expands folder and marks for loading on TOGGLE_FOLDER', async () => {
     const actor = createActor(filetree_flow_machine, { input: create_mock_input() }).start()
 
     actor.send({ type: 'TOGGLE_FOLDER', path: 'documents' })
 
+    await waitFor(actor, () => actor.getSnapshot().context.load_states.get('documents') === 'loaded')
+
     const snapshot = actor.getSnapshot()
     expect(snapshot.context.expanded_paths.has('documents')).toBe(true)
-    expect(snapshot.context.load_states.get('documents')).toBe('loading')
-    expect(snapshot.context.active_loads.has('documents')).toBe(true)
+    expect(snapshot.context.load_states.get('documents')).toBe('loaded')
+    expect(snapshot.context.active_loads.has('documents')).toBe(false)
 
     actor.stop()
   })
@@ -180,16 +182,18 @@ describe('filetree_flow', () => {
     actor.stop()
   })
 
-  it('resets and loads root on VAULT_CHANGED', () => {
+  it('resets and loads root on VAULT_CHANGED', async () => {
     const actor = createActor(filetree_flow_machine, { input: create_mock_input() }).start()
 
     actor.send({ type: 'TOGGLE_FOLDER', path: 'docs' })
     actor.send({ type: 'VAULT_CHANGED' })
 
+    await waitFor(actor, () => actor.getSnapshot().context.load_states.get('') === 'loaded')
+
     const snapshot = actor.getSnapshot()
     expect(snapshot.context.expanded_paths.size).toBe(0)
-    expect(snapshot.context.load_states.get('')).toBe('loading')
-    expect(snapshot.context.active_loads.has('')).toBe(true)
+    expect(snapshot.context.load_states.get('')).toBe('loaded')
+    expect(snapshot.context.active_loads.has('')).toBe(false)
 
     actor.stop()
   })

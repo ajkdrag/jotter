@@ -92,19 +92,6 @@
       create_folder.snapshot.matches('error')
   )
 
-  const delete_folder_dialog_open = $derived(
-    delete_folder.snapshot.matches('fetching_stats') ||
-      delete_folder.snapshot.matches('confirming') ||
-      delete_folder.snapshot.matches('deleting') ||
-      delete_folder.snapshot.matches('error')
-  )
-
-  const rename_folder_dialog_open = $derived(
-    rename_folder.snapshot.matches('confirming') ||
-      rename_folder.snapshot.matches('renaming') ||
-      rename_folder.snapshot.matches('error')
-  )
-
   const vault_selection_loading = $derived(
     open_app.snapshot.matches('starting') || change_vault.snapshot.matches('changing')
   )

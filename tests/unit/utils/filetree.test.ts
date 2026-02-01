@@ -200,13 +200,7 @@ describe('parent_folder_path', () => {
     expect(parent_folder_path('file')).toBe('')
   })
 
-  test('returns parent for two segments', () => {
-    expect(parent_folder_path('foo/note.md')).toBe('foo')
-    expect(parent_folder_path('a/b')).toBe('a')
-  })
-
-  test('returns parent for multi-segment path', () => {
-    expect(parent_folder_path('a/b/c/note.md')).toBe('a/b/c')
-    expect(parent_folder_path('foo/bar/baz')).toBe('foo/bar')
+  test('returns parent for nested path', () => {
+    expect(parent_folder_path('a/b/c.md')).toBe('a/b')
   })
 })

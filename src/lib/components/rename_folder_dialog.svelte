@@ -1,7 +1,6 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
-  import { Input } from "$lib/components/ui/input";
   import type { RenameFolderFlowContext, RenameFolderFlowEvents } from "$lib/flows/rename_folder_flow";
   import type { FlowSnapshot } from "$lib/flows/flow_handle";
 
