@@ -1,5 +1,10 @@
 import type { NoteMeta } from '$lib/types/note'
 
+export function parent_folder_path(path: string): string {
+  const i = path.lastIndexOf('/')
+  return i >= 0 ? path.slice(0, i) : ''
+}
+
 export type FileTreeNode = {
   name: string
   path: string

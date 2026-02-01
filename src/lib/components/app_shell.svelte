@@ -15,6 +15,7 @@
   import type { VaultId, VaultPath } from '$lib/types/ids'
   import { as_markdown_text, as_note_path } from '$lib/types/ids'
   import type { NoteMeta } from '$lib/types/note'
+  import { parent_folder_path } from '$lib/utils/filetree'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
   import { create_app_flows } from '$lib/flows/create_app_flows'
   import { create_editor_manager } from '$lib/operations/manage_editor'
@@ -142,6 +143,7 @@
       const current_note_id = app_state.snapshot.context.open_note?.meta.id
       if (current_note_id && current_note_id === as_note_path(note_path)) return
 
+      app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path: parent_folder_path(note_path) })
       open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
     },
     markdown_change(markdown: string) {

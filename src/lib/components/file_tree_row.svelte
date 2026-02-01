@@ -45,6 +45,7 @@
 
   function handle_click() {
     if (node.is_folder) {
+      on_toggle_folder(node.path);
       on_select_folder(node.path);
     } else if (node.note) {
       on_select_note(node.path);
@@ -54,6 +55,7 @@
   function handle_toggle(e: MouseEvent) {
     e.stopPropagation();
     on_toggle_folder(node.path);
+    on_select_folder(node.path);
   }
 
   function handle_retry(e: MouseEvent) {
@@ -72,6 +74,7 @@
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       on_toggle_folder(node.path);
+      on_select_folder(node.path);
     }
   }
 </script>

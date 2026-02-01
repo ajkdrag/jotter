@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { build_filetree, sort_tree } from '$lib/utils/filetree'
+import { build_filetree, parent_folder_path, sort_tree } from '$lib/utils/filetree'
 import type { NoteMeta } from '$lib/types/note'
 import { as_note_path } from '$lib/types/ids'
 
@@ -187,5 +187,26 @@ describe('filetree', () => {
     expect(tree.children.get('b')?.is_folder).toBe(true)
     expect(tree.children.get('b')?.note).toBeNull()
     expect(tree.children.get('b')?.children.size).toBe(0)
+  })
+})
+
+describe('parent_folder_path', () => {
+  test('returns empty string for empty path', () => {
+    expect(parent_folder_path('')).toBe('')
+  })
+
+  test('returns empty string for single segment (vault root)', () => {
+    expect(parent_folder_path('note.md')).toBe('')
+    expect(parent_folder_path('file')).toBe('')
+  })
+
+  test('returns parent for two segments', () => {
+    expect(parent_folder_path('foo/note.md')).toBe('foo')
+    expect(parent_folder_path('a/b')).toBe('a')
+  })
+
+  test('returns parent for multi-segment path', () => {
+    expect(parent_folder_path('a/b/c/note.md')).toBe('a/b/c')
+    expect(parent_folder_path('foo/bar/baz')).toBe('foo/bar')
   })
 })
