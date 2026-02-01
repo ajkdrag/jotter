@@ -161,6 +161,7 @@
                                     <VirtualFileTree
                                         nodes={flat_nodes}
                                         selected_path={selected_folder_path}
+                                        open_note_path={open_note?.meta.path ?? ''}
                                         on_toggle_folder={on_toggle_folder}
                                         on_select_note={on_open_note}
                                         on_select_folder={on_select_folder_path}

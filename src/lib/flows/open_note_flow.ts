@@ -2,6 +2,7 @@ import { setup, assign, fromPromise } from 'xstate'
 import { open_note } from '$lib/operations/open_note'
 import { to_open_note_state } from '$lib/types/editor'
 import { as_note_path } from '$lib/types/ids'
+import { parent_folder_path } from '$lib/utils/filetree'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
 import type { AppStateEvents } from '$lib/state/app_state_machine'
@@ -51,6 +52,8 @@ export const open_note_flow_machine = setup({
           { notes: input.ports.notes },
           { vault_id: input.vault_id, note_id: as_note_path(input.note_path) }
         )
+        const parent_path = parent_folder_path(as_note_path(input.note_path))
+        input.dispatch({ type: 'SET_SELECTED_FOLDER_PATH', path: parent_path })
         input.dispatch({ type: 'SET_OPEN_NOTE', open_note: to_open_note_state(doc) })
       }
     )

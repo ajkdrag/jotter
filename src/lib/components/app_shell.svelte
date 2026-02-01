@@ -140,10 +140,12 @@
       const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
 
-      const current_note_id = app_state.snapshot.context.open_note?.meta.id
-      if (current_note_id && current_note_id === as_note_path(note_path)) return
+      const normalized_path = as_note_path(note_path)
+      app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path: parent_folder_path(normalized_path) })
 
-      app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path: parent_folder_path(note_path) })
+      const current_note_id = app_state.snapshot.context.open_note?.meta.id
+      if (current_note_id && current_note_id === normalized_path) return
+
       open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
     },
     markdown_change(markdown: string) {

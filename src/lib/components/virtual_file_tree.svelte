@@ -7,6 +7,7 @@
   type Props = {
     nodes: FlatTreeNode[];
     selected_path: string;
+    open_note_path: string;
     on_toggle_folder: (path: string) => void;
     on_select_note: (path: string) => void;
     on_select_folder: (path: string) => void;
@@ -20,6 +21,7 @@
   let {
     nodes,
     selected_path,
+    open_note_path,
     on_toggle_folder,
     on_select_note,
     on_select_folder,
@@ -74,7 +76,7 @@
         >
           <FileTreeRow
             {node}
-            is_selected={selected_path === node.path}
+            is_selected={node.is_folder ? selected_path === node.path : open_note_path === node.path}
             {on_toggle_folder}
             {on_select_note}
             {on_select_folder}
