@@ -39,6 +39,7 @@ export type AppStateEvents =
   | { type: 'SET_SIDEBAR_OPEN'; open: boolean }
   | { type: 'SET_SELECTED_FOLDER_PATH'; path: string }
   | { type: 'MERGE_FOLDER_CONTENTS'; folder_path: string; contents: FolderContents }
+  | { type: 'ADD_FOLDER_PATH'; folder_path: string }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -241,25 +242,22 @@ export const app_state_machine = setup({
         },
         CLEAR_ACTIVE_VAULT: {
           target: 'no_vault',
-          actions: assign(({ context }) => ({
-            ...context,
+          actions: assign({
             vault: null,
             notes: [],
             folder_paths: [],
             open_note: null
-          }))
+          })
         },
         UPDATE_NOTES_LIST: {
-          actions: assign(({ event, context }) => ({
-            ...context,
-            notes: event.notes
-          }))
+          actions: assign({
+            notes: ({ event }) => event.notes
+          })
         },
         UPDATE_FOLDER_LIST: {
-          actions: assign(({ event, context }) => ({
-            ...context,
-            folder_paths: event.folder_paths
-          }))
+          actions: assign({
+            folder_paths: ({ event }) => event.folder_paths
+          })
         },
         SET_OPEN_NOTE: {
           actions: assign({
@@ -310,10 +308,14 @@ export const app_state_machine = setup({
           actions: assign(({ event, context }) =>
             merge_folder_contents(context, event.folder_path, event.contents)
           )
+        },
+        ADD_FOLDER_PATH: {
+          actions: assign(({ event, context }) => {
+            if (context.folder_paths.includes(event.folder_path)) return {}
+            return { folder_paths: [...context.folder_paths, event.folder_path] }
+          })
         }
       }
     }
   }
 })
-
-

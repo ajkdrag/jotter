@@ -1,13 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { create_folder_and_refresh } from '$lib/operations/create_folder'
+import { create_folder } from '$lib/operations/create_folder'
 import type { NotesPort } from '$lib/ports/notes_port'
-import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
 import type { AppStateEvents } from '$lib/state/app_state_machine'
 
 type CreateFolderPorts = {
   notes: NotesPort
-  index: WorkspaceIndexPort
 }
 
 type AppStateDispatch = (event: AppStateEvents) => void
@@ -37,6 +35,13 @@ type FlowInput = {
   dispatch: AppStateDispatch
 }
 
+const reset_form = {
+  parent_path: '',
+  folder_name: '',
+  vault_id: null as VaultId | null,
+  error: null as string | null
+}
+
 export const create_folder_flow_machine = setup({
   types: {
     context: {} as FlowContext,
@@ -58,44 +63,35 @@ export const create_folder_flow_machine = setup({
       }) => {
         const { ports, dispatch, vault_id, parent_path, folder_name } = input
 
-        const result = await create_folder_and_refresh(
+        const result = await create_folder(
           { notes: ports.notes },
           { vault_id, parent_path, folder_name }
         )
 
-        dispatch({ type: 'UPDATE_FOLDER_LIST', folder_paths: result.folder_paths })
-
-        void ports.index.build_index(vault_id)
+        dispatch({ type: 'ADD_FOLDER_PATH', folder_path: result.new_folder_path })
       }
     )
+  },
+  actions: {
+    reset_state: assign(() => reset_form)
   }
 }).createMachine({
   id: 'create_folder_flow',
   initial: 'idle',
   context: ({ input }) => ({
-    parent_path: '',
-    folder_name: '',
-    vault_id: null,
-    error: null,
+    ...reset_form,
     ports: input.ports,
     dispatch: input.dispatch
   }),
   states: {
     idle: {
-      entry: assign({
-        parent_path: () => '',
-        folder_name: '',
-        vault_id: () => null,
-        error: () => null
-      }),
+      entry: 'reset_state',
       on: {
         REQUEST_CREATE: {
           target: 'dialog_open',
           actions: assign({
             vault_id: ({ event }) => event.vault_id,
-            parent_path: ({ event }) => event.parent_path,
-            folder_name: () => '',
-            error: () => null
+            parent_path: ({ event }) => event.parent_path
           })
         }
       }
@@ -108,15 +104,7 @@ export const create_folder_flow_machine = setup({
           })
         },
         CONFIRM: 'creating',
-        CANCEL: {
-          target: 'idle',
-          actions: assign({
-            parent_path: () => '',
-            folder_name: '',
-            vault_id: () => null,
-            error: () => null
-          })
-        }
+        CANCEL: 'idle'
       }
     },
     creating: {
@@ -129,14 +117,7 @@ export const create_folder_flow_machine = setup({
           parent_path: context.parent_path,
           folder_name: context.folder_name
         }),
-        onDone: {
-          target: 'idle',
-          actions: assign({
-            parent_path: () => '',
-            folder_name: '',
-            vault_id: () => null
-          })
-        },
+        onDone: 'idle',
         onError: {
           target: 'error',
           actions: assign({
@@ -149,19 +130,9 @@ export const create_folder_flow_machine = setup({
       on: {
         RETRY: {
           target: 'creating',
-          actions: assign({
-            error: () => null
-          })
+          actions: assign({ error: null })
         },
-        CANCEL: {
-          target: 'idle',
-          actions: assign({
-            parent_path: () => '',
-            folder_name: '',
-            vault_id: () => null,
-            error: () => null
-          })
-        }
+        CANCEL: 'idle'
       }
     }
   }

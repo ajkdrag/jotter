@@ -81,10 +81,6 @@ export const filetree_flow_machine = setup({
     load_folder: load_folder_actor
   },
   guards: {
-    should_load_on_expand: ({ context, event }) => {
-      if (event.type !== 'TOGGLE_FOLDER' && event.type !== 'EXPAND_FOLDER') return false
-      return should_load_folder(context.load_states.get(event.path))
-    },
     is_expanding: ({ context, event }) => {
       if (event.type !== 'TOGGLE_FOLDER') return false
       return !context.expanded_paths.has(event.path)

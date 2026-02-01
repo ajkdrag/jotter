@@ -5,14 +5,14 @@ import { create_test_ports } from '$lib/adapters/test/test_ports'
 import { as_vault_id } from '$lib/types/ids'
 
 describe('create_folder_flow', () => {
-  it('creates folder and updates folder paths on confirm', async () => {
+  it('creates folder and dispatches ADD_FOLDER_PATH on confirm', async () => {
     const ports = create_test_ports()
     const dispatch = vi.fn()
     const vault_id = as_vault_id('test-vault')
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
-        ports: { notes: ports.notes, index: ports.index },
+        ports: { notes: ports.notes },
         dispatch
       }
     })
@@ -28,8 +28,8 @@ describe('create_folder_flow', () => {
     await waitFor(actor, (state) => state.matches('idle'))
 
     expect(dispatch).toHaveBeenCalledWith({
-      type: 'UPDATE_FOLDER_LIST',
-      folder_paths: expect.any(Array)
+      type: 'ADD_FOLDER_PATH',
+      folder_path: 'parent/new-folder'
     })
   })
 
@@ -40,7 +40,7 @@ describe('create_folder_flow', () => {
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
-        ports: { notes: ports.notes, index: ports.index },
+        ports: { notes: ports.notes },
         dispatch
       }
     })
@@ -65,7 +65,7 @@ describe('create_folder_flow', () => {
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
-        ports: { notes: ports.notes, index: ports.index },
+        ports: { notes: ports.notes },
         dispatch
       }
     })
@@ -97,7 +97,7 @@ describe('create_folder_flow', () => {
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
-        ports: { notes: ports.notes, index: ports.index },
+        ports: { notes: ports.notes },
         dispatch
       }
     })
@@ -117,8 +117,8 @@ describe('create_folder_flow', () => {
 
     expect(call_count).toBe(2)
     expect(dispatch).toHaveBeenCalledWith({
-      type: 'UPDATE_FOLDER_LIST',
-      folder_paths: expect.any(Array)
+      type: 'ADD_FOLDER_PATH',
+      folder_path: 'parent/new-folder'
     })
   })
 })

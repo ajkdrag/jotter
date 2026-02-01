@@ -105,7 +105,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   })
 
   const create_folder = create_flow_handle(create_folder_flow_machine, {
-    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+    input: { ports: { notes: ports.notes }, dispatch }
   })
 
   const app_startup = create_flow_handle(app_startup_flow_machine, {
