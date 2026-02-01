@@ -5,6 +5,7 @@ import { app_state_machine, type AppStateContext } from '$lib/state/app_state_ma
 import { create_mock_notes_port } from '../../unit/helpers/mock_ports'
 import { create_open_note_state, create_test_note, create_test_vault, create_untitled_note_state } from '../../unit/helpers/test_fixtures'
 import type { FlowSnapshot } from '$lib/flows/flow_handle'
+import { as_note_path } from '$lib/types/ids'
 
 function wrap_snapshot(
   snapshot: ReturnType<ReturnType<typeof createActor<typeof app_state_machine>>['getSnapshot']>
@@ -60,6 +61,9 @@ describe('save_note_flow', () => {
     actor.start()
 
     actor.send({ type: 'REQUEST_SAVE' })
+    await waitFor(actor, state => state.matches('showing_save_dialog'))
+
+    actor.send({ type: 'CONFIRM' })
     await waitFor(actor, state => state.matches('idle'))
 
     expect(notes_port._calls.create_note).toHaveLength(1)
@@ -109,6 +113,9 @@ describe('save_note_flow', () => {
     actor.start()
 
     actor.send({ type: 'REQUEST_SAVE' })
+    await waitFor(actor, state => state.matches('showing_save_dialog'))
+
+    actor.send({ type: 'CONFIRM' })
     await waitFor(actor, state => state.matches('idle'))
 
     expect(notes_port._calls.create_note).toHaveLength(1)
@@ -139,6 +146,9 @@ describe('save_note_flow', () => {
     actor.start()
 
     actor.send({ type: 'REQUEST_SAVE' })
+    await waitFor(actor, state => state.matches('showing_save_dialog'))
+
+    actor.send({ type: 'CONFIRM' })
     await waitFor(actor, state => state.matches('idle'))
 
     expect(notes_port._calls.create_note).toHaveLength(1)
@@ -151,6 +161,35 @@ describe('save_note_flow', () => {
     const final_state = app_state.getSnapshot().context.open_note
     expect(final_state?.meta.id).toBe('foo/Untitled-1.md')
     expect(final_state?.meta.path).toBe('foo/Untitled-1.md')
+  })
+
+  test('sanitizes filename on confirm (adds .md if missing)', async () => {
+    const notes_port = create_mock_notes_port()
+    const vault = create_test_vault()
+    const open_note = create_untitled_note_state('Untitled-1')
+    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    app_state.start()
+
+    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+
+    const actor = createActor(save_note_flow_machine, {
+      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+    })
+    actor.start()
+
+    actor.send({ type: 'REQUEST_SAVE' })
+    await waitFor(actor, state => state.matches('showing_save_dialog'))
+
+    actor.send({ type: 'UPDATE_NEW_PATH', path: as_note_path('my-custom-note') })
+    actor.send({ type: 'CONFIRM' })
+    await waitFor(actor, state => state.matches('idle'))
+
+    expect(notes_port._calls.create_note).toHaveLength(1)
+    expect(notes_port._calls.create_note[0]?.note_path).toBe('my-custom-note.md')
+
+    const final_state = app_state.getSnapshot().context.open_note
+    expect(final_state?.meta.id).toBe('my-custom-note.md')
   })
 
   test('invokes on_save_complete callback on success', async () => {

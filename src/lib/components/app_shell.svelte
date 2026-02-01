@@ -76,7 +76,11 @@
   )
 
   const save_dialog_open = $derived(
-    save_note.snapshot.matches('error')
+    save_note.snapshot.matches('showing_save_dialog') ||
+      save_note.snapshot.matches('checking_existence') ||
+      save_note.snapshot.matches('conflict_confirm') ||
+      save_note.snapshot.matches('saving') ||
+      save_note.snapshot.matches('error')
   )
 
   const settings_dialog_open = $derived(
@@ -179,6 +183,15 @@
     },
     request_save() {
       save_note.send({ type: 'REQUEST_SAVE' })
+    },
+    update_save_path(path: string) {
+      save_note.send({ type: 'UPDATE_NEW_PATH', path: as_note_path(path) })
+    },
+    confirm_save() {
+      save_note.send({ type: 'CONFIRM' })
+    },
+    confirm_save_overwrite() {
+      save_note.send({ type: 'CONFIRM_OVERWRITE' })
     },
     retry_save() {
       save_note.send({ type: 'RETRY' })
@@ -384,8 +397,15 @@
 
 <SaveNoteDialog
   open={save_dialog_open}
+  new_path={save_note.snapshot.context.new_path}
+  folder_path={save_note.snapshot.context.folder_path}
   is_saving={save_note.snapshot.matches('saving')}
+  is_checking={save_note.snapshot.matches('checking_existence')}
+  show_overwrite_confirm={save_note.snapshot.matches('conflict_confirm')}
   error={save_note.snapshot.context.error}
+  on_update_path={actions.update_save_path}
+  on_confirm={actions.confirm_save}
+  on_confirm_overwrite={actions.confirm_save_overwrite}
   on_retry={actions.retry_save}
   on_cancel={actions.cancel_save}
 />
