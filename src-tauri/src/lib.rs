@@ -30,6 +30,7 @@ pub fn run() {
             notes_service::create_note,
             notes_service::rename_note,
             notes_service::delete_note,
+            notes_service::list_folder_contents,
             settings_service::get_setting,
             settings_service::set_setting
         ])

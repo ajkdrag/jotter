@@ -224,12 +224,102 @@ pub struct NoteDeleteArgs {
     pub note_id: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct FolderContents {
+    pub notes: Vec<NoteMeta>,
+    pub subfolders: Vec<String>,
+}
+
 #[tauri::command]
 pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
     let root = vault_path(&app, &args.vault_id)?;
     let abs = safe_note_abs(&root, &args.note_id)?;
     std::fs::remove_file(&abs).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn list_folder_contents(
+    app: AppHandle,
+    vault_id: String,
+    folder_path: String,
+) -> Result<FolderContents, String> {
+    let root = vault_path(&app, &vault_id)?;
+    let target = if folder_path.is_empty() {
+        root.clone()
+    } else {
+        let rel = PathBuf::from(&folder_path);
+        if rel.is_absolute() {
+            return Err("folder path must be relative".to_string());
+        }
+        if rel.components().any(|c| {
+            matches!(
+                c,
+                Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir
+            )
+        }) {
+            return Err("folder path contains invalid segments".to_string());
+        }
+        let abs = root.join(&rel);
+        let abs = abs.canonicalize().unwrap_or(abs);
+        let base = root.canonicalize().unwrap_or_else(|_| root.clone());
+        if !abs.starts_with(&base) {
+            return Err("folder path escapes vault".to_string());
+        }
+        abs
+    };
+
+    if !target.is_dir() {
+        return Err("not a directory".to_string());
+    }
+
+    let mut notes = Vec::new();
+    let mut subfolders = Vec::new();
+
+    let entries = std::fs::read_dir(&target).map_err(|e| e.to_string())?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let file_name = entry.file_name().to_string_lossy().to_string();
+
+        if file_name.starts_with('.') {
+            continue;
+        }
+
+        let file_type = entry.file_type().map_err(|e| e.to_string())?;
+        let entry_path = entry.path();
+
+        if file_type.is_file() && file_name.ends_with(".md") {
+            let rel = if folder_path.is_empty() {
+                file_name.clone()
+            } else {
+                format!("{}/{}", folder_path, file_name)
+            };
+
+            let title = extract_title(&entry_path);
+            let (mtime_ms, size_bytes) = file_meta(&entry_path)?;
+
+            notes.push(NoteMeta {
+                id: rel.clone(),
+                path: rel,
+                title,
+                mtime_ms,
+                size_bytes,
+            });
+        } else if file_type.is_dir() {
+            let rel = if folder_path.is_empty() {
+                file_name
+            } else {
+                format!("{}/{}", folder_path, file_name)
+            };
+            subfolders.push(rel);
+        }
+    }
+
+    notes.sort_by(|a, b| a.path.cmp(&b.path));
+    subfolders.sort();
+
+    Ok(FolderContents { notes, subfolders })
 }
 
 #[cfg(test)]

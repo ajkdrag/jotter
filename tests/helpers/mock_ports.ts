@@ -4,6 +4,7 @@ import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId, VaultPath, NotePath, NoteId, MarkdownText } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
+import type { FolderContents } from '$lib/types/filetree'
 
 export function create_mock_vault_port(): VaultPort & {
   _calls: { choose_vault: number; open_vault: VaultPath[]; open_vault_by_id: VaultId[] }
@@ -115,6 +116,25 @@ export function create_mock_notes_port(): NotesPort & {
       if (!current.includes(full_path)) {
         mock._mock_folders.set(vault_id, [...current, full_path].sort((a, b) => a.localeCompare(b)))
       }
+    },
+    async list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+      const all_notes = mock._mock_notes.get(vault_id) || []
+      const all_folders = mock._mock_folders.get(vault_id) || []
+      const prefix = folder_path ? folder_path + '/' : ''
+
+      const notes = all_notes.filter((note) => {
+        if (!note.path.startsWith(prefix) && prefix !== '') return false
+        const remaining = prefix ? note.path.slice(prefix.length) : note.path
+        return !remaining.includes('/')
+      })
+
+      const subfolders = all_folders.filter((folder) => {
+        if (!folder.startsWith(prefix) && prefix !== '') return false
+        const remaining = prefix ? folder.slice(prefix.length) : folder
+        return !remaining.includes('/')
+      })
+
+      return { notes, subfolders }
     }
   }
   return mock

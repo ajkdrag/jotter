@@ -4,6 +4,7 @@ import type { MarkdownText, NoteId } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
+import type { FolderContents } from '$lib/types/filetree'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -37,6 +38,7 @@ export type AppStateEvents =
   | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'SET_SIDEBAR_OPEN'; open: boolean }
   | { type: 'SET_SELECTED_FOLDER_PATH'; path: string }
+  | { type: 'MERGE_FOLDER_CONTENTS'; folder_path: string; contents: FolderContents }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -126,6 +128,37 @@ export function create_new_note_in_current_folder(context: AppStateContext): App
   })
 
   return { ...context, open_note: new_note }
+}
+
+export function merge_folder_contents(
+  context: AppStateContext,
+  folder_path: string,
+  contents: FolderContents
+): AppStateContext {
+  const existing_notes_map = new Map(context.notes.map(n => [n.id, n]))
+
+  for (const note of contents.notes) {
+    existing_notes_map.set(note.id, note)
+  }
+
+  const merged_notes = Array.from(existing_notes_map.values())
+  merged_notes.sort((a, b) => a.path.localeCompare(b.path))
+
+  const existing_folders = new Set(context.folder_paths)
+  for (const subfolder of contents.subfolders) {
+    existing_folders.add(subfolder)
+  }
+  if (folder_path) {
+    existing_folders.add(folder_path)
+  }
+
+  const merged_folders = Array.from(existing_folders).sort((a, b) => a.localeCompare(b))
+
+  return {
+    ...context,
+    notes: merged_notes,
+    folder_paths: merged_folders
+  }
 }
 
 export const app_state_machine = setup({
@@ -272,6 +305,11 @@ export const app_state_machine = setup({
           actions: assign({
             selected_folder_path: ({ event }) => event.path
           })
+        },
+        MERGE_FOLDER_CONTENTS: {
+          actions: assign(({ event, context }) =>
+            merge_folder_contents(context, event.folder_path, event.contents)
+          )
         }
       }
     }

@@ -20,6 +20,8 @@ import { app_startup_flow_machine } from '$lib/flows/app_startup_flow'
 import type { AppStartupFlowContext, AppStartupFlowEvents } from '$lib/flows/app_startup_flow'
 import { command_palette_flow_machine } from '$lib/flows/command_palette_flow'
 import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
+import { filetree_flow_machine } from '$lib/flows/filetree_flow'
+import type { FiletreeFlowContext, FiletreeFlowEvents } from '$lib/flows/filetree_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
 
@@ -40,12 +42,21 @@ export type AppFlows = {
     create_folder: FlowHandle<CreateFolderFlowEvents, FlowSnapshot<CreateFolderFlowContext>>
     settings: FlowHandle<SettingsFlowEvents, FlowSnapshot<SettingsFlowContext>>
     command_palette: FlowHandle<CommandPaletteFlowEvents, FlowSnapshot<CommandPaletteFlowContext>>
+    filetree: FlowHandle<FiletreeFlowEvents, FlowSnapshot<FiletreeFlowContext>>
   }
 }
 
 export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbacks): AppFlows {
   const app_state = create_flow_handle(app_state_machine, { input: {} })
-  const dispatch = (event: AppStateEvents) => app_state.send(event)
+
+  let filetree_send: ((event: FiletreeFlowEvents) => void) | null = null
+
+  const dispatch = (event: AppStateEvents) => {
+    app_state.send(event)
+    if (event.type === 'SET_ACTIVE_VAULT' && filetree_send) {
+      filetree_send({ type: 'VAULT_CHANGED' })
+    }
+  }
 
   const open_app = create_flow_handle(open_app_flow_machine, {
     input: {
@@ -97,6 +108,15 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
 
+  const filetree = create_flow_handle(filetree_flow_machine, {
+    input: {
+      ports: { notes: ports.notes },
+      dispatch,
+      get_vault_id: () => app_state.get_snapshot().context.vault?.id ?? null
+    }
+  })
+  filetree_send = filetree.send
+
   return {
     app_state,
     flows: {
@@ -109,7 +129,8 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       save_note,
       create_folder,
       settings,
-      command_palette
+      command_palette,
+      filetree
     }
   }
 }

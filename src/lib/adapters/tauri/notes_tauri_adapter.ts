@@ -2,6 +2,7 @@ import type { NotesPort } from '$lib/ports/notes_port'
 import { tauri_invoke } from '$lib/adapters/tauri/tauri_invoke'
 import type { MarkdownText, NoteId, NotePath, VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
+import type { FolderContents } from '$lib/types/filetree'
 
 export function create_notes_tauri_adapter(): NotesPort {
   return {
@@ -40,6 +41,12 @@ export function create_notes_tauri_adapter(): NotesPort {
     },
     async delete_note(vault_id: VaultId, note_id: NoteId) {
       await tauri_invoke<void>('delete_note', { args: { vault_id, note_id } })
+    },
+    async list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+      return await tauri_invoke<FolderContents>('list_folder_contents', {
+        vault_id,
+        folder_path
+      })
     }
   }
 }

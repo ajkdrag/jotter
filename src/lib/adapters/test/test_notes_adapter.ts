@@ -1,6 +1,7 @@
 import type { NotesPort } from '$lib/ports/notes_port'
 import { as_markdown_text, as_note_path, type MarkdownText, type NoteId, type NotePath, type VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
+import type { FolderContents } from '$lib/types/filetree'
 
 const TEST_FILES_BASE = '/test/files'
 const TEST_FILES_INDEX = '/test/files/index.json'
@@ -149,6 +150,54 @@ export function create_test_notes_adapter(): NotesPort {
     },
 
     async delete_note(_vault_id: VaultId, _note_id: NoteId): Promise<void> {
+    },
+
+    async list_folder_contents(_vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+      const notes = await load_base_files()
+      const result_notes: NoteMeta[] = []
+      const subfolders = new Set<string>()
+
+      const prefix = folder_path ? folder_path + '/' : ''
+
+      for (const [note_path, data] of notes.entries()) {
+        if (!note_path.startsWith(prefix) && prefix !== '') continue
+
+        const remaining = prefix ? note_path.slice(prefix.length) : note_path
+        const slash_index = remaining.indexOf('/')
+
+        if (slash_index === -1) {
+          const parts = note_path.split('/').filter(Boolean)
+          const last_part = parts[parts.length - 1] || ''
+          const title = last_part.replace(/\.md$/, '')
+
+          result_notes.push({
+            id: note_path,
+            path: note_path,
+            title,
+            mtime_ms: data.mtime_ms,
+            size_bytes: new Blob([data.markdown]).size
+          })
+        } else {
+          const subfolder_name = remaining.slice(0, slash_index)
+          const subfolder_path = folder_path ? `${folder_path}/${subfolder_name}` : subfolder_name
+          subfolders.add(subfolder_path)
+        }
+      }
+
+      for (const folder of created_folders) {
+        const is_direct_child = folder_path
+          ? folder.startsWith(folder_path + '/') && !folder.slice(folder_path.length + 1).includes('/')
+          : !folder.includes('/')
+
+        if (is_direct_child) {
+          subfolders.add(folder)
+        }
+      }
+
+      return {
+        notes: result_notes.sort((a, b) => a.path.localeCompare(b.path)),
+        subfolders: Array.from(subfolders).sort((a, b) => a.localeCompare(b))
+      }
     }
   }
 }

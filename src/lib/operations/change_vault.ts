@@ -12,10 +12,6 @@ export async function change_vault(
     ? await ports.vault.open_vault(args.vault_path)
     : await ports.vault.open_vault_by_id(args.vault_id)
 
-  const [notes, folder_paths] = await Promise.all([
-    ports.notes.list_notes(vault.id),
-    ports.notes.list_folders(vault.id)
-  ])
   await ports.vault.remember_last_vault(vault.id)
-  return { vault, notes, folder_paths }
+  return { vault, notes: [], folder_paths: [] }
 }

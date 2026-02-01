@@ -1,6 +1,7 @@
 import type { NotesPort } from '$lib/ports/notes_port'
 import { as_markdown_text, as_note_path, type MarkdownText, type NoteId, type NotePath, type VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
+import type { FolderContents } from '$lib/types/filetree'
 import { get_vault } from './storage'
 
 async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryHandle> {
@@ -229,6 +230,46 @@ export function create_notes_web_adapter(): NotesPort {
       const root = await get_vault_handle(vault_id)
       const { parent, name } = await resolve_note_path(root, note_id)
       await parent.removeEntry(name)
+    },
+
+    async list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+      const root = await get_vault_handle(vault_id)
+      let target = root
+
+      if (folder_path) {
+        const parts = folder_path.split('/').filter(Boolean)
+        for (const part of parts) {
+          target = await target.getDirectoryHandle(part, { create: false })
+        }
+      }
+
+      const notes: NoteMeta[] = []
+      const subfolders: string[] = []
+
+      for await (const handle of target.values()) {
+        if (handle.kind === 'file' && handle.name.endsWith('.md')) {
+          const file_handle = handle as FileSystemFileHandle
+          const file = await file_handle.getFile()
+          const full_path = folder_path ? `${folder_path}/${handle.name}` : handle.name
+          const note_path = as_note_path(full_path)
+
+          notes.push({
+            id: note_path,
+            path: note_path,
+            title: handle.name.replace(/\.md$/, ''),
+            mtime_ms: file.lastModified,
+            size_bytes: file.size
+          })
+        } else if (handle.kind === 'directory') {
+          const subfolder_path = folder_path ? `${folder_path}/${handle.name}` : handle.name
+          subfolders.push(subfolder_path)
+        }
+      }
+
+      notes.sort((a, b) => a.path.localeCompare(b.path))
+      subfolders.sort((a, b) => a.localeCompare(b))
+
+      return { notes, subfolders }
     }
   }
 }

@@ -2,13 +2,15 @@
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
     import ActivityBar from "$lib/components/activity_bar.svelte";
-    import FileTree from "$lib/components/file_tree.svelte";
+    import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
     import ThemeToggle from "$lib/components/theme_toggle.svelte";
     import type { EditorManager } from "$lib/operations/manage_editor";
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
+    import type { FolderLoadState } from "$lib/types/filetree";
+    import { flatten_filetree } from "$lib/utils/flatten_filetree";
     import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical } from "@lucide/svelte";
 
     type Props = {
@@ -16,6 +18,8 @@
         vault: Vault | null;
         notes: NoteMeta[];
         folder_paths: string[];
+        expanded_paths: Set<string>;
+        load_states: Map<string, FolderLoadState>;
         open_note_title: string;
         open_note: OpenNoteState | null;
         sidebar_open: boolean;
@@ -32,6 +36,9 @@
         on_open_settings: () => void;
         on_toggle_sidebar: () => void;
         on_select_folder_path: (path: string) => void;
+        on_toggle_folder: (path: string) => void;
+        on_retry_load: (path: string) => void;
+        on_collapse_all: () => void;
     };
 
     let {
@@ -39,6 +46,8 @@
         vault,
         notes,
         folder_paths,
+        expanded_paths,
+        load_states,
         open_note_title,
         open_note,
         sidebar_open,
@@ -54,8 +63,18 @@
         on_request_rename_note,
         on_open_settings,
         on_toggle_sidebar,
-        on_select_folder_path
+        on_select_folder_path,
+        on_toggle_folder,
+        on_retry_load,
+        on_collapse_all
     }: Props = $props();
+
+    const flat_nodes = $derived(flatten_filetree({
+        notes,
+        folder_paths,
+        expanded_paths,
+        load_states
+    }));
 </script>
 
 {#if vault}
@@ -112,7 +131,7 @@
                                     </button>
                                     <button
                                         type="button"
-                                        onclick={() => console.log('Collapse All triggered')}
+                                        onclick={on_collapse_all}
                                         class="text-muted-foreground/70 hover:text-foreground transition-colors"
                                         aria-label="Collapse All"
                                     >
@@ -122,17 +141,18 @@
                             </div>
                         </Sidebar.Header>
 
-                        <Sidebar.Content>
-                            <Sidebar.Group>
-                                <Sidebar.GroupContent>
-                                    <FileTree
-                                        notes={notes}
-                                        folder_paths={folder_paths}
-                                        selected_root={selected_folder_path}
-                                        on_select_root={on_select_folder_path}
-                                        on_open_note={on_open_note}
+                        <Sidebar.Content class="overflow-hidden">
+                            <Sidebar.Group class="h-full">
+                                <Sidebar.GroupContent class="h-full">
+                                    <VirtualFileTree
+                                        nodes={flat_nodes}
+                                        selected_path={selected_folder_path}
+                                        on_toggle_folder={on_toggle_folder}
+                                        on_select_note={on_open_note}
+                                        on_select_folder={on_select_folder_path}
                                         on_request_delete={on_request_delete_note}
                                         on_request_rename={on_request_rename_note}
+                                        on_retry_load={on_retry_load}
                                     />
                                 </Sidebar.GroupContent>
                             </Sidebar.Group>

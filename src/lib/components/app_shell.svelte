@@ -44,6 +44,7 @@
   const create_folder = use_flow_handle(app.flows.create_folder)
   const settings = use_flow_handle(app.flows.settings)
   const command_palette = use_flow_handle(app.flows.command_palette)
+  const filetree = use_flow_handle(app.flows.filetree)
 
   const palette_open = $derived(command_palette.snapshot.matches('open'))
   const palette_selected_index = $derived(command_palette.snapshot.context.selected_index)
@@ -212,8 +213,18 @@
     },
     select_folder_path(path: string) {
       app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path })
+    },
+    toggle_filetree_folder(path: string) {
+      filetree.send({ type: 'TOGGLE_FOLDER', path })
+    },
+    retry_load_folder(path: string) {
+      filetree.send({ type: 'RETRY_LOAD', path })
+    },
+    collapse_all_folders() {
+      filetree.send({ type: 'COLLAPSE_ALL' })
     }
   }
+
 
   function handle_keydown_capture(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key === 'p') {
@@ -264,6 +275,8 @@
       vault={app.vault}
       notes={app.notes}
       folder_paths={app.folder_paths}
+      expanded_paths={filetree.snapshot.context.expanded_paths}
+      load_states={filetree.snapshot.context.load_states}
       open_note_title={app.open_note?.meta.title ?? 'Notes'}
       open_note={app.open_note}
       sidebar_open={app.sidebar_open}
@@ -280,6 +293,9 @@
       on_open_settings={actions.open_settings}
       on_toggle_sidebar={actions.toggle_sidebar}
       on_select_folder_path={actions.select_folder_path}
+      on_toggle_folder={actions.toggle_filetree_folder}
+      on_retry_load={actions.retry_load_folder}
+      on_collapse_all={actions.collapse_all_folders}
     />
   </main>
 {/if}
