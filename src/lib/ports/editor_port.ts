@@ -1,3 +1,9 @@
+export type CursorInfo = {
+  line: number
+  column: number
+  total_lines: number
+}
+
 export type EditorHandle = {
   destroy: () => void
   set_markdown: (markdown: string) => void
@@ -14,6 +20,7 @@ export type EditorPort = {
       initial_markdown: string
       on_markdown_change: (markdown: string) => void
       on_dirty_state_change: (is_dirty: boolean) => void
+      on_cursor_change?: (info: CursorInfo) => void
     }
   ) => Promise<EditorHandle>
 }

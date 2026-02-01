@@ -12,7 +12,7 @@
 </script>
 
 <div
-  class="sticky top-0 z-30 flex h-svh w-12 flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-1"
+  class="flex h-full w-12 flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-1"
 >
   <div class="flex flex-col">
     <Button

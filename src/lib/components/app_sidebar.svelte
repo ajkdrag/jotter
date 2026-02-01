@@ -6,13 +6,17 @@
     import ActivityBar from "$lib/components/activity_bar.svelte";
     import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
+    import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
+    import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
     import ThemeToggle from "$lib/components/theme_toggle.svelte";
     import type { EditorManager } from "$lib/operations/manage_editor";
     import type { Vault } from "$lib/types/vault";
     import type { NoteMeta } from "$lib/types/note";
     import type { OpenNoteState } from "$lib/types/editor";
     import type { FolderLoadState } from "$lib/types/filetree";
+    import type { CursorInfo } from "$lib/ports/editor_port";
     import { flatten_filetree } from "$lib/utils/flatten_filetree";
+    import { count_words } from "$lib/utils/count_words";
     import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical } from "@lucide/svelte";
 
     type Props = {
@@ -81,17 +85,27 @@
         expanded_paths,
         load_states
     }));
+
+    let cursor_info: CursorInfo | null = $state(null);
+    let details_dialog_open = $state(false);
+
+    const word_count = $derived(open_note ? count_words(open_note.markdown) : 0);
+
+    function handle_cursor_change(info: CursorInfo) {
+        cursor_info = info;
+    }
 </script>
 
 {#if vault}
-    <div class="flex h-screen">
-        <ActivityBar
-            sidebar_open={sidebar_open}
-            on_toggle_sidebar={on_toggle_sidebar}
-            on_open_settings={on_open_settings}
-        />
-        <Sidebar.Provider open={sidebar_open} class="flex-1">
-            <Resizable.PaneGroup direction="horizontal" class="h-full">
+    <div class="flex flex-col h-screen">
+        <div class="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+            <ActivityBar
+                sidebar_open={sidebar_open}
+                on_toggle_sidebar={on_toggle_sidebar}
+                on_open_settings={on_open_settings}
+            />
+            <Sidebar.Provider open={sidebar_open} class="flex-1 min-h-0">
+                <Resizable.PaneGroup direction="horizontal" class="h-full">
                 {#if sidebar_open}
                 <Resizable.Pane
                     defaultSize={15}
@@ -181,7 +195,7 @@
                 <Resizable.Handle withHandle />
                 {/if}
                 <Resizable.Pane order={2} defaultSize={sidebar_open ? 80 : 100}>
-                    <Sidebar.Inset class="min-h-0 h-full">
+                    <Sidebar.Inset class="min-h-0 h-full flex flex-col">
                         <header
                             class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
                         >
@@ -201,11 +215,29 @@
                                 open_note={open_note}
                                 on_markdown_change={on_markdown_change}
                                 on_dirty_state_change={on_dirty_state_change}
+                                on_cursor_change={handle_cursor_change}
                             />
                         </div>
                     </Sidebar.Inset>
                 </Resizable.Pane>
             </Resizable.PaneGroup>
-        </Sidebar.Provider>
+            </Sidebar.Provider>
+        </div>
+        <div class="relative z-10 shrink-0">
+            <EditorStatusBar
+                cursor_info={cursor_info}
+                word_count={word_count}
+                has_note={!!open_note}
+                on_info_click={() => details_dialog_open = true}
+            />
+        </div>
     </div>
+
+    <NoteDetailsDialog
+        open={details_dialog_open}
+        note={open_note}
+        word_count={word_count}
+        line_count={cursor_info?.total_lines ?? 0}
+        on_close={() => details_dialog_open = false}
+    />
 {/if}

@@ -1,4 +1,7 @@
-import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx } from '@milkdown/kit/core'
+import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx, editorStateCtx } from '@milkdown/kit/core'
+import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import { $prose } from '@milkdown/kit/utils'
+import type { CursorInfo } from '$lib/ports/editor_port'
 import {
   configureLinkTooltip,
   linkTooltipPlugin,
@@ -32,15 +35,39 @@ const LINK_TOOLTIP_ICONS = {
   check: resize_icon(Check, 14),
 } as const
 
+function calculate_cursor_info(doc: import('@milkdown/kit/prose/model').Node, pos: number): CursorInfo {
+  const text_before_pos = doc.textBetween(0, Math.min(pos, doc.content.size), '\n')
+  const lines = text_before_pos.split('\n')
+  const line = lines.length
+  const column = (lines[lines.length - 1]?.length ?? 0) + 1
+  const total_lines = doc.childCount || 1
+  return { line, column, total_lines }
+}
+
+const cursor_plugin_key = new PluginKey('cursor-tracker')
+
+function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
+  return $prose(() => new Plugin({
+    key: cursor_plugin_key,
+    view: () => ({
+      update: (view) => {
+        const { doc, selection } = view.state
+        const info = calculate_cursor_info(doc, selection.from)
+        on_cursor_change(info)
+      }
+    })
+  }))
+}
+
 export const milkdown_editor_port: EditorPort = {
   create_editor: async (root, config) => {
-    const { initial_markdown, on_markdown_change, on_dirty_state_change } = config
+    const { initial_markdown, on_markdown_change, on_dirty_state_change, on_cursor_change } = config
 
     let current_markdown = initial_markdown
     let current_is_dirty = false
     let editor: Editor | null = null
 
-    editor = await Editor.make()
+    let builder = Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root)
         ctx.set(defaultValueCtx, initial_markdown)
@@ -82,7 +109,12 @@ export const milkdown_editor_port: EditorPort = {
           }
         })
       })
-      .create()
+
+    if (on_cursor_change) {
+      builder = builder.use(create_cursor_plugin(on_cursor_change))
+    }
+
+    editor = await builder.create()
 
     function mark_clean() {
       if (!editor) return

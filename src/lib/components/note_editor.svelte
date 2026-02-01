@@ -1,18 +1,20 @@
 <script lang="ts">
     import type { EditorManager } from "$lib/operations/manage_editor";
     import type { OpenNoteState } from "$lib/types/editor";
+    import type { CursorInfo } from "$lib/ports/editor_port";
 
     interface Props {
         editor_manager: EditorManager;
         open_note: OpenNoteState | null;
         on_markdown_change: (markdown: string) => void;
         on_dirty_state_change: (is_dirty: boolean) => void;
+        on_cursor_change?: (info: CursorInfo) => void;
     }
 
-    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change }: Props = $props();
+    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change, on_cursor_change }: Props = $props();
 
     function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-        const mount_promise = editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change);
+        const mount_promise = editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change, on_cursor_change);
 
         mount_promise.then(() => {
             editor_manager.focus();

@@ -1,4 +1,4 @@
-import type { EditorHandle, EditorPort } from '$lib/ports/editor_port'
+import type { EditorHandle, EditorPort, CursorInfo } from '$lib/ports/editor_port'
 import type { OpenNoteState } from '$lib/types/editor'
 
 export type EditorManager = {
@@ -6,7 +6,8 @@ export type EditorManager = {
     root: HTMLElement,
     note: OpenNoteState,
     on_change: (md: string) => void,
-    on_dirty_change: (is_dirty: boolean) => void
+    on_dirty_change: (is_dirty: boolean) => void,
+    on_cursor_change?: (info: CursorInfo) => void
   ) => Promise<void>
   update: (note: OpenNoteState) => void
   destroy: () => void
@@ -23,7 +24,8 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       root: HTMLElement,
       note: OpenNoteState,
       on_change: (md: string) => void,
-      on_dirty_change: (is_dirty: boolean) => void
+      on_dirty_change: (is_dirty: boolean) => void,
+      on_cursor_change?: (info: CursorInfo) => void
     ) {
       if (editor_handle) {
         editor_handle.destroy()
@@ -34,7 +36,8 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       editor_handle = await editor_port.create_editor(root, {
         initial_markdown: note.markdown,
         on_markdown_change: on_change,
-        on_dirty_state_change: on_dirty_change
+        on_dirty_state_change: on_dirty_change,
+        ...(on_cursor_change && { on_cursor_change })
       })
     },
 
