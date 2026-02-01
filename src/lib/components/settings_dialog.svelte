@@ -70,18 +70,18 @@ const spacing_options = [
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="settings">
-      <section class="settings__section">
-        <div class="settings__section-header">
+    <div class="flex flex-col gap-6 py-2">
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
           <TypeIcon class="size-4 text-muted-foreground" />
-          <span class="settings__section-label">Typography</span>
+          <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Typography</span>
         </div>
-        
-        <div class="settings__group">
-          <div class="settings__field">
-            <div class="settings__field-header">
-              <span class="settings__field-label">Font Size</span>
-              <span class="settings__field-value">{editor_settings.font_size.toFixed(2)}rem</span>
+
+        <div class="flex flex-col gap-5">
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium">Font Size</span>
+              <span class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{editor_settings.font_size.toFixed(2)}rem</span>
             </div>
             <Slider.Root
               type="single"
@@ -94,10 +94,10 @@ const spacing_options = [
             />
           </div>
 
-          <div class="settings__field">
-            <div class="settings__field-header">
-              <span class="settings__field-label">Line Height</span>
-              <span class="settings__field-value">{editor_settings.line_height.toFixed(2)}</span>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium">Line Height</span>
+              <span class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{editor_settings.line_height.toFixed(2)}</span>
             </div>
             <Slider.Root
               type="single"
@@ -110,8 +110,8 @@ const spacing_options = [
             />
           </div>
 
-          <div class="settings__field settings__field--inline">
-            <span class="settings__field-label">Heading Color</span>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-sm font-medium">Heading Color</span>
             <Select.Root type="single" value={editor_settings.heading_color} onValueChange={handle_heading_color_change}>
               <Select.Trigger class="w-32">
                 {heading_color_options.find(o => o.value === editor_settings.heading_color)?.label}
@@ -128,15 +128,15 @@ const spacing_options = [
 
       <Separator />
 
-      <section class="settings__section">
-        <div class="settings__section-header">
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
           <LayoutIcon class="size-4 text-muted-foreground" />
-          <span class="settings__section-label">Layout</span>
+          <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Layout</span>
         </div>
-        
-        <div class="settings__group">
-          <div class="settings__field settings__field--inline">
-            <span class="settings__field-label">Content Spacing</span>
+
+        <div class="flex flex-col gap-5">
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-sm font-medium">Content Spacing</span>
             <Select.Root type="single" value={editor_settings.spacing} onValueChange={handle_spacing_change}>
               <Select.Trigger class="w-32">
                 {spacing_options.find(o => o.value === editor_settings.spacing)?.label}
@@ -152,7 +152,7 @@ const spacing_options = [
       </section>
     </div>
 
-    <Dialog.Footer class="settings__footer">
+    <Dialog.Footer class="pt-4 border-t">
       {#if error}
         <span class="text-destructive text-sm mr-auto">{error}</span>
       {/if}
@@ -166,77 +166,3 @@ const spacing_options = [
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
-
-<style>
-.settings {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 0.5rem 0;
-}
-
-.settings__section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.settings__section-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.settings__section-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-foreground);
-}
-
-.settings__group {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.settings__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.settings__field--inline {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.settings__field-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.settings__field-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--foreground);
-}
-
-.settings__field-value {
-  font-size: 0.75rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: var(--muted-foreground);
-  background: var(--muted);
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-:global(.settings__footer) {
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-</style>

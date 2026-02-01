@@ -120,16 +120,12 @@
             type="button"
             onclick={(e) => handle_select_vault(vault, e)}
             disabled={is_loading || current_vault_id === vault.id}
-            class="flex min-h-14 items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-left outline-none transition-all hover:bg-muted/70 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 data-[active=true]:bg-accent/20 data-[active=true]:border-primary/30"
+            class="flex items-center justify-between rounded-lg border bg-card px-3 py-2.5 text-left transition-all hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 {current_vault_id === vault.id ? 'bg-accent/20 border-primary/30' : ''}"
             data-active={current_vault_id === vault.id}
           >
             <div class="min-w-0 flex-1">
-              <div class="mb-1 truncate text-[0.9375rem] font-medium text-foreground">
-                {vault.name}
-              </div>
-              <div class="truncate text-[0.8125rem] text-muted-foreground">
-                {format_path(vault.path)}
-              </div>
+              <div class="truncate font-medium">{vault.name}</div>
+              <div class="truncate text-sm text-muted-foreground">{format_path(vault.path)}</div>
             </div>
             {#if current_vault_id === vault.id}
               <Check class="ml-4 shrink-0 text-primary" />

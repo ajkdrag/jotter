@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js"
   import { Button } from "$lib/components/ui/button"
+  import { Input } from "$lib/components/ui/input"
   import type { NoteMeta } from "$lib/types/note"
   import type { NotePath } from "$lib/types/ids"
 
@@ -72,14 +73,13 @@
 
     {#if !error && !show_overwrite_confirm}
       <div class="space-y-4">
-        <input
+        <Input
           type="text"
           value={input_value}
           onchange={(e) => update_input(e.currentTarget.value)}
           oninput={(e) => update_input(e.currentTarget.value)}
           placeholder="e.g., folder/new-title.md"
           disabled={is_renaming || is_checking_conflict}
-          class="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
     {/if}

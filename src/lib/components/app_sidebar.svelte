@@ -1,6 +1,8 @@
 <script lang="ts">
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
+    import * as Tooltip from "$lib/components/ui/tooltip/index.js";
+    import { Button } from "$lib/components/ui/button";
     import ActivityBar from "$lib/components/activity_bar.svelte";
     import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
     import NoteEditor from "$lib/components/note_editor.svelte";
@@ -104,39 +106,47 @@
                                 >
                                     {vault.name}
                                 </button>
-                                <div class="flex items-center gap-1.5 shrink-0">
-                                    <button
-                                        type="button"
-                                        onclick={on_create_note}
-                                        class="text-muted-foreground/70 hover:text-foreground transition-colors"
-                                        aria-label="New Note"
-                                    >
-                                        <FilePlus class="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onclick={() => on_request_create_folder(selected_folder_path)}
-                                        class="text-muted-foreground/70 hover:text-foreground transition-colors"
-                                        aria-label="New Folder"
-                                    >
-                                        <FolderPlus class="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onclick={() => console.log('Refresh triggered')}
-                                        class="text-muted-foreground/70 hover:text-foreground transition-colors"
-                                        aria-label="Refresh"
-                                    >
-                                        <RefreshCw class="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onclick={on_collapse_all}
-                                        class="text-muted-foreground/70 hover:text-foreground transition-colors"
-                                        aria-label="Collapse All"
-                                    >
-                                        <FoldVertical class="h-4 w-4" />
-                                    </button>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <Tooltip.Root>
+                                        <Tooltip.Trigger>
+                                            {#snippet child({ props })}
+                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={on_create_note}>
+                                                    <FilePlus class="h-4 w-4" />
+                                                </Button>
+                                            {/snippet}
+                                        </Tooltip.Trigger>
+                                        <Tooltip.Content>New Note</Tooltip.Content>
+                                    </Tooltip.Root>
+                                    <Tooltip.Root>
+                                        <Tooltip.Trigger>
+                                            {#snippet child({ props })}
+                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={() => on_request_create_folder(selected_folder_path)}>
+                                                    <FolderPlus class="h-4 w-4" />
+                                                </Button>
+                                            {/snippet}
+                                        </Tooltip.Trigger>
+                                        <Tooltip.Content>New Folder</Tooltip.Content>
+                                    </Tooltip.Root>
+                                    <Tooltip.Root>
+                                        <Tooltip.Trigger>
+                                            {#snippet child({ props })}
+                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={() => console.log('Refresh triggered')}>
+                                                    <RefreshCw class="h-4 w-4" />
+                                                </Button>
+                                            {/snippet}
+                                        </Tooltip.Trigger>
+                                        <Tooltip.Content>Refresh</Tooltip.Content>
+                                    </Tooltip.Root>
+                                    <Tooltip.Root>
+                                        <Tooltip.Trigger>
+                                            {#snippet child({ props })}
+                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={on_collapse_all}>
+                                                    <FoldVertical class="h-4 w-4" />
+                                                </Button>
+                                            {/snippet}
+                                        </Tooltip.Trigger>
+                                        <Tooltip.Content>Collapse All</Tooltip.Content>
+                                    </Tooltip.Root>
                                 </div>
                             </div>
                         </Sidebar.Header>

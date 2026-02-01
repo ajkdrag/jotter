@@ -11,7 +11,7 @@ interface ThemeToggleProps {
 let { mode, on_change }: ThemeToggleProps = $props()
 </script>
 
-<div class="theme-toggle__container">
+<div class="flex gap-1">
   <Button
     variant={mode === 'light' ? 'default' : 'ghost'}
     size="sm"
@@ -37,10 +37,3 @@ let { mode, on_change }: ThemeToggleProps = $props()
     <Monitor class="w-4 h-4" />
   </Button>
 </div>
-
-<style>
-.theme-toggle__container {
-  display: flex;
-  gap: 0.25rem;
-}
-</style>

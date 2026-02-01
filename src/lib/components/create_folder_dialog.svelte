@@ -2,6 +2,7 @@
   import { tick } from 'svelte'
   import * as Dialog from '$lib/components/ui/dialog/index.js'
   import { Button } from '$lib/components/ui/button'
+  import { Input } from '$lib/components/ui/input'
 
   type Props = {
     open: boolean
@@ -25,7 +26,7 @@
     on_cancel
   }: Props = $props()
 
-  let input_el: HTMLInputElement | null = $state(null)
+  let input_el = $state<HTMLInputElement | null>(null)
 
   $effect(() => {
     if (open && input_el) {
@@ -53,14 +54,13 @@
     </Dialog.Header>
 
     <div class="space-y-4">
-      <input
-        bind:this={input_el}
+      <Input
+        bind:ref={input_el}
         type="text"
         value={folder_name}
         oninput={(e) => on_folder_name_change(e.currentTarget.value)}
         placeholder="Folder name"
         disabled={is_creating}
-        class="border-input bg-background ring-offset-background placeholder:text-muted-foreground flex h-9 w-full min-w-0 rounded-md border px-3 py-1 text-base shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
       />
       {#if error}
         <p class="text-sm text-destructive">{error}</p>
