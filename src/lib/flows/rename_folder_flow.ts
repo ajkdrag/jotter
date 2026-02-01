@@ -16,7 +16,6 @@ type FlowContext = {
   folder_path: string | null
   vault_id: VaultId | null
   new_path: string | null
-  contains_open_note: boolean
   error: string | null
   ports: RenameFolderPorts
   dispatch: AppStateDispatch
@@ -25,7 +24,7 @@ type FlowContext = {
 export type RenameFolderFlowContext = FlowContext
 
 type FlowEvents =
-  | { type: 'REQUEST_RENAME'; vault_id: VaultId; folder_path: string; contains_open_note: boolean }
+  | { type: 'REQUEST_RENAME'; vault_id: VaultId; folder_path: string }
   | { type: 'UPDATE_NEW_PATH'; path: string }
   | { type: 'CONFIRM' }
   | { type: 'CANCEL' }
@@ -74,7 +73,6 @@ export const rename_folder_flow_machine = setup({
     folder_path: null,
     vault_id: null,
     new_path: null,
-    contains_open_note: false,
     error: null,
     ports: input.ports,
     dispatch: input.dispatch
@@ -87,7 +85,6 @@ export const rename_folder_flow_machine = setup({
           actions: assign({
             folder_path: ({ event }) => event.folder_path,
             vault_id: ({ event }) => event.vault_id,
-            contains_open_note: ({ event }) => event.contains_open_note,
             new_path: ({ event }) => event.folder_path,
             error: () => null
           })
@@ -108,7 +105,6 @@ export const rename_folder_flow_machine = setup({
             folder_path: () => null,
             vault_id: () => null,
             new_path: () => null,
-            contains_open_note: () => false,
             error: () => null
           })
         }
@@ -129,8 +125,7 @@ export const rename_folder_flow_machine = setup({
           actions: assign({
             folder_path: () => null,
             vault_id: () => null,
-            new_path: () => null,
-            contains_open_note: () => false
+            new_path: () => null
           })
         },
         onError: {
@@ -150,7 +145,6 @@ export const rename_folder_flow_machine = setup({
             folder_path: () => null,
             vault_id: () => null,
             new_path: () => null,
-            contains_open_note: () => false,
             error: () => null
           })
         }

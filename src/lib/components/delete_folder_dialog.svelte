@@ -18,7 +18,7 @@
   const is_open = $derived(is_fetching_stats || is_confirming || is_deleting || is_error);
   const is_loading = $derived(is_fetching_stats || is_deleting);
 
-  const folder_name = $derived(() => {
+  const folder_name = $derived.by(() => {
     const path = snapshot.context.folder_path;
     if (!path) return "";
     const parts = path.split("/");
@@ -55,9 +55,9 @@
         {#if is_error}
           {snapshot.context.error || "An unknown error occurred"}
         {:else if is_fetching_stats}
-          Checking contents of <span class="font-medium">{folder_name()}</span>...
+          Checking contents of <span class="font-medium">{folder_name}</span>...
         {:else}
-          Are you sure you want to delete the folder <span class="font-medium">{folder_name()}</span>?
+          Are you sure you want to delete the folder <span class="font-medium">{folder_name}</span>?
           {#if affected_note_count > 0 || affected_folder_count > 0}
             <br /><br />
             This will permanently delete:

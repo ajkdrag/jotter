@@ -258,12 +258,7 @@
     request_rename_folder(folder_path: string) {
       const vault_id = app_state.snapshot.context.vault?.id
       if (!vault_id) return
-
-      const open_note_path = app_state.snapshot.context.open_note?.meta.path ?? ''
-      const prefix = folder_path + '/'
-      const contains_open_note = open_note_path.startsWith(prefix)
-
-      rename_folder.send({ type: 'REQUEST_RENAME', vault_id, folder_path, contains_open_note })
+      rename_folder.send({ type: 'REQUEST_RENAME', vault_id, folder_path })
     }
   }
 
