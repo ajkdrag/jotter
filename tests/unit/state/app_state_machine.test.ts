@@ -126,6 +126,34 @@ describe('app_state_machine transitions', () => {
     actor.stop()
   })
 
+  it('creates new note in selected folder', () => {
+    const actor = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    actor.start()
+    const vault = create_test_vault()
+
+    actor.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+    actor.send({ type: 'SET_SELECTED_FOLDER_PATH', path: 'projects' })
+    actor.send({ type: 'CREATE_NEW_NOTE_IN_CURRENT_FOLDER' })
+
+    const { open_note } = actor.getSnapshot().context
+    expect(open_note?.meta.path).toBe('projects/Untitled-1')
+    expect(open_note?.meta.title).toBe('Untitled-1')
+    actor.stop()
+  })
+
+  it('creates new note in root when no folder selected', () => {
+    const actor = createActor(app_state_machine, { input: { now_ms: () => 123 } })
+    actor.start()
+    const vault = create_test_vault()
+
+    actor.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+    actor.send({ type: 'CREATE_NEW_NOTE_IN_CURRENT_FOLDER' })
+
+    const { open_note } = actor.getSnapshot().context
+    expect(open_note?.meta.path).toBe('Untitled-1')
+    actor.stop()
+  })
+
   it('updates markdown and dirty state when open note exists', () => {
     const actor = createActor(app_state_machine, { input: {} })
     actor.start()

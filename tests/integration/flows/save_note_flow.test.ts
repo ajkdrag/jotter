@@ -130,7 +130,7 @@ describe('save_note_flow', () => {
     expect(final_state?.meta.title).toBe('Untitled-1')
   })
 
-  test('saves foldered untitled note with folder path preserved', async () => {
+  test('saves untitled note in selected folder', async () => {
     const notes_port = create_mock_notes_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('foo/Untitled-1')
@@ -139,6 +139,7 @@ describe('save_note_flow', () => {
 
     app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
     app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+    app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path: 'foo' })
 
     const actor = createActor(save_note_flow_machine, {
       input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }

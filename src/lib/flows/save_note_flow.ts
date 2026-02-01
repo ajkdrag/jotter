@@ -149,7 +149,7 @@ export const save_note_flow_machine = setup({
               const app_snapshot = context.get_app_state_snapshot()
               const open_note = app_snapshot.context.open_note
               const current_path = open_note?.meta.path ?? ''
-              const folder = get_folder_from_path(current_path)
+              const folder = app_snapshot.context.selected_folder_path
               const filename = get_filename_from_path(current_path) || 'Untitled'
               return {
                 error: null,

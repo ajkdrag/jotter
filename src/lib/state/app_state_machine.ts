@@ -187,13 +187,9 @@ export function remove_folder_from_state(context: AppStateContext, folder_path: 
 }
 
 export function create_new_note_in_current_folder(context: AppStateContext): AppStateContext {
-  const current_path = context.open_note?.meta.path ?? ''
-  const last_slash = current_path.lastIndexOf('/')
-  const folder_prefix = last_slash >= 0 ? current_path.substring(0, last_slash) : ''
-
   const new_note = create_untitled_open_note_in_folder({
     notes: context.notes,
-    folder_prefix,
+    folder_prefix: context.selected_folder_path,
     now_ms: context.now_ms()
   })
 
