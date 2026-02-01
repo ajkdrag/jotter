@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { createVirtualizer, type VirtualItem } from "@tanstack/svelte-virtual";
-  import { onMount } from "svelte";
+  import { createVirtualizer } from "@tanstack/svelte-virtual";
   import type { FlatTreeNode } from "$lib/types/filetree";
   import type { NoteMeta } from "$lib/types/note";
   import FileTreeRow from "$lib/components/file_tree_row.svelte";
@@ -31,27 +30,28 @@
   const OVERSCAN = 5;
 
   let scroll_container: HTMLDivElement | null = $state(null);
-  let is_mounted = $state(false);
 
-  onMount(() => {
-    requestAnimationFrame(() => {
-      is_mounted = true;
-    });
-  });
-
-  const virtualizer_store = $derived(
-    createVirtualizer({
-      get count() {
-        return nodes.length;
-      },
-      getScrollElement: () => scroll_container,
-      estimateSize: () => ROW_HEIGHT,
-      overscan: OVERSCAN
-    })
+  const virtualizer = $derived(
+    scroll_container
+      ? createVirtualizer({
+          get count() {
+            return nodes.length;
+          },
+          getScrollElement: () => scroll_container,
+          estimateSize: () => ROW_HEIGHT,
+          overscan: OVERSCAN
+        })
+      : null
   );
 
-  let virtual_items: VirtualItem[] = $derived(is_mounted ? $virtualizer_store.getVirtualItems() : []);
-  let total_size = $derived(is_mounted ? $virtualizer_store.getTotalSize() : nodes.length * ROW_HEIGHT);
+  let virtual_items = $derived.by(() => {
+    if (!virtualizer) return []
+    return $virtualizer!.getVirtualItems()
+  });
+  let total_size = $derived.by(() => {
+    if (!virtualizer) return nodes.length * ROW_HEIGHT
+    return $virtualizer!.getTotalSize()
+  });
 </script>
 
 <div

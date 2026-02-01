@@ -49,12 +49,18 @@ export type AppFlows = {
 export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbacks): AppFlows {
   const app_state = create_flow_handle(app_state_machine, { input: {} })
 
-  let filetree_send: ((event: FiletreeFlowEvents) => void) | null = null
+  const filetree = create_flow_handle(filetree_flow_machine, {
+    input: {
+      ports: { notes: ports.notes },
+      dispatch: (event: AppStateEvents) => app_state.send(event),
+      get_vault_id: () => app_state.get_snapshot().context.vault?.id ?? null
+    }
+  })
 
   const dispatch = (event: AppStateEvents) => {
     app_state.send(event)
-    if (event.type === 'SET_ACTIVE_VAULT' && filetree_send) {
-      filetree_send({ type: 'VAULT_CHANGED' })
+    if (event.type === 'SET_ACTIVE_VAULT') {
+      filetree.send({ type: 'VAULT_CHANGED' })
     }
   }
 
@@ -90,7 +96,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       ports: { notes: ports.notes },
       dispatch,
       get_app_state_snapshot: app_state.get_snapshot,
-      ...callbacks?.on_save_complete ? { on_save_complete: callbacks.on_save_complete } : {}
+      ...(callbacks?.on_save_complete && { on_save_complete: callbacks.on_save_complete })
     }
   })
 
@@ -107,15 +113,6 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   })
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
-
-  const filetree = create_flow_handle(filetree_flow_machine, {
-    input: {
-      ports: { notes: ports.notes },
-      dispatch,
-      get_vault_id: () => app_state.get_snapshot().context.vault?.id ?? null
-    }
-  })
-  filetree_send = filetree.send
 
   return {
     app_state,
