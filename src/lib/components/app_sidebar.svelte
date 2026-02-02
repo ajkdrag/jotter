@@ -223,14 +223,12 @@
             </Resizable.PaneGroup>
             </Sidebar.Provider>
         </div>
-        <div class="relative z-10 shrink-0">
-            <EditorStatusBar
-                cursor_info={cursor_info}
-                word_count={word_count}
-                has_note={!!open_note}
-                on_info_click={() => details_dialog_open = true}
-            />
-        </div>
+        <EditorStatusBar
+            cursor_info={cursor_info}
+            word_count={word_count}
+            has_note={!!open_note}
+            on_info_click={() => details_dialog_open = true}
+        />
     </div>
 
     <NoteDetailsDialog
