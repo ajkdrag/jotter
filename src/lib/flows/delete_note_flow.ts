@@ -60,8 +60,7 @@ export const delete_note_flow_machine = setup({
 
         await delete_note(ports, { vault_id, note_id: note.id })
 
-        const notes = await ports.notes.list_notes(vault_id)
-        dispatch({ type: 'UPDATE_NOTES_LIST', notes })
+        dispatch({ type: 'REMOVE_NOTE_FROM_LIST', note_id: note.id })
 
         if (input.is_note_currently_open) dispatch({ type: 'CLEAR_OPEN_NOTE' })
         dispatch({ type: 'COMMAND_ENSURE_OPEN_NOTE' })

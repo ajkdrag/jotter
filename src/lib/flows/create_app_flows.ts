@@ -103,7 +103,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   })
 
   const rename_note = create_flow_handle(rename_note_flow_machine, {
-    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+    input: { ports: { notes: ports.notes, index: ports.index }, dispatch, get_app_state_snapshot: app_state.get_snapshot }
   })
 
   const save_note = create_flow_handle(save_note_flow_machine, {

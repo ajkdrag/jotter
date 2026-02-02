@@ -1,4 +1,4 @@
-import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx, editorStateCtx } from '@milkdown/kit/core'
+import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx } from '@milkdown/kit/core'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose } from '@milkdown/kit/utils'
 import type { CursorInfo } from '$lib/ports/editor_port'

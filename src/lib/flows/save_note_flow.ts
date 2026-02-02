@@ -2,9 +2,9 @@ import { setup, assign, fromPromise } from 'xstate'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { AppStateEvents, AppStateContext } from '$lib/state/app_state_machine'
 import type { FlowSnapshot } from '$lib/flows/flow_handle'
-import type { NotePath, VaultId } from '$lib/types/ids'
+import type { NotePath } from '$lib/types/ids'
 import { as_note_path } from '$lib/types/ids'
-import { check_note_path_exists } from '$lib/operations/check_note_path_exists'
+import type { NoteMeta } from '$lib/types/note'
 import { sanitize_note_name } from '$lib/utils/sanitize_note_name'
 
 type SaveNotePorts = {
@@ -20,6 +20,7 @@ type FlowContext = {
   new_path: NotePath | null
   folder_path: string
   target_exists: boolean
+  requires_dialog: boolean
   ports: SaveNotePorts
   dispatch: AppStateDispatch
   get_app_state_snapshot: GetAppStateSnapshot
@@ -43,11 +44,6 @@ type FlowInput = {
   dispatch: AppStateDispatch
   get_app_state_snapshot: GetAppStateSnapshot
   on_save_complete?: () => void
-}
-
-function get_folder_from_path(path: string): string {
-  const last_slash = path.lastIndexOf('/')
-  return last_slash >= 0 ? path.substring(0, last_slash) : ''
 }
 
 function get_filename_from_path(path: string): string {
@@ -81,16 +77,13 @@ export const save_note_flow_machine = setup({
         input
       }: {
         input: {
-          ports: SaveNotePorts
-          vault_id: VaultId
+          notes: NoteMeta[]
           new_path: NotePath
         }
       }) => {
-        const { ports, vault_id, new_path } = input
-        return await check_note_path_exists(
-          { notes: ports.notes },
-          { vault_id, note_path: new_path }
-        )
+        const { notes, new_path } = input
+        const normalized = new_path.endsWith('.md') ? new_path : `${new_path}.md`
+        return notes.some(note => note.path === normalized)
       }
     ),
     perform_save: fromPromise(
@@ -114,14 +107,12 @@ export const save_note_flow_machine = setup({
         const is_untitled = !open_note.meta.path.endsWith('.md')
 
         if (is_untitled && new_path) {
-          await ports.notes.create_note(vault.id, new_path, open_note.markdown)
+          const new_note_meta = await ports.notes.create_note(vault.id, new_path, open_note.markdown)
           dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: new_path })
+          dispatch({ type: 'ADD_NOTE_TO_LIST', note: new_note_meta })
         } else {
           await ports.notes.write_note(vault.id, open_note.meta.id, open_note.markdown)
         }
-
-        const notes = await ports.notes.list_notes(vault.id)
-        dispatch({ type: 'UPDATE_NOTES_LIST', notes })
       }
     )
   }
@@ -133,6 +124,7 @@ export const save_note_flow_machine = setup({
     new_path: null,
     folder_path: '',
     target_exists: false,
+    requires_dialog: false,
     ports: input.ports,
     dispatch: input.dispatch,
     get_app_state_snapshot: input.get_app_state_snapshot,
@@ -155,7 +147,8 @@ export const save_note_flow_machine = setup({
                 error: null,
                 folder_path: folder,
                 new_path: build_full_path(folder, filename),
-                target_exists: false
+                target_exists: false,
+                requires_dialog: true
               }
             })
           },
@@ -191,6 +184,7 @@ export const save_note_flow_machine = setup({
             new_path: () => null,
             folder_path: () => '',
             target_exists: () => false,
+            requires_dialog: () => false,
             error: () => null
           })
         }
@@ -201,10 +195,8 @@ export const save_note_flow_machine = setup({
         src: 'check_path_exists',
         input: ({ context }) => {
           const app_snapshot = context.get_app_state_snapshot()
-          const vault_id = app_snapshot.context.vault!.id
           return {
-            ports: context.ports,
-            vault_id,
+            notes: app_snapshot.context.notes,
             new_path: context.new_path!
           }
         },
@@ -254,7 +246,8 @@ export const save_note_flow_machine = setup({
             assign({
               new_path: () => null,
               folder_path: () => '',
-              target_exists: () => false
+              target_exists: () => false,
+              requires_dialog: () => false
             }),
             ({ context }) => {
               context.on_save_complete?.()
@@ -283,6 +276,7 @@ export const save_note_flow_machine = setup({
             new_path: () => null,
             folder_path: () => '',
             target_exists: () => false,
+            requires_dialog: () => false,
             error: () => null
           })
         }

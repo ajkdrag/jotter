@@ -1,6 +1,6 @@
 import { setup, assign } from 'xstate'
 import { ensure_open_note, create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
-import type { MarkdownText, NoteId } from '$lib/types/ids'
+import type { MarkdownText, NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { Vault } from '$lib/types/vault'
@@ -44,6 +44,9 @@ export type AppStateEvents =
   | { type: 'SET_SELECTED_FOLDER_PATH'; path: string }
   | { type: 'MERGE_FOLDER_CONTENTS'; folder_path: string; contents: FolderContents }
   | { type: 'ADD_FOLDER_PATH'; folder_path: string }
+  | { type: 'ADD_NOTE_TO_LIST'; note: NoteMeta }
+  | { type: 'REMOVE_NOTE_FROM_LIST'; note_id: NoteId }
+  | { type: 'RENAME_NOTE_IN_LIST'; old_path: NotePath; new_path: NotePath }
 
 export type AppStateInput = { now_ms?: () => number }
 
@@ -392,6 +395,36 @@ export const app_state_machine = setup({
           actions: assign(({ event, context }) => {
             if (context.folder_paths.includes(event.folder_path)) return {}
             return { folder_paths: [...context.folder_paths, event.folder_path] }
+          })
+        },
+        ADD_NOTE_TO_LIST: {
+          actions: assign(({ event, context }) => {
+            const existing = context.notes.find(n => n.id === event.note.id)
+            if (existing) return {}
+            const updated = [...context.notes, event.note]
+            updated.sort((a, b) => a.path.localeCompare(b.path))
+            return { notes: updated }
+          })
+        },
+        REMOVE_NOTE_FROM_LIST: {
+          actions: assign(({ event, context }) => ({
+            notes: context.notes.filter(n => n.id !== event.note_id)
+          }))
+        },
+        RENAME_NOTE_IN_LIST: {
+          actions: assign(({ event, context }) => {
+            const { old_path, new_path } = event
+            const normalized_new = new_path.endsWith('.md') ? new_path : `${new_path}.md`
+            const parts = normalized_new.split('/')
+            const leaf = parts[parts.length - 1] ?? ''
+            const title = leaf.endsWith('.md') ? leaf.slice(0, -3) : leaf
+
+            const updated = context.notes.map(n => {
+              if (n.path !== old_path) return n
+              return { ...n, id: normalized_new as NoteId, path: normalized_new as NotePath, title }
+            })
+            updated.sort((a, b) => a.path.localeCompare(b.path))
+            return { notes: updated }
           })
         }
       }

@@ -1,11 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
 import { rename_note } from '$lib/operations/rename_note'
-import { check_note_path_exists } from '$lib/operations/check_note_path_exists'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { NotePath, VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStateEvents, AppStateContext } from '$lib/state/app_state_machine'
+import type { FlowSnapshot } from '$lib/flows/flow_handle'
 
 type RenameNotePorts = {
   notes: NotesPort
@@ -13,6 +13,8 @@ type RenameNotePorts = {
 }
 
 type AppStateDispatch = (event: AppStateEvents) => void
+
+type GetAppStateSnapshot = () => FlowSnapshot<AppStateContext>
 
 type FlowContext = {
   note_to_rename: NoteMeta | null
@@ -23,6 +25,7 @@ type FlowContext = {
   target_exists: boolean
   ports: RenameNotePorts
   dispatch: AppStateDispatch
+  get_app_state_snapshot: GetAppStateSnapshot
 }
 
 export type RenameNoteFlowContext = FlowContext
@@ -40,6 +43,7 @@ export type RenameNoteFlowEvents = FlowEvents
 type FlowInput = {
   ports: RenameNotePorts
   dispatch: AppStateDispatch
+  get_app_state_snapshot: GetAppStateSnapshot
 }
 
 export const rename_note_flow_machine = setup({
@@ -54,16 +58,13 @@ export const rename_note_flow_machine = setup({
         input
       }: {
         input: {
-          ports: RenameNotePorts
-          vault_id: VaultId
+          notes: NoteMeta[]
           new_path: NotePath
         }
       }) => {
-        const { ports, vault_id, new_path } = input
-        return await check_note_path_exists(
-          { notes: ports.notes },
-          { vault_id, note_path: new_path }
-        )
+        const { notes, new_path } = input
+        const normalized = new_path.endsWith('.md') ? new_path : `${new_path}.md`
+        return notes.some(note => note.path === normalized)
       }
     ),
     perform_rename: fromPromise(
@@ -83,8 +84,7 @@ export const rename_note_flow_machine = setup({
 
         await rename_note(ports, { vault_id, from: note.path, to: new_path })
 
-        const notes = await ports.notes.list_notes(vault_id)
-        dispatch({ type: 'UPDATE_NOTES_LIST', notes })
+        dispatch({ type: 'RENAME_NOTE_IN_LIST', old_path: note.path, new_path })
 
         if (is_note_currently_open) {
           dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: new_path })
@@ -105,7 +105,8 @@ export const rename_note_flow_machine = setup({
     error: null,
     target_exists: false,
     ports: input.ports,
-    dispatch: input.dispatch
+    dispatch: input.dispatch,
+    get_app_state_snapshot: input.get_app_state_snapshot
   }),
   states: {
     idle: {
@@ -147,11 +148,13 @@ export const rename_note_flow_machine = setup({
     checking_conflict: {
       invoke: {
         src: 'check_path_exists',
-        input: ({ context }) => ({
-          ports: context.ports,
-          vault_id: context.vault_id!,
-          new_path: context.new_path!
-        }),
+        input: ({ context }) => {
+          const app_snapshot = context.get_app_state_snapshot()
+          return {
+            notes: app_snapshot.context.notes,
+            new_path: context.new_path!
+          }
+        },
         onDone: {
           target: 'conflict_check_done',
           actions: assign({

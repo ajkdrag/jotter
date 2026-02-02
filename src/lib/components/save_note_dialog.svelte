@@ -3,7 +3,6 @@
   import { Button } from "$lib/components/ui/button"
   import { Input } from "$lib/components/ui/input"
   import type { NotePath } from "$lib/types/ids"
-  import { sanitize_note_name } from "$lib/utils/sanitize_note_name"
   import { tick } from 'svelte'
 
   interface Props {

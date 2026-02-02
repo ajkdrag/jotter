@@ -76,11 +76,13 @@
   )
 
   const save_dialog_open = $derived(
-    save_note.snapshot.matches('showing_save_dialog') ||
+    save_note.snapshot.context.requires_dialog && (
+      save_note.snapshot.matches('showing_save_dialog') ||
       save_note.snapshot.matches('checking_existence') ||
       save_note.snapshot.matches('conflict_confirm') ||
       save_note.snapshot.matches('saving') ||
       save_note.snapshot.matches('error')
+    )
   )
 
   const settings_dialog_open = $derived(
