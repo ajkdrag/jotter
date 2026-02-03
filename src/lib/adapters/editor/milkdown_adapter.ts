@@ -14,6 +14,7 @@ import { gfm } from '@milkdown/kit/preset/gfm'
 import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
+import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { replaceAll } from '@milkdown/kit/utils'
 import { Link, Pencil, Trash2, Check } from 'lucide-static'
 import type { EditorPort } from '$lib/ports/editor_port'
@@ -148,6 +149,7 @@ export const milkdown_editor_port: EditorPort = {
       .use(create_wiki_link_converter_plugin(note_path))
       .use(listener)
       .use(history)
+      .use(clipboard)
       .use(dirty_state_plugin_config_key)
       .use(dirty_state_plugin)
       .config((ctx) => {

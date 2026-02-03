@@ -2,6 +2,7 @@
     import * as Sidebar from "$lib/components/ui/sidebar/index.js";
     import * as Resizable from "$lib/components/ui/resizable/index.js";
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
+    import * as ContextMenu from "$lib/components/ui/context-menu";
     import { Button } from "$lib/components/ui/button";
     import ActivityBar from "$lib/components/activity_bar.svelte";
     import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
@@ -13,7 +14,7 @@
     import type { CursorInfo } from "$lib/ports/editor_port";
     import { flatten_filetree } from "$lib/utils/flatten_filetree";
     import { count_words } from "$lib/utils/count_words";
-    import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical } from "@lucide/svelte";
+    import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical, Copy } from "@lucide/svelte";
 
     type Props = {
         model: AppSidebarModel;
@@ -145,19 +146,34 @@
                 {/if}
                 <Resizable.Pane order={2} defaultSize={model.sidebar_open ? 80 : 100}>
                     <Sidebar.Inset class="min-h-0 h-full flex flex-col">
-                        <header
-                            class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
-                        >
-                            <div class="text-sm font-medium flex items-center gap-2 min-w-0 flex-1">
-                                <span class="truncate">{model.open_note_title}</span>
-                                {#if model.open_note?.is_dirty}
-                                    <Circle class="h-2 w-2 fill-current shrink-0" />
-                                {/if}
-                            </div>
-                            <div class="shrink-0">
-                                <ThemeToggle mode={model.current_theme} on_change={ops.on_theme_change} />
-                            </div>
-                        </header>
+	                        <header
+	                            class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
+	                        >
+	                            <ContextMenu.Root>
+	                                <ContextMenu.Trigger class="min-w-0 flex-1">
+	                                    <div class="text-sm font-medium flex items-center gap-2 min-w-0 flex-1">
+	                                        <span class="truncate">{model.open_note_title}</span>
+	                                        {#if model.open_note?.is_dirty}
+	                                            <Circle class="h-2 w-2 fill-current shrink-0" />
+	                                        {/if}
+	                                    </div>
+	                                </ContextMenu.Trigger>
+	                                <ContextMenu.Portal>
+	                                    <ContextMenu.Content>
+	                                        <ContextMenu.Item
+	                                            disabled={!model.open_note}
+	                                            onclick={ops.on_copy_open_note_markdown}
+	                                        >
+	                                            <Copy class="mr-2 h-4 w-4" />
+	                                            <span>Copy Markdown</span>
+	                                        </ContextMenu.Item>
+	                                    </ContextMenu.Content>
+	                                </ContextMenu.Portal>
+	                            </ContextMenu.Root>
+	                            <div class="shrink-0">
+	                                <ThemeToggle mode={model.current_theme} on_change={ops.on_theme_change} />
+	                            </div>
+	                        </header>
                         <div class="flex flex-1 flex-col min-h-0">
 	                            <NoteEditor
 	                                editor_manager={model.editor_manager}

@@ -29,6 +29,7 @@ export type AppShellActions = {
   open_wiki_link: (note_path: string) => void
   markdown_change: (markdown: string) => void
   dirty_state_change: (is_dirty: boolean) => void
+  copy_open_note_markdown: () => void
 
   request_delete: (note: NoteMeta) => void
   confirm_delete: () => void
@@ -173,6 +174,16 @@ export function create_app_shell_actions(input: {
 
     dirty_state_change: (is_dirty) => {
       app.stores.editor.actions.update_dirty_state(is_dirty)
+    },
+
+    copy_open_note_markdown: () => {
+      const open_note = app.stores.editor.get_snapshot().open_note
+      if (!open_note) return
+
+      stable.ports.clipboard.write_text(open_note.markdown)
+        .catch((error) => {
+          console.error('Failed to copy note markdown to clipboard:', open_note.meta.path, error)
+        })
     },
 
     request_delete: (note) => {

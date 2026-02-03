@@ -29,6 +29,7 @@ export type AppSidebarViewModelInput = {
     | 'request_create_folder'
     | 'markdown_change'
     | 'dirty_state_change'
+    | 'copy_open_note_markdown'
     | 'request_delete'
     | 'request_rename'
     | 'request_delete_folder'
@@ -65,6 +66,7 @@ export type AppSidebarOps = {
   on_request_create_folder: (parent_path: string) => void
   on_markdown_change: (markdown: string) => void
   on_dirty_state_change: (is_dirty: boolean) => void
+  on_copy_open_note_markdown: () => void
   on_request_delete_note: (note: NoteMeta) => void
   on_request_rename_note: (note: NoteMeta) => void
   on_request_delete_folder: (folder_path: string) => void
@@ -122,6 +124,7 @@ export function build_app_sidebar_props(input: AppSidebarViewModelInput): AppSid
       on_request_create_folder: actions.request_create_folder,
       on_markdown_change: actions.markdown_change,
       on_dirty_state_change: actions.dirty_state_change,
+      on_copy_open_note_markdown: actions.copy_open_note_markdown,
       on_request_delete_note: actions.request_delete,
       on_request_rename_note: actions.request_rename,
       on_request_delete_folder: actions.request_delete_folder,
