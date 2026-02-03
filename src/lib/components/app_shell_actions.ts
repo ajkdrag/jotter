@@ -4,6 +4,7 @@ import type { VaultId, VaultPath } from '$lib/types/ids'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
 import { parent_folder_path } from '$lib/utils/filetree'
+import { resolve_existing_note_path } from '$lib/utils/note_lookup'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import type { ThemeMode } from '$lib/stores/ui_store'
 import { to_open_note_state } from '$lib/types/editor'
@@ -130,10 +131,18 @@ export function create_app_shell_actions(input: {
       if (!vault) return
 
       const normalized_path = as_note_path(note_path)
-      const existing = app.stores.notes.get_snapshot().notes.find(n => n.path === normalized_path)
-      if (existing) {
-        app.stores.ui.actions.set_selected_folder_path(parent_folder_path(normalized_path))
-        app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id: vault.id, note_path: normalized_path })
+      const resolved_existing_path = resolve_existing_note_path(
+        app.stores.notes.get_snapshot().notes,
+        normalized_path
+      )
+
+      if (resolved_existing_path) {
+        app.stores.ui.actions.set_selected_folder_path(parent_folder_path(resolved_existing_path))
+
+        const current_note_id = app.stores.editor.get_snapshot().open_note?.meta.id
+        if (current_note_id && current_note_id === resolved_existing_path) return
+
+        app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id: vault.id, note_path: resolved_existing_path })
         return
       }
 

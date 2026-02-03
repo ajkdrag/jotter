@@ -2,43 +2,118 @@ import { $prose } from '@milkdown/kit/utils'
 import { Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
 import { linkSchema } from '@milkdown/kit/preset/commonmark'
 
-const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)]+)\)/
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)\s]+)\)/
 const ZERO_WIDTH_SPACE = '\u200B'
 
+type Segment = {
+  text: string
+  start_index: number
+  start_pos: number
+  has_link_mark: boolean
+}
+
+function build_segments(input: {
+  text_block: any
+  block_start: number
+  link_type: any
+}): { segments: Segment[]; combined: string; has_non_text_inline: boolean } {
+  const segments: Segment[] = []
+  let combined = ''
+  let current_index = 0
+  let has_non_text_inline = false
+
+  input.text_block.descendants((node: any, pos: number) => {
+    if (node.isText && node.text) {
+      segments.push({
+        text: node.text,
+        start_index: current_index,
+        start_pos: input.block_start + pos,
+        has_link_mark: node.marks.some((m: any) => m.type === input.link_type)
+      })
+      combined += node.text
+      current_index += node.text.length
+      return true
+    }
+
+    if (node.isInline) {
+      has_non_text_inline = true
+      return false
+    }
+
+    return true
+  })
+
+  return { segments, combined, has_non_text_inline }
+}
+
+function pos_from_index(segments: Segment[], index: number): number | null {
+  for (const seg of segments) {
+    const end = seg.start_index + seg.text.length
+    if (index >= seg.start_index && index < end) {
+      return seg.start_pos + (index - seg.start_index)
+    }
+  }
+  return null
+}
+
+function contains_link_mark(segments: Segment[], match_start_index: number, match_end_index: number): boolean {
+  return segments.some((seg) => {
+    if (!seg.has_link_mark) return false
+    const seg_end = seg.start_index + seg.text.length
+    return seg.start_index < match_end_index && seg_end > match_start_index
+  })
+}
+
 export const markdown_link_input_rule_plugin = $prose((ctx) => {
-  const linkType = linkSchema.type(ctx)
+  const link_type = linkSchema.type(ctx)
 
   return new Plugin({
     key: new PluginKey('markdown-link-converter'),
     appendTransaction(transactions, _oldState, newState) {
       if (!transactions.some((tr) => tr.docChanged)) return null
 
-      const tr = newState.tr
-      let modified = false
+      const from = newState.selection.$from
+      const text_block = from.parent
+      if (!text_block.isTextblock) return null
+      if (text_block.type?.name === 'code_block') return null
 
-      newState.doc.descendants((node, pos) => {
-        if (!node.isText || !node.text) return true
-        if (node.marks.some((m) => m.type === linkType)) return true
-
-        const match = MARKDOWN_LINK_REGEX.exec(node.text)
-        if (!match) return true
-
-        const [fullMatch, linkText, href] = match
-        if (!linkText || !href) return true
-
-        const start = pos + match.index
-        tr.replaceWith(start, start + fullMatch.length, [
-          newState.schema.text(linkText, [linkType.create({ href })]),
-          newState.schema.text(ZERO_WIDTH_SPACE)
-        ])
-          .setSelection(TextSelection.create(tr.doc, start + linkText.length + 1))
-          .setStoredMarks([])
-
-        modified = true
-        return false
+      const { segments, combined, has_non_text_inline } = build_segments({
+        text_block,
+        block_start: from.start(),
+        link_type
       })
+      if (has_non_text_inline) return null
+      if (combined === '') return null
 
-      return modified ? tr : null
+      const window_before = 256
+      const window_after = 64
+      const anchor = from.parentOffset
+      const window_start = Math.max(0, anchor - window_before)
+      const window_end = Math.min(combined.length, anchor + window_after)
+      const window_text = combined.slice(window_start, window_end)
+
+      const match = MARKDOWN_LINK_REGEX.exec(window_text)
+      if (!match) return null
+
+      const [full_match, link_text, href] = match
+      if (!link_text || !href) return null
+
+      const match_start_index = window_start + match.index
+      const match_end_index = match_start_index + full_match.length
+      if (contains_link_mark(segments, match_start_index, match_end_index)) return null
+
+      const start = pos_from_index(segments, match_start_index)
+      if (start === null) return null
+
+      const tr = newState.tr
+      tr.replaceWith(start, start + full_match.length, [
+        newState.schema.text(link_text, [link_type.create({ href })]),
+        newState.schema.text(ZERO_WIDTH_SPACE)
+      ])
+      tr.setSelection(TextSelection.create(tr.doc, start + link_text.length + 1))
+      tr.setStoredMarks([])
+
+      return tr
     }
   })
 })

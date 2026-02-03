@@ -37,11 +37,30 @@ const LINK_TOOLTIP_ICONS = {
   check: resize_icon(Check, 14),
 } as const
 
-function calculate_cursor_info(doc: import('@milkdown/kit/prose/model').Node, pos: number): CursorInfo {
-  const text_before_pos = doc.textBetween(0, Math.min(pos, doc.content.size), '\n')
-  const lines = text_before_pos.split('\n')
-  const line = lines.length
-  const column = (lines[lines.length - 1]?.length ?? 0) + 1
+const LARGE_DOC_LINE_THRESHOLD = 8000
+const LARGE_DOC_CHAR_THRESHOLD = 400_000
+
+function count_lines(text: string): number {
+  if (text === '') return 1
+
+  let lines = 1
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) lines++
+  }
+  return lines
+}
+
+function is_large_markdown(text: string): boolean {
+  if (text.length >= LARGE_DOC_CHAR_THRESHOLD) return true
+  return count_lines(text) >= LARGE_DOC_LINE_THRESHOLD
+}
+
+function calculate_cursor_info(doc: import('@milkdown/kit/prose/model').Node, selection: any): CursorInfo {
+  const $from = selection?.$from
+  if (!$from) return { line: 1, column: 1, total_lines: doc.childCount || 1 }
+
+  const line = $from.index(0) + 1
+  const column = $from.parentOffset + 1
   const total_lines = doc.childCount || 1
   return { line, column, total_lines }
 }
@@ -54,7 +73,7 @@ function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
     view: () => ({
       update: (view) => {
         const { doc, selection } = view.state
-        const info = calculate_cursor_info(doc, selection.from)
+        const info = calculate_cursor_info(doc, selection)
         on_cursor_change(info)
       }
     })
@@ -68,9 +87,16 @@ export const milkdown_editor_port: EditorPort = {
     let current_markdown = initial_markdown
     let current_is_dirty = false
     let editor: Editor | null = null
+    let is_large_note = is_large_markdown(initial_markdown)
 
     function normalize_markdown(raw: string): string {
-      const without_zws = raw.replaceAll('\u200B', '')
+      const needs_zws_cleanup = raw.includes('\u200B')
+      const needs_wiki_cleanup = raw.includes('imdown://wiki')
+      if (!needs_zws_cleanup && !needs_wiki_cleanup) return raw
+
+      const without_zws = needs_zws_cleanup ? raw.replaceAll('\u200B', '') : raw
+      if (!needs_wiki_cleanup) return without_zws
+
       return without_zws.replace(/\[([^\]]+)\]\((imdown:\/\/wiki\/?\?[^)\s]+)\)/g, (full, label, href) => {
         const resolved_note_path = try_decode_wiki_link_href(String(href))
         if (!resolved_note_path) return full
@@ -146,11 +172,13 @@ export const milkdown_editor_port: EditorPort = {
 
     editor = await builder.create()
 
-    editor.action((ctx) => {
-      const view = ctx.get(editorViewCtx)
-      const tr = view.state.tr.setMeta(wiki_link_plugin_key, { action: 'full_scan' })
-      view.dispatch(tr)
-    })
+    if (!is_large_note) {
+      editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        const tr = view.state.tr.setMeta(wiki_link_plugin_key, { action: 'full_scan' })
+        view.dispatch(tr)
+      })
+    }
 
     function mark_clean() {
       if (!editor) return
@@ -170,13 +198,16 @@ export const milkdown_editor_port: EditorPort = {
       },
       set_markdown(markdown: string) {
         if (!editor) return
+        is_large_note = is_large_markdown(markdown)
         current_markdown = markdown
         editor.action(replaceAll(markdown))
-        editor.action((ctx) => {
-          const view = ctx.get(editorViewCtx)
-          const tr = view.state.tr.setMeta(wiki_link_plugin_key, { action: 'full_scan' })
-          view.dispatch(tr)
-        })
+        if (!is_large_note) {
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx)
+            const tr = view.state.tr.setMeta(wiki_link_plugin_key, { action: 'full_scan' })
+            view.dispatch(tr)
+          })
+        }
       },
       get_markdown() {
         return current_markdown

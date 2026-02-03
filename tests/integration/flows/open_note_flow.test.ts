@@ -77,4 +77,39 @@ describe('open_note_flow', () => {
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
     expect(attempts).toBe(2)
   })
+
+  it('recovers from error when opening a different note', async () => {
+    const notes_port = create_mock_notes_port()
+    const stores = create_mock_stores()
+    const vault_id = as_vault_id('vault-1')
+    const first_path = as_note_path('missing.md')
+    const second_path = as_note_path('ok.md')
+
+    notes_port.read_note = async (_vault_id, note_id) => {
+      if (note_id === first_path) throw new Error('Read failed')
+      return {
+        meta: {
+          id: second_path,
+          path: second_path,
+          title: 'ok',
+          mtime_ms: 0,
+          size_bytes: 10
+        },
+        markdown: as_markdown_text('content')
+      }
+    }
+
+    const actor = createActor(open_note_flow_machine, {
+      input: { ports: { notes: notes_port }, stores }
+    })
+    actor.start()
+
+    actor.send({ type: 'OPEN_NOTE', vault_id, note_path: first_path })
+    await waitFor(actor, (snapshot) => snapshot.value === 'error')
+
+    actor.send({ type: 'OPEN_NOTE', vault_id, note_path: second_path })
+    await waitFor(actor, (snapshot) => snapshot.value === 'idle')
+
+    expect(stores.editor.get_snapshot().open_note?.meta.path).toBe(second_path)
+  })
 })

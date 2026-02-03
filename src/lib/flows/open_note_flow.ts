@@ -80,6 +80,16 @@ export const open_note_flow_machine = setup({
       }
     },
     opening: {
+      on: {
+        OPEN_NOTE: {
+          target: 'opening',
+          actions: assign({
+            error: () => null,
+            last_note_path: ({ event }) => event.note_path,
+            last_vault_id: ({ event }) => event.vault_id
+          })
+        }
+      },
       invoke: {
         src: 'perform_open',
         input: ({ context }) => ({
@@ -99,6 +109,14 @@ export const open_note_flow_machine = setup({
     },
     error: {
       on: {
+        OPEN_NOTE: {
+          target: 'opening',
+          actions: assign({
+            error: () => null,
+            last_note_path: ({ event }) => event.note_path,
+            last_vault_id: ({ event }) => event.vault_id
+          })
+        },
         RETRY: 'opening',
         CANCEL: {
           target: 'idle',
