@@ -13,6 +13,69 @@ The codebase is built on the principles of **Hexagonal Architecture (Ports and A
 
 ---
 
+## Definitive Guide: Building Features
+
+This is the canonical, non-negotiable workflow for adding new features. If a change does not fit this model, update this document first.
+
+### The Composition Root (Where Wiring Happens)
+**Location:** `src/routes/+page.svelte` (and other route entry points as needed)
+
+-   Create ports via `create_prod_ports`.
+-   Create `app` via `create_app_flows(ports, callbacks)`.
+-   Create any adapter-level managers (e.g., `editor_manager`).
+-   Create controllers (e.g., `create_app_shell_actions`) and pass them down.
+-   **Never** instantiate flows or adapters inside UI components.
+
+### The Data & Control Flow (Happy Path)
+1.  **UI Component** emits an intent via a callback.
+2.  **Controller** translates the intent into a Flow event.
+3.  **Flow** orchestrates work: calls Operations, updates Stores, manages transient UI state.
+4.  **Operation** performs business logic via Ports and returns domain data.
+5.  **Adapter** is the concrete implementation of a Port (web/tauri/editor).
+6.  **Store** holds persistent application state and notifies UI.
+
+### Side Effects: Where They Belong
+-   **Adapters**: external I/O and environment interaction (filesystem, IPC, browser APIs).
+-   **Operations**: business logic with side effects via Ports.
+-   **Flows**: orchestrate side effects by invoking Operations and updating Stores.
+-   **Controllers**: no Ports, no async I/O. Only send Flow events and call Store actions for UI-level state.
+-   **Components**: no side effects except DOM interaction and callbacks.
+
+### State Ownership Rules
+-   **Long-lived state** → `stores/` (vault, notes, editor, UI preferences).
+-   **Transient UX state** → `flows/` (dialogs, loading, error states, confirmation steps).
+-   **One-off computations** → `utils/` (pure helpers).
+-   **Domain types** → `types/` (no dependencies on stores/adapters).
+
+### Where to Put New Code (File Placement)
+-   **Ports**: `src/lib/ports/*_port.ts` (+ bundle in `ports.ts`).
+-   **Adapters**: `src/lib/adapters/<web|tauri|editor|test>/...`.
+-   **Operations**: `src/lib/operations/*.ts` (pure, stateless, port-driven).
+-   **Flows**: `src/lib/flows/*_flow.ts` (state machines + orchestration).
+-   **Controllers**: `src/lib/controllers/*` (UI intent → Flow events).
+-   **Stores**: `src/lib/stores/*` (global state + pure actions).
+-   **Components**: `src/lib/components/*` (presentational UI).
+-   **Utils**: `src/lib/utils/*` (pure helpers).
+-   **Types**: `src/lib/types/*` (domain and UI types).
+
+### Feature Development Checklist
+-   Define the **user experience** as a Flow (states + events).
+-   Implement **Operations** for business logic; keep them pure and testable.
+-   Add or update **Ports/Adapters** only when you need new external dependencies.
+-   Update **Stores** only for long-lived state; keep actions pure.
+-   Wire everything in the **composition root** (route).
+-   Add tests:
+    -   Operations → `tests/unit/operations/*`
+    -   Flows → `tests/integration/flows/*`
+    -   Stores → `tests/unit/stores/*`
+    -   Adapters → `tests/unit/adapters/*` as appropriate
+
+### Explicit No-Gos
+-   UI components **must not** import `xstate`, Ports, or Operations.
+-   Controllers **must not** call Ports directly.
+-   Stores **must not** perform async work.
+-   Operations **must not** mutate Stores or call UI code.
+
 ## Layering Architecture
 
 The application is structured into clear layers, flowing from the core logic out to the implementation details.
@@ -28,9 +91,12 @@ Ports define the **interfaces** for external dependencies. They are pure TypeScr
     -   `VaultPort` - Vault management (`open_vault`, `list_vaults`, `remember_last_vault`, etc.)
     -   `WorkspaceIndexPort` - Search and indexing operations (`index_build`, `index_search`, `index_backlinks`, `index_outlinks`)
     -   `AssetsPort` - Asset management (`import_asset`)
+    -   `SearchPort` - Search operations (`search_notes`)
     -   `SettingsPort` - Application settings (`get_setting`, `set_setting`)
     -   `ThemePort` - Theme management (`get_theme`, `set_theme`, `get_resolved_theme`)
     -   `EditorPort` - Editor integration (Milkdown-specific operations)
+    -   `ClipboardPort` - Clipboard integration (`write_text`)
+-   **Bundle Type**: `ports.ts` defines the `Ports` aggregate type for wiring.
 
 ### 2. Adapters (Implementation)
 **Location:** `src/lib/adapters/`
@@ -45,7 +111,7 @@ Adapters implement the Ports, providing concrete implementations for specific en
         -   `tauri_invoke.ts` - Tauri IPC wrapper
         -   `dialog_adapter.ts` - Native dialog integration
     -   `editor/` - Editor-specific adapters
-    -   `milkdown_adapter.ts` - Milkdown editor integration
+        -   `milkdown_adapter.ts` - Milkdown editor integration
         -   `dirty_state_plugin.ts`, `markdown_link_input_rule.ts`, `editor_manager.ts`
     -   `theme_adapter.ts` - Theme persistence (shared; uses settings/localStorage)
     -   `test/` - Test implementations for unit testing
@@ -114,14 +180,33 @@ A "Flow" represents a discrete unit of user experience. It encapsulates the **St
     -   `rename_note_flow.ts` - Note renaming flow
     -   `save_note_flow.ts` - Note saving flow
     -   `create_folder_flow.ts` - Create folder flow
+    -   `delete_folder_flow.ts` - Delete folder flow with confirmation
+    -   `rename_folder_flow.ts` - Rename folder flow
     -   `settings_flow.ts` - Settings dialog flow
     -   `command_palette_flow.ts` - Command palette state (no ports)
+    -   `file_search_flow.ts` - File search dialog flow
+    -   `filetree_flow.ts` - File tree loading/expand/collapse
+    -   `clipboard_flow.ts` - Clipboard side-effects
+    -   `theme_flow.ts` - Theme side-effects
 -   **Infrastructure**:
     -   `flow_engine.ts` - Creates flow handles from XState machines (`create_flow_handle`)
     -   `flow_handle.ts` - Type definitions for flow handles (`FlowHandle`, `FlowSnapshot`)
     -   `create_app_flows.ts` - Dependency injection root (see below)
 
-### 6. The Bridge: Hooks
+### 6. Controllers (UI Intent Translation)
+**Location:** `src/lib/controllers/`
+
+Controllers are the thin glue between UI events and Flow events.
+
+-   **Responsibilities**:
+    -   Translate UI intents into Flow events.
+    -   Perform lightweight, synchronous Store updates for UI-only state.
+-   **Constraints**:
+    -   Do NOT call Ports directly.
+    -   Do NOT import or depend on Adapters.
+    -   Do NOT perform async I/O.
+
+### 7. The Bridge: Hooks
 **Location:** `src/lib/hooks/`
 
 This is the deliberate decoupling layer between XState and Svelte components.
@@ -133,7 +218,7 @@ This is the deliberate decoupling layer between XState and Svelte components.
 -   **`is-mobile.svelte.ts`**: Platform detection hook for responsive UI.
 -   **Benefit**: UI components receive a reactive object. They don't know it's XState.
 
-### 7. UI Components ("Dumb" & Decoupled)
+### 8. UI Components ("Dumb" & Decoupled)
 **Location:** `src/lib/components/`
 
 Components are strictly presentational and decoupled from XState.
@@ -141,6 +226,7 @@ Components are strictly presentational and decoupled from XState.
 -   **Input**: Receives data via props (`snapshot.context` from flow handles).
 -   **Output**: Emits user intents via callbacks (passed as props) or a generic `send` function.
 -   **Constraint**: NEVER import `xstate` or business logic directly into a component.
+-   **Note**: Container components may use hooks (`use_flow_handle`, `use_store_handle`) but should remain wiring-only. Leaf components must remain pure presentational UI.
 -   **Organization**:
     -   **Feature Components** (top-level):
         -   `app_shell.svelte` - Main application shell
@@ -163,7 +249,7 @@ Components are strictly presentational and decoupled from XState.
 
 ---
 
-### 8. Types (Domain Models)
+### 9. Types (Domain Models)
 **Location:** `src/lib/types/`
 
 Pure TypeScript type definitions for domain entities.
@@ -173,8 +259,9 @@ Pure TypeScript type definitions for domain entities.
 -   `vault.ts` - Vault domain types (`Vault`)
 -   `editor.ts` - Editor state types (`OpenNoteState`)
 -   `editor_settings.ts` - Editor settings types
+-   `theme.ts` - Theme mode types
 
-### 9. Utils (Pure Helpers)
+### 10. Utils (Pure Helpers)
 **Location:** `src/lib/utils/`
 
 Pure utility functions with no side effects.
@@ -182,6 +269,8 @@ Pure utility functions with no side effects.
 -   `filetree.ts` - File tree construction utilities (`build_filetree`)
 -   `component_utils.ts` - Component helper functions
 -   `asset_url.ts` - Asset URL generation utilities
+-   `search_commands.ts`, `search_settings.ts` - Command palette filtering
+-   `note_path_exists.ts` - Note path normalization + existence check
 
 ---
 
@@ -210,8 +299,11 @@ This file is where the application is "wired" together. It creates the stores an
 -   `filetree` - Requires `notes` port + `stores`
 -   `settings` - Requires `settings` port
 -   `command_palette` - No ports
+-   `file_search` - Requires `search` port
+-   `clipboard` - Requires `clipboard` port
+-   `theme` - Requires `theme` port
 
-**Usage:** Called once at application startup in `src/routes/+page.svelte` via `AppShell` component.
+**Usage:** Called once at application startup in `src/routes/+page.svelte` and injected into `AppShell`.
 
 ---
 
@@ -219,15 +311,16 @@ This file is where the application is "wired" together. It creates the stores an
 
 ```
 src/lib/
-├── ports/           # Interface contracts (7 ports)
+├── ports/           # Interface contracts + bundle type
 ├── adapters/        # Platform implementations (web/, tauri/, editor/, theme, test/)
-├── operations/      # Pure business logic functions (16 operations)
-├── stores/          # Global reactive state (4 stores + infrastructure)
-├── flows/           # Feature state machines (15 flows + infrastructure)
-├── hooks/           # Svelte integration layer (2 hooks)
+├── operations/      # Pure business logic functions
+├── stores/          # Global reactive state + infrastructure
+├── flows/           # Feature state machines + infrastructure
+├── controllers/     # UI intent → Flow events
+├── hooks/           # Svelte integration layer
 ├── components/      # UI components (feature + ui primitives)
-├── types/           # Domain type definitions (5 files)
-└── utils/           # Pure utility functions (3 files)
+├── types/           # Domain type definitions
+└── utils/           # Pure utility functions
 ```
 
 ## Key Implementation Guidelines

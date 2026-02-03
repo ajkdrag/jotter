@@ -1,3 +1,12 @@
+<!-- Key Documentation -->
+
+**Read these documents before making changes:**
+
+- **[UI.md](./UI.md)** — Design system, tokens, BEM naming, component patterns
+- **[architecture.md](./architecture.md)** — System architecture, ports/adapters, data flow
+
+---
+
 <!-- Source: .ruler/coding_guidelines.md -->
 
 - Prefer composition over inheritance
