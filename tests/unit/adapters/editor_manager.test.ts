@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { create_editor_manager } from '$lib/operations/manage_editor'
+import { create_editor_manager } from '$lib/adapters/editor/editor_manager'
 import type { EditorPort, EditorHandle } from '$lib/ports/editor_port'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
 import type { OpenNoteState } from '$lib/types/editor'

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button"
   import { Info, GitBranch } from "@lucide/svelte"
   import type { CursorInfo } from "$lib/ports/editor_port"
 
@@ -17,76 +16,106 @@
   const total_lines = $derived(cursor_info?.total_lines ?? null)
 </script>
 
-<div class="EditorStatusBar border-t bg-muted/30 text-muted-foreground">
-  <div class="EditorStatusBar__section">
-    <span class="EditorStatusBar__item">
+<div class="StatusBar">
+  <div class="StatusBar__section">
+    <span class="StatusBar__item">
       Ln {line ?? '--'}, Col {column ?? '--'}
     </span>
-    <span class="EditorStatusBar__separator">|</span>
-    <span class="EditorStatusBar__item">
+    <span class="StatusBar__separator" aria-hidden="true"></span>
+    <span class="StatusBar__item">
       {has_note ? word_count : '--'} words
     </span>
-    <span class="EditorStatusBar__separator">|</span>
-    <span class="EditorStatusBar__item">
+    <span class="StatusBar__separator" aria-hidden="true"></span>
+    <span class="StatusBar__item">
       {total_lines ?? '--'} lines
     </span>
   </div>
-  <div class="EditorStatusBar__section">
-    <span class="EditorStatusBar__item EditorStatusBar__item--disabled">
-      <GitBranch class="h-3 w-3" />
+  <div class="StatusBar__section">
+    <span class="StatusBar__item StatusBar__item--muted">
+      <GitBranch />
       <span>--</span>
     </span>
-    <Button
-      variant="ghost"
-      size="icon"
-      class="EditorStatusBar__info-btn"
+    <button
+      type="button"
+      class="StatusBar__action"
       onclick={on_info_click}
       disabled={!has_note}
       aria-label="Note details"
     >
-      <Info class="h-3.5 w-3.5" />
-    </Button>
+      <Info />
+    </button>
   </div>
 </div>
 
 <style>
-  .EditorStatusBar {
+  .StatusBar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 1.375rem;
-    padding: 0 0.75rem;
+    height: var(--size-status-bar);
+    padding-inline: var(--space-3);
     font-size: 0.6875rem;
+    font-feature-settings: 'tnum' 1;
     flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+    color: var(--muted-foreground);
   }
 
-  .EditorStatusBar__section {
+  .StatusBar__section {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
-  .EditorStatusBar__item {
+  .StatusBar__item {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--space-1);
   }
 
-  .EditorStatusBar__item--disabled {
+  .StatusBar__item--muted {
     opacity: 0.5;
   }
 
-  .EditorStatusBar__separator {
-    opacity: 0.25;
+  .StatusBar__separator {
+    width: 1px;
+    height: 0.625rem;
+    background-color: currentColor;
+    opacity: 0.2;
   }
 
-  :global(.EditorStatusBar__info-btn) {
-    height: 1.125rem;
-    width: 1.125rem;
+  .StatusBar__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-touch-xs);
+    height: var(--size-touch-xs);
+    border-radius: var(--radius-sm);
+    color: var(--muted-foreground);
     opacity: 0.7;
+    transition: opacity var(--duration-fast) var(--ease-default);
   }
 
-  :global(.EditorStatusBar__info-btn:hover:not(:disabled)) {
+  .StatusBar__action:hover:not(:disabled) {
     opacity: 1;
+    color: var(--interactive);
+  }
+
+  .StatusBar__action:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .StatusBar__action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  :global(.StatusBar__item svg),
+  :global(.StatusBar__action svg) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
   }
 </style>

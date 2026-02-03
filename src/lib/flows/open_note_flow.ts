@@ -1,10 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { open_note } from '$lib/operations/open_note'
+import { open_note_or_create } from '$lib/operations/open_note_or_create'
 import { to_open_note_state } from '$lib/types/editor'
-import { as_note_path } from '$lib/types/ids'
 import { parent_folder_path } from '$lib/utils/filetree'
+import { resolve_existing_note_path } from '$lib/utils/note_lookup'
+import { as_note_path } from '$lib/types/ids'
 import type { NotesPort } from '$lib/ports/notes_port'
-import type { VaultId } from '$lib/types/ids'
+import type { NotePath, VaultId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
 
 type OpenNotePorts = {
@@ -13,8 +14,9 @@ type OpenNotePorts = {
 
 type FlowContext = {
   error: string | null
-  last_note_path: string | null
+  last_note_path: NotePath | null
   last_vault_id: VaultId | null
+  create_if_missing: boolean
   ports: OpenNotePorts
   stores: AppStores
 }
@@ -22,7 +24,8 @@ type FlowContext = {
 export type OpenNoteFlowContext = FlowContext
 
 type FlowEvents =
-  | { type: 'OPEN_NOTE'; vault_id: VaultId; note_path: string }
+  | { type: 'OPEN_NOTE'; vault_id: VaultId; note_path: NotePath }
+  | { type: 'OPEN_WIKI_LINK'; vault_id: VaultId; note_path: NotePath }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
 
@@ -44,15 +47,31 @@ export const open_note_flow_machine = setup({
       async ({
         input
       }: {
-        input: { ports: OpenNotePorts; stores: AppStores; vault_id: VaultId; note_path: string }
+        input: {
+          ports: OpenNotePorts
+          stores: AppStores
+          vault_id: VaultId
+          note_path: NotePath
+          create_if_missing: boolean
+        }
       }) => {
-        const doc = await open_note(
+        const notes = input.stores.notes.get_snapshot().notes
+        const resolved = input.create_if_missing
+          ? resolve_existing_note_path(notes, input.note_path)
+          : null
+        const resolved_path = resolved ? as_note_path(resolved) : input.note_path
+
+        const result = await open_note_or_create(
           { notes: input.ports.notes },
-          { vault_id: input.vault_id, note_id: as_note_path(input.note_path) }
+          { vault_id: input.vault_id, note_path: resolved_path, create_if_missing: input.create_if_missing }
         )
-        const parent_path = parent_folder_path(as_note_path(input.note_path))
+
+        const parent_path = parent_folder_path(resolved_path)
         input.stores.ui.actions.set_selected_folder_path(parent_path)
-        input.stores.editor.actions.set_open_note(to_open_note_state(doc))
+        if (result.created) {
+          input.stores.notes.actions.add_note(result.doc.meta)
+        }
+        input.stores.editor.actions.set_open_note(to_open_note_state(result.doc))
       }
     )
   }
@@ -63,6 +82,7 @@ export const open_note_flow_machine = setup({
     error: null,
     last_note_path: null,
     last_vault_id: null,
+    create_if_missing: false,
     ports: input.ports,
     stores: input.stores
   }),
@@ -74,7 +94,17 @@ export const open_note_flow_machine = setup({
           actions: assign({
             error: () => null,
             last_note_path: ({ event }) => event.note_path,
-            last_vault_id: ({ event }) => event.vault_id
+            last_vault_id: ({ event }) => event.vault_id,
+            create_if_missing: () => false
+          })
+        },
+        OPEN_WIKI_LINK: {
+          target: 'opening',
+          actions: assign({
+            error: () => null,
+            last_note_path: ({ event }) => event.note_path,
+            last_vault_id: ({ event }) => event.vault_id,
+            create_if_missing: () => true
           })
         }
       }
@@ -86,7 +116,17 @@ export const open_note_flow_machine = setup({
           actions: assign({
             error: () => null,
             last_note_path: ({ event }) => event.note_path,
-            last_vault_id: ({ event }) => event.vault_id
+            last_vault_id: ({ event }) => event.vault_id,
+            create_if_missing: () => false
+          })
+        },
+        OPEN_WIKI_LINK: {
+          target: 'opening',
+          actions: assign({
+            error: () => null,
+            last_note_path: ({ event }) => event.note_path,
+            last_vault_id: ({ event }) => event.vault_id,
+            create_if_missing: () => true
           })
         }
       },
@@ -96,7 +136,8 @@ export const open_note_flow_machine = setup({
           ports: context.ports,
           stores: context.stores,
           vault_id: context.last_vault_id!,
-          note_path: context.last_note_path!
+          note_path: context.last_note_path!,
+          create_if_missing: context.create_if_missing
         }),
         onDone: 'idle',
         onError: {
@@ -114,7 +155,17 @@ export const open_note_flow_machine = setup({
           actions: assign({
             error: () => null,
             last_note_path: ({ event }) => event.note_path,
-            last_vault_id: ({ event }) => event.vault_id
+            last_vault_id: ({ event }) => event.vault_id,
+            create_if_missing: () => false
+          })
+        },
+        OPEN_WIKI_LINK: {
+          target: 'opening',
+          actions: assign({
+            error: () => null,
+            last_note_path: ({ event }) => event.note_path,
+            last_vault_id: ({ event }) => event.vault_id,
+            create_if_missing: () => true
           })
         },
         RETRY: 'opening',
@@ -123,7 +174,8 @@ export const open_note_flow_machine = setup({
           actions: assign({
             error: () => null,
             last_note_path: () => null,
-            last_vault_id: () => null
+            last_vault_id: () => null,
+            create_if_missing: () => false
           })
         }
       }

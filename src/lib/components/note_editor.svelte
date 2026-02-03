@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { EditorManager } from "$lib/operations/manage_editor";
+    import type { EditorManager } from "$lib/adapters/editor/editor_manager";
     import type { OpenNoteState } from "$lib/types/editor";
     import type { CursorInfo } from "$lib/ports/editor_port";
     import type { EditorSettings } from "$lib/types/editor_settings";

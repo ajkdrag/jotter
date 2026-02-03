@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Files, Settings } from '@lucide/svelte'
-  import { Button } from '$lib/components/ui/button'
 
   type Props = {
     sidebar_open: boolean
@@ -11,32 +10,93 @@
   let { sidebar_open, on_toggle_sidebar, on_open_settings }: Props = $props()
 </script>
 
-<div
-  class="flex h-full w-12 flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-1"
->
-  <div class="flex flex-col">
-    <Button
-      variant="ghost"
-      size="icon"
+<div class="ActivityBar">
+  <div class="ActivityBar__section">
+    <button
+      type="button"
+      class="ActivityBar__button"
+      class:ActivityBar__button--active={sidebar_open}
       onclick={on_toggle_sidebar}
-      class="relative size-12 rounded-none text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground before:absolute before:inset-y-3 before:start-0 before:w-0.5 before:bg-sidebar-foreground before:opacity-0 data-[active=true]:before:opacity-100 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-      data-active={sidebar_open}
       aria-pressed={sidebar_open}
       aria-label="Toggle Explorer"
     >
-      <Files class="size-6" />
-    </Button>
+      <Files class="ActivityBar__icon" />
+    </button>
   </div>
 
-  <div class="flex flex-col">
-    <Button
-      variant="ghost"
-      size="icon"
+  <div class="ActivityBar__section">
+    <button
+      type="button"
+      class="ActivityBar__button"
       onclick={on_open_settings}
-      class="size-12 rounded-none text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       aria-label="Settings"
     >
-      <Settings class="size-6" />
-    </Button>
+      <Settings class="ActivityBar__icon" />
+    </button>
   </div>
 </div>
+
+<style>
+  .ActivityBar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: var(--size-activity-bar);
+    height: 100%;
+    padding-block: var(--space-1);
+    background-color: var(--sidebar);
+    border-inline-end: 1px solid var(--sidebar-border);
+  }
+
+  .ActivityBar__section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ActivityBar__button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-activity-bar);
+    height: var(--size-activity-bar);
+    color: var(--sidebar-foreground);
+    opacity: 0.7;
+    transition:
+      opacity var(--duration-fast) var(--ease-default),
+      background-color var(--duration-fast) var(--ease-default);
+  }
+
+  .ActivityBar__button:hover {
+    opacity: 1;
+    background-color: var(--sidebar-accent);
+  }
+
+  .ActivityBar__button:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .ActivityBar__button--active {
+    opacity: 1;
+    background-color: var(--interactive-bg);
+    color: var(--interactive);
+  }
+
+  .ActivityBar__button--active::before {
+    content: '';
+    position: absolute;
+    inset-block: var(--space-2);
+    inset-inline-start: 0;
+    width: 2px;
+    background-color: var(--interactive);
+    border-radius: 1px;
+  }
+
+  :global(.ActivityBar__icon) {
+    width: var(--size-activity-icon);
+    height: var(--size-activity-icon);
+  }
+</style>

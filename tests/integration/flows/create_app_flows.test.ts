@@ -10,7 +10,7 @@ import { create_test_search_adapter } from '$lib/adapters/test/test_search_adapt
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
 import { create_test_clipboard_adapter } from '$lib/adapters/test/test_clipboard_adapter'
 import { as_vault_id, as_vault_path } from '$lib/types/ids'
-import type { Ports } from '$lib/adapters/create_prod_ports'
+import type { Ports } from '$lib/ports/ports'
 import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
 
 describe('create_app_flows', () => {
@@ -42,6 +42,8 @@ describe('create_app_flows', () => {
     expect(app_flows.flows.command_palette).toBeDefined()
     expect(app_flows.flows.file_search).toBeDefined()
     expect(app_flows.flows.filetree).toBeDefined()
+    expect(app_flows.flows.clipboard).toBeDefined()
+    expect(app_flows.flows.theme).toBeDefined()
     expect(app_flows.stores).toBeDefined()
   })
 

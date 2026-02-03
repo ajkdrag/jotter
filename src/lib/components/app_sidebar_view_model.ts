@@ -1,10 +1,10 @@
-import type { EditorManager } from '$lib/operations/manage_editor'
+import type { EditorManager } from '$lib/adapters/editor/editor_manager'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { FolderLoadState } from '$lib/types/filetree'
-import type { ThemeMode } from '$lib/stores/ui_store'
-import type { AppShellActions } from '$lib/components/app_shell_actions'
+import type { ThemeMode } from '$lib/types/theme'
+import type { AppShellActions } from '$lib/controllers/app_shell_actions'
 import type { EditorSettings } from '$lib/types/editor_settings'
 
 export type AppSidebarViewModelInput = {

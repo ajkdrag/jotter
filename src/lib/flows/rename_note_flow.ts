@@ -5,6 +5,7 @@ import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { NotePath, VaultId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import { note_path_exists } from '$lib/utils/note_path_exists'
 
 type RenameNotePorts = {
   notes: NotesPort
@@ -56,8 +57,7 @@ export const rename_note_flow_machine = setup({
         }
       }) => {
         const { notes, new_path } = input
-        const normalized = new_path.endsWith('.md') ? new_path : `${new_path}.md`
-        return notes.some(note => note.path === normalized)
+        return note_path_exists(notes, new_path)
       }
     ),
     perform_rename: fromPromise(

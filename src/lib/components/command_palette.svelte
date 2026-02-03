@@ -4,8 +4,8 @@
   import SearchIcon from '@lucide/svelte/icons/search'
   import CommandIcon from '@lucide/svelte/icons/terminal'
   import SettingsIcon from '@lucide/svelte/icons/settings'
-  import { search_commands, type CommandId, type CommandDefinition } from '$lib/operations/search_commands'
-  import { search_settings, type SettingDefinition } from '$lib/operations/search_settings'
+  import { search_commands, type CommandId, type CommandDefinition } from '$lib/utils/search_commands'
+  import { search_settings, type SettingDefinition } from '$lib/utils/search_settings'
 
   type PaletteItem =
     | { type: 'command'; item: CommandDefinition }
@@ -103,9 +103,9 @@
 </script>
 
 <Dialog.Root {open} onOpenChange={on_open_change}>
-  <Dialog.Content class="max-w-lg p-0" showCloseButton={false}>
-    <div class="flex items-center border-b px-3">
-      <SearchIcon class="size-4 text-muted-foreground shrink-0" />
+  <Dialog.Content class="CommandPalette" showCloseButton={false}>
+    <div class="CommandPalette__search">
+      <SearchIcon />
       <Input
         bind:ref={input_ref}
         type="text"
@@ -120,11 +120,11 @@
       role="listbox"
       tabindex="0"
       aria-activedescendant={items[selected_index] ? get_item_id(items[selected_index]) : undefined}
-      class="max-h-80 overflow-y-auto py-2"
+      class="CommandPalette__list"
     >
       {#if show_commands_header}
-        <div class="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-          <CommandIcon class="size-3" />
+        <div class="CommandPalette__header">
+          <CommandIcon />
           <span>Commands</span>
         </div>
       {/if}
@@ -135,19 +135,19 @@
           id={`cmd-${command.id}`}
           role="option"
           aria-selected={global_index === selected_index}
-          class="w-full px-3 py-2 text-left transition-colors focus:outline-none"
-          class:bg-muted={global_index === selected_index}
+          class="CommandPalette__item"
+          class:CommandPalette__item--selected={global_index === selected_index}
           onmouseenter={() => on_selected_index_change(global_index)}
           onclick={() => on_select_command(command.id)}
         >
-          <div class="font-medium text-foreground">{command.label}</div>
-          <div class="text-sm text-muted-foreground">{command.description}</div>
+          <div class="CommandPalette__item-title">{command.label}</div>
+          <div class="CommandPalette__item-desc">{command.description}</div>
         </button>
       {/each}
 
       {#if show_settings_header}
-        <div class="flex items-center gap-2 px-3 py-1.5 mt-2 text-xs text-muted-foreground border-t pt-2">
-          <SettingsIcon class="size-3" />
+        <div class="CommandPalette__header CommandPalette__header--bordered">
+          <SettingsIcon />
           <span>Settings</span>
         </div>
       {/if}
@@ -158,21 +158,21 @@
           id={`setting-${setting.key}`}
           role="option"
           aria-selected={global_index === selected_index}
-          class="w-full px-3 py-2 text-left transition-colors focus:outline-none"
-          class:bg-muted={global_index === selected_index}
+          class="CommandPalette__item"
+          class:CommandPalette__item--selected={global_index === selected_index}
           onmouseenter={() => on_selected_index_change(global_index)}
           onclick={() => on_select_setting(setting.key)}
         >
-          <div class="flex items-center gap-2">
-            <span class="font-medium text-foreground">{setting.label}</span>
-            <span class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{setting.category}</span>
+          <div class="CommandPalette__item-row">
+            <span class="CommandPalette__item-title">{setting.label}</span>
+            <span class="CommandPalette__badge">{setting.category}</span>
           </div>
-          <div class="text-sm text-muted-foreground">{setting.description}</div>
+          <div class="CommandPalette__item-desc">{setting.description}</div>
         </button>
       {/each}
 
       {#if items.length === 0}
-        <div class="px-3 py-8 text-center text-sm text-muted-foreground">
+        <div class="CommandPalette__empty">
           No results found
         </div>
       {/if}
@@ -181,3 +181,110 @@
 </Dialog.Root>
 
 <svelte:window onkeydown={handle_keydown} />
+
+<style>
+  :global(.CommandPalette) {
+    max-width: 32rem;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .CommandPalette__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.CommandPalette__search svg) {
+    width: var(--size-icon);
+    height: var(--size-icon);
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+  }
+
+  .CommandPalette__list {
+    max-height: 20rem;
+    overflow-y: auto;
+    padding-block: var(--space-2);
+  }
+
+  .CommandPalette__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1-5) var(--space-3);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+  }
+
+  .CommandPalette__header--bordered {
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  :global(.CommandPalette__header svg) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
+  }
+
+  .CommandPalette__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    border-radius: 0;
+    transition: background-color var(--duration-fast) var(--ease-default);
+  }
+
+  .CommandPalette__item:focus {
+    outline: none;
+  }
+
+  .CommandPalette__item--selected {
+    background-color: var(--interactive-bg);
+  }
+
+  .CommandPalette__item--selected .CommandPalette__item-title {
+    color: var(--interactive);
+  }
+
+  .CommandPalette__item-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .CommandPalette__item-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  .CommandPalette__item-desc {
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+  }
+
+  .CommandPalette__badge {
+    font-size: 0.6875rem;
+    padding: var(--space-0-5) var(--space-1-5);
+    border-radius: var(--radius-sm);
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  .CommandPalette__empty {
+    padding: var(--space-8) var(--space-3);
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+  }
+</style>

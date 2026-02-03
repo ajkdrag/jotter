@@ -1,0 +1,243 @@
+/* ============================================
+   IMDOWN DESIGN TOKENS
+   ============================================
+   Extended design system that builds on shadcn-svelte.
+   Import this AFTER app.css in your layout.
+
+   Rationale: app.css is managed by shadcn-svelte CLI,
+   so we extend rather than modify it.
+   ============================================ */
+
+:root {
+  /* ----------------------------------------
+     ACCENT COLOR: Teal/Cyan
+     ----------------------------------------
+     A distinctive yet professional accent that
+     differentiates from generic shadcn while
+     maintaining the neutral minimal aesthetic.
+     ---------------------------------------- */
+  --accent-hue: 175;
+  --accent-chroma: 0.12;
+
+  /* Interactive accent - used for focus, selection, primary actions */
+  --interactive: oklch(0.55 var(--accent-chroma) var(--accent-hue));
+  --interactive-hover: oklch(0.50 var(--accent-chroma) var(--accent-hue));
+  --interactive-muted: oklch(0.55 calc(var(--accent-chroma) * 0.5) var(--accent-hue));
+  --interactive-bg: oklch(0.96 0.02 var(--accent-hue));
+  --interactive-bg-hover: oklch(0.93 0.025 var(--accent-hue));
+
+  /* Focus ring - teal-tinted for visibility */
+  --focus-ring: oklch(0.65 0.1 var(--accent-hue));
+  --focus-ring-offset: oklch(1 0 0);
+
+  /* Selection highlight */
+  --selection-bg: oklch(0.92 0.04 var(--accent-hue));
+
+  /* ----------------------------------------
+     DEPTH SYSTEM
+     ----------------------------------------
+     Consistent elevation through subtle shadows.
+     Uses color-mix for theme-aware shadows.
+     ---------------------------------------- */
+  --shadow-color: oklch(0.2 0 0);
+
+  --shadow-xs: 0 1px 2px color-mix(in oklch, var(--shadow-color) 5%, transparent);
+  --shadow-sm: 0 1px 3px color-mix(in oklch, var(--shadow-color) 8%, transparent),
+               0 1px 2px color-mix(in oklch, var(--shadow-color) 6%, transparent);
+  --shadow-md: 0 4px 6px -1px color-mix(in oklch, var(--shadow-color) 8%, transparent),
+               0 2px 4px -2px color-mix(in oklch, var(--shadow-color) 6%, transparent);
+  --shadow-lg: 0 10px 15px -3px color-mix(in oklch, var(--shadow-color) 8%, transparent),
+               0 4px 6px -4px color-mix(in oklch, var(--shadow-color) 6%, transparent);
+
+  /* ----------------------------------------
+     SPACING SCALE
+     ----------------------------------------
+     4px base unit for consistent rhythm.
+     ---------------------------------------- */
+  --space-0: 0;
+  --space-0-5: 0.125rem;  /* 2px */
+  --space-1: 0.25rem;     /* 4px */
+  --space-1-5: 0.375rem;  /* 6px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-2-5: 0.625rem;  /* 10px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-12: 3rem;       /* 48px */
+
+  /* ----------------------------------------
+     COMPONENT DIMENSIONS
+     ----------------------------------------
+     Consistent sizes for interactive elements.
+     ---------------------------------------- */
+  --size-icon-xs: 0.75rem;    /* 12px */
+  --size-icon-sm: 0.875rem;   /* 14px */
+  --size-icon: 1rem;          /* 16px */
+  --size-icon-md: 1.25rem;    /* 20px */
+  --size-icon-lg: 1.5rem;     /* 24px */
+
+  --size-touch-xs: 1.5rem;    /* 24px - minimum touch */
+  --size-touch-sm: 1.75rem;   /* 28px */
+  --size-touch: 2rem;         /* 32px - default touch target */
+  --size-touch-md: 2.25rem;   /* 36px */
+  --size-touch-lg: 2.5rem;    /* 40px */
+
+  /* Activity bar specific */
+  --size-activity-bar: 2.75rem;  /* 44px */
+  --size-activity-icon: 1.25rem; /* 20px */
+
+  /* Status bar */
+  --size-status-bar: 1.375rem;   /* 22px */
+
+  /* File tree row */
+  --size-tree-row: 1.875rem;     /* 30px - slightly smaller than 32 */
+
+  /* ----------------------------------------
+     TRANSITION SYSTEM
+     ---------------------------------------- */
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 200ms;
+  --duration-slower: 300ms;
+
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ----------------------------------------
+     BORDER SYSTEM
+     ---------------------------------------- */
+  --border-width-default: 1px;
+  --border-width-thick: 2px;
+
+  /* ----------------------------------------
+     Z-INDEX SCALE
+     ---------------------------------------- */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-popover: 50;
+  --z-tooltip: 60;
+}
+
+.dark {
+  /* Adjusted interactive colors for dark mode */
+  --interactive: oklch(0.70 var(--accent-chroma) var(--accent-hue));
+  --interactive-hover: oklch(0.75 var(--accent-chroma) var(--accent-hue));
+  --interactive-muted: oklch(0.65 calc(var(--accent-chroma) * 0.6) var(--accent-hue));
+  --interactive-bg: oklch(0.25 0.03 var(--accent-hue));
+  --interactive-bg-hover: oklch(0.30 0.035 var(--accent-hue));
+
+  --focus-ring: oklch(0.70 0.12 var(--accent-hue));
+  --focus-ring-offset: oklch(0.145 0 0);
+
+  --selection-bg: oklch(0.30 0.05 var(--accent-hue));
+
+  /* Shadows are more subtle in dark mode */
+  --shadow-color: oklch(0 0 0);
+}
+
+/* ============================================
+   TAILWIND THEME EXTENSION
+   ============================================ */
+
+@theme inline {
+  /* Interactive colors */
+  --color-interactive: var(--interactive);
+  --color-interactive-hover: var(--interactive-hover);
+  --color-interactive-muted: var(--interactive-muted);
+  --color-interactive-bg: var(--interactive-bg);
+  --color-interactive-bg-hover: var(--interactive-bg-hover);
+
+  /* Focus */
+  --color-focus-ring: var(--focus-ring);
+
+  /* Selection */
+  --color-selection-bg: var(--selection-bg);
+
+  /* Shadows */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+/* ============================================
+   GLOBAL OVERRIDES
+   ============================================
+   These override shadcn defaults with our
+   accent color for better visual identity.
+   ============================================ */
+
+@layer base {
+  /* Focus ring uses our teal accent */
+  *:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Text selection uses teal tint */
+  ::selection {
+    background: var(--selection-bg);
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+@layer utilities {
+  /* Interactive background states */
+  .bg-interactive {
+    background-color: var(--interactive-bg);
+  }
+
+  .bg-interactive-hover {
+    background-color: var(--interactive-bg-hover);
+  }
+
+  /* Active/selected states with teal accent */
+  .is-active {
+    background-color: var(--interactive-bg);
+    color: var(--interactive);
+  }
+
+  .is-active-subtle {
+    background-color: color-mix(in oklch, var(--interactive-bg) 50%, transparent);
+  }
+
+  /* Focus ring utility */
+  .focus-ring-interactive {
+    &:focus-visible {
+      outline-color: var(--focus-ring);
+    }
+  }
+
+  /* Indicator line (for active states like activity bar) */
+  .has-indicator {
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-block: var(--space-2);
+      inset-inline-start: 0;
+      width: 2px;
+      background-color: var(--interactive);
+      border-radius: 1px;
+      opacity: 0;
+      transition: opacity var(--duration-fast) var(--ease-default);
+    }
+
+    &[data-active="true"]::before,
+    &.is-active::before {
+      opacity: 1;
+    }
+  }
+}

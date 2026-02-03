@@ -96,7 +96,7 @@
     <Button
       onclick={(e) => handle_choose_vault(e)}
       disabled={is_loading}
-      class="w-full"
+      class="VaultPanel__action-btn"
     >
       <Plus />
       Choose Vault Directory
@@ -104,40 +104,157 @@
   {/if}
 
   {#if error}
-    <div class="rounded-lg border border-border bg-card px-4 py-3 text-sm text-destructive">
+    <div class="VaultPanel__error">
       {error}
     </div>
   {/if}
 
   {#if recent_vaults.length > 0}
-    <div class="mt-4 space-y-3">
-      <h3 class="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <div class="VaultPanel__recent">
+      <h3 class="VaultPanel__section-title">
         Recent Vaults
       </h3>
-      <div class="flex flex-col gap-2">
+      <div class="VaultPanel__list">
         {#each recent_vaults as vault (vault.id)}
           <button
             type="button"
             onclick={(e) => handle_select_vault(vault, e)}
             disabled={is_loading || current_vault_id === vault.id}
-            class="flex items-center justify-between rounded-lg border bg-card px-3 py-2.5 text-left transition-all hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60 {current_vault_id === vault.id ? 'bg-accent/20 border-primary/30' : ''}"
+            class="VaultPanel__vault-item"
+            class:VaultPanel__vault-item--active={current_vault_id === vault.id}
             data-active={current_vault_id === vault.id}
           >
-            <div class="min-w-0 flex-1">
-              <div class="truncate font-medium">{vault.name}</div>
-              <div class="truncate text-sm text-muted-foreground">{format_path(vault.path)}</div>
+            <div class="VaultPanel__vault-info">
+              <div class="VaultPanel__vault-name">{vault.name}</div>
+              <div class="VaultPanel__vault-path">{format_path(vault.path)}</div>
             </div>
             {#if current_vault_id === vault.id}
-              <Check class="ml-4 shrink-0 text-primary" />
+              <Check class="VaultPanel__check-icon" />
             {/if}
           </button>
         {/each}
       </div>
     </div>
   {:else}
-    <div class="py-12 px-6 text-center">
-      <p class="mb-2 text-[0.9375rem] font-medium text-foreground">No recent vaults</p>
-      <p class="text-sm text-muted-foreground">Choose a vault directory to get started</p>
+    <div class="VaultPanel__empty">
+      <p class="VaultPanel__empty-title">No recent vaults</p>
+      <p class="VaultPanel__empty-desc">Choose a vault directory to get started</p>
     </div>
   {/if}
 {/snippet}
+
+<style>
+  :global(.VaultPanel__action-btn) {
+    width: 100%;
+  }
+
+  .VaultPanel__error {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    font-size: 0.875rem;
+    color: var(--destructive);
+  }
+
+  .VaultPanel__recent {
+    margin-top: var(--space-4);
+  }
+
+  .VaultPanel__section-title {
+    margin-bottom: var(--space-3);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+  }
+
+  .VaultPanel__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .VaultPanel__vault-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2-5) var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    text-align: left;
+    transition:
+      background-color var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+  }
+
+  .VaultPanel__vault-item:hover:not(:disabled) {
+    background-color: color-mix(in oklch, var(--muted) 50%, transparent);
+  }
+
+  .VaultPanel__vault-item:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .VaultPanel__vault-item:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  .VaultPanel__vault-item--active {
+    background-color: var(--interactive-bg);
+    border-color: color-mix(in oklch, var(--interactive) 30%, transparent);
+  }
+
+  .VaultPanel__vault-item--active:hover:not(:disabled) {
+    background-color: var(--interactive-bg-hover);
+  }
+
+  .VaultPanel__vault-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .VaultPanel__vault-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .VaultPanel__vault-path {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.VaultPanel__check-icon) {
+    margin-left: var(--space-4);
+    flex-shrink: 0;
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
+    color: var(--interactive);
+  }
+
+  .VaultPanel__empty {
+    padding: var(--space-12) var(--space-6);
+    text-align: center;
+  }
+
+  .VaultPanel__empty-title {
+    margin-bottom: var(--space-2);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  .VaultPanel__empty-desc {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+  }
+</style>

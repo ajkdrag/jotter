@@ -12,39 +12,19 @@ import { create_workspace_index_web_adapter } from '$lib/adapters/web/workspace_
 import { create_settings_web_adapter } from '$lib/adapters/web/settings_web_adapter'
 import { create_search_web_adapter } from '$lib/adapters/web/search_web_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
-import type { AssetsPort } from '$lib/ports/assets_port'
-import type { ClipboardPort } from '$lib/ports/clipboard_port'
-import type { EditorPort } from '$lib/ports/editor_port'
-import type { NotesPort } from '$lib/ports/notes_port'
-import type { SettingsPort } from '$lib/ports/settings_port'
-import type { SearchPort } from '$lib/ports/search_port'
-import type { ThemePort } from '$lib/ports/theme_port'
-import type { VaultPort } from '$lib/ports/vault_port'
-import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { VaultId } from '$lib/types/ids'
 import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
 import { create_clipboard_web_adapter } from '$lib/adapters/web/clipboard_web_adapter'
 import { create_clipboard_tauri_adapter } from '$lib/adapters/tauri/clipboard_tauri_adapter'
-
-export type Ports = {
-  vault: VaultPort
-  notes: NotesPort
-  index: WorkspaceIndexPort
-  search: SearchPort
-  settings: SettingsPort
-  assets: AssetsPort
-  editor: EditorPort
-  theme: ThemePort
-  clipboard: ClipboardPort
-}
+import type { Ports } from '$lib/ports/ports'
 
 export type CreateProdPortsInput = {
   get_notes_for_search?: (vault_id: VaultId) => NoteMeta[]
 }
 
 export function create_prod_ports(input?: CreateProdPortsInput): Ports {
-  const search_port: SearchPort = is_tauri
+  const search_port = is_tauri
     ? create_search_tauri_adapter()
     : create_search_web_adapter(input?.get_notes_for_search ?? (() => []))
 

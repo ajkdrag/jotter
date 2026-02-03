@@ -112,4 +112,26 @@ describe('open_note_flow', () => {
 
     expect(stores.editor.get_snapshot().open_note?.meta.path).toBe(second_path)
   })
+
+  it('creates note when opening a wiki link that is missing', async () => {
+    const notes_port = create_mock_notes_port()
+    const stores = create_mock_stores()
+    const vault_id = as_vault_id('vault-1')
+    const note_path = as_note_path('wiki/new_note.md')
+
+    notes_port.read_note = async () => {
+      throw new Error('Missing')
+    }
+
+    const actor = createActor(open_note_flow_machine, {
+      input: { ports: { notes: notes_port }, stores }
+    })
+    actor.start()
+
+    actor.send({ type: 'OPEN_WIKI_LINK', vault_id, note_path })
+    await waitFor(actor, (snapshot) => snapshot.value === 'idle')
+
+    expect(stores.editor.get_snapshot().open_note?.meta.path).toBe(note_path)
+    expect(stores.notes.get_snapshot().notes.some((note) => note.path === note_path)).toBe(true)
+  })
 })

@@ -81,10 +81,9 @@
 
 {#snippet row_content()}
   <div
-    class="file-tree-row flex h-8 w-full cursor-pointer items-center gap-1 rounded-md px-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-    class:bg-sidebar-accent={is_selected}
-    class:text-sidebar-accent-foreground={is_selected}
-    style="padding-left: {BASE_PADDING_PX + node.depth * INDENT_PX}px"
+    class="TreeRow"
+    class:TreeRow--selected={is_selected}
+    style="--tree-indent: {BASE_PADDING_PX + node.depth * INDENT_PX}px"
     role="treeitem"
     tabindex="0"
     aria-selected={is_selected}
@@ -94,38 +93,38 @@
     {#if node.is_folder}
       <button
         type="button"
-        class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent-foreground/10"
+        class="TreeRow__toggle"
         onclick={handle_toggle}
         onkeydown={handle_toggle_keydown}
         aria-label={node.is_expanded ? "Collapse" : "Expand"}
         disabled={node.is_loading}
       >
         {#if node.is_loading}
-          <Loader2 class="size-3.5 animate-spin" />
+          <Loader2 class="TreeRow__icon TreeRow__icon--spin" />
         {:else if node.has_error}
-          <AlertCircle class="size-3.5 text-destructive" />
+          <AlertCircle class="TreeRow__icon TreeRow__icon--error" />
         {:else if node.is_expanded}
-          <ChevronDown class="size-3.5" />
+          <ChevronDown class="TreeRow__icon" />
         {:else}
-          <ChevronRight class="size-3.5" />
+          <ChevronRight class="TreeRow__icon" />
         {/if}
       </button>
-      <Folder class="size-4 shrink-0" />
-      <span class="min-w-0 flex-1 truncate">{node.name}</span>
+      <Folder class="TreeRow__type-icon" />
+      <span class="TreeRow__label">{node.name}</span>
       {#if node.has_error}
         <button
           type="button"
-          class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          class="TreeRow__action"
           onclick={handle_retry}
           aria-label="Retry loading"
         >
-          <RefreshCw class="size-3" />
+          <RefreshCw />
         </button>
       {/if}
     {:else}
-      <div class="w-5 shrink-0"></div>
-      <File class="size-4 shrink-0" />
-      <span class="min-w-0 flex-1 truncate">{node.name}</span>
+      <span class="TreeRow__spacer"></span>
+      <File class="TreeRow__type-icon" />
+      <span class="TreeRow__label">{node.name}</span>
     {/if}
   </div>
 {/snippet}
@@ -167,3 +166,120 @@
     </ContextMenu.Portal>
   </ContextMenu.Root>
 {/if}
+
+<style>
+  .TreeRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    width: 100%;
+    height: var(--size-tree-row);
+    padding-inline-start: var(--tree-indent);
+    padding-inline-end: var(--space-2);
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    color: var(--sidebar-foreground);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+
+  .TreeRow:hover {
+    background-color: var(--sidebar-accent);
+  }
+
+  .TreeRow:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .TreeRow--selected {
+    background-color: var(--interactive-bg);
+    color: var(--interactive);
+  }
+
+  .TreeRow--selected:hover {
+    background-color: var(--interactive-bg-hover);
+  }
+
+  .TreeRow__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    color: var(--muted-foreground);
+    transition: background-color var(--duration-fast) var(--ease-default);
+  }
+
+  .TreeRow__toggle:hover:not(:disabled) {
+    background-color: color-mix(in oklch, var(--sidebar-accent-foreground) 10%, transparent);
+  }
+
+  .TreeRow__toggle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .TreeRow__spacer {
+    width: var(--size-icon-md);
+    flex-shrink: 0;
+  }
+
+  .TreeRow__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .TreeRow__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    color: var(--muted-foreground);
+    transition: color var(--duration-fast) var(--ease-default);
+  }
+
+  .TreeRow__action:hover {
+    color: var(--foreground);
+  }
+
+  :global(.TreeRow__icon) {
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
+  }
+
+  :global(.TreeRow__icon--spin) {
+    animation: spin 1s linear infinite;
+  }
+
+  :global(.TreeRow__icon--error) {
+    color: var(--destructive);
+  }
+
+  :global(.TreeRow__type-icon) {
+    width: var(--size-icon);
+    height: var(--size-icon);
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  :global(.TreeRow__action svg) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>

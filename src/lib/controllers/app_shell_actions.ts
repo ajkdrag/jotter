@@ -1,16 +1,12 @@
 import type { AppFlows } from '$lib/flows/create_app_flows'
-import type { Ports } from '$lib/adapters/create_prod_ports'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
-import type { NoteDoc, NoteMeta } from '$lib/types/note'
+import type { NoteMeta } from '$lib/types/note'
 import { parent_folder_path } from '$lib/utils/filetree'
-import { resolve_existing_note_path } from '$lib/utils/note_lookup'
 import type { EditorSettings } from '$lib/types/editor_settings'
-import type { ThemeMode } from '$lib/stores/ui_store'
-import { to_open_note_state } from '$lib/types/editor'
+import type { ThemeMode } from '$lib/types/theme'
 
-export type AppShellStableConfig = {
-  ports: Ports
+export type AppShellActionsConfig = {
   bootstrap_default_vault_path?: VaultPath
   reset_state_on_mount: boolean
 }
@@ -74,10 +70,10 @@ export type AppShellActions = {
 }
 
 export function create_app_shell_actions(input: {
-  stable: AppShellStableConfig
+  config: AppShellActionsConfig
   app: AppFlows
 }): AppShellActions {
-  const { stable, app } = input
+  const { config, app } = input
 
   return {
     mount: () => {
@@ -86,8 +82,8 @@ export function create_app_shell_actions(input: {
       app.flows.open_app.send({
         type: 'START',
         config: {
-          reset_app_state: stable.reset_state_on_mount,
-          bootstrap_default_vault_path: stable.bootstrap_default_vault_path ?? null
+          reset_app_state: config.reset_state_on_mount,
+          bootstrap_default_vault_path: config.bootstrap_default_vault_path ?? null
         }
       })
     },
@@ -124,7 +120,7 @@ export function create_app_shell_actions(input: {
       const current_note_id = app.stores.editor.get_snapshot().open_note?.meta.id
       if (current_note_id && current_note_id === normalized_path) return
 
-      app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
+      app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id, note_path: normalized_path })
     },
 
     open_wiki_link: (note_path) => {
@@ -132,40 +128,11 @@ export function create_app_shell_actions(input: {
       if (!vault) return
 
       const normalized_path = as_note_path(note_path)
-      const resolved_existing_path = resolve_existing_note_path(
-        app.stores.notes.get_snapshot().notes,
-        normalized_path
-      )
 
-      if (resolved_existing_path) {
-        app.stores.ui.actions.set_selected_folder_path(parent_folder_path(resolved_existing_path))
+      const current_note_id = app.stores.editor.get_snapshot().open_note?.meta.id
+      if (current_note_id && current_note_id === normalized_path) return
 
-        const current_note_id = app.stores.editor.get_snapshot().open_note?.meta.id
-        if (current_note_id && current_note_id === resolved_existing_path) return
-
-        app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id: vault.id, note_path: resolved_existing_path })
-        return
-      }
-
-      const open = (doc: NoteDoc) => {
-        app.stores.notes.actions.add_note(doc.meta)
-        app.stores.ui.actions.set_selected_folder_path(parent_folder_path(normalized_path))
-        app.stores.editor.actions.set_open_note(to_open_note_state(doc))
-      }
-
-      stable.ports.notes.read_note(vault.id, normalized_path)
-        .then((doc) => {
-          open(doc)
-        })
-        .catch(() => {
-          stable.ports.notes.create_note(vault.id, normalized_path, as_markdown_text(''))
-            .then((meta) => {
-              open({ meta, markdown: as_markdown_text('') })
-            })
-            .catch((error) => {
-              console.error('Failed to open or create wiki link note:', normalized_path, error)
-            })
-        })
+      app.flows.open_note.send({ type: 'OPEN_WIKI_LINK', vault_id: vault.id, note_path: normalized_path })
     },
 
     markdown_change: (markdown) => {
@@ -180,10 +147,7 @@ export function create_app_shell_actions(input: {
       const open_note = app.stores.editor.get_snapshot().open_note
       if (!open_note) return
 
-      stable.ports.clipboard.write_text(open_note.markdown)
-        .catch((error) => {
-          console.error('Failed to copy note markdown to clipboard:', open_note.meta.path, error)
-        })
+      app.flows.clipboard.send({ type: 'COPY_TEXT', text: open_note.markdown })
     },
 
     request_delete: (note) => {
@@ -275,8 +239,7 @@ export function create_app_shell_actions(input: {
     },
 
     handle_theme_change: (theme) => {
-      stable.ports.theme.set_theme(theme)
-      app.stores.ui.actions.set_theme(theme)
+      app.flows.theme.send({ type: 'SET_THEME', theme })
     },
 
     request_create_folder: (parent_path) => {

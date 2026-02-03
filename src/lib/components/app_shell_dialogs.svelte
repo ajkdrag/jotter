@@ -25,7 +25,7 @@
   import type { RenameFolderFlowContext, RenameFolderFlowEvents } from '$lib/flows/rename_folder_flow'
   import type { NoteId } from '$lib/types/ids'
 
-  import type { AppShellActions } from '$lib/components/app_shell_actions'
+  import type { AppShellActions } from '$lib/controllers/app_shell_actions'
 
   type FlowView<TEvent, TContext> = {
     snapshot: FlowSnapshot<TContext>

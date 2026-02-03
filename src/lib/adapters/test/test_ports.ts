@@ -5,7 +5,7 @@ import { create_test_workspace_index_adapter } from './test_workspace_index_adap
 import { create_test_settings_adapter } from './test_settings_adapter'
 import { create_test_search_adapter } from './test_search_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
-import type { Ports } from '$lib/adapters/create_prod_ports'
+import type { Ports } from '$lib/ports/ports'
 import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
 import { create_test_clipboard_adapter } from '$lib/adapters/test/test_clipboard_adapter'
 

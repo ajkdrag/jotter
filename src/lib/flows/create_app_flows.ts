@@ -1,4 +1,4 @@
-import type { Ports } from '$lib/adapters/create_prod_ports'
+import type { Ports } from '$lib/ports/ports'
 import { create_app_stores, type AppStores } from '$lib/stores/create_app_stores'
 import { change_vault_flow_machine } from '$lib/flows/change_vault_flow'
 import type { ChangeVaultFlowContext, ChangeVaultFlowEvents } from '$lib/flows/change_vault_flow'
@@ -32,6 +32,10 @@ import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
 import { is_tauri } from '$lib/adapters/detect_platform'
 import { create_search_web_adapter } from '$lib/adapters/web/search_web_adapter'
+import { clipboard_flow_machine } from '$lib/flows/clipboard_flow'
+import type { ClipboardFlowContext, ClipboardFlowEvents } from '$lib/flows/clipboard_flow'
+import { theme_flow_machine } from '$lib/flows/theme_flow'
+import type { ThemeFlowContext, ThemeFlowEvents } from '$lib/flows/theme_flow'
 
 export type CreateAppFlowsCallbacks = {
   on_save_complete?: () => void
@@ -54,6 +58,8 @@ export type AppFlows = {
     command_palette: FlowHandle<CommandPaletteFlowEvents, FlowSnapshot<CommandPaletteFlowContext>>
     file_search: FlowHandle<FileSearchFlowEvents, FlowSnapshot<FileSearchFlowContext>>
     filetree: FlowHandle<FiletreeFlowEvents, FlowSnapshot<FiletreeFlowContext>>
+    clipboard: FlowHandle<ClipboardFlowEvents, FlowSnapshot<ClipboardFlowContext>>
+    theme: FlowHandle<ThemeFlowEvents, FlowSnapshot<ThemeFlowContext>>
   }
 }
 
@@ -141,6 +147,14 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
     input: { ports: { notes: ports.notes, index: ports.index }, stores }
   })
 
+  const clipboard = create_flow_handle(clipboard_flow_machine, {
+    input: { ports: { clipboard: ports.clipboard } }
+  })
+
+  const theme = create_flow_handle(theme_flow_machine, {
+    input: { ports: { theme: ports.theme }, stores }
+  })
+
   return {
     stores,
     flows: {
@@ -157,7 +171,9 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       settings,
       command_palette,
       file_search,
-      filetree
+      filetree,
+      clipboard,
+      theme
     }
   }
 }

@@ -45,8 +45,8 @@ Adapters implement the Ports, providing concrete implementations for specific en
         -   `tauri_invoke.ts` - Tauri IPC wrapper
         -   `dialog_adapter.ts` - Native dialog integration
     -   `editor/` - Editor-specific adapters
-        -   `milkdown_adapter.ts` - Milkdown editor integration
-        -   `dirty_state_plugin.ts`, `markdown_link_input_rule.ts`
+    -   `milkdown_adapter.ts` - Milkdown editor integration
+        -   `dirty_state_plugin.ts`, `markdown_link_input_rule.ts`, `editor_manager.ts`
     -   `theme_adapter.ts` - Theme persistence (shared; uses settings/localStorage)
     -   `test/` - Test implementations for unit testing
         -   `test_notes_adapter.ts`, `test_vault_adapter.ts`, `test_workspace_index_adapter.ts`, `test_assets_adapter.ts`, `test_settings_adapter.ts`, `test_ports.ts`
@@ -65,14 +65,13 @@ Operations are **pure functions** (or functional stateless modules) that impleme
     -   Do NOT manage UI state (loading, error, etc.).
 -   **Current Operations**:
     -   `change_vault.ts` - Vault switching logic
-    -   `check_note_path_exists.ts` - Path existence check
     -   `create_folder.ts` - Folder creation
     -   `delete_note.ts` - Note deletion logic
     -   `ensure_open_note.ts` - Ensures a note is open (used by app state)
     -   `insert_dropped_image.ts` - Image insertion from drag-and-drop
-    -   `manage_editor.ts` - Editor lifecycle management
     -   `open_last_vault.ts` - Opens the last used vault
     -   `open_note.ts` - Note opening logic
+    -   `open_note_or_create.ts` - Note open-or-create logic (wiki links)
     -   `rename_note.ts` - Note renaming logic
     -   `save_note.ts` - Note saving logic
     -   `save_note_operation.ts` - Core save logic (used by save_note flow)
@@ -238,6 +237,7 @@ src/lib/
 3.  **No Side-Effects in Stores**: The stores must remain pure. They should only manage state updates. All async work happens in Flows.
 4.  **Test the Store Updates**: When adding logic to stores, export the logic as a pure function and add a unit test for it in `tests/unit/stores/`. Prefer to keep the stores lean (even when creating new flows, or updating existing flows, move logic in plain, testable functions).
 5.  **File Naming**: All files use snake_case, regardless of tech stack (TypeScript, Svelte, Rust).
+    -   **Exception**: `src/lib/components/ui/**` mirrors shadcn-svelte file names and is exempt.
 6.  **Port Organization**: Adapters are organized by platform (`web/`, `tauri/`) and domain (`editor/`, `test/`). Shared adapters (e.g. `theme_adapter.ts`) live at adapters root.
 7.  **Component Separation**: Feature components (business logic) are separate from UI primitives (`ui/` directory).
 8.  **Type Safety**: Use branded types from `types/ids.ts` for IDs and paths to prevent mixing incompatible values.

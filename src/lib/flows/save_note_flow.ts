@@ -5,6 +5,7 @@ import { as_note_path } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import { sanitize_note_name } from '$lib/utils/sanitize_note_name'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import { note_path_exists } from '$lib/utils/note_path_exists'
 
 type SaveNotePorts = {
   notes: NotesPort
@@ -74,8 +75,7 @@ export const save_note_flow_machine = setup({
         }
       }) => {
         const { notes, new_path } = input
-        const normalized = new_path.endsWith('.md') ? new_path : `${new_path}.md`
-        return notes.some(note => note.path === normalized)
+        return note_path_exists(notes, new_path)
       }
     ),
     perform_save: fromPromise(

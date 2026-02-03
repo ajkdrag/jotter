@@ -2,8 +2,7 @@ import type { StoreHandle } from './store_handle'
 import { create_store } from './create_store.svelte'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
-
-export type ThemeMode = 'light' | 'dark' | 'system'
+import type { ThemeMode } from '$lib/types/theme'
 
 export type UIState = {
   theme: ThemeMode
