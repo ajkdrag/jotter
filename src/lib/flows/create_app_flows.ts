@@ -30,6 +30,8 @@ import { file_search_flow_machine } from '$lib/flows/file_search_flow'
 import type { FileSearchFlowContext, FileSearchFlowEvents } from '$lib/flows/file_search_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
+import { is_tauri } from '$lib/adapters/detect_platform'
+import { create_search_web_adapter } from '$lib/adapters/web/search_web_adapter'
 
 export type CreateAppFlowsCallbacks = {
   on_save_complete?: () => void
@@ -120,9 +122,13 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
 
+  const search_port = is_tauri
+    ? ports.search
+    : create_search_web_adapter(() => stores.notes.get_snapshot().notes)
+
   const file_search = create_flow_handle(file_search_flow_machine, {
     input: {
-      ports: { search: ports.search },
+      ports: { search: search_port },
       get_vault_id: () => stores.vault.get_snapshot().vault?.id ?? null
     }
   })

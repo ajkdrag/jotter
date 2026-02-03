@@ -18,7 +18,7 @@ type TauriSearchHit = {
 export function create_search_tauri_adapter(): SearchPort {
   return {
     async search_notes(vault_id: VaultId, query: string, limit = 50): Promise<NoteSearchHit[]> {
-      const hits = await tauri_invoke<TauriSearchHit[]>('index_search', { vault_id, query })
+      const hits = await tauri_invoke<TauriSearchHit[]>('index_search', { vaultId: vault_id, query })
       return hits.slice(0, limit).map((hit) => ({
         note: {
           id: hit.note.id as NoteId,
