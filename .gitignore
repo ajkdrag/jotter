@@ -1,6 +1,7 @@
 .cursor/**
 .claude/
 .vscode/
+.codex/**
 node_modules/
 .svelte-kit/
 build/
