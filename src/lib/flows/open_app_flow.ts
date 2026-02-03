@@ -4,19 +4,13 @@ import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultPath } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
-import type { FlowSnapshot } from '$lib/flows/flow_handle'
-import type { AppStateContext } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type OpenAppPorts = {
   vault: VaultPort
   notes: NotesPort
   index: WorkspaceIndexPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
-
-type GetAppStateSnapshot = () => FlowSnapshot<AppStateContext>
 
 type StartupConfig = {
   reset_app_state: boolean
@@ -28,8 +22,7 @@ export type OpenAppStartupConfig = StartupConfig
 type FlowContext = {
   error: string | null
   ports: OpenAppPorts
-  dispatch: AppStateDispatch
-  get_app_state_snapshot: GetAppStateSnapshot
+  stores: AppStores
   startup_config: StartupConfig
 }
 
@@ -44,8 +37,18 @@ export type OpenAppFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: OpenAppPorts
-  dispatch: AppStateDispatch
-  get_app_state_snapshot: GetAppStateSnapshot
+  stores: AppStores
+}
+
+function reset_all_stores(stores: AppStores): void {
+  stores.vault.actions.clear_vault()
+  stores.vault.actions.set_recent_vaults([])
+  stores.notes.actions.set_notes([])
+  stores.notes.actions.set_folder_paths([])
+  stores.editor.actions.clear_open_note()
+  stores.ui.actions.set_theme('system')
+  stores.ui.actions.set_sidebar_open(true)
+  stores.ui.actions.set_selected_folder_path('')
 }
 
 export const open_app_flow_machine = setup({
@@ -61,34 +64,36 @@ export const open_app_flow_machine = setup({
       }: {
         input: {
           ports: OpenAppPorts
-          dispatch: AppStateDispatch
-          get_app_state_snapshot: GetAppStateSnapshot
+          stores: AppStores
           config: StartupConfig
         }
       }) => {
-        const { ports, dispatch, get_app_state_snapshot, config } = input
+        const { ports, stores, config } = input
 
-        if (config.reset_app_state) dispatch({ type: 'RESET_APP' })
+        if (config.reset_app_state) {
+          reset_all_stores(stores)
+        }
 
-        const app_snapshot = get_app_state_snapshot()
-        const current_state = app_snapshot.matches('no_vault') ? 'no_vault' : 'vault_open'
+        const has_vault = stores.vault.get_snapshot().vault !== null
 
         const result = await startup_app(ports, {
           bootstrap_vault_path: config.bootstrap_default_vault_path,
-          current_app_state: current_state
+          current_app_state: has_vault ? 'vault_open' : 'no_vault'
         })
 
-        dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults: result.recent_vaults })
+        stores.vault.actions.set_recent_vaults(result.recent_vaults)
 
         if (result.bootstrapped_vault) {
-          dispatch({
-            type: 'SET_ACTIVE_VAULT',
-            vault: result.bootstrapped_vault.vault,
-            notes: result.bootstrapped_vault.notes,
-            folder_paths: result.bootstrapped_vault.folder_paths
-          })
+          stores.vault.actions.set_vault(result.bootstrapped_vault.vault)
+          stores.notes.actions.set_notes(result.bootstrapped_vault.notes)
+          stores.notes.actions.set_folder_paths(result.bootstrapped_vault.folder_paths)
+          stores.editor.actions.ensure_open_note(
+            result.bootstrapped_vault.vault,
+            result.bootstrapped_vault.notes,
+            stores.now_ms()
+          )
           const updated_recent_vaults = await ports.vault.list_vaults()
-          dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults: updated_recent_vaults })
+          stores.vault.actions.set_recent_vaults(updated_recent_vaults)
         }
       }
     )
@@ -99,8 +104,7 @@ export const open_app_flow_machine = setup({
   context: ({ input }) => ({
     error: null,
     ports: input.ports,
-    dispatch: input.dispatch,
-    get_app_state_snapshot: input.get_app_state_snapshot,
+    stores: input.stores,
     startup_config: {
       reset_app_state: false,
       bootstrap_default_vault_path: null
@@ -127,8 +131,7 @@ export const open_app_flow_machine = setup({
         src: 'startup',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
-          get_app_state_snapshot: context.get_app_state_snapshot,
+          stores: context.stores,
           config: context.startup_config
         }),
         onDone: 'idle',

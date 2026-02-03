@@ -1,14 +1,15 @@
 import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { open_app_flow_machine } from '$lib/flows/open_app_flow'
-import { app_state_machine } from '$lib/state/app_state_machine'
 import { create_mock_ports } from '../../unit/helpers/mock_ports'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 
 describe('open_app_flow', () => {
-  test('loads recents and dispatches RECENT_VAULTS_SET', async () => {
+  test('loads recents and updates stores', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores({ now_ms: () => 123 })
 
     const vault1: Vault = {
       id: 'vault-1' as VaultId,
@@ -26,22 +27,10 @@ describe('open_app_flow', () => {
 
     ports.vault._mock_vaults = [vault1, vault2]
 
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-
     const actor = createActor(open_app_flow_machine, {
       input: {
-        ports,
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => ({
-          context: app_state.getSnapshot().context,
-          matches: (state: string) => {
-            if (state === 'no_vault' || state === 'vault_open') {
-              return app_state.getSnapshot().matches(state)
-            }
-            return false
-          }
-        })
+        ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
+        stores
       }
     })
     actor.start()
@@ -52,12 +41,13 @@ describe('open_app_flow', () => {
     })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(app_state.getSnapshot().context.recent_vaults).toEqual([vault1, vault2])
-    expect(app_state.getSnapshot().context.vault).toBeNull()
+    expect(stores.vault.get_snapshot().recent_vaults).toEqual([vault1, vault2])
+    expect(stores.vault.get_snapshot().vault).toBeNull()
   })
 
-  test('when bootstrap path is provided, opens vault and dispatches VAULT_SET', async () => {
+  test('when bootstrap path is provided, opens vault and updates stores', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores({ now_ms: () => 123 })
 
     const vault: Vault = {
       id: 'vault-1' as VaultId,
@@ -68,22 +58,10 @@ describe('open_app_flow', () => {
 
     ports.vault._mock_vaults = [vault]
 
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-
     const actor = createActor(open_app_flow_machine, {
       input: {
-        ports,
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => ({
-          context: app_state.getSnapshot().context,
-          matches: (state: string) => {
-            if (state === 'no_vault' || state === 'vault_open') {
-              return app_state.getSnapshot().matches(state)
-            }
-            return false
-          }
-        })
+        ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
+        stores
       }
     })
     actor.start()
@@ -94,36 +72,25 @@ describe('open_app_flow', () => {
     })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(app_state.getSnapshot().context.vault).toEqual(vault)
-    expect(app_state.getSnapshot().context.notes).toEqual([])
-    expect(app_state.getSnapshot().context.open_note?.meta.title).toBe('Untitled-1')
+    expect(stores.vault.get_snapshot().vault).toEqual(vault)
+    expect(stores.notes.get_snapshot().notes).toEqual([])
+    expect(stores.editor.get_snapshot().open_note?.meta.title).toBe('Untitled-1')
     expect(ports.index._calls.build_index).toContain(vault.id)
-    expect(app_state.getSnapshot().context.recent_vaults).toEqual([vault])
+    expect(stores.vault.get_snapshot().recent_vaults).toEqual([vault])
   })
 
   test('error handling when list_vaults throws', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores()
 
     ports.vault.list_vaults = async () => {
       throw new Error('Failed to list vaults')
     }
 
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
     const actor = createActor(open_app_flow_machine, {
       input: {
-        ports,
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => ({
-          context: app_state.getSnapshot().context,
-          matches: (state: string) => {
-            if (state === 'no_vault' || state === 'vault_open') {
-              return app_state.getSnapshot().matches(state)
-            }
-            return false
-          }
-        })
+        ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
+        stores
       }
     })
     actor.start()
@@ -139,6 +106,7 @@ describe('open_app_flow', () => {
 
   test('error handling when bootstrap open throws', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores()
 
     const vault: Vault = {
       id: 'vault-1' as VaultId,
@@ -152,22 +120,10 @@ describe('open_app_flow', () => {
       throw new Error('Failed to open vault')
     }
 
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
     const actor = createActor(open_app_flow_machine, {
       input: {
-        ports,
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => ({
-          context: app_state.getSnapshot().context,
-          matches: (state: string) => {
-            if (state === 'no_vault' || state === 'vault_open') {
-              return app_state.getSnapshot().matches(state)
-            }
-            return false
-          }
-        })
+        ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
+        stores
       }
     })
     actor.start()
@@ -183,27 +139,16 @@ describe('open_app_flow', () => {
 
   test('retry transitions back to starting', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores()
 
     ports.vault.list_vaults = async () => {
       throw new Error('Failed to list vaults')
     }
 
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
     const actor = createActor(open_app_flow_machine, {
       input: {
-        ports,
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => ({
-          context: app_state.getSnapshot().context,
-          matches: (state: string) => {
-            if (state === 'no_vault' || state === 'vault_open') {
-              return app_state.getSnapshot().matches(state)
-            }
-            return false
-          }
-        })
+        ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
+        stores
       }
     })
     actor.start()
@@ -221,27 +166,16 @@ describe('open_app_flow', () => {
 
   test('cancel clears error and returns to idle', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores()
 
     ports.vault.list_vaults = async () => {
       throw new Error('Failed to list vaults')
     }
 
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
     const actor = createActor(open_app_flow_machine, {
       input: {
-        ports,
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => ({
-          context: app_state.getSnapshot().context,
-          matches: (state: string) => {
-            if (state === 'no_vault' || state === 'vault_open') {
-              return app_state.getSnapshot().matches(state)
-            }
-            return false
-          }
-        })
+        ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
+        stores
       }
     })
     actor.start()

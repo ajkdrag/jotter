@@ -3,17 +3,18 @@ import { createActor, waitFor } from 'xstate'
 import { create_folder_flow_machine } from '$lib/flows/create_folder_flow'
 import { create_test_ports } from '$lib/adapters/test/test_ports'
 import { as_vault_id } from '$lib/types/ids'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 
 describe('create_folder_flow', () => {
-  it('creates folder and dispatches ADD_FOLDER_PATH on confirm', async () => {
+  it('creates folder and adds path to store on confirm', async () => {
     const ports = create_test_ports()
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
     const vault_id = as_vault_id('test-vault')
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        dispatch
+        stores
       }
     })
 
@@ -27,21 +28,18 @@ describe('create_folder_flow', () => {
 
     await waitFor(actor, (state) => state.matches('idle'))
 
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'ADD_FOLDER_PATH',
-      folder_path: 'parent/new-folder'
-    })
+    expect(stores.notes.get_snapshot().folder_paths).toContain('parent/new-folder')
   })
 
   it('returns to idle on cancel from dialog', async () => {
     const ports = create_test_ports()
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
     const vault_id = as_vault_id('test-vault')
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        dispatch
+        stores
       }
     })
 
@@ -53,20 +51,20 @@ describe('create_folder_flow', () => {
     actor.send({ type: 'CANCEL' })
     await waitFor(actor, (state) => state.matches('idle'))
 
-    expect(dispatch).not.toHaveBeenCalled()
+    expect(stores.notes.get_snapshot().folder_paths).toEqual([])
   })
 
   it('transitions to error state on create failure', async () => {
     const ports = create_test_ports()
     ports.notes.create_folder = vi.fn().mockRejectedValue(new Error('Create failed'))
 
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
     const vault_id = as_vault_id('test-vault')
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        dispatch
+        stores
       }
     })
 
@@ -92,13 +90,13 @@ describe('create_folder_flow', () => {
       return Promise.resolve()
     })
 
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
     const vault_id = as_vault_id('test-vault')
 
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        dispatch
+        stores
       }
     })
 
@@ -116,9 +114,6 @@ describe('create_folder_flow', () => {
     await waitFor(actor, (state) => state.matches('idle'))
 
     expect(call_count).toBe(2)
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'ADD_FOLDER_PATH',
-      folder_path: 'parent/new-folder'
-    })
+    expect(stores.notes.get_snapshot().folder_paths).toContain('parent/new-folder')
   })
 })

@@ -5,20 +5,18 @@ import { as_note_path } from '$lib/types/ids'
 import { parent_folder_path } from '$lib/utils/filetree'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type OpenNotePorts = {
   notes: NotesPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   error: string | null
   last_note_path: string | null
   last_vault_id: VaultId | null
   ports: OpenNotePorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type OpenNoteFlowContext = FlowContext
@@ -32,7 +30,7 @@ export type OpenNoteFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: OpenNotePorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export const open_note_flow_machine = setup({
@@ -46,15 +44,15 @@ export const open_note_flow_machine = setup({
       async ({
         input
       }: {
-        input: { ports: OpenNotePorts; dispatch: AppStateDispatch; vault_id: VaultId; note_path: string }
+        input: { ports: OpenNotePorts; stores: AppStores; vault_id: VaultId; note_path: string }
       }) => {
         const doc = await open_note(
           { notes: input.ports.notes },
           { vault_id: input.vault_id, note_id: as_note_path(input.note_path) }
         )
         const parent_path = parent_folder_path(as_note_path(input.note_path))
-        input.dispatch({ type: 'SET_SELECTED_FOLDER_PATH', path: parent_path })
-        input.dispatch({ type: 'SET_OPEN_NOTE', open_note: to_open_note_state(doc) })
+        input.stores.ui.actions.set_selected_folder_path(parent_path)
+        input.stores.editor.actions.set_open_note(to_open_note_state(doc))
       }
     )
   }
@@ -66,7 +64,7 @@ export const open_note_flow_machine = setup({
     last_note_path: null,
     last_vault_id: null,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -86,7 +84,7 @@ export const open_note_flow_machine = setup({
         src: 'perform_open',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
+          stores: context.stores,
           vault_id: context.last_vault_id!,
           note_path: context.last_note_path!
         }),

@@ -6,15 +6,13 @@ import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type ChangeVaultPorts = {
   vault: VaultPort
   notes: NotesPort
   index: WorkspaceIndexPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type ChangeMode =
   | { kind: 'choose_vault' }
@@ -24,7 +22,7 @@ type FlowContext = {
   error: string | null
   change_mode: ChangeMode | null
   ports: ChangeVaultPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type ChangeVaultFlowContext = FlowContext
@@ -41,7 +39,7 @@ export type ChangeVaultFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: ChangeVaultPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export const change_vault_flow_machine = setup({
@@ -58,10 +56,10 @@ export const change_vault_flow_machine = setup({
         input: {
           ports: ChangeVaultPorts
           change_mode: ChangeMode
-          dispatch: AppStateDispatch
+          stores: AppStores
         }
       }) => {
-        const { ports, change_mode, dispatch } = input
+        const { ports, change_mode, stores } = input
 
         let result: { vault: Vault; notes: NoteMeta[]; folder_paths: string[] } | null = null
 
@@ -82,13 +80,13 @@ export const change_vault_flow_machine = setup({
 
         void ports.index.build_index(result.vault.id)
         const recent_vaults = await ports.vault.list_vaults()
-        dispatch({
-          type: 'SET_ACTIVE_VAULT',
-          vault: result.vault,
-          notes: result.notes,
-          folder_paths: result.folder_paths
-        })
-        dispatch({ type: 'SET_RECENT_VAULTS', recent_vaults })
+
+        stores.vault.actions.set_vault(result.vault)
+        stores.notes.actions.set_notes(result.notes)
+        stores.notes.actions.set_folder_paths(result.folder_paths)
+        stores.editor.actions.clear_open_note()
+        stores.editor.actions.ensure_open_note(result.vault, result.notes, stores.now_ms())
+        stores.vault.actions.set_recent_vaults(recent_vaults)
 
         return { changed: true }
       }
@@ -101,7 +99,7 @@ export const change_vault_flow_machine = setup({
     error: null,
     change_mode: null,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -137,7 +135,7 @@ export const change_vault_flow_machine = setup({
         input: ({ context }) => ({
           ports: context.ports,
           change_mode: context.change_mode!,
-          dispatch: context.dispatch
+          stores: context.stores
         }),
         onDone: 'idle',
         onError: {

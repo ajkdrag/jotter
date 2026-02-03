@@ -2,16 +2,17 @@ import { describe, it, expect, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { app_startup_flow_machine } from '$lib/flows/app_startup_flow'
 import { create_test_ports } from '$lib/adapters/test/test_ports'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 
 describe('app_startup_flow', () => {
   it('initializes theme and editor settings', async () => {
     const ports = create_test_ports()
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
 
     const actor = createActor(app_startup_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
-        dispatch
+        stores
       }
     })
 
@@ -21,22 +22,19 @@ describe('app_startup_flow', () => {
 
     await waitFor(actor, (state) => state.matches('idle'), { timeout: 1000 })
 
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'SET_THEME',
-      theme: expect.any(String)
-    })
+    expect(stores.ui.get_snapshot().theme).toBeDefined()
   })
 
   it('transitions to error state on initialization failure', async () => {
     const ports = create_test_ports()
     ports.settings.get_setting = vi.fn().mockRejectedValue(new Error('Settings load failed'))
 
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
 
     const actor = createActor(app_startup_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
-        dispatch
+        stores
       }
     })
 
@@ -58,12 +56,12 @@ describe('app_startup_flow', () => {
       return Promise.resolve(null)
     })
 
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
 
     const actor = createActor(app_startup_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
-        dispatch
+        stores
       }
     })
 
@@ -78,22 +76,19 @@ describe('app_startup_flow', () => {
     await waitFor(actor, (state) => state.matches('idle'), { timeout: 1000 })
 
     expect(call_count).toBe(2)
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'SET_THEME',
-      theme: expect.any(String)
-    })
+    expect(stores.ui.get_snapshot().theme).toBeDefined()
   })
 
   it('cancels from error state and returns to idle', async () => {
     const ports = create_test_ports()
     ports.settings.get_setting = vi.fn().mockRejectedValue(new Error('Settings load failed'))
 
-    const dispatch = vi.fn()
+    const stores = create_mock_stores()
 
     const actor = createActor(app_startup_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
-        dispatch
+        stores
       }
     })
 

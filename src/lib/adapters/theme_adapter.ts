@@ -1,6 +1,6 @@
 import { mode, setMode, userPrefersMode } from 'mode-watcher'
 import type { ThemePort } from '$lib/ports/theme_port'
-import type { ThemeMode } from '$lib/state/app_state_machine'
+import type { ThemeMode } from '$lib/stores/ui_store'
 
 export function create_theme_adapter(): ThemePort {
   return {

@@ -1,4 +1,4 @@
-import type { ThemeMode } from '$lib/state/app_state_machine'
+import type { ThemeMode } from '$lib/stores/ui_store'
 
 export interface ThemePort {
   get_theme(): ThemeMode

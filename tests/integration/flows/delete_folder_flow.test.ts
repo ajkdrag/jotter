@@ -2,20 +2,21 @@ import { describe, it, expect, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { delete_folder_flow_machine } from '$lib/flows/delete_folder_flow'
 import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import { create_test_vault } from '../../unit/helpers/test_fixtures'
 
 describe('delete_folder_flow', () => {
-  it('fetches stats then deletes folder and updates state', async () => {
+  it('fetches stats then deletes folder and updates stores', async () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
+    const stores = create_mock_stores()
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_folder_paths(['docs'])
     notes_port.get_folder_stats = vi.fn().mockResolvedValue({ note_count: 2, folder_count: 1 })
 
-    const dispatched: unknown[] = []
-    const dispatch = (event: unknown) => dispatched.push(event)
-
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -31,7 +32,7 @@ describe('delete_folder_flow', () => {
     expect(notes_port._calls.delete_folder).toEqual([
       { vault_id: vault.id, folder_path: 'docs' }
     ])
-    expect(dispatched).toContainEqual({ type: 'REMOVE_FOLDER_FROM_STATE', folder_path: 'docs' })
+    expect(stores.notes.get_snapshot().folder_paths).not.toContain('docs')
     expect(index_port._calls.build_index).toContain(vault.id)
   })
 
@@ -39,13 +40,13 @@ describe('delete_folder_flow', () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
+    const stores = create_mock_stores({ now_ms: () => 123 })
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_folder_paths(['docs'])
     notes_port.get_folder_stats = vi.fn().mockResolvedValue({ note_count: 0, folder_count: 0 })
 
-    const dispatched: unknown[] = []
-    const dispatch = (event: unknown) => dispatched.push(event)
-
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -54,8 +55,7 @@ describe('delete_folder_flow', () => {
     actor.send({ type: 'CONFIRM' })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
 
-    expect(dispatched).toContainEqual({ type: 'CLEAR_OPEN_NOTE' })
-    expect(dispatched).toContainEqual({ type: 'COMMAND_ENSURE_OPEN_NOTE' })
+    expect(stores.editor.get_snapshot().open_note?.meta.title).toBe('Untitled-1')
   })
 
   it('handles error when stats fetch fails', async () => {
@@ -63,9 +63,10 @@ describe('delete_folder_flow', () => {
     const index_port = create_mock_index_port()
     notes_port.get_folder_stats = vi.fn().mockRejectedValue(new Error('Stats failed'))
     const vault = create_test_vault()
+    const stores = create_mock_stores()
 
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch: () => {} }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -79,6 +80,8 @@ describe('delete_folder_flow', () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
+    const stores = create_mock_stores()
+    stores.vault.actions.set_vault(vault)
     let calls = 0
     notes_port.delete_folder = vi.fn().mockImplementation(() => {
       calls++
@@ -87,7 +90,7 @@ describe('delete_folder_flow', () => {
     })
 
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch: () => {} }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 

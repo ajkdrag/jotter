@@ -2,7 +2,7 @@ import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { error } from '@sveltejs/kit'
 
-export async function GET({ params }) {
+export async function GET({ params }: { params: { path: string } }) {
   try {
     const test_files_dir = resolve(process.cwd(), 'test', 'files')
     const requested_path = join(test_files_dir, params.path)

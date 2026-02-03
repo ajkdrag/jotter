@@ -3,9 +3,9 @@ import { create_app_flows } from '$lib/flows/create_app_flows'
 import { create_mock_notes_port, create_mock_index_port, create_mock_vault_port } from '../../unit/helpers/mock_ports'
 import { create_test_assets_adapter } from '$lib/adapters/test/test_assets_adapter'
 import { create_test_settings_adapter } from '$lib/adapters/test/test_settings_adapter'
-import { create_test_workspace_index_adapter } from '$lib/adapters/test/test_workspace_index_adapter'
 import { create_test_vault_adapter } from '$lib/adapters/test/test_vault_adapter'
 import { create_test_notes_adapter } from '$lib/adapters/test/test_notes_adapter'
+import { create_test_workspace_index_adapter } from '$lib/adapters/test/test_workspace_index_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
 import { as_vault_id, as_vault_path } from '$lib/types/ids'
 import type { Ports } from '$lib/adapters/create_prod_ports'
@@ -37,9 +37,10 @@ describe('create_app_flows', () => {
     expect(app_flows.flows.settings).toBeDefined()
     expect(app_flows.flows.command_palette).toBeDefined()
     expect(app_flows.flows.filetree).toBeDefined()
+    expect(app_flows.stores).toBeDefined()
   })
 
-  it('dispatches VAULT_CHANGED to filetree on SET_ACTIVE_VAULT', async () => {
+  it('dispatches VAULT_CHANGED to filetree when vault changes', async () => {
     const ports: Ports = {
       vault: create_mock_vault_port(),
       notes: create_mock_notes_port(),
@@ -54,7 +55,7 @@ describe('create_app_flows', () => {
     const filetree_spy = vi.spyOn(app_flows.flows.filetree, 'send')
 
     const vault = { id: as_vault_id('vault-1'), name: 'Vault', path: as_vault_path('/vault'), created_at: 0 }
-    app_flows.app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+    app_flows.stores.vault.actions.set_vault(vault)
 
     await vi.waitUntil(() => filetree_spy.mock.calls.length > 0)
     expect(filetree_spy).toHaveBeenCalledWith({ type: 'VAULT_CHANGED' })

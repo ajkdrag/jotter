@@ -2,17 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { change_vault_flow_machine } from '$lib/flows/change_vault_flow'
 import { create_mock_ports } from '../../unit/helpers/mock_ports'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import { as_vault_id } from '$lib/types/ids'
 
 describe('change_vault_flow errors', () => {
   it('transitions to error when open fails and can cancel', async () => {
     const ports = create_mock_ports()
+    const stores = create_mock_stores()
     ports.vault.open_vault_by_id = async () => {
       throw new Error('Open failed')
     }
 
     const actor = createActor(change_vault_flow_machine, {
-      input: { ports, dispatch: () => {} }
+      input: { ports, stores }
     })
     actor.start()
 

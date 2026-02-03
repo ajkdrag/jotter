@@ -1,23 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { rename_folder_flow_machine } from '$lib/flows/rename_folder_flow'
-import { app_state_machine } from '$lib/state/app_state_machine'
 import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import { create_test_vault } from '../../unit/helpers/test_fixtures'
 
 describe('rename_folder_flow', () => {
-  it('renames folder and dispatches RENAME_FOLDER_IN_STATE', async () => {
+  it('renames folder and updates stores', async () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
-    const dispatched: unknown[] = []
-    const dispatch = (event: unknown) => dispatched.push(event)
+    const stores = create_mock_stores()
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_folder_paths(['old'])
 
     const actor = createActor(rename_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -30,7 +28,8 @@ describe('rename_folder_flow', () => {
     expect(notes_port._calls.rename_folder).toEqual([
       { vault_id: vault.id, from_path: 'old', to_path: 'new' }
     ])
-    expect(dispatched).toContainEqual({ type: 'RENAME_FOLDER_IN_STATE', old_path: 'old', new_path: 'new' })
+    expect(stores.notes.get_snapshot().folder_paths).toContain('new')
+    expect(stores.notes.get_snapshot().folder_paths).not.toContain('old')
     expect(index_port._calls.build_index).toContain(vault.id)
   })
 
@@ -38,6 +37,8 @@ describe('rename_folder_flow', () => {
     const notes_port = create_mock_notes_port()
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
+    const stores = create_mock_stores()
+    stores.vault.actions.set_vault(vault)
     let calls = 0
     notes_port.rename_folder = vi.fn().mockImplementation(() => {
       calls++
@@ -46,7 +47,7 @@ describe('rename_folder_flow', () => {
     })
 
     const actor = createActor(rename_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, dispatch: () => {} }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 

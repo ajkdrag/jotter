@@ -4,14 +4,12 @@ import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type DeleteNotePorts = {
   notes: NotesPort
   index: WorkspaceIndexPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   note_to_delete: NoteMeta | null
@@ -19,7 +17,7 @@ type FlowContext = {
   is_note_currently_open: boolean
   error: string | null
   ports: DeleteNotePorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type DeleteNoteFlowContext = FlowContext
@@ -34,7 +32,7 @@ export type DeleteNoteFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: DeleteNotePorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export const delete_note_flow_machine = setup({
@@ -50,20 +48,25 @@ export const delete_note_flow_machine = setup({
       }: {
         input: {
           ports: DeleteNotePorts
-          dispatch: AppStateDispatch
+          stores: AppStores
           vault_id: VaultId
           note: NoteMeta
           is_note_currently_open: boolean
         }
       }) => {
-        const { ports, dispatch, vault_id, note } = input
+        const { ports, stores, vault_id, note } = input
 
         await delete_note(ports, { vault_id, note_id: note.id })
 
-        dispatch({ type: 'REMOVE_NOTE_FROM_LIST', note_id: note.id })
+        stores.notes.actions.remove_note(note.id)
 
-        if (input.is_note_currently_open) dispatch({ type: 'CLEAR_OPEN_NOTE' })
-        dispatch({ type: 'COMMAND_ENSURE_OPEN_NOTE' })
+        if (input.is_note_currently_open) {
+          stores.editor.actions.clear_open_note()
+        }
+
+        const vault = stores.vault.get_snapshot().vault
+        const notes = stores.notes.get_snapshot().notes
+        stores.editor.actions.ensure_open_note(vault, notes, stores.now_ms())
 
         void ports.index.build_index(vault_id)
       }
@@ -78,7 +81,7 @@ export const delete_note_flow_machine = setup({
     is_note_currently_open: false,
     error: null,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -110,7 +113,7 @@ export const delete_note_flow_machine = setup({
         src: 'perform_delete',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
+          stores: context.stores,
           vault_id: context.vault_id!,
           note: context.note_to_delete!,
           is_note_currently_open: context.is_note_currently_open

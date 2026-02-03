@@ -1,29 +1,18 @@
 import { describe, expect, test, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { save_note_flow_machine } from '$lib/flows/save_note_flow'
-import { app_state_machine, type AppStateContext } from '$lib/state/app_state_machine'
 import { create_mock_notes_port } from '../../unit/helpers/mock_ports'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import { create_open_note_state, create_test_note, create_test_vault, create_untitled_note_state } from '../../unit/helpers/test_fixtures'
-import type { FlowSnapshot } from '$lib/flows/flow_handle'
 import { as_note_path } from '$lib/types/ids'
-
-function wrap_snapshot(
-  snapshot: ReturnType<ReturnType<typeof createActor<typeof app_state_machine>>['getSnapshot']>
-): FlowSnapshot<AppStateContext> {
-  return {
-    context: snapshot.context,
-    matches: (state: string) => snapshot.matches(state as never)
-  }
-}
 
 describe('save_note_flow', () => {
   test('starts in idle state', () => {
     const notes_port = create_mock_notes_port()
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
+    const stores = create_mock_stores()
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -32,11 +21,10 @@ describe('save_note_flow', () => {
 
   test('no-op when there is no vault', async () => {
     const notes_port = create_mock_notes_port()
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
+    const stores = create_mock_stores()
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -50,13 +38,13 @@ describe('save_note_flow', () => {
   test('creates untitled note when vault is active and has auto-created open note', async () => {
     const notes_port = create_mock_notes_port()
     const vault = create_test_vault()
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
+    const stores = create_mock_stores()
+    stores.vault.actions.set_vault(vault)
+    const open_note = create_untitled_note_state('Untitled-1')
+    stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -75,14 +63,13 @@ describe('save_note_flow', () => {
     const vault = create_test_vault()
     const note = create_test_note('note-1', 'My Note')
     const open_note = create_open_note_state(note)
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
-    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+    const stores = create_mock_stores({ now_ms: () => 123 })
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_notes([note])
+    stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -101,14 +88,13 @@ describe('save_note_flow', () => {
     const notes_port = create_mock_notes_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('Untitled-1')
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
-    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+    const stores = create_mock_stores({ now_ms: () => 123 })
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_notes([])
+    stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -125,7 +111,7 @@ describe('save_note_flow', () => {
       markdown: open_note.markdown
     })
 
-    const final_state = app_state.getSnapshot().context.open_note
+    const final_state = stores.editor.get_snapshot().open_note
     expect(final_state?.meta.id).toBe('Untitled-1.md')
     expect(final_state?.meta.title).toBe('Untitled-1')
   })
@@ -134,15 +120,14 @@ describe('save_note_flow', () => {
     const notes_port = create_mock_notes_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('foo/Untitled-1')
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
-    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
-    app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path: 'foo' })
+    const stores = create_mock_stores({ now_ms: () => 123 })
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_notes([])
+    stores.editor.actions.set_open_note(open_note)
+    stores.ui.actions.set_selected_folder_path('foo')
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -159,7 +144,7 @@ describe('save_note_flow', () => {
       markdown: open_note.markdown
     })
 
-    const final_state = app_state.getSnapshot().context.open_note
+    const final_state = stores.editor.get_snapshot().open_note
     expect(final_state?.meta.id).toBe('foo/Untitled-1.md')
     expect(final_state?.meta.path).toBe('foo/Untitled-1.md')
   })
@@ -168,14 +153,13 @@ describe('save_note_flow', () => {
     const notes_port = create_mock_notes_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('Untitled-1')
-    const app_state = createActor(app_state_machine, { input: { now_ms: () => 123 } })
-    app_state.start()
-
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [] })
-    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+    const stores = create_mock_stores({ now_ms: () => 123 })
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_notes([])
+    stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, dispatch: app_state.send, get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()) }
+      input: { ports: { notes: notes_port }, stores }
     })
     actor.start()
 
@@ -189,7 +173,7 @@ describe('save_note_flow', () => {
     expect(notes_port._calls.create_note).toHaveLength(1)
     expect(notes_port._calls.create_note[0]?.note_path).toBe('my-custom-note.md')
 
-    const final_state = app_state.getSnapshot().context.open_note
+    const final_state = stores.editor.get_snapshot().open_note
     expect(final_state?.meta.id).toBe('my-custom-note.md')
   })
 
@@ -198,18 +182,16 @@ describe('save_note_flow', () => {
     const vault = create_test_vault()
     const note = create_test_note('note-1', 'My Note')
     const open_note = create_open_note_state(note)
-    const app_state = createActor(app_state_machine, { input: {} })
-    app_state.start()
-
-    app_state.send({ type: 'SET_ACTIVE_VAULT', vault, notes: [note] })
-    app_state.send({ type: 'SET_OPEN_NOTE', open_note })
+    const stores = create_mock_stores()
+    stores.vault.actions.set_vault(vault)
+    stores.notes.actions.set_notes([note])
+    stores.editor.actions.set_open_note(open_note)
 
     const on_save_complete = vi.fn()
     const actor = createActor(save_note_flow_machine, {
       input: {
         ports: { notes: notes_port },
-        dispatch: app_state.send,
-        get_app_state_snapshot: () => wrap_snapshot(app_state.getSnapshot()),
+        stores,
         on_save_complete
       }
     })

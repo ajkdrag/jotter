@@ -17,6 +17,7 @@
   import type { NoteMeta } from '$lib/types/note'
   import { parent_folder_path } from '$lib/utils/filetree'
   import { use_flow_handle } from '$lib/hooks/use_flow_handle.svelte'
+  import { use_store_handle } from '$lib/hooks/use_store_handle.svelte'
   import { create_app_flows } from '$lib/flows/create_app_flows'
   import { create_editor_manager } from '$lib/operations/manage_editor'
 
@@ -36,7 +37,11 @@
     on_save_complete: () => editor_manager.mark_clean()
   }))
 
-  const app_state = use_flow_handle(app.app_state)
+  const vault_store = use_store_handle(app.stores.vault)
+  const notes_store = use_store_handle(app.stores.notes)
+  const editor_store = use_store_handle(app.stores.editor)
+  const ui_store = use_store_handle(app.stores.ui)
+
   const app_startup = use_flow_handle(app.flows.app_startup)
   const open_app = use_flow_handle(app.flows.open_app)
   const change_vault = use_flow_handle(app.flows.change_vault)
@@ -51,11 +56,13 @@
   const command_palette = use_flow_handle(app.flows.command_palette)
   const filetree = use_flow_handle(app.flows.filetree)
 
+  const has_vault = $derived(vault_store.state.vault !== null)
+
   const palette_open = $derived(command_palette.snapshot.matches('open'))
   const palette_selected_index = $derived(command_palette.snapshot.context.selected_index)
 
   const vault_dialog_open = $derived(
-    app_state.snapshot.matches('vault_open') &&
+    has_vault &&
       (change_vault.snapshot.matches('dialog_open') ||
         change_vault.snapshot.matches('changing') ||
         change_vault.snapshot.matches('error'))
@@ -115,7 +122,11 @@
       })
     },
     create_new_note() {
-      app_state.send({ type: 'CREATE_NEW_NOTE_IN_CURRENT_FOLDER' })
+      editor_store.actions.create_new_note_in_folder(
+        notes_store.state.notes,
+        ui_store.state.selected_folder_path,
+        app.stores.now_ms()
+      )
     },
     request_change_vault() {
       change_vault.send({ type: 'OPEN_DIALOG' })
@@ -130,27 +141,27 @@
       change_vault.send({ type: 'SELECT_VAULT', vault_id })
     },
     open_note(note_path: string) {
-      const vault_id = app_state.snapshot.context.vault?.id
+      const vault_id = vault_store.state.vault?.id
       if (!vault_id) return
 
       const normalized_path = as_note_path(note_path)
-      app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path: parent_folder_path(normalized_path) })
+      ui_store.actions.set_selected_folder_path(parent_folder_path(normalized_path))
 
-      const current_note_id = app_state.snapshot.context.open_note?.meta.id
+      const current_note_id = editor_store.state.open_note?.meta.id
       if (current_note_id && current_note_id === normalized_path) return
 
       open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
     },
     markdown_change(markdown: string) {
-      app_state.send({ type: 'NOTIFY_MARKDOWN_CHANGED', markdown: as_markdown_text(markdown) })
+      editor_store.actions.update_markdown(as_markdown_text(markdown))
     },
     dirty_state_change(is_dirty: boolean) {
-      app_state.send({ type: 'NOTIFY_DIRTY_STATE_CHANGED', is_dirty })
+      editor_store.actions.update_dirty_state(is_dirty)
     },
     request_delete(note: NoteMeta) {
-      const vault_id = app_state.snapshot.context.vault?.id
+      const vault_id = vault_store.state.vault?.id
       if (!vault_id) return
-      const is_note_currently_open = app_state.snapshot.context.open_note?.meta.id === note.id
+      const is_note_currently_open = editor_store.state.open_note?.meta.id === note.id
       delete_note.send({ type: 'REQUEST_DELETE', vault_id, note, is_note_currently_open })
     },
     confirm_delete() {
@@ -163,9 +174,9 @@
       delete_note.send({ type: 'RETRY' })
     },
     request_rename(note: NoteMeta) {
-      const vault_id = app_state.snapshot.context.vault?.id
+      const vault_id = vault_store.state.vault?.id
       if (!vault_id) return
-      const is_note_currently_open = app_state.snapshot.context.open_note?.meta.id === note.id
+      const is_note_currently_open = editor_store.state.open_note?.meta.id === note.id
       rename_note.send({ type: 'REQUEST_RENAME', vault_id, note, is_note_currently_open })
     },
     update_rename_path(path: string) {
@@ -215,10 +226,10 @@
     },
     handle_theme_change(theme: 'light' | 'dark' | 'system') {
       stable.ports.theme.set_theme(theme)
-      app_state.send({ type: 'SET_THEME', theme })
+      ui_store.actions.set_theme(theme)
     },
     request_create_folder(parent_path: string) {
-      const vault_id = app_state.snapshot.context.vault?.id
+      const vault_id = vault_store.state.vault?.id
       if (!vault_id) return
       create_folder.send({ type: 'REQUEST_CREATE', vault_id, parent_path })
     },
@@ -232,10 +243,10 @@
       create_folder.send({ type: 'UPDATE_FOLDER_NAME', name })
     },
     toggle_sidebar() {
-      app_state.send({ type: 'TOGGLE_SIDEBAR' })
+      ui_store.actions.toggle_sidebar()
     },
     select_folder_path(path: string) {
-      app_state.send({ type: 'SET_SELECTED_FOLDER_PATH', path })
+      ui_store.actions.set_selected_folder_path(path)
     },
     toggle_filetree_folder(path: string) {
       filetree.send({ type: 'TOGGLE_FOLDER', path })
@@ -247,10 +258,10 @@
       filetree.send({ type: 'COLLAPSE_ALL' })
     },
     request_delete_folder(folder_path: string) {
-      const vault_id = app_state.snapshot.context.vault?.id
+      const vault_id = vault_store.state.vault?.id
       if (!vault_id) return
 
-      const open_note_path = app_state.snapshot.context.open_note?.meta.path ?? ''
+      const open_note_path = editor_store.state.open_note?.meta.path ?? ''
       const prefix = folder_path + '/'
       const contains_open_note = open_note_path.startsWith(prefix)
 
@@ -262,7 +273,7 @@
       })
     },
     request_rename_folder(folder_path: string) {
-      const vault_id = app_state.snapshot.context.vault?.id
+      const vault_id = vault_store.state.vault?.id
       if (!vault_id) return
       rename_folder.send({ type: 'REQUEST_RENAME', vault_id, folder_path })
     }
@@ -271,14 +282,14 @@
 
   function handle_keydown_capture(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key === 'p') {
-      if (app_state.snapshot.matches('no_vault')) {
+      if (!has_vault) {
         return
       }
       event.preventDefault()
       command_palette.send({ type: 'TOGGLE' })
     }
     if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
-      if (app_state.snapshot.matches('no_vault')) {
+      if (!has_vault) {
         return
       }
       event.preventDefault()
@@ -298,10 +309,10 @@
   })
 </script>
 
-{#if app_state.snapshot.matches('no_vault')}
+{#if !has_vault}
   <div class="mx-auto max-w-[65ch] p-8">
     <VaultSelectionPanel
-      recent_vaults={app_state.snapshot.context.recent_vaults}
+      recent_vaults={vault_store.state.recent_vaults}
       current_vault_id={null}
       is_loading={vault_selection_loading}
       error={open_app.snapshot.context.error ?? change_vault.snapshot.context.error}
@@ -311,20 +322,19 @@
     />
   </div>
 {:else}
-  {@const app = app_state.snapshot.context}
   <main>
     <AppSidebar
       editor_manager={editor_manager}
-      vault={app.vault}
-      notes={app.notes}
-      folder_paths={app.folder_paths}
+      vault={vault_store.state.vault}
+      notes={notes_store.state.notes}
+      folder_paths={notes_store.state.folder_paths}
       expanded_paths={filetree.snapshot.context.expanded_paths}
       load_states={filetree.snapshot.context.load_states}
-      open_note_title={app.open_note?.meta.title ?? 'Notes'}
-      open_note={app.open_note}
-      sidebar_open={app.sidebar_open}
-      selected_folder_path={app.selected_folder_path}
-      current_theme={app.theme}
+      open_note_title={editor_store.state.open_note?.meta.title ?? 'Notes'}
+      open_note={editor_store.state.open_note}
+      sidebar_open={ui_store.state.sidebar_open}
+      selected_folder_path={ui_store.state.selected_folder_path}
+      current_theme={ui_store.state.theme}
       on_theme_change={actions.handle_theme_change}
       on_open_note={actions.open_note}
       on_create_note={actions.create_new_note}
@@ -345,15 +355,14 @@
   </main>
 {/if}
 
-{#if app_state.snapshot.matches('vault_open')}
-  {@const app = app_state.snapshot.context}
+{#if has_vault}
   <VaultDialog
     open={vault_dialog_open}
     on_open_change={(open) => {
       if (!open) actions.close_change_vault_dialog()
     }}
-    recent_vaults={app.recent_vaults}
-    current_vault_id={app.vault!.id}
+    recent_vaults={vault_store.state.recent_vaults}
+    current_vault_id={vault_store.state.vault!.id}
     is_loading={vault_selection_loading}
     error={change_vault.snapshot.context.error}
     on_choose_vault_dir={actions.choose_vault_dir}

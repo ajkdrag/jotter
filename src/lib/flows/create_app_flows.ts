@@ -1,5 +1,5 @@
 import type { Ports } from '$lib/adapters/create_prod_ports'
-import { app_state_machine, type AppStateEvents, type AppStateContext } from '$lib/state/app_state_machine'
+import { create_app_stores, type AppStores } from '$lib/stores/create_app_stores'
 import { change_vault_flow_machine } from '$lib/flows/change_vault_flow'
 import type { ChangeVaultFlowContext, ChangeVaultFlowEvents } from '$lib/flows/change_vault_flow'
 import { open_app_flow_machine } from '$lib/flows/open_app_flow'
@@ -34,7 +34,7 @@ export type CreateAppFlowsCallbacks = {
 }
 
 export type AppFlows = {
-  app_state: FlowHandle<AppStateEvents, FlowSnapshot<AppStateContext>>
+  stores: AppStores
   flows: {
     app_startup: FlowHandle<AppStartupFlowEvents, FlowSnapshot<AppStartupFlowContext>>
     open_app: FlowHandle<OpenAppFlowEvents, FlowSnapshot<OpenAppFlowContext>>
@@ -53,64 +53,52 @@ export type AppFlows = {
 }
 
 export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbacks): AppFlows {
-  const app_state = create_flow_handle(app_state_machine, { input: {} })
-  let last_vault_id: string | null = app_state.get_snapshot().context.vault?.id ?? null
+  const stores = create_app_stores()
 
   const filetree = create_flow_handle(filetree_flow_machine, {
     input: {
       ports: { notes: ports.notes },
-      dispatch: (event: AppStateEvents) => app_state.send(event),
-      get_vault_id: () => app_state.get_snapshot().context.vault?.id ?? null
+      stores,
+      get_vault_id: () => stores.vault.get_snapshot().vault?.id ?? null
     }
   })
 
-  app_state.subscribe((snapshot) => {
-    const next_vault_id = snapshot.context.vault?.id ?? null
-    if (next_vault_id && next_vault_id !== last_vault_id) {
+  stores.vault.subscribe((state) => {
+    if (state.vault) {
       filetree.send({ type: 'VAULT_CHANGED' })
     }
-    last_vault_id = next_vault_id
   })
-
-  const dispatch = (event: AppStateEvents) => {
-    app_state.send(event)
-    if (event.type === 'SET_ACTIVE_VAULT') {
-      filetree.send({ type: 'VAULT_CHANGED' })
-    }
-  }
 
   const open_app = create_flow_handle(open_app_flow_machine, {
     input: {
       ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-      dispatch,
-      get_app_state_snapshot: app_state.get_snapshot
+      stores
     }
   })
 
   const change_vault = create_flow_handle(change_vault_flow_machine, {
     input: {
       ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-      dispatch
+      stores
     }
   })
 
   const open_note = create_flow_handle(open_note_flow_machine, {
-    input: { ports: { notes: ports.notes }, dispatch }
+    input: { ports: { notes: ports.notes }, stores }
   })
 
   const delete_note = create_flow_handle(delete_note_flow_machine, {
-    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+    input: { ports: { notes: ports.notes, index: ports.index }, stores }
   })
 
   const rename_note = create_flow_handle(rename_note_flow_machine, {
-    input: { ports: { notes: ports.notes, index: ports.index }, dispatch, get_app_state_snapshot: app_state.get_snapshot }
+    input: { ports: { notes: ports.notes, index: ports.index }, stores }
   })
 
   const save_note = create_flow_handle(save_note_flow_machine, {
     input: {
       ports: { notes: ports.notes },
-      dispatch,
-      get_app_state_snapshot: app_state.get_snapshot,
+      stores,
       ...(callbacks?.on_save_complete && { on_save_complete: callbacks.on_save_complete })
     }
   })
@@ -120,25 +108,25 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   })
 
   const create_folder = create_flow_handle(create_folder_flow_machine, {
-    input: { ports: { notes: ports.notes }, dispatch }
+    input: { ports: { notes: ports.notes }, stores }
   })
 
   const app_startup = create_flow_handle(app_startup_flow_machine, {
-    input: { ports: { theme: ports.theme, settings: ports.settings }, dispatch }
+    input: { ports: { theme: ports.theme, settings: ports.settings }, stores }
   })
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
 
   const delete_folder = create_flow_handle(delete_folder_flow_machine, {
-    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+    input: { ports: { notes: ports.notes, index: ports.index }, stores }
   })
 
   const rename_folder = create_flow_handle(rename_folder_flow_machine, {
-    input: { ports: { notes: ports.notes, index: ports.index }, dispatch }
+    input: { ports: { notes: ports.notes, index: ports.index }, stores }
   })
 
   return {
-    app_state,
+    stores,
     flows: {
       app_startup,
       open_app,

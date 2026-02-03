@@ -2,13 +2,11 @@ import { setup, assign, fromCallback, type AnyActorRef } from 'xstate'
 import type { FolderLoadState, FolderContents } from '$lib/types/filetree'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type FiletreePorts = {
   notes: NotesPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type GetVaultId = () => VaultId | null
 
@@ -18,7 +16,7 @@ type FlowContext = {
   error_messages: Map<string, string>
   active_loads: Map<string, AnyActorRef>
   ports: FiletreePorts
-  dispatch: AppStateDispatch
+  stores: AppStores
   get_vault_id: GetVaultId
 }
 
@@ -40,7 +38,7 @@ export type FiletreeFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: FiletreePorts
-  dispatch: AppStateDispatch
+  stores: AppStores
   get_vault_id: GetVaultId
 }
 
@@ -163,7 +161,7 @@ export const filetree_flow_machine = setup({
       new_error_messages.delete(path)
       new_active_loads.delete(path)
 
-      context.dispatch({ type: 'MERGE_FOLDER_CONTENTS', folder_path: path, contents })
+      context.stores.notes.actions.merge_folder_contents(path, contents)
 
       return { load_states: new_load_states, error_messages: new_error_messages, active_loads: new_active_loads }
     }),
@@ -206,7 +204,7 @@ export const filetree_flow_machine = setup({
   context: ({ input }) => ({
     ...create_empty_state(),
     ports: input.ports,
-    dispatch: input.dispatch,
+    stores: input.stores,
     get_vault_id: input.get_vault_id
   }),
   states: {

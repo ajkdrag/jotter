@@ -2,13 +2,11 @@ import { setup, assign, fromPromise } from 'xstate'
 import { create_folder } from '$lib/operations/create_folder'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type CreateFolderPorts = {
   notes: NotesPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   parent_path: string
@@ -16,7 +14,7 @@ type FlowContext = {
   vault_id: VaultId | null
   error: string | null
   ports: CreateFolderPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type CreateFolderFlowContext = FlowContext
@@ -32,7 +30,7 @@ export type CreateFolderFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: CreateFolderPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 const reset_form = {
@@ -55,20 +53,20 @@ export const create_folder_flow_machine = setup({
       }: {
         input: {
           ports: CreateFolderPorts
-          dispatch: AppStateDispatch
+          stores: AppStores
           vault_id: VaultId
           parent_path: string
           folder_name: string
         }
       }) => {
-        const { ports, dispatch, vault_id, parent_path, folder_name } = input
+        const { ports, stores, vault_id, parent_path, folder_name } = input
 
         const result = await create_folder(
           { notes: ports.notes },
           { vault_id, parent_path, folder_name }
         )
 
-        dispatch({ type: 'ADD_FOLDER_PATH', folder_path: result.new_folder_path })
+        stores.notes.actions.add_folder_path(result.new_folder_path)
       }
     )
   },
@@ -81,7 +79,7 @@ export const create_folder_flow_machine = setup({
   context: ({ input }) => ({
     ...reset_form,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -112,7 +110,7 @@ export const create_folder_flow_machine = setup({
         src: 'perform_create',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
+          stores: context.stores,
           vault_id: context.vault_id!,
           parent_path: context.parent_path,
           folder_name: context.folder_name

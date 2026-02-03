@@ -4,14 +4,12 @@ import { get_folder_stats } from '$lib/operations/get_folder_stats'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type DeleteFolderPorts = {
   notes: NotesPort
   index: WorkspaceIndexPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   folder_path: string | null
@@ -21,7 +19,7 @@ type FlowContext = {
   affected_folder_count: number
   error: string | null
   ports: DeleteFolderPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type DeleteFolderFlowContext = FlowContext
@@ -36,7 +34,7 @@ export type DeleteFolderFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: DeleteFolderPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export const delete_folder_flow_machine = setup({
@@ -66,20 +64,25 @@ export const delete_folder_flow_machine = setup({
       }: {
         input: {
           ports: DeleteFolderPorts
-          dispatch: AppStateDispatch
+          stores: AppStores
           vault_id: VaultId
           folder_path: string
           contains_open_note: boolean
         }
       }) => {
-        const { ports, dispatch, vault_id, folder_path, contains_open_note } = input
+        const { ports, stores, vault_id, folder_path, contains_open_note } = input
 
         await delete_folder(ports, { vault_id, folder_path })
 
-        dispatch({ type: 'REMOVE_FOLDER_FROM_STATE', folder_path })
+        stores.notes.actions.remove_folder(folder_path)
 
-        if (contains_open_note) dispatch({ type: 'CLEAR_OPEN_NOTE' })
-        dispatch({ type: 'COMMAND_ENSURE_OPEN_NOTE' })
+        if (contains_open_note) {
+          stores.editor.actions.clear_open_note()
+        }
+
+        const vault = stores.vault.get_snapshot().vault
+        const notes = stores.notes.get_snapshot().notes
+        stores.editor.actions.ensure_open_note(vault, notes, stores.now_ms())
 
         void ports.index.build_index(vault_id)
       }
@@ -96,7 +99,7 @@ export const delete_folder_flow_machine = setup({
     affected_folder_count: 0,
     error: null,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -157,7 +160,7 @@ export const delete_folder_flow_machine = setup({
         src: 'perform_delete',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
+          stores: context.stores,
           vault_id: context.vault_id!,
           folder_path: context.folder_path!,
           contains_open_note: context.contains_open_note

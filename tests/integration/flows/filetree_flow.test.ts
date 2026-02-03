@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { filetree_flow_machine } from '$lib/flows/filetree_flow'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import type { VaultId } from '$lib/types/ids'
 import type { FolderContents } from '$lib/types/filetree'
 
 function create_mock_input() {
-  const dispatch = vi.fn()
+  const stores = create_mock_stores()
   const get_vault_id = vi.fn(() => 'test-vault' as VaultId)
   const list_folder_contents = vi.fn(
     async (_vault_id: VaultId, _folder_path: string): Promise<FolderContents> => ({
@@ -31,7 +32,7 @@ function create_mock_input() {
         get_folder_stats: vi.fn(async () => ({ note_count: 0, folder_count: 0 }))
       }
     },
-    dispatch,
+    stores,
     get_vault_id
   }
 }

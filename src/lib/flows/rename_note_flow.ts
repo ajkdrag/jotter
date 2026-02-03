@@ -4,17 +4,12 @@ import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { NotePath, VaultId } from '$lib/types/ids'
-import type { AppStateEvents, AppStateContext } from '$lib/state/app_state_machine'
-import type { FlowSnapshot } from '$lib/flows/flow_handle'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type RenameNotePorts = {
   notes: NotesPort
   index: WorkspaceIndexPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
-
-type GetAppStateSnapshot = () => FlowSnapshot<AppStateContext>
 
 type FlowContext = {
   note_to_rename: NoteMeta | null
@@ -24,8 +19,7 @@ type FlowContext = {
   error: string | null
   target_exists: boolean
   ports: RenameNotePorts
-  dispatch: AppStateDispatch
-  get_app_state_snapshot: GetAppStateSnapshot
+  stores: AppStores
 }
 
 export type RenameNoteFlowContext = FlowContext
@@ -42,8 +36,7 @@ export type RenameNoteFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: RenameNotePorts
-  dispatch: AppStateDispatch
-  get_app_state_snapshot: GetAppStateSnapshot
+  stores: AppStores
 }
 
 export const rename_note_flow_machine = setup({
@@ -73,21 +66,21 @@ export const rename_note_flow_machine = setup({
       }: {
         input: {
           ports: RenameNotePorts
-          dispatch: AppStateDispatch
+          stores: AppStores
           vault_id: VaultId
           note: NoteMeta
           new_path: NotePath
           is_note_currently_open: boolean
         }
       }) => {
-        const { ports, dispatch, vault_id, note, new_path, is_note_currently_open } = input
+        const { ports, stores, vault_id, note, new_path, is_note_currently_open } = input
 
         await rename_note(ports, { vault_id, from: note.path, to: new_path })
 
-        dispatch({ type: 'RENAME_NOTE_IN_LIST', old_path: note.path, new_path })
+        stores.notes.actions.rename_note(note.path, new_path)
 
         if (is_note_currently_open) {
-          dispatch({ type: 'UPDATE_OPEN_NOTE_PATH', path: new_path })
+          stores.editor.actions.update_path(new_path)
         }
 
         void ports.index.build_index(vault_id)
@@ -105,8 +98,7 @@ export const rename_note_flow_machine = setup({
     error: null,
     target_exists: false,
     ports: input.ports,
-    dispatch: input.dispatch,
-    get_app_state_snapshot: input.get_app_state_snapshot
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -149,9 +141,9 @@ export const rename_note_flow_machine = setup({
       invoke: {
         src: 'check_path_exists',
         input: ({ context }) => {
-          const app_snapshot = context.get_app_state_snapshot()
+          const notes = context.stores.notes.get_snapshot().notes
           return {
-            notes: app_snapshot.context.notes,
+            notes,
             new_path: context.new_path!
           }
         },
@@ -191,7 +183,7 @@ export const rename_note_flow_machine = setup({
         src: 'perform_rename',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
+          stores: context.stores,
           vault_id: context.vault_id!,
           note: context.note_to_rename!,
           new_path: context.new_path!,

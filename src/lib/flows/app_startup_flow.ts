@@ -4,19 +4,17 @@ import { load_editor_settings } from '$lib/operations/load_editor_settings'
 import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
 import type { ThemePort } from '$lib/ports/theme_port'
 import type { SettingsPort } from '$lib/ports/settings_port'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type AppStartupPorts = {
   theme: ThemePort
   settings: SettingsPort
 }
 
-type AppStateDispatch = (event: AppStateEvents) => void
-
 type FlowContext = {
   error: string | null
   ports: AppStartupPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type AppStartupFlowContext = FlowContext
@@ -27,7 +25,7 @@ export type AppStartupFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: AppStartupPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export const app_startup_flow_machine = setup({
@@ -43,13 +41,13 @@ export const app_startup_flow_machine = setup({
       }: {
         input: {
           ports: AppStartupPorts
-          dispatch: AppStateDispatch
+          stores: AppStores
         }
       }) => {
-        const { ports, dispatch } = input
+        const { ports, stores } = input
 
         const theme_mode = init_theme(ports.theme)
-        dispatch({ type: 'SET_THEME', theme: theme_mode })
+        stores.ui.actions.set_theme(theme_mode)
 
         const editor_settings = await load_editor_settings(ports.settings)
         apply_editor_styles(editor_settings)
@@ -62,7 +60,7 @@ export const app_startup_flow_machine = setup({
   context: ({ input }) => ({
     error: null,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -83,7 +81,7 @@ export const app_startup_flow_machine = setup({
         src: 'perform_startup',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch
+          stores: context.stores
         }),
         onDone: 'idle',
         onError: {

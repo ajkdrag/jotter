@@ -3,14 +3,12 @@ import { rename_folder } from '$lib/operations/rename_folder'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStateEvents } from '$lib/state/app_state_machine'
+import type { AppStores } from '$lib/stores/create_app_stores'
 
 type RenameFolderPorts = {
   notes: NotesPort
   index: WorkspaceIndexPort
 }
-
-type AppStateDispatch = (event: AppStateEvents) => void
 
 type FlowContext = {
   folder_path: string | null
@@ -18,7 +16,7 @@ type FlowContext = {
   new_path: string | null
   error: string | null
   ports: RenameFolderPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export type RenameFolderFlowContext = FlowContext
@@ -34,7 +32,7 @@ export type RenameFolderFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: RenameFolderPorts
-  dispatch: AppStateDispatch
+  stores: AppStores
 }
 
 export const rename_folder_flow_machine = setup({
@@ -50,17 +48,24 @@ export const rename_folder_flow_machine = setup({
       }: {
         input: {
           ports: RenameFolderPorts
-          dispatch: AppStateDispatch
+          stores: AppStores
           vault_id: VaultId
           folder_path: string
           new_path: string
         }
       }) => {
-        const { ports, dispatch, vault_id, folder_path, new_path } = input
+        const { ports, stores, vault_id, folder_path, new_path } = input
 
         await rename_folder(ports, { vault_id, from_path: folder_path, to_path: new_path })
 
-        dispatch({ type: 'RENAME_FOLDER_IN_STATE', old_path: folder_path, new_path })
+        stores.notes.actions.rename_folder(folder_path, new_path)
+
+        const old_prefix = folder_path + '/'
+        const new_prefix = new_path + '/'
+        const open_note = stores.editor.get_snapshot().open_note
+        if (open_note?.meta.path.startsWith(old_prefix)) {
+          stores.editor.actions.update_path_prefix(old_prefix, new_prefix)
+        }
 
         void ports.index.build_index(vault_id)
       }
@@ -75,7 +80,7 @@ export const rename_folder_flow_machine = setup({
     new_path: null,
     error: null,
     ports: input.ports,
-    dispatch: input.dispatch
+    stores: input.stores
   }),
   states: {
     idle: {
@@ -115,7 +120,7 @@ export const rename_folder_flow_machine = setup({
         src: 'perform_rename',
         input: ({ context }) => ({
           ports: context.ports,
-          dispatch: context.dispatch,
+          stores: context.stores,
           vault_id: context.vault_id!,
           folder_path: context.folder_path!,
           new_path: context.new_path!
