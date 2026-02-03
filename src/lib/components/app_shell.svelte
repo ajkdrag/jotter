@@ -11,6 +11,7 @@
   import { create_app_flows } from '$lib/flows/create_app_flows'
   import { create_editor_manager } from '$lib/operations/manage_editor'
   import { create_app_shell_actions } from '$lib/components/app_shell_actions'
+  import { build_app_sidebar_props } from '$lib/components/app_sidebar_view_model'
 
   type Props = {
     ports: Ports
@@ -74,6 +75,21 @@
   onMount(() => {
     actions.mount()
   })
+
+  const sidebar_props = $derived(build_app_sidebar_props({
+    editor_manager,
+    vault: vault_store.state.vault,
+    notes: notes_store.state.notes,
+    folder_paths: notes_store.state.folder_paths,
+    expanded_paths: filetree.snapshot.context.expanded_paths,
+    load_states: filetree.snapshot.context.load_states,
+    open_note_title: editor_store.state.open_note?.meta.title ?? 'Notes',
+    open_note: editor_store.state.open_note,
+    sidebar_open: ui_store.state.sidebar_open,
+    selected_folder_path: ui_store.state.selected_folder_path,
+    current_theme: ui_store.state.theme,
+    actions
+  }))
 </script>
 
 {#if !has_vault}
@@ -90,35 +106,7 @@
   </div>
 {:else}
   <main>
-    <AppSidebar
-      editor_manager={editor_manager}
-      vault={vault_store.state.vault}
-      notes={notes_store.state.notes}
-      folder_paths={notes_store.state.folder_paths}
-      expanded_paths={filetree.snapshot.context.expanded_paths}
-      load_states={filetree.snapshot.context.load_states}
-      open_note_title={editor_store.state.open_note?.meta.title ?? 'Notes'}
-      open_note={editor_store.state.open_note}
-      sidebar_open={ui_store.state.sidebar_open}
-      selected_folder_path={ui_store.state.selected_folder_path}
-      current_theme={ui_store.state.theme}
-      on_theme_change={actions.handle_theme_change}
-      on_open_note={actions.open_note}
-      on_create_note={actions.create_new_note}
-      on_request_create_folder={actions.request_create_folder}
-      on_markdown_change={actions.markdown_change}
-      on_dirty_state_change={actions.dirty_state_change}
-      on_request_delete_note={actions.request_delete}
-      on_request_rename_note={actions.request_rename}
-      on_request_delete_folder={actions.request_delete_folder}
-      on_request_rename_folder={actions.request_rename_folder}
-      on_open_settings={actions.open_settings}
-      on_toggle_sidebar={actions.toggle_sidebar}
-      on_select_folder_path={actions.select_folder_path}
-      on_toggle_folder={actions.toggle_filetree_folder}
-      on_retry_load={actions.retry_load_folder}
-      on_collapse_all={actions.collapse_all_folders}
-    />
+    <AppSidebar model={sidebar_props.model} ops={sidebar_props.ops} />
   </main>
 {/if}
 
@@ -127,14 +115,14 @@
   hide_choose_vault_button={stable.hide_choose_vault_button}
   vault_selection_loading={vault_selection_loading}
   vault_store_state={vault_store.state}
-  change_vault={change_vault}
-  delete_note={delete_note}
-  rename_note={rename_note}
-  save_note={save_note}
+  change_vault_snapshot={change_vault.snapshot}
+  delete_note_snapshot={delete_note.snapshot}
+  rename_note_snapshot={rename_note.snapshot}
+  save_note_snapshot={save_note.snapshot}
   delete_folder={delete_folder}
   rename_folder={rename_folder}
-  create_folder={create_folder}
-  settings={settings}
+  create_folder_snapshot={create_folder.snapshot}
+  settings_snapshot={settings.snapshot}
   command_palette={command_palette}
   actions={actions}
 />

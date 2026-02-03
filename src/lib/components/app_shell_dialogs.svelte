@@ -11,12 +11,12 @@
 
   import type { VaultState } from '$lib/stores/vault_store'
   import type { FlowSnapshot } from '$lib/flows/flow_handle'
-  import type { ChangeVaultFlowContext, ChangeVaultFlowEvents } from '$lib/flows/change_vault_flow'
-  import type { DeleteNoteFlowContext, DeleteNoteFlowEvents } from '$lib/flows/delete_note_flow'
-  import type { RenameNoteFlowContext, RenameNoteFlowEvents } from '$lib/flows/rename_note_flow'
-  import type { SaveNoteFlowContext, SaveNoteFlowEvents } from '$lib/flows/save_note_flow'
-  import type { SettingsFlowContext, SettingsFlowEvents } from '$lib/flows/settings_flow'
-  import type { CreateFolderFlowContext, CreateFolderFlowEvents } from '$lib/flows/create_folder_flow'
+  import type { ChangeVaultFlowContext } from '$lib/flows/change_vault_flow'
+  import type { DeleteNoteFlowContext } from '$lib/flows/delete_note_flow'
+  import type { RenameNoteFlowContext } from '$lib/flows/rename_note_flow'
+  import type { SaveNoteFlowContext } from '$lib/flows/save_note_flow'
+  import type { SettingsFlowContext } from '$lib/flows/settings_flow'
+  import type { CreateFolderFlowContext } from '$lib/flows/create_folder_flow'
   import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
   import type { DeleteFolderFlowContext, DeleteFolderFlowEvents } from '$lib/flows/delete_folder_flow'
   import type { RenameFolderFlowContext, RenameFolderFlowEvents } from '$lib/flows/rename_folder_flow'
@@ -35,17 +35,15 @@
 
     vault_store_state: VaultState
 
-    change_vault: FlowView<ChangeVaultFlowEvents, ChangeVaultFlowContext>
-
-    delete_note: FlowView<DeleteNoteFlowEvents, DeleteNoteFlowContext>
-    rename_note: FlowView<RenameNoteFlowEvents, RenameNoteFlowContext>
-    save_note: FlowView<SaveNoteFlowEvents, SaveNoteFlowContext>
+    change_vault_snapshot: FlowSnapshot<ChangeVaultFlowContext>
+    delete_note_snapshot: FlowSnapshot<DeleteNoteFlowContext>
+    rename_note_snapshot: FlowSnapshot<RenameNoteFlowContext>
+    save_note_snapshot: FlowSnapshot<SaveNoteFlowContext>
+    create_folder_snapshot: FlowSnapshot<CreateFolderFlowContext>
+    settings_snapshot: FlowSnapshot<SettingsFlowContext>
 
     delete_folder: FlowView<DeleteFolderFlowEvents, DeleteFolderFlowContext>
     rename_folder: FlowView<RenameFolderFlowEvents, RenameFolderFlowContext>
-
-    create_folder: FlowView<CreateFolderFlowEvents, CreateFolderFlowContext>
-    settings: FlowView<SettingsFlowEvents, SettingsFlowContext>
     command_palette: FlowView<CommandPaletteFlowEvents, CommandPaletteFlowContext>
 
     actions: AppShellActions
@@ -56,14 +54,14 @@
     hide_choose_vault_button,
     vault_selection_loading,
     vault_store_state,
-    change_vault,
-    delete_note,
-    rename_note,
-    save_note,
+    change_vault_snapshot,
+    delete_note_snapshot,
+    rename_note_snapshot,
+    save_note_snapshot,
     delete_folder,
     rename_folder,
-    create_folder,
-    settings,
+    create_folder_snapshot,
+    settings_snapshot,
     command_palette,
     actions
   }: Props = $props()
@@ -73,45 +71,45 @@
 
   const vault_dialog_open = $derived(
     has_vault &&
-      (change_vault.snapshot.matches('dialog_open') ||
-        change_vault.snapshot.matches('changing') ||
-        change_vault.snapshot.matches('error'))
+      (change_vault_snapshot.matches('dialog_open') ||
+        change_vault_snapshot.matches('changing') ||
+        change_vault_snapshot.matches('error'))
   )
 
   const delete_dialog_open = $derived(
-    delete_note.snapshot.matches('confirming') ||
-      delete_note.snapshot.matches('deleting') ||
-      delete_note.snapshot.matches('error')
+    delete_note_snapshot.matches('confirming') ||
+      delete_note_snapshot.matches('deleting') ||
+      delete_note_snapshot.matches('error')
   )
 
   const rename_dialog_open = $derived(
-    rename_note.snapshot.matches('confirming') ||
-      rename_note.snapshot.matches('checking_conflict') ||
-      rename_note.snapshot.matches('conflict_confirm') ||
-      rename_note.snapshot.matches('renaming') ||
-      rename_note.snapshot.matches('error')
+    rename_note_snapshot.matches('confirming') ||
+      rename_note_snapshot.matches('checking_conflict') ||
+      rename_note_snapshot.matches('conflict_confirm') ||
+      rename_note_snapshot.matches('renaming') ||
+      rename_note_snapshot.matches('error')
   )
 
   const save_dialog_open = $derived(
-    save_note.snapshot.context.requires_dialog &&
-      (save_note.snapshot.matches('showing_save_dialog') ||
-        save_note.snapshot.matches('checking_existence') ||
-        save_note.snapshot.matches('conflict_confirm') ||
-        save_note.snapshot.matches('saving') ||
-        save_note.snapshot.matches('error'))
+    save_note_snapshot.context.requires_dialog &&
+      (save_note_snapshot.matches('showing_save_dialog') ||
+        save_note_snapshot.matches('checking_existence') ||
+        save_note_snapshot.matches('conflict_confirm') ||
+        save_note_snapshot.matches('saving') ||
+        save_note_snapshot.matches('error'))
   )
 
   const settings_dialog_open = $derived(
-    settings.snapshot.matches('loading') ||
-      settings.snapshot.matches('editing') ||
-      settings.snapshot.matches('saving') ||
-      settings.snapshot.matches('error')
+    settings_snapshot.matches('loading') ||
+      settings_snapshot.matches('editing') ||
+      settings_snapshot.matches('saving') ||
+      settings_snapshot.matches('error')
   )
 
   const create_folder_dialog_open = $derived(
-    create_folder.snapshot.matches('dialog_open') ||
-      create_folder.snapshot.matches('creating') ||
-      create_folder.snapshot.matches('error')
+    create_folder_snapshot.matches('dialog_open') ||
+      create_folder_snapshot.matches('creating') ||
+      create_folder_snapshot.matches('error')
   )
 </script>
 
@@ -124,7 +122,7 @@
     recent_vaults={vault_store_state.recent_vaults}
     current_vault_id={vault_store_state.vault!.id}
     is_loading={vault_selection_loading}
-    error={change_vault.snapshot.context.error}
+    error={change_vault_snapshot.context.error}
     on_choose_vault_dir={actions.choose_vault_dir}
     on_select_vault={actions.select_vault}
     hide_choose_vault_button={hide_choose_vault_button}
@@ -133,9 +131,9 @@
 
 <DeleteNoteDialog
   open={delete_dialog_open}
-  note={delete_note.snapshot.context.note_to_delete}
-  is_deleting={delete_note.snapshot.matches('deleting')}
-  error={delete_note.snapshot.context.error}
+  note={delete_note_snapshot.context.note_to_delete}
+  is_deleting={delete_note_snapshot.matches('deleting')}
+  error={delete_note_snapshot.context.error}
   on_confirm={actions.confirm_delete}
   on_cancel={actions.cancel_delete}
   on_retry={actions.retry_delete}
@@ -143,12 +141,12 @@
 
 <RenameNoteDialog
   open={rename_dialog_open}
-  note={rename_note.snapshot.context.note_to_rename}
-  new_path={rename_note.snapshot.context.new_path}
-  is_renaming={rename_note.snapshot.matches('renaming')}
-  is_checking_conflict={rename_note.snapshot.matches('checking_conflict')}
-  error={rename_note.snapshot.context.error}
-  show_overwrite_confirm={rename_note.snapshot.matches('conflict_confirm')}
+  note={rename_note_snapshot.context.note_to_rename}
+  new_path={rename_note_snapshot.context.new_path}
+  is_renaming={rename_note_snapshot.matches('renaming')}
+  is_checking_conflict={rename_note_snapshot.matches('checking_conflict')}
+  error={rename_note_snapshot.context.error}
+  show_overwrite_confirm={rename_note_snapshot.matches('conflict_confirm')}
   on_update_path={actions.update_rename_path}
   on_confirm={actions.confirm_rename}
   on_confirm_overwrite={actions.confirm_rename_overwrite}
@@ -162,12 +160,12 @@
 
 <SaveNoteDialog
   open={save_dialog_open}
-  new_path={save_note.snapshot.context.new_path}
-  folder_path={save_note.snapshot.context.folder_path}
-  is_saving={save_note.snapshot.matches('saving')}
-  is_checking={save_note.snapshot.matches('checking_existence')}
-  show_overwrite_confirm={save_note.snapshot.matches('conflict_confirm')}
-  error={save_note.snapshot.context.error}
+  new_path={save_note_snapshot.context.new_path}
+  folder_path={save_note_snapshot.context.folder_path}
+  is_saving={save_note_snapshot.matches('saving')}
+  is_checking={save_note_snapshot.matches('checking_existence')}
+  show_overwrite_confirm={save_note_snapshot.matches('conflict_confirm')}
+  error={save_note_snapshot.context.error}
   on_update_path={actions.update_save_path}
   on_confirm={actions.confirm_save}
   on_confirm_overwrite={actions.confirm_save_overwrite}
@@ -177,10 +175,10 @@
 
 <SettingsDialog
   open={settings_dialog_open}
-  editor_settings={settings.snapshot.context.current_settings}
-  is_saving={settings.snapshot.matches('saving')}
-  has_unsaved_changes={settings.snapshot.context.has_unsaved_changes}
-  error={settings.snapshot.context.error}
+  editor_settings={settings_snapshot.context.current_settings}
+  is_saving={settings_snapshot.matches('saving')}
+  has_unsaved_changes={settings_snapshot.context.has_unsaved_changes}
+  error={settings_snapshot.context.error}
   on_update_settings={actions.update_settings}
   on_save={actions.save_settings}
   on_close={actions.close_settings}
@@ -188,10 +186,10 @@
 
 <CreateFolderDialog
   open={create_folder_dialog_open}
-  parent_path={create_folder.snapshot.context.parent_path}
-  folder_name={create_folder.snapshot.context.folder_name}
-  is_creating={create_folder.snapshot.matches('creating')}
-  error={create_folder.snapshot.context.error}
+  parent_path={create_folder_snapshot.context.parent_path}
+  folder_name={create_folder_snapshot.context.folder_name}
+  is_creating={create_folder_snapshot.matches('creating')}
+  error={create_folder_snapshot.context.error}
   on_folder_name_change={actions.update_create_folder_name}
   on_confirm={actions.confirm_create_folder}
   on_cancel={actions.cancel_create_folder}
