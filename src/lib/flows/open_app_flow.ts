@@ -5,6 +5,7 @@ import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultPath } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 
 type OpenAppPorts = {
   vault: VaultPort
@@ -49,6 +50,7 @@ function reset_all_stores(stores: AppStores): void {
   stores.ui.actions.set_theme('system')
   stores.ui.actions.set_sidebar_open(true)
   stores.ui.actions.set_selected_folder_path('')
+  stores.ui.actions.set_editor_settings(DEFAULT_EDITOR_SETTINGS)
 }
 
 export const open_app_flow_machine = setup({

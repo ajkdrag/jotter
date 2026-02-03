@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { Schema } from '@milkdown/kit/prose/model'
 import { EditorState, TextSelection } from '@milkdown/kit/prose/state'
 import { create_wiki_link_converter_prose_plugin } from '$lib/adapters/editor/wiki_link_plugin'
+import type { MarkType, Node as ProseNode, Mark } from '@milkdown/kit/prose/model'
 
 function create_schema() {
   const link = {
     attrs: { href: {} },
     inclusive: false,
-    parseDOM: [{ tag: 'a[href]', getAttrs: (dom: any) => ({ href: dom.getAttribute('href') }) }],
-    toDOM: (mark: any) => ['a', { href: mark.attrs.href }, 0] as const
+    parseDOM: [{ tag: 'a[href]', getAttrs: (dom: HTMLElement) => ({ href: dom.getAttribute('href') }) }],
+    toDOM: (mark: Mark, _inline: boolean) => ['a', { href: String(mark.attrs['href'] ?? '') }, 0] as const
   } as const
 
   const code_inline = {
@@ -32,11 +33,11 @@ function create_schema() {
   })
 }
 
-function get_link_href(doc: any, link_mark: any): string | null {
+function get_link_href(doc: ProseNode, link_mark: MarkType): string | null {
   let href: string | null = null
-  doc.descendants((node: any) => {
+  doc.descendants((node: ProseNode) => {
     if (!node.isText) return true
-    const mark = node.marks.find((m: any) => m.type === link_mark)
+    const mark = node.marks.find((m: Mark) => m.type === link_mark)
     if (!mark) return true
     href = mark.attrs.href
     return false
@@ -139,4 +140,3 @@ describe('create_wiki_link_converter_prose_plugin', () => {
     expect(get_link_href(next.doc, schema.marks.link)).toBeNull()
   })
 })
-

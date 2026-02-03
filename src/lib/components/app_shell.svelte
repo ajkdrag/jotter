@@ -76,20 +76,21 @@
     actions.mount()
   })
 
-  const sidebar_props = $derived(build_app_sidebar_props({
-    editor_manager,
-    vault: vault_store.state.vault,
-    notes: notes_store.state.notes,
-    folder_paths: notes_store.state.folder_paths,
-    expanded_paths: filetree.snapshot.context.expanded_paths,
-    load_states: filetree.snapshot.context.load_states,
-    open_note_title: editor_store.state.open_note?.meta.title ?? 'Notes',
-    open_note: editor_store.state.open_note,
-    sidebar_open: ui_store.state.sidebar_open,
-    selected_folder_path: ui_store.state.selected_folder_path,
-    current_theme: ui_store.state.theme,
-    actions
-  }))
+	  const sidebar_props = $derived(build_app_sidebar_props({
+	    editor_manager,
+	    vault: vault_store.state.vault,
+	    notes: notes_store.state.notes,
+	    folder_paths: notes_store.state.folder_paths,
+	    expanded_paths: filetree.snapshot.context.expanded_paths,
+	    load_states: filetree.snapshot.context.load_states,
+	    open_note_title: editor_store.state.open_note?.meta.title ?? 'Notes',
+	    open_note: editor_store.state.open_note,
+	    sidebar_open: ui_store.state.sidebar_open,
+	    selected_folder_path: ui_store.state.selected_folder_path,
+	    current_theme: ui_store.state.theme,
+	    link_syntax: ui_store.state.editor_settings.link_syntax,
+	    actions
+	  }))
 </script>
 
 {#if !has_vault}

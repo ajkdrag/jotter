@@ -12,7 +12,8 @@ describe('apply_editor_styles (no document)', () => {
       font_size: 1,
       line_height: 1.5,
       heading_color: 'inherit',
-      spacing: 'normal'
+      spacing: 'normal',
+      link_syntax: 'wikilink'
     }
 
     expect(() => apply_editor_styles(settings)).not.toThrow()

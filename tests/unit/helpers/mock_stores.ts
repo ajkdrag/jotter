@@ -6,6 +6,7 @@ import type { UIStore, UIState, UIActions } from '$lib/stores/ui_store'
 import type { StoreHandle } from '$lib/stores/store_handle'
 import type { NoteId, NotePath } from '$lib/types/ids'
 import { ensure_open_note, create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
+import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 
 function create_mock_store<TState, TActions>(
   initial_state: TState,
@@ -246,7 +247,8 @@ export function create_mock_ui_store(): UIStore {
     {
       theme: 'system',
       sidebar_open: true,
-      selected_folder_path: ''
+      selected_folder_path: '',
+      editor_settings: DEFAULT_EDITOR_SETTINGS
     },
     (get, set) => ({
       set_theme: (theme) => {
@@ -264,6 +266,10 @@ export function create_mock_ui_store(): UIStore {
 
       set_selected_folder_path: (path) => {
         set({ ...get(), selected_folder_path: path })
+      },
+
+      set_editor_settings: (editor_settings) => {
+        set({ ...get(), editor_settings })
       }
     })
   )

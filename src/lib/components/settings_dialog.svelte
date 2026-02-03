@@ -4,9 +4,10 @@ import * as Select from '$lib/components/ui/select/index.js'
 import * as Slider from '$lib/components/ui/slider/index.js'
 import { Button } from '$lib/components/ui/button'
 import { Separator } from '$lib/components/ui/separator'
-import TypeIcon from '@lucide/svelte/icons/type'
-import LayoutIcon from '@lucide/svelte/icons/layout-template'
-import type { EditorSettings } from '$lib/types/editor_settings'
+	import TypeIcon from '@lucide/svelte/icons/type'
+	import LayoutIcon from '@lucide/svelte/icons/layout-template'
+	import Link2Icon from '@lucide/svelte/icons/link-2'
+	import type { EditorSettings } from '$lib/types/editor_settings'
 
 type Props = {
   open: boolean
@@ -41,25 +42,37 @@ function handle_heading_color_change(value: string | undefined) {
   }
 }
 
-function handle_spacing_change(value: string | undefined) {
-  if (value) {
-    editor_settings.spacing = value as EditorSettings['spacing']
-    on_update_settings(editor_settings)
-  }
-}
+	function handle_spacing_change(value: string | undefined) {
+		if (value) {
+			editor_settings.spacing = value as EditorSettings['spacing']
+			on_update_settings(editor_settings)
+		}
+	}
 
-const heading_color_options = [
-  { value: 'inherit', label: 'Inherit' },
-  { value: 'primary', label: 'Primary' },
-  { value: 'accent', label: 'Accent' }
-]
+	function handle_link_syntax_change(value: string | undefined) {
+		if (value) {
+			editor_settings.link_syntax = value as EditorSettings['link_syntax']
+			on_update_settings(editor_settings)
+		}
+	}
 
-const spacing_options = [
-  { value: 'compact', label: 'Compact' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'spacious', label: 'Spacious' }
-]
-</script>
+	const heading_color_options = [
+		{ value: 'inherit', label: 'Inherit' },
+		{ value: 'primary', label: 'Primary' },
+		{ value: 'accent', label: 'Accent' }
+	]
+
+	const spacing_options = [
+		{ value: 'compact', label: 'Compact' },
+		{ value: 'normal', label: 'Normal' },
+		{ value: 'spacious', label: 'Spacious' }
+	]
+
+	const link_syntax_options = [
+		{ value: 'wikilink', label: 'Wikilinks ([[note]])' },
+		{ value: 'markdown', label: 'Markdown links ([note](note.md))' }
+	]
+	</script>
 
 <Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_close() }}>
   <Dialog.Content class="max-w-md">
@@ -126,13 +139,13 @@ const spacing_options = [
         </div>
       </section>
 
-      <Separator />
+	      <Separator />
 
-      <section class="flex flex-col gap-4">
-        <div class="flex items-center gap-2">
-          <LayoutIcon class="size-4 text-muted-foreground" />
-          <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Layout</span>
-        </div>
+	      <section class="flex flex-col gap-4">
+	        <div class="flex items-center gap-2">
+	          <LayoutIcon class="size-4 text-muted-foreground" />
+	          <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Layout</span>
+	        </div>
 
         <div class="flex flex-col gap-5">
           <div class="flex items-center justify-between gap-4">
@@ -149,8 +162,37 @@ const spacing_options = [
             </Select.Root>
           </div>
         </div>
-      </section>
-    </div>
+	      </section>
+
+	      <Separator />
+
+	      <section class="flex flex-col gap-4">
+	        <div class="flex items-center gap-2">
+	          <Link2Icon class="size-4 text-muted-foreground" />
+	          <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Links</span>
+	        </div>
+
+	        <div class="flex flex-col gap-5">
+	          <div class="flex items-center justify-between gap-4">
+	            <span class="text-sm font-medium">Save Link Syntax</span>
+	            <Select.Root
+	              type="single"
+	              value={editor_settings.link_syntax}
+	              onValueChange={handle_link_syntax_change}
+	            >
+	              <Select.Trigger class="w-56">
+	                {link_syntax_options.find(o => o.value === editor_settings.link_syntax)?.label}
+	              </Select.Trigger>
+	              <Select.Content>
+	                {#each link_syntax_options as option (option.value)}
+	                  <Select.Item value={option.value}>{option.label}</Select.Item>
+	                {/each}
+	              </Select.Content>
+	            </Select.Root>
+	          </div>
+	        </div>
+	      </section>
+	    </div>
 
     <Dialog.Footer class="pt-4 border-t">
       {#if error}

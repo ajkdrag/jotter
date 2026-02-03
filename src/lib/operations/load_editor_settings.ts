@@ -9,7 +9,8 @@ export async function load_editor_settings(
   settings_port: SettingsPort,
 ): Promise<EditorSettings> {
   const stored = await settings_port.get_setting<EditorSettings>(SETTINGS_KEY);
-  return stored ?? DEFAULT_EDITOR_SETTINGS;
+  if (!stored) return DEFAULT_EDITOR_SETTINGS
+  return { ...DEFAULT_EDITOR_SETTINGS, ...stored }
 }
 
 export async function save_editor_settings(

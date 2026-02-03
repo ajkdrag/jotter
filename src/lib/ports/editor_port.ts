@@ -1,3 +1,5 @@
+import type { EditorSettings } from '$lib/types/editor_settings'
+
 export type CursorInfo = {
   line: number
   column: number
@@ -19,6 +21,7 @@ export type EditorPort = {
     config: {
       initial_markdown: string
       note_path: string
+      link_syntax: EditorSettings['link_syntax']
       on_markdown_change: (markdown: string) => void
       on_dirty_state_change: (is_dirty: boolean) => void
       on_cursor_change?: (info: CursorInfo) => void

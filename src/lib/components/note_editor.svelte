@@ -2,20 +2,30 @@
     import type { EditorManager } from "$lib/operations/manage_editor";
     import type { OpenNoteState } from "$lib/types/editor";
     import type { CursorInfo } from "$lib/ports/editor_port";
+    import type { EditorSettings } from "$lib/types/editor_settings";
 
     interface Props {
         editor_manager: EditorManager;
         open_note: OpenNoteState | null;
+        link_syntax: EditorSettings['link_syntax'];
         on_markdown_change: (markdown: string) => void;
         on_dirty_state_change: (is_dirty: boolean) => void;
         on_cursor_change?: (info: CursorInfo) => void;
         on_wiki_link_click?: (note_path: string) => void;
     }
 
-    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click }: Props = $props();
+    let { editor_manager, open_note, link_syntax, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click }: Props = $props();
 
     function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-        const mount_promise = editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click);
+        const mount_promise = editor_manager.mount(
+            node,
+            note,
+            on_markdown_change,
+            on_dirty_state_change,
+            link_syntax,
+            on_cursor_change,
+            on_wiki_link_click
+        );
 
         mount_promise.then(() => {
             editor_manager.focus();

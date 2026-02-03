@@ -1,6 +1,6 @@
 import { $prose } from '@milkdown/kit/utils'
 import { Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
-import type { MarkType } from '@milkdown/kit/prose/model'
+import type { MarkType, Node as ProseNode, Mark } from '@milkdown/kit/prose/model'
 import { linkSchema } from '@milkdown/kit/preset/commonmark'
 import { encode_wiki_link_href, format_wiki_target_for_markdown, resolve_wiki_target_to_note_path, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
@@ -18,7 +18,7 @@ type Segment = {
 }
 
 function build_segments(input: {
-  text_block: any
+  text_block: ProseNode
   block_start: number
   link_type: MarkType
 }): { segments: Segment[]; combined: string; has_non_text_inline: boolean } {
@@ -27,14 +27,14 @@ function build_segments(input: {
   let current_index = 0
   let has_non_text_inline = false
 
-  input.text_block.descendants((node: any, pos: number) => {
+  input.text_block.descendants((node: ProseNode, pos: number) => {
     if (node.isText && node.text) {
       segments.push({
         text: node.text,
         start_index: current_index,
         start_pos: input.block_start + pos,
-        has_link_mark: node.marks.some((m: any) => m.type === input.link_type),
-        has_code_mark: node.marks.some((m: any) => m.type?.name === 'code_inline' || m.type?.name === 'code')
+        has_link_mark: node.marks.some((m: Mark) => m.type === input.link_type),
+        has_code_mark: node.marks.some((m: Mark) => m.type.name === 'code_inline' || m.type.name === 'code')
       })
       combined += node.text
       current_index += node.text.length
@@ -105,7 +105,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
 
       const tr = new_state.tr
 
-      const scan_textblock = (text_block: any, block_start: number, selection_anchor: number | null) => {
+      const scan_textblock = (text_block: ProseNode, block_start: number, selection_anchor: number | null) => {
         if (!text_block.isTextblock) return
         if (text_block.type?.name === 'code_block') return
 
@@ -216,8 +216,44 @@ export function create_wiki_link_converter_prose_plugin(input: {
 
 export function create_wiki_link_click_prose_plugin(input: {
   link_type: MarkType
+  base_note_path: string
   on_wiki_link_click: (note_path: string) => void
 }) {
+  function is_external_href(href: string): boolean {
+    try {
+      new URL(href)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  function try_resolve_markdown_href(base_note_path: string, href: string): string | null {
+    if (href.trim() === '') return null
+    if (is_external_href(href)) return null
+
+    const without_hash = href.split('#')[0] ?? ''
+    if (without_hash.trim() === '') return null
+
+    const without_query = without_hash.split('?')[0] ?? ''
+    if (without_query.trim() === '') return null
+
+    let decoded = without_query
+    try {
+      decoded = decodeURIComponent(without_query)
+    } catch {
+      decoded = without_query
+    }
+
+    const cleaned = decoded.startsWith('./') ? decoded.slice(2) : decoded
+    const leaf = cleaned.split('/').filter(Boolean).at(-1) ?? ''
+    const has_dot = leaf.includes('.')
+    const is_md = leaf.toLowerCase().endsWith('.md')
+    if (has_dot && !is_md) return null
+
+    return resolve_wiki_target_to_note_path({ base_note_path, raw_target: cleaned })
+  }
+
   return new Plugin({
     key: new PluginKey('wiki-link-click'),
     props: {
@@ -231,10 +267,11 @@ export function create_wiki_link_click_prose_plugin(input: {
         if (typeof href !== 'string') return false
 
         const note_path = try_decode_wiki_link_href(href)
-        if (!note_path) return false
+        const resolved = note_path ?? try_resolve_markdown_href(input.base_note_path, href)
+        if (!resolved) return false
 
         event.preventDefault()
-        input.on_wiki_link_click(note_path)
+        input.on_wiki_link_click(resolved)
         return true
       }
     }
@@ -247,8 +284,8 @@ export const create_wiki_link_converter_plugin = (base_note_path: string) =>
     return create_wiki_link_converter_prose_plugin({ link_type, base_note_path })
   })
 
-export const create_wiki_link_click_plugin = (on_wiki_link_click: (note_path: string) => void) =>
+export const create_wiki_link_click_plugin = (base_note_path: string, on_wiki_link_click: (note_path: string) => void) =>
   $prose((ctx) => {
     const link_type = linkSchema.type(ctx)
-    return create_wiki_link_click_prose_plugin({ link_type, on_wiki_link_click })
+    return create_wiki_link_click_prose_plugin({ link_type, base_note_path, on_wiki_link_click })
   })

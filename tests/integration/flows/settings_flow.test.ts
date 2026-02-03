@@ -3,13 +3,15 @@ import { createActor, waitFor } from 'xstate'
 import { settings_flow_machine } from '$lib/flows/settings_flow'
 import { create_test_settings_adapter } from '$lib/adapters/test/test_settings_adapter'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
+import { create_mock_stores } from '../../unit/helpers/mock_stores'
 
 describe('settings_flow', () => {
   it('loads settings on open dialog', async () => {
     const settings_port = create_test_settings_adapter()
+    const stores = create_mock_stores()
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port } }
+      input: { ports: { settings: settings_port }, stores }
     })
     actor.start()
 
@@ -22,9 +24,10 @@ describe('settings_flow', () => {
 
   it('updates settings and marks unsaved changes', async () => {
     const settings_port = create_test_settings_adapter()
+    const stores = create_mock_stores()
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port } }
+      input: { ports: { settings: settings_port }, stores }
     })
     actor.start()
 
@@ -40,9 +43,10 @@ describe('settings_flow', () => {
 
   it('saves settings and clears unsaved flag', async () => {
     const settings_port = create_test_settings_adapter()
+    const stores = create_mock_stores()
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port } }
+      input: { ports: { settings: settings_port }, stores }
     })
     actor.start()
 
@@ -61,6 +65,7 @@ describe('settings_flow', () => {
 
   it('handles load error and retry', async () => {
     const settings_port = create_test_settings_adapter()
+    const stores = create_mock_stores()
     let attempts = 0
     settings_port.get_setting = async <T,>(_key: string) => {
       attempts++
@@ -69,7 +74,7 @@ describe('settings_flow', () => {
     }
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port } }
+      input: { ports: { settings: settings_port }, stores }
     })
     actor.start()
 

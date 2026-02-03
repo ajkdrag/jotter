@@ -3,6 +3,7 @@ export type EditorSettings = {
   line_height: number;
   heading_color: "inherit" | "primary" | "accent";
   spacing: "compact" | "normal" | "spacious";
+  link_syntax: "wikilink" | "markdown";
 };
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
@@ -10,6 +11,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   line_height: 1.75,
   heading_color: "inherit",
   spacing: "normal",
+  link_syntax: "wikilink",
 };
 
 export const SETTINGS_KEY = "editor" as const;

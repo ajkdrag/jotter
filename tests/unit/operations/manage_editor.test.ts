@@ -45,8 +45,8 @@ describe('create_editor_manager', () => {
 
     const manager = create_editor_manager(editor_port)
 
-    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn())
-    await manager.mount({} as HTMLElement, create_note('b', 'second'), vi.fn(), vi.fn())
+    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn(), 'wikilink')
+    await manager.mount({} as HTMLElement, create_note('b', 'second'), vi.fn(), vi.fn(), 'wikilink')
 
     expect(editor_port.create_editor).toHaveBeenCalledTimes(2)
     expect(first_handle.destroy).toHaveBeenCalledTimes(1)
@@ -66,7 +66,7 @@ describe('create_editor_manager', () => {
     }
 
     const manager = create_editor_manager(editor_port)
-    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn())
+    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn(), 'wikilink')
     manager.update(create_note('a', 'first'))
 
     expect(handle.set_markdown).not.toHaveBeenCalled()
@@ -87,7 +87,7 @@ describe('create_editor_manager', () => {
     }
 
     const manager = create_editor_manager(editor_port)
-    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn())
+    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn(), 'wikilink')
     manager.update(create_note('b', 'second'))
 
     expect(handle.set_markdown).toHaveBeenCalledWith(as_markdown_text('second'))
@@ -108,7 +108,7 @@ describe('create_editor_manager', () => {
     }
 
     const manager = create_editor_manager(editor_port)
-    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn())
+    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn(), 'wikilink')
     manager.destroy()
     manager.destroy()
 
@@ -129,7 +129,7 @@ describe('create_editor_manager', () => {
     }
 
     const manager = create_editor_manager(editor_port)
-    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn())
+    await manager.mount({} as HTMLElement, create_note('a', 'first'), vi.fn(), vi.fn(), 'wikilink')
     manager.mark_clean()
     manager.focus()
 

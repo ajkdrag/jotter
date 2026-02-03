@@ -5,6 +5,7 @@ import type { OpenNoteState } from '$lib/types/editor'
 import type { FolderLoadState } from '$lib/types/filetree'
 import type { ThemeMode } from '$lib/stores/ui_store'
 import type { AppShellActions } from '$lib/components/app_shell_actions'
+import type { EditorSettings } from '$lib/types/editor_settings'
 
 export type AppSidebarViewModelInput = {
   editor_manager: EditorManager
@@ -18,6 +19,7 @@ export type AppSidebarViewModelInput = {
   sidebar_open: boolean
   selected_folder_path: string
   current_theme: ThemeMode
+  link_syntax: EditorSettings['link_syntax']
   actions: Pick<
     AppShellActions,
     | 'handle_theme_change'
@@ -52,6 +54,7 @@ export type AppSidebarModel = {
   sidebar_open: boolean
   selected_folder_path: string
   current_theme: ThemeMode
+  link_syntax: EditorSettings['link_syntax']
 }
 
 export type AppSidebarOps = {
@@ -92,6 +95,7 @@ export function build_app_sidebar_props(input: AppSidebarViewModelInput): AppSid
     sidebar_open,
     selected_folder_path,
     current_theme,
+    link_syntax,
     actions
   } = input
 
@@ -107,7 +111,8 @@ export function build_app_sidebar_props(input: AppSidebarViewModelInput): AppSid
       open_note,
       sidebar_open,
       selected_folder_path,
-      current_theme
+      current_theme,
+      link_syntax
     },
     ops: {
       on_theme_change: actions.handle_theme_change,

@@ -1,6 +1,7 @@
 import { $prose } from '@milkdown/kit/utils'
 import { Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
 import { linkSchema } from '@milkdown/kit/preset/commonmark'
+import type { MarkType, Node as ProseNode, Mark } from '@milkdown/kit/prose/model'
 
 const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)\s]+)\)/
 const ZERO_WIDTH_SPACE = '\u200B'
@@ -13,22 +14,22 @@ type Segment = {
 }
 
 function build_segments(input: {
-  text_block: any
+  text_block: ProseNode
   block_start: number
-  link_type: any
+  link_type: MarkType
 }): { segments: Segment[]; combined: string; has_non_text_inline: boolean } {
   const segments: Segment[] = []
   let combined = ''
   let current_index = 0
   let has_non_text_inline = false
 
-  input.text_block.descendants((node: any, pos: number) => {
+  input.text_block.descendants((node: ProseNode, pos: number) => {
     if (node.isText && node.text) {
       segments.push({
         text: node.text,
         start_index: current_index,
         start_pos: input.block_start + pos,
-        has_link_mark: node.marks.some((m: any) => m.type === input.link_type)
+        has_link_mark: node.marks.some((m: Mark) => m.type === input.link_type)
       })
       combined += node.text
       current_index += node.text.length

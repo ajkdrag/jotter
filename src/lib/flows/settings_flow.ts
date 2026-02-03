@@ -7,6 +7,7 @@ import {
   save_editor_settings,
 } from "$lib/operations/load_editor_settings";
 import { apply_editor_styles } from "$lib/operations/apply_editor_styles";
+import type { AppStores } from "$lib/stores/create_app_stores";
 
 type SettingsFlowPorts = {
   settings: SettingsPort;
@@ -14,6 +15,7 @@ type SettingsFlowPorts = {
 
 type FlowContext = {
   ports: SettingsFlowPorts;
+  stores: AppStores;
   current_settings: EditorSettings;
   has_unsaved_changes: boolean;
   error: string | null;
@@ -32,6 +34,7 @@ export type SettingsFlowEvents = FlowEvents;
 
 type FlowInput = {
   ports: SettingsFlowPorts;
+  stores: AppStores;
 };
 
 export const settings_flow_machine = setup({
@@ -62,6 +65,7 @@ export const settings_flow_machine = setup({
   initial: "idle",
   context: ({ input }) => ({
     ports: input.ports,
+    stores: input.stores,
     current_settings: DEFAULT_EDITOR_SETTINGS,
     has_unsaved_changes: false,
     error: null,
@@ -78,11 +82,17 @@ export const settings_flow_machine = setup({
         input: ({ context }) => ({ ports: context.ports }),
         onDone: {
           target: "editing",
-          actions: assign({
-            current_settings: ({ event }) => event.output,
-            has_unsaved_changes: false,
-            error: null,
-          }),
+          actions: [
+            assign({
+              current_settings: ({ event }) => event.output,
+              has_unsaved_changes: false,
+              error: null,
+            }),
+            ({ event, context }) => {
+              context.stores.ui.actions.set_editor_settings(event.output)
+              apply_editor_styles(event.output)
+            }
+          ],
         },
         onError: {
           target: "error",
@@ -103,7 +113,10 @@ export const settings_flow_machine = setup({
               current_settings: ({ event }) => event.settings,
               has_unsaved_changes: true,
             }),
-            ({ event }) => apply_editor_styles(event.settings),
+            ({ event, context }) => {
+              context.stores.ui.actions.set_editor_settings(event.settings)
+              apply_editor_styles(event.settings)
+            },
           ],
         },
         SAVE: "saving",

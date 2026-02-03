@@ -92,3 +92,22 @@ export function format_wiki_target_for_markdown(input: {
 
   return maybe_strip_md_extension(normalized_target)
 }
+
+export function format_wiki_target_for_markdown_link(input: {
+  base_note_path: string
+  resolved_note_path: string
+}): string {
+  const base_folder = parent_folder_path(input.base_note_path)
+  const normalized_target = strip_leading_slash(normalize_path_segments(input.resolved_note_path))
+
+  if (base_folder === '') {
+    return normalized_target
+  }
+
+  const prefix = `${base_folder}/`
+  if (normalized_target.startsWith(prefix)) {
+    return normalized_target.slice(prefix.length)
+  }
+
+  return normalized_target
+}

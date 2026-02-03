@@ -50,6 +50,7 @@ export const app_startup_flow_machine = setup({
         stores.ui.actions.set_theme(theme_mode)
 
         const editor_settings = await load_editor_settings(ports.settings)
+        stores.ui.actions.set_editor_settings(editor_settings)
         apply_editor_styles(editor_settings)
       }
     )

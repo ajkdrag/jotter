@@ -159,14 +159,15 @@
                             </div>
                         </header>
                         <div class="flex flex-1 flex-col min-h-0">
-                            <NoteEditor
-                                editor_manager={model.editor_manager}
-                                open_note={model.open_note}
-                                on_markdown_change={ops.on_markdown_change}
-                                on_dirty_state_change={ops.on_dirty_state_change}
-                                on_cursor_change={handle_cursor_change}
-                                on_wiki_link_click={ops.on_wiki_link_click}
-                            />
+	                            <NoteEditor
+	                                editor_manager={model.editor_manager}
+	                                open_note={model.open_note}
+	                                link_syntax={model.link_syntax}
+	                                on_markdown_change={ops.on_markdown_change}
+	                                on_dirty_state_change={ops.on_dirty_state_change}
+	                                on_cursor_change={handle_cursor_change}
+	                                on_wiki_link_click={ops.on_wiki_link_click}
+	                            />
                         </div>
                     </Sidebar.Inset>
                 </Resizable.Pane>

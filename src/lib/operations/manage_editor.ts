@@ -1,5 +1,6 @@
 import type { EditorHandle, EditorPort, CursorInfo } from '$lib/ports/editor_port'
 import type { OpenNoteState } from '$lib/types/editor'
+import type { EditorSettings } from '$lib/types/editor_settings'
 
 export type EditorManager = {
   mount: (
@@ -7,6 +8,7 @@ export type EditorManager = {
     note: OpenNoteState,
     on_change: (md: string) => void,
     on_dirty_change: (is_dirty: boolean) => void,
+    link_syntax: EditorSettings['link_syntax'],
     on_cursor_change?: (info: CursorInfo) => void,
     on_wiki_link_click?: (note_path: string) => void
   ) => Promise<void>
@@ -26,6 +28,7 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       note: OpenNoteState,
       on_change: (md: string) => void,
       on_dirty_change: (is_dirty: boolean) => void,
+      link_syntax: EditorSettings['link_syntax'],
       on_cursor_change?: (info: CursorInfo) => void,
       on_wiki_link_click?: (note_path: string) => void
     ) {
@@ -38,6 +41,7 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       editor_handle = await editor_port.create_editor(root, {
         initial_markdown: note.markdown,
         note_path: note.meta.path,
+        link_syntax,
         on_markdown_change: on_change,
         on_dirty_state_change: on_dirty_change,
         ...(on_cursor_change && { on_cursor_change }),

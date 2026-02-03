@@ -2,13 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
 import type { EditorSettings } from '$lib/types/editor_settings'
 
-describe('apply_editor_styles', () => {
-  const settings: EditorSettings = {
-    font_size: 1.25,
-    line_height: 1.8,
-    heading_color: 'accent',
-    spacing: 'spacious'
-  }
+	describe('apply_editor_styles', () => {
+	  const settings: EditorSettings = {
+	    font_size: 1.25,
+	    line_height: 1.8,
+	    heading_color: 'accent',
+	    spacing: 'spacious',
+	    link_syntax: 'wikilink'
+	  }
 
   const original_document = globalThis.document
 

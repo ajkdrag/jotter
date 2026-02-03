@@ -2,6 +2,8 @@ import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx }
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose } from '@milkdown/kit/utils'
 import type { CursorInfo } from '$lib/ports/editor_port'
+import type { Node as ProseNode } from '@milkdown/kit/prose/model'
+import type { Selection } from '@milkdown/kit/prose/state'
 import {
   configureLinkTooltip,
   linkTooltipPlugin,
@@ -22,7 +24,7 @@ import {
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
-import { format_wiki_target_for_markdown, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
+import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
 function resize_icon(svg: string, size: number): string {
   return svg
@@ -55,7 +57,7 @@ function is_large_markdown(text: string): boolean {
   return count_lines(text) >= LARGE_DOC_LINE_THRESHOLD
 }
 
-function calculate_cursor_info(doc: import('@milkdown/kit/prose/model').Node, selection: any): CursorInfo {
+function calculate_cursor_info(doc: ProseNode, selection: Selection | null | undefined): CursorInfo {
   const $from = selection?.$from
   if (!$from) return { line: 1, column: 1, total_lines: doc.childCount || 1 }
 
@@ -82,7 +84,7 @@ function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
 
 export const milkdown_editor_port: EditorPort = {
   create_editor: async (root, config) => {
-    const { initial_markdown, note_path, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
+    const { initial_markdown, note_path, link_syntax, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
 
     let current_markdown = initial_markdown
     let current_is_dirty = false
@@ -101,16 +103,22 @@ export const milkdown_editor_port: EditorPort = {
         const resolved_note_path = try_decode_wiki_link_href(String(href))
         if (!resolved_note_path) return full
 
+        const safe_label = String(label)
+        if (link_syntax === 'markdown') {
+          const target = format_wiki_target_for_markdown_link({
+            base_note_path: note_path,
+            resolved_note_path
+          })
+
+          return `[${safe_label}](${target})`
+        }
+
         const target = format_wiki_target_for_markdown({
           base_note_path: note_path,
           resolved_note_path
         })
 
-        const safe_label = String(label)
-        if (safe_label === target) {
-          return `[[${target}]]`
-        }
-
+        if (safe_label === target) return `[[${target}]]`
         return `[[${target}|${safe_label}]]`
       })
     }
@@ -163,7 +171,7 @@ export const milkdown_editor_port: EditorPort = {
       })
 
     if (on_wiki_link_click) {
-      builder = builder.use(create_wiki_link_click_plugin(on_wiki_link_click))
+      builder = builder.use(create_wiki_link_click_plugin(note_path, on_wiki_link_click))
     }
 
     if (on_cursor_change) {
