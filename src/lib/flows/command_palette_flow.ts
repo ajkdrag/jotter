@@ -1,6 +1,7 @@
 import { setup, assign } from 'xstate'
 
 type FlowContext = {
+  query: string
   selected_index: number
 }
 
@@ -10,6 +11,7 @@ type FlowEvents =
   | { type: 'OPEN' }
   | { type: 'CLOSE' }
   | { type: 'TOGGLE' }
+  | { type: 'SET_QUERY'; query: string }
   | { type: 'SET_SELECTED_INDEX'; index: number }
   | { type: 'EXECUTE_COMMAND'; command: string }
 
@@ -24,6 +26,7 @@ export const command_palette_flow_machine = setup({
   id: 'command_palette_flow',
   initial: 'closed',
   context: {
+    query: '',
     selected_index: 0
   },
   states: {
@@ -31,11 +34,11 @@ export const command_palette_flow_machine = setup({
       on: {
         OPEN: {
           target: 'open',
-          actions: assign({ selected_index: 0 })
+          actions: assign({ query: '', selected_index: 0 })
         },
         TOGGLE: {
           target: 'open',
-          actions: assign({ selected_index: 0 })
+          actions: assign({ query: '', selected_index: 0 })
         }
       }
     },
@@ -43,6 +46,12 @@ export const command_palette_flow_machine = setup({
       on: {
         CLOSE: 'closed',
         TOGGLE: 'closed',
+        SET_QUERY: {
+          actions: assign({
+            query: ({ event }) => event.query,
+            selected_index: () => 0
+          })
+        },
         SET_SELECTED_INDEX: {
           actions: assign({
             selected_index: ({ event }) => event.index

@@ -8,8 +8,10 @@
   import SettingsDialog from '$lib/components/settings_dialog.svelte'
   import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
   import CommandPalette from '$lib/components/command_palette.svelte'
+  import FileSearchDialog from '$lib/components/file_search_dialog.svelte'
 
   import type { VaultState } from '$lib/stores/vault_store'
+  import type { NotesState } from '$lib/stores/notes_store'
   import type { FlowSnapshot } from '$lib/flows/flow_handle'
   import type { ChangeVaultFlowContext } from '$lib/flows/change_vault_flow'
   import type { DeleteNoteFlowContext } from '$lib/flows/delete_note_flow'
@@ -18,8 +20,10 @@
   import type { SettingsFlowContext } from '$lib/flows/settings_flow'
   import type { CreateFolderFlowContext } from '$lib/flows/create_folder_flow'
   import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
+  import type { FileSearchFlowContext, FileSearchFlowEvents } from '$lib/flows/file_search_flow'
   import type { DeleteFolderFlowContext, DeleteFolderFlowEvents } from '$lib/flows/delete_folder_flow'
   import type { RenameFolderFlowContext, RenameFolderFlowEvents } from '$lib/flows/rename_folder_flow'
+  import type { NoteId } from '$lib/types/ids'
 
   import type { AppShellActions } from '$lib/components/app_shell_actions'
 
@@ -45,6 +49,9 @@
     delete_folder: FlowView<DeleteFolderFlowEvents, DeleteFolderFlowContext>
     rename_folder: FlowView<RenameFolderFlowEvents, RenameFolderFlowContext>
     command_palette: FlowView<CommandPaletteFlowEvents, CommandPaletteFlowContext>
+    file_search: FlowView<FileSearchFlowEvents, FileSearchFlowContext>
+    notes_store_state: NotesState
+    on_open_note: (note_id: NoteId) => void
 
     actions: AppShellActions
   }
@@ -63,11 +70,22 @@
     create_folder_snapshot,
     settings_snapshot,
     command_palette,
+    file_search,
+    notes_store_state,
+    on_open_note,
     actions
   }: Props = $props()
 
   const palette_open = $derived(command_palette.snapshot.matches('open'))
-  const palette_selected_index = $derived(command_palette.snapshot.context.selected_index)
+  const palette_context = $derived(command_palette.snapshot.context)
+
+  const file_search_open = $derived(file_search.snapshot.matches('open'))
+  const file_search_context = $derived(file_search.snapshot.context)
+  const recent_notes_for_display = $derived(
+    file_search_context.recent_notes
+      .map((id) => notes_store_state.notes.find((n) => n.id === id))
+      .filter((n): n is NonNullable<typeof n> => n != null)
+  )
 
   const vault_dialog_open = $derived(
     has_vault &&
@@ -197,6 +215,8 @@
 
 <CommandPalette
   open={palette_open}
+  query={palette_context.query}
+  selected_index={palette_context.selected_index}
   on_open_change={(open) => {
     if (open) {
       command_palette.send({ type: 'OPEN' })
@@ -204,7 +224,9 @@
       command_palette.send({ type: 'CLOSE' })
     }
   }}
-  selected_index={palette_selected_index}
+  on_query_change={(query) => {
+    command_palette.send({ type: 'SET_QUERY', query })
+  }}
   on_selected_index_change={(index) => {
     command_palette.send({ type: 'SET_SELECTED_INDEX', index })
   }}
@@ -220,6 +242,40 @@
       case 'open_settings':
         actions.open_settings()
         break
+      case 'open_file_search':
+        file_search.send({ type: 'OPEN' })
+        break
     }
+  }}
+  on_select_setting={(_key) => {
+    command_palette.send({ type: 'CLOSE' })
+    actions.open_settings()
+  }}
+/>
+
+<FileSearchDialog
+  open={file_search_open}
+  query={file_search_context.query}
+  results={file_search_context.results}
+  recent_notes={recent_notes_for_display}
+  selected_index={file_search_context.selected_index}
+  is_searching={file_search_context.is_searching}
+  on_open_change={(open) => {
+    if (open) {
+      file_search.send({ type: 'OPEN' })
+    } else {
+      file_search.send({ type: 'CLOSE' })
+    }
+  }}
+  on_query_change={(query) => {
+    file_search.send({ type: 'SET_QUERY', query })
+  }}
+  on_selected_index_change={(index) => {
+    file_search.send({ type: 'SET_SELECTED_INDEX', index })
+  }}
+  on_confirm={(note_id) => {
+    file_search.send({ type: 'ADD_RECENT', note_id })
+    file_search.send({ type: 'CLOSE' })
+    on_open_note(note_id)
   }}
 />

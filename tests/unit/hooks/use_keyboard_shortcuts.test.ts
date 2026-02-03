@@ -9,6 +9,7 @@ describe('use_keyboard_shortcuts', () => {
     const shortcuts = use_keyboard_shortcuts({
       is_enabled: () => true,
       on_toggle_palette,
+      on_toggle_file_search: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_save: vi.fn()
     })
@@ -31,6 +32,7 @@ describe('use_keyboard_shortcuts', () => {
     const shortcuts = use_keyboard_shortcuts({
       is_enabled: () => false,
       on_toggle_palette,
+      on_toggle_file_search: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_save: vi.fn()
     })
@@ -46,6 +48,29 @@ describe('use_keyboard_shortcuts', () => {
     expect(on_toggle_palette).toHaveBeenCalledTimes(0)
   })
 
+  it('toggles file search on mod+o when enabled', () => {
+    const on_toggle_file_search = vi.fn()
+    const prevent_default = vi.fn()
+
+    const shortcuts = use_keyboard_shortcuts({
+      is_enabled: () => true,
+      on_toggle_palette: vi.fn(),
+      on_toggle_file_search,
+      on_toggle_sidebar: vi.fn(),
+      on_save: vi.fn()
+    })
+
+    shortcuts.handle_keydown_capture({
+      metaKey: true,
+      ctrlKey: false,
+      key: 'o',
+      preventDefault: prevent_default
+    } as unknown as KeyboardEvent)
+
+    expect(prevent_default).toHaveBeenCalledTimes(1)
+    expect(on_toggle_file_search).toHaveBeenCalledTimes(1)
+  })
+
   it('requests save on mod+s (case-insensitive)', () => {
     const on_save = vi.fn()
     const prevent_default = vi.fn()
@@ -53,6 +78,7 @@ describe('use_keyboard_shortcuts', () => {
     const shortcuts = use_keyboard_shortcuts({
       is_enabled: () => true,
       on_toggle_palette: vi.fn(),
+      on_toggle_file_search: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_save
     })

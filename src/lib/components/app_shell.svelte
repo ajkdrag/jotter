@@ -44,6 +44,7 @@
   const create_folder = use_flow_handle(app.flows.create_folder)
   const settings = use_flow_handle(app.flows.settings)
   const command_palette = use_flow_handle(app.flows.command_palette)
+  const file_search = use_flow_handle(app.flows.file_search)
   const filetree = use_flow_handle(app.flows.filetree)
 
   const has_vault = $derived(vault_store.state.vault !== null)
@@ -67,6 +68,9 @@
     is_enabled: () => has_vault,
     on_toggle_palette: () => {
       command_palette.send({ type: 'TOGGLE' })
+    },
+    on_toggle_file_search: () => {
+      file_search.send({ type: 'TOGGLE' })
     },
     on_toggle_sidebar: actions.toggle_sidebar,
     on_save: actions.request_save
@@ -125,6 +129,9 @@
   create_folder_snapshot={create_folder.snapshot}
   settings_snapshot={settings.snapshot}
   command_palette={command_palette}
+  file_search={file_search}
+  notes_store_state={notes_store.state}
+  on_open_note={actions.open_note}
   actions={actions}
 />
 

@@ -26,6 +26,8 @@ import { delete_folder_flow_machine } from '$lib/flows/delete_folder_flow'
 import type { DeleteFolderFlowContext, DeleteFolderFlowEvents } from '$lib/flows/delete_folder_flow'
 import { rename_folder_flow_machine } from '$lib/flows/rename_folder_flow'
 import type { RenameFolderFlowContext, RenameFolderFlowEvents } from '$lib/flows/rename_folder_flow'
+import { file_search_flow_machine } from '$lib/flows/file_search_flow'
+import type { FileSearchFlowContext, FileSearchFlowEvents } from '$lib/flows/file_search_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
 
@@ -48,6 +50,7 @@ export type AppFlows = {
     create_folder: FlowHandle<CreateFolderFlowEvents, FlowSnapshot<CreateFolderFlowContext>>
     settings: FlowHandle<SettingsFlowEvents, FlowSnapshot<SettingsFlowContext>>
     command_palette: FlowHandle<CommandPaletteFlowEvents, FlowSnapshot<CommandPaletteFlowContext>>
+    file_search: FlowHandle<FileSearchFlowEvents, FlowSnapshot<FileSearchFlowContext>>
     filetree: FlowHandle<FiletreeFlowEvents, FlowSnapshot<FiletreeFlowContext>>
   }
 }
@@ -117,6 +120,13 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
 
+  const file_search = create_flow_handle(file_search_flow_machine, {
+    input: {
+      ports: { search: ports.search },
+      get_vault_id: () => stores.vault.get_snapshot().vault?.id ?? null
+    }
+  })
+
   const delete_folder = create_flow_handle(delete_folder_flow_machine, {
     input: { ports: { notes: ports.notes, index: ports.index }, stores }
   })
@@ -140,6 +150,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       create_folder,
       settings,
       command_palette,
+      file_search,
       filetree
     }
   }

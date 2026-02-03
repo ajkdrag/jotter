@@ -6,10 +6,11 @@ export type KeyboardShortcuts = {
 export function use_keyboard_shortcuts(input: {
   is_enabled: () => boolean
   on_toggle_palette: () => void
+  on_toggle_file_search: () => void
   on_toggle_sidebar: () => void
   on_save: () => void
 }): KeyboardShortcuts {
-  const { is_enabled, on_toggle_palette, on_toggle_sidebar, on_save } = input
+  const { is_enabled, on_toggle_palette, on_toggle_file_search, on_toggle_sidebar, on_save } = input
 
   const is_mod_combo = (event: KeyboardEvent, key: string): boolean => {
     if (!(event.metaKey || event.ctrlKey)) return false
@@ -21,6 +22,13 @@ export function use_keyboard_shortcuts(input: {
       if (!is_enabled()) return
       event.preventDefault()
       on_toggle_palette()
+      return
+    }
+
+    if (is_mod_combo(event, 'o')) {
+      if (!is_enabled()) return
+      event.preventDefault()
+      on_toggle_file_search()
       return
     }
 

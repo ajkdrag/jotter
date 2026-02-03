@@ -6,6 +6,7 @@ import { create_test_settings_adapter } from '$lib/adapters/test/test_settings_a
 import { create_test_vault_adapter } from '$lib/adapters/test/test_vault_adapter'
 import { create_test_notes_adapter } from '$lib/adapters/test/test_notes_adapter'
 import { create_test_workspace_index_adapter } from '$lib/adapters/test/test_workspace_index_adapter'
+import { create_test_search_adapter } from '$lib/adapters/test/test_search_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
 import { create_test_clipboard_adapter } from '$lib/adapters/test/test_clipboard_adapter'
 import { as_vault_id, as_vault_path } from '$lib/types/ids'
@@ -18,6 +19,7 @@ describe('create_app_flows', () => {
       vault: create_test_vault_adapter(),
       notes: create_test_notes_adapter(),
       index: create_test_workspace_index_adapter(),
+      search: create_test_search_adapter(),
       settings: create_test_settings_adapter(),
       assets: create_test_assets_adapter(),
       editor: milkdown_editor_port,
@@ -38,6 +40,7 @@ describe('create_app_flows', () => {
     expect(app_flows.flows.create_folder).toBeDefined()
     expect(app_flows.flows.settings).toBeDefined()
     expect(app_flows.flows.command_palette).toBeDefined()
+    expect(app_flows.flows.file_search).toBeDefined()
     expect(app_flows.flows.filetree).toBeDefined()
     expect(app_flows.stores).toBeDefined()
   })
@@ -47,6 +50,7 @@ describe('create_app_flows', () => {
       vault: create_mock_vault_port(),
       notes: create_mock_notes_port(),
       index: create_mock_index_port(),
+      search: create_test_search_adapter(),
       settings: create_test_settings_adapter(),
       assets: create_test_assets_adapter(),
       editor: milkdown_editor_port,

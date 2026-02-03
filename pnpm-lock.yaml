@@ -44,6 +44,9 @@ importers:
       lucide-static:
         specifier: ^0.563.0
         version: 0.563.0
+      minisearch:
+        specifier: ^7.2.0
+        version: 7.2.0
       mode-watcher:
         specifier: ^1.1.0
         version: 1.1.0(svelte@5.47.0)
@@ -2076,6 +2079,9 @@ packages:
   minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
     engines: {node: '>=16 || 14 >=14.17'}
+
+  minisearch@7.2.0:
+    resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
   mode-watcher@1.1.0:
     resolution: {integrity: sha512-mUT9RRGPDYenk59qJauN1rhsIMKBmWA3xMF+uRwE8MW/tjhaDSCCARqkSuDTq8vr4/2KcAxIGVjACxTjdk5C3g==}
@@ -5162,6 +5168,8 @@ snapshots:
   minimatch@9.0.5:
     dependencies:
       brace-expansion: 2.0.2
+
+  minisearch@7.2.0: {}
 
   mode-watcher@1.1.0(svelte@5.47.0):
     dependencies:
