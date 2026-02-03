@@ -123,16 +123,18 @@ function handle_heading_color_change(value: string | undefined) {
             />
           </div>
 
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium">Heading Color</span>
-            <Select.Root type="single" value={editor_settings.heading_color} onValueChange={handle_heading_color_change}>
-              <Select.Trigger class="w-32">
-                {heading_color_options.find(o => o.value === editor_settings.heading_color)?.label}
-              </Select.Trigger>
-              <Select.Content>
-                {#each heading_color_options as option (option.value)}
-                  <Select.Item value={option.value}>{option.label}</Select.Item>
-                {/each}
+	          <div class="flex items-center justify-between gap-4">
+	            <span class="text-sm font-medium">Heading Color</span>
+	            <Select.Root type="single" value={editor_settings.heading_color} onValueChange={handle_heading_color_change}>
+	              <Select.Trigger class="w-32">
+	                <span data-slot="select-value">
+	                  {heading_color_options.find(o => o.value === editor_settings.heading_color)?.label}
+	                </span>
+	              </Select.Trigger>
+	              <Select.Content>
+	                {#each heading_color_options as option (option.value)}
+	                  <Select.Item value={option.value}>{option.label}</Select.Item>
+	                {/each}
               </Select.Content>
             </Select.Root>
           </div>
@@ -148,16 +150,18 @@ function handle_heading_color_change(value: string | undefined) {
 	        </div>
 
         <div class="flex flex-col gap-5">
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium">Content Spacing</span>
-            <Select.Root type="single" value={editor_settings.spacing} onValueChange={handle_spacing_change}>
-              <Select.Trigger class="w-32">
-                {spacing_options.find(o => o.value === editor_settings.spacing)?.label}
-              </Select.Trigger>
-              <Select.Content>
-                {#each spacing_options as option (option.value)}
-                  <Select.Item value={option.value}>{option.label}</Select.Item>
-                {/each}
+	          <div class="flex items-center justify-between gap-4">
+	            <span class="text-sm font-medium">Content Spacing</span>
+	            <Select.Root type="single" value={editor_settings.spacing} onValueChange={handle_spacing_change}>
+	              <Select.Trigger class="w-32">
+	                <span data-slot="select-value">
+	                  {spacing_options.find(o => o.value === editor_settings.spacing)?.label}
+	                </span>
+	              </Select.Trigger>
+	              <Select.Content>
+	                {#each spacing_options as option (option.value)}
+	                  <Select.Item value={option.value}>{option.label}</Select.Item>
+	                {/each}
               </Select.Content>
             </Select.Root>
           </div>
@@ -181,7 +185,9 @@ function handle_heading_color_change(value: string | undefined) {
 	              onValueChange={handle_link_syntax_change}
 	            >
 	              <Select.Trigger class="w-56">
-	                {link_syntax_options.find(o => o.value === editor_settings.link_syntax)?.label}
+	                <span data-slot="select-value">
+	                  {link_syntax_options.find(o => o.value === editor_settings.link_syntax)?.label}
+	                </span>
 	              </Select.Trigger>
 	              <Select.Content>
 	                {#each link_syntax_options as option (option.value)}
