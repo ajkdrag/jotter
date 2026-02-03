@@ -219,6 +219,20 @@ export function create_wiki_link_click_prose_plugin(input: {
   base_note_path: string
   on_wiki_link_click: (note_path: string) => void
 }) {
+  function should_handle_event(event: MouseEvent): boolean {
+    if (event.button !== 0) return false
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false
+    return true
+  }
+
+  function href_from_dom_event_target(event: MouseEvent): string | null {
+    const target = event.target
+    if (!(target instanceof Element)) return null
+    const anchor = target.closest('a[href]')
+    if (!(anchor instanceof HTMLAnchorElement)) return null
+    return anchor.getAttribute('href')
+  }
+
   function is_external_href(href: string): boolean {
     try {
       new URL(href)
@@ -228,51 +242,87 @@ export function create_wiki_link_click_prose_plugin(input: {
     }
   }
 
+  function strip_hash_and_query(value: string): string {
+    let end = value.length
+    const hash_index = value.indexOf('#')
+    if (hash_index >= 0 && hash_index < end) end = hash_index
+    const query_index = value.indexOf('?')
+    if (query_index >= 0 && query_index < end) end = query_index
+    return value.slice(0, end)
+  }
+
+  function safe_decode_uri_component(value: string): string {
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      return value
+    }
+  }
+
   function try_resolve_markdown_href(base_note_path: string, href: string): string | null {
     if (href.trim() === '') return null
     if (is_external_href(href)) return null
 
-    const without_hash = href.split('#')[0] ?? ''
-    if (without_hash.trim() === '') return null
+    const raw_path = strip_hash_and_query(href).trim()
+    if (raw_path === '') return null
 
-    const without_query = without_hash.split('?')[0] ?? ''
-    if (without_query.trim() === '') return null
+    const decoded_path = safe_decode_uri_component(raw_path)
+    const cleaned = decoded_path.startsWith('./') ? decoded_path.slice(2) : decoded_path
+    const trimmed = cleaned.trim()
+    if (trimmed === '') return null
 
-    let decoded = without_query
-    try {
-      decoded = decodeURIComponent(without_query)
-    } catch {
-      decoded = without_query
-    }
+    const last_slash_index = trimmed.lastIndexOf('/')
+    const leaf = last_slash_index >= 0 ? trimmed.slice(last_slash_index + 1) : trimmed
+    if (leaf === '') return null
 
-    const cleaned = decoded.startsWith('./') ? decoded.slice(2) : decoded
-    const leaf = cleaned.split('/').filter(Boolean).at(-1) ?? ''
     const has_dot = leaf.includes('.')
     const is_md = leaf.toLowerCase().endsWith('.md')
     if (has_dot && !is_md) return null
 
-    return resolve_wiki_target_to_note_path({ base_note_path, raw_target: cleaned })
+    return resolve_wiki_target_to_note_path({ base_note_path, raw_target: trimmed })
+  }
+
+  function resolve_internal_href(href: string): string | null {
+    return try_decode_wiki_link_href(href) ?? try_resolve_markdown_href(input.base_note_path, href)
+  }
+
+  function handle_internal_link_click(args: {
+    href: string
+    event: MouseEvent
+    stop_propagation: boolean
+  }): boolean {
+    const resolved = resolve_internal_href(args.href)
+    if (!resolved) return false
+
+    args.event.preventDefault()
+    if (args.stop_propagation) args.event.stopPropagation()
+    input.on_wiki_link_click(resolved)
+    return true
   }
 
   return new Plugin({
     key: new PluginKey('wiki-link-click'),
     props: {
+      handleDOMEvents: {
+        click: (_view, raw_event) => {
+          if (!(raw_event instanceof MouseEvent)) return false
+          if (!should_handle_event(raw_event)) return false
+
+          const href = href_from_dom_event_target(raw_event)
+          if (typeof href !== 'string') return false
+          return handle_internal_link_click({ href, event: raw_event, stop_propagation: true })
+        }
+      },
       handleClick: (view, pos, event) => {
-        if (event.button !== 0) return false
+        if (!should_handle_event(event)) return false
 
         const $pos = view.state.doc.resolve(pos)
         const marks = $pos.marks()
         const link_mark = marks.find((m) => m.type === input.link_type)
-        const href = link_mark?.attrs?.href
-        if (typeof href !== 'string') return false
+        const raw_href = href_from_dom_event_target(event) ?? link_mark?.attrs?.href
+        if (typeof raw_href !== 'string') return false
 
-        const note_path = try_decode_wiki_link_href(href)
-        const resolved = note_path ?? try_resolve_markdown_href(input.base_note_path, href)
-        if (!resolved) return false
-
-        event.preventDefault()
-        input.on_wiki_link_click(resolved)
-        return true
+        return handle_internal_link_click({ href: raw_href, event, stop_propagation: false })
       }
     }
   })

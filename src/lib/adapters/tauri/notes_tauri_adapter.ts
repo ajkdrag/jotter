@@ -57,14 +57,23 @@ export function create_notes_tauri_adapter(): NotesPort {
       })
     },
     async get_folder_stats(vault_id: VaultId, folder_path: string): Promise<FolderStats> {
-      try {
-        return await tauri_invoke<FolderStats>('get_folder_stats', {
+      let note_count = 0
+      let folder_count = 0
+
+      const count_recursive = async (path: string) => {
+        const contents = await tauri_invoke<FolderContents>('list_folder_contents', {
           vaultId: vault_id,
-          folderPath: folder_path
+          folderPath: path
         })
-      } catch {
-        return { note_count: 0, folder_count: 0 }
+        note_count += contents.notes.length
+        folder_count += contents.subfolders.length
+        for (const subfolder of contents.subfolders) {
+          await count_recursive(subfolder)
+        }
       }
+
+      await count_recursive(folder_path)
+      return { note_count, folder_count }
     }
   }
 }
