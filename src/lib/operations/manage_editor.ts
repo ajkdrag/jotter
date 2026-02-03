@@ -7,7 +7,8 @@ export type EditorManager = {
     note: OpenNoteState,
     on_change: (md: string) => void,
     on_dirty_change: (is_dirty: boolean) => void,
-    on_cursor_change?: (info: CursorInfo) => void
+    on_cursor_change?: (info: CursorInfo) => void,
+    on_wiki_link_click?: (note_path: string) => void
   ) => Promise<void>
   update: (note: OpenNoteState) => void
   destroy: () => void
@@ -25,7 +26,8 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       note: OpenNoteState,
       on_change: (md: string) => void,
       on_dirty_change: (is_dirty: boolean) => void,
-      on_cursor_change?: (info: CursorInfo) => void
+      on_cursor_change?: (info: CursorInfo) => void,
+      on_wiki_link_click?: (note_path: string) => void
     ) {
       if (editor_handle) {
         editor_handle.destroy()
@@ -35,9 +37,11 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       current_buffer_id = note.buffer_id
       editor_handle = await editor_port.create_editor(root, {
         initial_markdown: note.markdown,
+        note_path: note.meta.path,
         on_markdown_change: on_change,
         on_dirty_state_change: on_dirty_change,
-        ...(on_cursor_change && { on_cursor_change })
+        ...(on_cursor_change && { on_cursor_change }),
+        ...(on_wiki_link_click && { on_wiki_link_click })
       })
     },
 

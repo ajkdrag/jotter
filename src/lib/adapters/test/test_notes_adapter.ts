@@ -6,7 +6,7 @@ import type { FolderContents } from '$lib/types/filetree'
 const TEST_FILES_BASE = '/test/files'
 const TEST_FILES_INDEX = '/test/files/index.json'
 
-const FALLBACK_TEST_NOTES = new Map<NotePath, { markdown: string; mtime_ms: number }>([
+const FALLBACK_TEST_NOTES = new Map<NotePath, { markdown: MarkdownText; mtime_ms: number }>([
   [as_note_path('welcome.md'), { markdown: as_markdown_text('# Welcome\n\nWelcome to your notes.'), mtime_ms: Date.now() }],
   [as_note_path('getting-started.md'), { markdown: as_markdown_text('# Getting Started\n\nStart taking notes!'), mtime_ms: Date.now() }]
 ])
@@ -37,13 +37,13 @@ async function discover_test_files(): Promise<string[]> {
   return ['welcome.md', 'getting-started.md']
 }
 
-async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtime_ms: number }>> {
+async function load_base_files(): Promise<Map<NotePath, { markdown: MarkdownText; mtime_ms: number }>> {
   const base_url = resolve_test_url(TEST_FILES_BASE)
   if (!base_url || typeof fetch === 'undefined') {
     return new Map(FALLBACK_TEST_NOTES)
   }
 
-  const notes = new Map<NotePath, { markdown: string; mtime_ms: number }>()
+  const notes = new Map<NotePath, { markdown: MarkdownText; mtime_ms: number }>()
   const test_files = await discover_test_files()
 
   for (const file_name of test_files) {
@@ -71,10 +71,14 @@ async function load_base_files(): Promise<Map<NotePath, { markdown: string; mtim
 
 export function create_test_notes_adapter(): NotesPort {
   const created_folders = new Set<string>()
+  const user_notes = new Map<NotePath, { markdown: MarkdownText; mtime_ms: number }>()
 
   return {
     async list_notes(_vault_id: VaultId): Promise<NoteMeta[]> {
       const notes = await load_base_files()
+      for (const [note_path, data] of user_notes.entries()) {
+        notes.set(note_path, data)
+      }
       const result: NoteMeta[] = []
 
       for (const [note_path, data] of notes.entries()) {
@@ -96,6 +100,9 @@ export function create_test_notes_adapter(): NotesPort {
 
     async list_folders(_vault_id: VaultId): Promise<string[]> {
       const notes = await load_base_files()
+      for (const [note_path, data] of user_notes.entries()) {
+        notes.set(note_path, data)
+      }
       const dirs = new Set<string>()
       for (const note_path of notes.keys()) {
         const parts = note_path.split('/').filter(Boolean)
@@ -109,10 +116,10 @@ export function create_test_notes_adapter(): NotesPort {
       return Array.from(dirs).sort((a, b) => a.localeCompare(b))
     },
 
-    async read_note(vault_id: VaultId, note_id: NoteId): Promise<NoteDoc> {
+    async read_note(_vault_id: VaultId, note_id: NoteId): Promise<NoteDoc> {
       const notes = await load_base_files()
       const note_path = as_note_path(note_id)
-      const note_data = notes.get(note_path)
+      const note_data = user_notes.get(note_path) ?? notes.get(note_path)
 
       if (!note_data) {
         throw new Error(`Note not found: ${note_id}`)
@@ -133,11 +140,14 @@ export function create_test_notes_adapter(): NotesPort {
       return { meta, markdown: as_markdown_text(note_data.markdown) }
     },
 
-    async write_note(_vault_id: VaultId, _note_id: NoteId, _markdown: MarkdownText): Promise<void> {
+    async write_note(_vault_id: VaultId, note_id: NoteId, markdown: MarkdownText): Promise<void> {
+      const note_path = as_note_path(note_id)
+      user_notes.set(note_path, { markdown, mtime_ms: Date.now() })
     },
 
     async create_note(_vault_id: VaultId, note_path: NotePath, initial_markdown: MarkdownText): Promise<NoteMeta> {
       const full_path = note_path.endsWith('.md') ? as_note_path(note_path) : as_note_path(`${note_path}.md`)
+      user_notes.set(full_path, { markdown: initial_markdown, mtime_ms: Date.now() })
       const parts = full_path.split('/').filter(Boolean)
       const last_part = parts[parts.length - 1] || ''
       const title = last_part.replace(/\.md$/, '')
@@ -164,6 +174,9 @@ export function create_test_notes_adapter(): NotesPort {
 
     async list_folder_contents(_vault_id: VaultId, folder_path: string): Promise<FolderContents> {
       const notes = await load_base_files()
+      for (const [note_path, data] of user_notes.entries()) {
+        notes.set(note_path, data)
+      }
       const result_notes: NoteMeta[] = []
       const subfolders = new Set<string>()
 

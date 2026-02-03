@@ -2,10 +2,11 @@ import type { AppFlows } from '$lib/flows/create_app_flows'
 import type { Ports } from '$lib/adapters/create_prod_ports'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
-import type { NoteMeta } from '$lib/types/note'
+import type { NoteDoc, NoteMeta } from '$lib/types/note'
 import { parent_folder_path } from '$lib/utils/filetree'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import type { ThemeMode } from '$lib/stores/ui_store'
+import { to_open_note_state } from '$lib/types/editor'
 
 export type AppShellStableConfig = {
   ports: Ports
@@ -24,6 +25,7 @@ export type AppShellActions = {
   select_vault: (vault_id: VaultId) => void
 
   open_note: (note_path: string) => void
+  open_wiki_link: (note_path: string) => void
   markdown_change: (markdown: string) => void
   dirty_state_change: (is_dirty: boolean) => void
 
@@ -121,6 +123,39 @@ export function create_app_shell_actions(input: {
       if (current_note_id && current_note_id === normalized_path) return
 
       app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id, note_path })
+    },
+
+    open_wiki_link: (note_path) => {
+      const vault = app.stores.vault.get_snapshot().vault
+      if (!vault) return
+
+      const normalized_path = as_note_path(note_path)
+      const existing = app.stores.notes.get_snapshot().notes.find(n => n.path === normalized_path)
+      if (existing) {
+        app.stores.ui.actions.set_selected_folder_path(parent_folder_path(normalized_path))
+        app.flows.open_note.send({ type: 'OPEN_NOTE', vault_id: vault.id, note_path: normalized_path })
+        return
+      }
+
+      const open = (doc: NoteDoc) => {
+        app.stores.notes.actions.add_note(doc.meta)
+        app.stores.ui.actions.set_selected_folder_path(parent_folder_path(normalized_path))
+        app.stores.editor.actions.set_open_note(to_open_note_state(doc))
+      }
+
+      stable.ports.notes.read_note(vault.id, normalized_path)
+        .then((doc) => {
+          open(doc)
+        })
+        .catch(() => {
+          stable.ports.notes.create_note(vault.id, normalized_path, as_markdown_text(''))
+            .then((meta) => {
+              open({ meta, markdown: as_markdown_text('') })
+            })
+            .catch((error) => {
+              console.error('Failed to open or create wiki link note:', normalized_path, error)
+            })
+        })
     },
 
     markdown_change: (markdown) => {

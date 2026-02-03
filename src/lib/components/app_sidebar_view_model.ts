@@ -22,6 +22,7 @@ export type AppSidebarViewModelInput = {
     AppShellActions,
     | 'handle_theme_change'
     | 'open_note'
+    | 'open_wiki_link'
     | 'create_new_note'
     | 'request_create_folder'
     | 'markdown_change'
@@ -56,6 +57,7 @@ export type AppSidebarModel = {
 export type AppSidebarOps = {
   on_theme_change: (theme: ThemeMode) => void
   on_open_note: (note_path: string) => void
+  on_wiki_link_click: (note_path: string) => void
   on_create_note: () => void
   on_request_create_folder: (parent_path: string) => void
   on_markdown_change: (markdown: string) => void
@@ -110,6 +112,7 @@ export function build_app_sidebar_props(input: AppSidebarViewModelInput): AppSid
     ops: {
       on_theme_change: actions.handle_theme_change,
       on_open_note: actions.open_note,
+      on_wiki_link_click: actions.open_wiki_link,
       on_create_note: actions.create_new_note,
       on_request_create_folder: actions.request_create_folder,
       on_markdown_change: actions.markdown_change,

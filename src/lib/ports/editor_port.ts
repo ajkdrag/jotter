@@ -18,9 +18,11 @@ export type EditorPort = {
     root: HTMLElement,
     config: {
       initial_markdown: string
+      note_path: string
       on_markdown_change: (markdown: string) => void
       on_dirty_state_change: (is_dirty: boolean) => void
       on_cursor_change?: (info: CursorInfo) => void
+      on_wiki_link_click?: (note_path: string) => void
     }
   ) => Promise<EditorHandle>
 }

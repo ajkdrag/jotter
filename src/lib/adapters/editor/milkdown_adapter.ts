@@ -21,6 +21,8 @@ import {
   dirty_state_plugin_key
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
+import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
+import { format_wiki_target_for_markdown, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
 function resize_icon(svg: string, size: number): string {
   return svg
@@ -61,11 +63,31 @@ function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
 
 export const milkdown_editor_port: EditorPort = {
   create_editor: async (root, config) => {
-    const { initial_markdown, on_markdown_change, on_dirty_state_change, on_cursor_change } = config
+    const { initial_markdown, note_path, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
 
     let current_markdown = initial_markdown
     let current_is_dirty = false
     let editor: Editor | null = null
+
+    function normalize_markdown(raw: string): string {
+      const without_zws = raw.replaceAll('\u200B', '')
+      return without_zws.replace(/\[([^\]]+)\]\((imdown:\/\/wiki\/?\?[^)\s]+)\)/g, (full, label, href) => {
+        const resolved_note_path = try_decode_wiki_link_href(String(href))
+        if (!resolved_note_path) return full
+
+        const target = format_wiki_target_for_markdown({
+          base_note_path: note_path,
+          resolved_note_path
+        })
+
+        const safe_label = String(label)
+        if (safe_label === target) {
+          return `[[${target}]]`
+        }
+
+        return `[[${target}|${safe_label}]]`
+      })
+    }
 
     let builder = Editor.make()
       .config((ctx) => {
@@ -89,6 +111,7 @@ export const milkdown_editor_port: EditorPort = {
       .use(linkTooltipPlugin)
       .use(listItemBlockComponent)
       .use(markdown_link_input_rule_plugin)
+      .use(create_wiki_link_converter_plugin(note_path))
       .use(listener)
       .use(history)
       .use(dirty_state_plugin_config_key)
@@ -103,18 +126,31 @@ export const milkdown_editor_port: EditorPort = {
 
         const listener_instance = ctx.get(listenerCtx)
         listener_instance.markdownUpdated((_ctx, markdown, prev_markdown) => {
-          if (markdown !== prev_markdown && markdown !== current_markdown) {
-            current_markdown = markdown
-            on_markdown_change(markdown)
-          }
+          if (markdown === prev_markdown) return
+
+          const normalized = normalize_markdown(markdown)
+          if (normalized === current_markdown) return
+
+          current_markdown = normalized
+          on_markdown_change(normalized)
         })
       })
+
+    if (on_wiki_link_click) {
+      builder = builder.use(create_wiki_link_click_plugin(on_wiki_link_click))
+    }
 
     if (on_cursor_change) {
       builder = builder.use(create_cursor_plugin(on_cursor_change))
     }
 
     editor = await builder.create()
+
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const tr = view.state.tr.setMeta(wiki_link_plugin_key, { action: 'full_scan' })
+      view.dispatch(tr)
+    })
 
     function mark_clean() {
       if (!editor) return
@@ -136,6 +172,11 @@ export const milkdown_editor_port: EditorPort = {
         if (!editor) return
         current_markdown = markdown
         editor.action(replaceAll(markdown))
+        editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx)
+          const tr = view.state.tr.setMeta(wiki_link_plugin_key, { action: 'full_scan' })
+          view.dispatch(tr)
+        })
       },
       get_markdown() {
         return current_markdown

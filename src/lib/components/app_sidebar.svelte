@@ -165,6 +165,7 @@
                                 on_markdown_change={ops.on_markdown_change}
                                 on_dirty_state_change={ops.on_dirty_state_change}
                                 on_cursor_change={handle_cursor_change}
+                                on_wiki_link_click={ops.on_wiki_link_click}
                             />
                         </div>
                     </Sidebar.Inset>

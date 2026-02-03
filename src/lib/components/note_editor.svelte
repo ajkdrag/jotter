@@ -9,12 +9,13 @@
         on_markdown_change: (markdown: string) => void;
         on_dirty_state_change: (is_dirty: boolean) => void;
         on_cursor_change?: (info: CursorInfo) => void;
+        on_wiki_link_click?: (note_path: string) => void;
     }
 
-    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change, on_cursor_change }: Props = $props();
+    let { editor_manager, open_note, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click }: Props = $props();
 
     function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-        const mount_promise = editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change, on_cursor_change);
+        const mount_promise = editor_manager.mount(node, note, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click);
 
         mount_promise.then(() => {
             editor_manager.focus();

@@ -1,0 +1,254 @@
+import { $prose } from '@milkdown/kit/utils'
+import { Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
+import type { MarkType } from '@milkdown/kit/prose/model'
+import { linkSchema } from '@milkdown/kit/preset/commonmark'
+import { encode_wiki_link_href, format_wiki_target_for_markdown, resolve_wiki_target_to_note_path, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
+
+const ZERO_WIDTH_SPACE = '\u200B'
+const WIKI_LINK_REGEX = /\[\[([^\]\n]+?)(?:\|([^\]\n]+?))?\]\]/
+
+export const wiki_link_plugin_key = new PluginKey('wiki-link-plugin')
+
+type Segment = {
+  text: string
+  start_index: number
+  start_pos: number
+  has_link_mark: boolean
+  has_code_mark: boolean
+}
+
+function build_segments(input: {
+  text_block: any
+  block_start: number
+  link_type: MarkType
+}): { segments: Segment[]; combined: string; has_non_text_inline: boolean } {
+  const segments: Segment[] = []
+  let combined = ''
+  let current_index = 0
+  let has_non_text_inline = false
+
+  input.text_block.descendants((node: any, pos: number) => {
+    if (node.isText && node.text) {
+      segments.push({
+        text: node.text,
+        start_index: current_index,
+        start_pos: input.block_start + pos,
+        has_link_mark: node.marks.some((m: any) => m.type === input.link_type),
+        has_code_mark: node.marks.some((m: any) => m.type?.name === 'code_inline' || m.type?.name === 'code')
+      })
+      combined += node.text
+      current_index += node.text.length
+      return true
+    }
+
+    if (node.isInline) {
+      has_non_text_inline = true
+      return false
+    }
+
+    return true
+  })
+
+  return { segments, combined, has_non_text_inline }
+}
+
+function pos_from_index(segments: Segment[], index: number): number | null {
+  for (const seg of segments) {
+    const end = seg.start_index + seg.text.length
+    if (index >= seg.start_index && index < end) {
+      return seg.start_pos + (index - seg.start_index)
+    }
+  }
+  return null
+}
+
+function contains_protected_mark(segments: Segment[], match_start_index: number, match_end_index: number): boolean {
+  return segments.some((seg) => {
+    if (!seg.has_link_mark && !seg.has_code_mark) return false
+    const seg_end = seg.start_index + seg.text.length
+    return seg.start_index < match_end_index && seg_end > match_start_index
+  })
+}
+
+function build_replacement(input: {
+  link_type: MarkType
+  base_note_path: string
+  raw_target: string
+  raw_label: string | null
+}): { resolved_note_path: string; display: string; href: string } | null {
+  const resolved_note_path = resolve_wiki_target_to_note_path({
+    base_note_path: input.base_note_path,
+    raw_target: input.raw_target
+  })
+  if (!resolved_note_path) return null
+
+  const href = encode_wiki_link_href(resolved_note_path)
+  const target_for_markdown = format_wiki_target_for_markdown({
+    base_note_path: input.base_note_path,
+    resolved_note_path
+  })
+
+  const display = (input.raw_label ?? '').trim() !== '' ? input.raw_label!.trim() : target_for_markdown
+  return { resolved_note_path, display, href }
+}
+
+export function create_wiki_link_converter_prose_plugin(input: {
+  link_type: MarkType
+  base_note_path: string
+}) {
+  return new Plugin({
+    key: wiki_link_plugin_key,
+    appendTransaction(transactions, _old_state, new_state) {
+      const force_full_scan = transactions.some((tr) => tr.getMeta(wiki_link_plugin_key)?.action === 'full_scan')
+      const should_scan = force_full_scan || transactions.some((tr) => tr.docChanged)
+      if (!should_scan) return null
+
+      const tr = new_state.tr
+
+      const scan_textblock = (text_block: any, block_start: number, selection_anchor: number | null) => {
+        if (!text_block.isTextblock) return
+        if (text_block.type?.name === 'code_block') return
+
+        const { segments, combined, has_non_text_inline } = build_segments({
+          text_block,
+          block_start,
+          link_type: input.link_type
+        })
+        if (has_non_text_inline) return
+        if (combined === '') return
+
+        if (selection_anchor === null) {
+          const matches: Array<{ full_match: string; raw_target: string; raw_label: string | null; start: number; end: number }> = []
+          const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
+          let match: RegExpExecArray | null = null
+
+          while ((match = regex.exec(combined)) !== null) {
+            const [full_match, raw_target, raw_label] = match
+            if (!raw_target) continue
+
+            const start = match.index
+            const end = start + full_match.length
+            if (contains_protected_mark(segments, start, end)) continue
+            matches.push({ full_match, raw_target, raw_label: raw_label ?? null, start, end })
+          }
+
+          for (let i = matches.length - 1; i >= 0; i--) {
+            const m = matches[i]
+            if (!m) continue
+            const start_pos = pos_from_index(segments, m.start)
+            if (start_pos === null) continue
+
+            const replacement = build_replacement({
+              link_type: input.link_type,
+              base_note_path: input.base_note_path,
+              raw_target: m.raw_target,
+              raw_label: m.raw_label
+            })
+            if (!replacement) continue
+
+            tr.replaceWith(start_pos, start_pos + m.full_match.length, [
+              new_state.schema.text(replacement.display, [input.link_type.create({ href: replacement.href })]),
+              new_state.schema.text(ZERO_WIDTH_SPACE)
+            ])
+          }
+
+          return
+        }
+
+        const window_before = 1024
+        const window_after = 256
+        const anchor = selection_anchor
+        const window_start = Math.max(0, anchor - window_before)
+        const window_end = Math.min(combined.length, anchor + window_after)
+        const window_text = combined.slice(window_start, window_end)
+
+        const match = WIKI_LINK_REGEX.exec(window_text)
+        if (!match) return
+
+        const [full_match, raw_target, raw_label] = match
+        if (!raw_target) return
+
+        const match_start_index = window_start + match.index
+        const match_end_index = match_start_index + full_match.length
+        if (contains_protected_mark(segments, match_start_index, match_end_index)) return
+
+        const start = pos_from_index(segments, match_start_index)
+        if (start === null) return
+
+        const replacement = build_replacement({
+          link_type: input.link_type,
+          base_note_path: input.base_note_path,
+          raw_target,
+          raw_label: raw_label ?? null
+        })
+        if (!replacement) return
+
+        tr.replaceWith(start, start + full_match.length, [
+          new_state.schema.text(replacement.display, [input.link_type.create({ href: replacement.href })]),
+          new_state.schema.text(ZERO_WIDTH_SPACE)
+        ])
+
+        if (selection_anchor !== null) {
+          tr.setSelection(TextSelection.create(tr.doc, start + replacement.display.length + 1))
+          tr.setStoredMarks([])
+        }
+      }
+
+      if (force_full_scan) {
+        new_state.doc.descendants((node, pos) => {
+          if (!node.isTextblock) return true
+          scan_textblock(node, pos + 1, null)
+          return false
+        })
+        return tr.docChanged ? tr : null
+      }
+
+      const from = new_state.selection.$from
+      const text_block = from.parent
+      if (!text_block.isTextblock) return null
+      if (from.parent.type?.name === 'code_block') return null
+
+      scan_textblock(text_block, from.start(), from.parentOffset)
+      return tr.docChanged ? tr : null
+    }
+  })
+}
+
+export function create_wiki_link_click_prose_plugin(input: {
+  link_type: MarkType
+  on_wiki_link_click: (note_path: string) => void
+}) {
+  return new Plugin({
+    key: new PluginKey('wiki-link-click'),
+    props: {
+      handleClick: (view, pos, event) => {
+        if (event.button !== 0) return false
+
+        const $pos = view.state.doc.resolve(pos)
+        const marks = $pos.marks()
+        const link_mark = marks.find((m) => m.type === input.link_type)
+        const href = link_mark?.attrs?.href
+        if (typeof href !== 'string') return false
+
+        const note_path = try_decode_wiki_link_href(href)
+        if (!note_path) return false
+
+        event.preventDefault()
+        input.on_wiki_link_click(note_path)
+        return true
+      }
+    }
+  })
+}
+
+export const create_wiki_link_converter_plugin = (base_note_path: string) =>
+  $prose((ctx) => {
+    const link_type = linkSchema.type(ctx)
+    return create_wiki_link_converter_prose_plugin({ link_type, base_note_path })
+  })
+
+export const create_wiki_link_click_plugin = (on_wiki_link_click: (note_path: string) => void) =>
+  $prose((ctx) => {
+    const link_type = linkSchema.type(ctx)
+    return create_wiki_link_click_prose_plugin({ link_type, on_wiki_link_click })
+  })
