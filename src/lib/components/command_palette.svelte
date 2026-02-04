@@ -4,8 +4,18 @@
   import SearchIcon from '@lucide/svelte/icons/search'
   import CommandIcon from '@lucide/svelte/icons/terminal'
   import SettingsIcon from '@lucide/svelte/icons/settings'
-  import { search_commands, type CommandId, type CommandDefinition } from '$lib/utils/search_commands'
-  import { search_settings, type SettingDefinition } from '$lib/utils/search_settings'
+  import FilePlusIcon from '@lucide/svelte/icons/file-plus'
+  import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
+  import type { CommandId, CommandDefinition, CommandIcon as CommandIconType } from '$lib/utils/search_commands'
+  import type { SettingDefinition } from '$lib/types/settings_registry'
+  import type { Component } from 'svelte'
+
+  const COMMAND_ICONS: Record<CommandIconType, Component> = {
+    'file-plus': FilePlusIcon,
+    'folder-open': FolderOpenIcon,
+    'settings': SettingsIcon,
+    'search': SearchIcon
+  }
 
   type PaletteItem =
     | { type: 'command'; item: CommandDefinition }
@@ -15,6 +25,8 @@
     open: boolean
     query: string
     selected_index: number
+    commands: CommandDefinition[]
+    settings: SettingDefinition[]
     on_open_change: (open: boolean) => void
     on_query_change: (query: string) => void
     on_selected_index_change: (index: number) => void
@@ -26,6 +38,8 @@
     open,
     query,
     selected_index,
+    commands,
+    settings,
     on_open_change,
     on_query_change,
     on_selected_index_change,
@@ -35,8 +49,8 @@
 
   let input_ref: HTMLInputElement | null = $state(null)
 
-  const filtered_commands = $derived(search_commands(query))
-  const filtered_settings = $derived(search_settings(query))
+  const filtered_commands = $derived(commands)
+  const filtered_settings = $derived(settings)
 
   const items: PaletteItem[] = $derived([
     ...filtered_commands.map((cmd): PaletteItem => ({ type: 'command', item: cmd })),
@@ -132,6 +146,7 @@
 
       {#each filtered_commands as command, index (command.id)}
         {@const global_index = commands_start_index() + index}
+        {@const IconComponent = COMMAND_ICONS[command.icon]}
         <button
           id={`cmd-${command.id}`}
           role="option"
@@ -141,7 +156,10 @@
           onmouseenter={() => { on_selected_index_change(global_index); }}
           onclick={() => { on_select_command(command.id); }}
         >
-          <div class="CommandPalette__item-title">{command.label}</div>
+          <div class="CommandPalette__item-row">
+            <span class="CommandPalette__item-icon"><IconComponent /></span>
+            <span class="CommandPalette__item-title">{command.label}</span>
+          </div>
           <div class="CommandPalette__item-desc">{command.description}</div>
         </button>
       {/each}
@@ -216,7 +234,7 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-1-5) var(--space-3);
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -263,19 +281,36 @@
     gap: var(--space-2);
   }
 
+  .CommandPalette__item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted-foreground);
+    transition: color var(--duration-fast) var(--ease-default);
+  }
+
+  :global(.CommandPalette__item-icon svg) {
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
+  }
+
+  .CommandPalette__item--selected .CommandPalette__item-icon {
+    color: var(--interactive);
+  }
+
   .CommandPalette__item-title {
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     font-weight: 500;
     color: var(--foreground);
   }
 
   .CommandPalette__item-desc {
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--muted-foreground);
   }
 
   .CommandPalette__badge {
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     padding: var(--space-0-5) var(--space-1-5);
     border-radius: var(--radius-sm);
     background-color: var(--muted);
@@ -285,7 +320,7 @@
   .CommandPalette__empty {
     padding: var(--space-8) var(--space-3);
     text-align: center;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     color: var(--muted-foreground);
   }
 </style>

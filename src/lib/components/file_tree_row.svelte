@@ -193,7 +193,7 @@
     padding-inline-start: var(--tree-indent);
     padding-inline-end: var(--space-2);
     border-radius: var(--radius-md);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--sidebar-foreground);
     cursor: pointer;
     transition:

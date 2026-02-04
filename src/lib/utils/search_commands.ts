@@ -1,10 +1,13 @@
 export type CommandId = 'create_new_note' | 'change_vault' | 'open_settings' | 'open_file_search'
 
+export type CommandIcon = 'file-plus' | 'folder-open' | 'settings' | 'search'
+
 export type CommandDefinition = {
   id: CommandId
   label: string
   description: string
   keywords: string[]
+  icon: CommandIcon
 }
 
 export const COMMANDS_REGISTRY: CommandDefinition[] = [
@@ -12,25 +15,29 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     id: 'create_new_note',
     label: 'Create new note',
     description: 'Create an untitled note in the current folder',
-    keywords: ['new', 'add', 'create', 'note', 'file', 'document']
+    keywords: ['new', 'add', 'create', 'note', 'file', 'document'],
+    icon: 'file-plus'
   },
   {
     id: 'change_vault',
     label: 'Change vault',
     description: 'Switch to a different vault',
-    keywords: ['switch', 'vault', 'folder', 'workspace', 'change', 'open']
+    keywords: ['switch', 'vault', 'folder', 'workspace', 'change', 'open'],
+    icon: 'folder-open'
   },
   {
     id: 'open_settings',
     label: 'Settings',
     description: 'Open application settings',
-    keywords: ['settings', 'preferences', 'config', 'options', 'configure']
+    keywords: ['settings', 'preferences', 'config', 'options', 'configure'],
+    icon: 'settings'
   },
   {
     id: 'open_file_search',
     label: 'Search files',
     description: 'Open file search (Cmd+O)',
-    keywords: ['search', 'find', 'file', 'open', 'quick', 'navigate']
+    keywords: ['search', 'find', 'file', 'open', 'quick', 'navigate'],
+    icon: 'search'
   }
 ]
 

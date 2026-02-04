@@ -36,8 +36,12 @@
 
   let input_ref: HTMLInputElement | null = $state(null)
 
-  const display_items = $derived(
-    query.trim() ? results.map((r) => r.note) : recent_notes
+  type DisplayItem = { note: NoteMeta; snippet?: string | undefined }
+
+  const display_items: DisplayItem[] = $derived(
+    query.trim()
+      ? results.map((r) => ({ note: r.note, snippet: r.snippet }))
+      : recent_notes.map((note) => ({ note }))
   )
 
   const show_recent_header = $derived(!query.trim() && recent_notes.length > 0)
@@ -72,7 +76,7 @@
       case 'Enter':
         event.preventDefault()
         if (display_items[selected_index]) {
-          on_confirm(display_items[selected_index].id)
+          on_confirm(display_items[selected_index].note.id)
         }
         break
     }
@@ -107,7 +111,7 @@
       role="listbox"
       tabindex="0"
       aria-activedescendant={display_items[selected_index]
-        ? `note-${display_items[selected_index].id}`
+        ? `note-${display_items[selected_index].note.id}`
         : undefined}
       class="max-h-80 overflow-y-auto py-2"
     >
@@ -130,21 +134,24 @@
         </div>
       {/if}
 
-      {#each display_items as item, index (item.id)}
+      {#each display_items as item, index (item.note.id)}
         <button
-          id={`note-${item.id}`}
+          id={`note-${item.note.id}`}
           role="option"
           aria-selected={index === selected_index}
           class="w-full px-3 py-2 text-left transition-colors focus:outline-none"
           class:bg-muted={index === selected_index}
           onmouseenter={() => { on_selected_index_change(index); }}
-          onclick={() => { on_confirm(item.id); }}
+          onclick={() => { on_confirm(item.note.id); }}
         >
           <div class="flex items-center gap-2">
             <FileIcon class="size-4 text-muted-foreground shrink-0" />
             <div class="flex flex-col min-w-0">
-              <span class="font-medium text-foreground truncate">{item.title}</span>
-              <span class="text-xs text-muted-foreground truncate">{item.path}</span>
+              <span class="font-medium text-foreground truncate">{item.note.title}</span>
+              <span class="text-xs text-muted-foreground truncate">{item.note.path}</span>
+              {#if item.snippet}
+                <span class="text-xs text-muted-foreground truncate">{item.snippet}</span>
+              {/if}
             </div>
           </div>
         </button>

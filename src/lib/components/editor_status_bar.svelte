@@ -54,7 +54,7 @@
     justify-content: space-between;
     height: var(--size-status-bar);
     padding-inline: var(--space-3);
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     font-feature-settings: 'tnum' 1;
     flex-shrink: 0;
     border-top: 1px solid var(--border);

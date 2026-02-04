@@ -38,6 +38,7 @@ describe('create_editor_manager', () => {
       focus: vi.fn()
     }
     const editor_port: EditorPort = {
+      insert_text_at_cursor: vi.fn(),
       create_editor: vi.fn()
         .mockResolvedValueOnce(first_handle)
         .mockResolvedValueOnce(second_handle)
@@ -62,6 +63,7 @@ describe('create_editor_manager', () => {
       focus: vi.fn()
     }
     const editor_port: EditorPort = {
+      insert_text_at_cursor: vi.fn(),
       create_editor: vi.fn().mockResolvedValue(handle)
     }
 
@@ -83,6 +85,7 @@ describe('create_editor_manager', () => {
       focus: vi.fn()
     }
     const editor_port: EditorPort = {
+      insert_text_at_cursor: vi.fn(),
       create_editor: vi.fn().mockResolvedValue(handle)
     }
 
@@ -104,6 +107,7 @@ describe('create_editor_manager', () => {
       focus: vi.fn()
     }
     const editor_port: EditorPort = {
+      insert_text_at_cursor: vi.fn(),
       create_editor: vi.fn().mockResolvedValue(handle)
     }
 
@@ -125,6 +129,7 @@ describe('create_editor_manager', () => {
       focus: vi.fn()
     }
     const editor_port: EditorPort = {
+      insert_text_at_cursor: vi.fn(),
       create_editor: vi.fn().mockResolvedValue(handle)
     }
 

@@ -69,6 +69,17 @@
   --space-12: 3rem;       /* 48px */
 
   /* ----------------------------------------
+     TYPOGRAPHY SCALE
+     ----------------------------------------
+     Consistent font sizes across the UI.
+     ---------------------------------------- */
+  --text-xs: 0.6875rem;    /* 11px - status bar, badges, section headers */
+  --text-sm: 0.8125rem;    /* 13px - secondary text, descriptions */
+  --text-base: 0.875rem;   /* 14px - body text, list items */
+  --text-md: 0.9375rem;    /* 15px - emphasized body */
+  --text-lg: 1rem;         /* 16px - primary content */
+
+  /* ----------------------------------------
      COMPONENT DIMENSIONS
      ----------------------------------------
      Consistent sizes for interactive elements.

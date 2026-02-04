@@ -3,12 +3,14 @@ use crate::storage;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::io::ErrorKind;
+use std::path::{Component, Path, PathBuf};
 use tantivy::collector::TopDocs;
 use tantivy::directory::MmapDirectory;
 use tantivy::query::QueryParser;
 use tantivy::schema::{Schema, Value, STORED, STRING, TEXT};
-use tantivy::{doc, Index, IndexReader};
+use tantivy::snippet::SnippetGenerator;
+use tantivy::{doc, Index, IndexReader, Term};
 use tauri::AppHandle;
 use walkdir::WalkDir;
 
@@ -32,6 +34,22 @@ pub struct SearchHit {
     pub note: IndexNoteMeta,
     pub score: f32,
     pub snippet: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+enum SearchScope {
+    All,
+    Path,
+    Title,
+    Content,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchQueryInput {
+    pub raw: String,
+    pub text: String,
+    pub scope: SearchScope,
 }
 
 fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
@@ -134,21 +152,62 @@ fn extract_meta(abs: &Path, vault_root: &Path) -> Result<IndexNoteMeta, String> 
     })
 }
 
-fn build_index_schema() -> (Schema, tantivy::schema::Field, tantivy::schema::Field, tantivy::schema::Field) {
+fn note_abs_path(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+    let rel = PathBuf::from(note_rel);
+    if rel.is_absolute() {
+        return Err("note path must be relative".to_string());
+    }
+    if rel
+        .components()
+        .any(|c| matches!(c, Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir))
+    {
+        return Err("note path contains invalid segments".to_string());
+    }
+    let abs = vault_root.join(&rel);
+    let abs = abs.canonicalize().unwrap_or(abs);
+    let base = vault_root
+        .canonicalize()
+        .unwrap_or_else(|_| vault_root.to_path_buf());
+    if !abs.starts_with(&base) {
+        return Err("note path escapes vault".to_string());
+    }
+    Ok(abs)
+}
+
+fn build_index_schema() -> (
+    Schema,
+    tantivy::schema::Field,
+    tantivy::schema::Field,
+    tantivy::schema::Field,
+    tantivy::schema::Field,
+) {
     let mut schema_builder = Schema::builder();
-    let path_f = schema_builder.add_text_field("path", STRING | STORED);
+    let path_exact_f = schema_builder.add_text_field("path_exact", STRING | STORED);
+    let path_f = schema_builder.add_text_field("path", TEXT | STORED);
     let title_f = schema_builder.add_text_field("title", TEXT | STORED);
     let body_f = schema_builder.add_text_field("body", TEXT | STORED);
     let schema = schema_builder.build();
-    (schema, path_f, title_f, body_f)
+    (schema, path_exact_f, path_f, title_f, body_f)
 }
 
-fn open_index(vault_root: &Path) -> Result<(Index, tantivy::schema::Field, tantivy::schema::Field, tantivy::schema::Field), String> {
+fn open_index(
+    vault_root: &Path,
+) -> Result<
+    (
+        Index,
+        tantivy::schema::Field,
+        tantivy::schema::Field,
+        tantivy::schema::Field,
+        tantivy::schema::Field,
+    ),
+    String,
+> {
     let dir = index_dir(vault_root);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let mmap = MmapDirectory::open(&dir).map_err(|e| e.to_string())?;
-    let (schema, path_f, title_f, body_f) = build_index_schema();
+    let (schema, path_exact_f, path_f, title_f, body_f) = build_index_schema();
     let index = Index::open_or_create(mmap, schema).map_err(|e| e.to_string())?;
-    Ok((index, path_f, title_f, body_f))
+    Ok((index, path_exact_f, path_f, title_f, body_f))
 }
 
 fn open_reader(index: &Index) -> Result<IndexReader, String> {
@@ -162,6 +221,14 @@ fn open_reader(index: &Index) -> Result<IndexReader, String> {
 fn load_index_data(vault_root: &Path) -> Result<IndexData, String> {
     let bytes = std::fs::read(index_data_path(vault_root)).map_err(|e| e.to_string())?;
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+}
+
+fn load_or_init_index_data(vault_root: &Path) -> Result<IndexData, String> {
+    match std::fs::read(index_data_path(vault_root)) {
+        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| e.to_string()),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(IndexData::default()),
+        Err(err) => Err(err.to_string()),
+    }
 }
 
 fn save_index_data(vault_root: &Path, data: &IndexData) -> Result<(), String> {
@@ -183,7 +250,7 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
-    let (index, path_f, title_f, body_f) = open_index(&vault_root)?;
+    let (index, path_exact_f, path_f, title_f, body_f) = open_index(&vault_root)?;
     let mut writer = index.writer(50_000_000).map_err(|e| e.to_string())?;
 
     let mut notes: BTreeMap<String, IndexNoteMeta> = BTreeMap::new();
@@ -214,6 +281,7 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
         let body = markdown;
         writer
             .add_document(doc!(
+                path_exact_f => path.as_str(),
                 path_f => path.as_str(),
                 title_f => meta.title.as_str(),
                 body_f => body
@@ -232,16 +300,37 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn index_search(app: AppHandle, vault_id: String, query: String) -> Result<Vec<SearchHit>, String> {
+pub fn index_search(app: AppHandle, vault_id: String, query: SearchQueryInput) -> Result<Vec<SearchHit>, String> {
     let vault_root = vault_path(&app, &vault_id)?;
-    let data = load_index_data(&vault_root)?;
-    let (index, _path_f, title_f, body_f) = open_index(&vault_root)?;
+    if query.text.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let data = load_or_init_index_data(&vault_root)?;
+    let (index, _path_exact_f, path_f, title_f, body_f) = open_index(&vault_root)?;
     let reader = open_reader(&index)?;
     let searcher = reader.searcher();
 
-    let qp = QueryParser::for_index(&index, vec![title_f, body_f]);
-    let q = qp.parse_query(&query).map_err(|e| e.to_string())?;
+    let fields = match query.scope {
+        SearchScope::All => vec![title_f, path_f, body_f],
+        SearchScope::Path => vec![path_f],
+        SearchScope::Title => vec![title_f],
+        SearchScope::Content => vec![body_f],
+    };
+
+    let mut qp = QueryParser::for_index(&index, fields);
+    qp.set_field_boost(title_f, 2.0);
+    qp.set_field_boost(path_f, 1.5);
+    qp.set_field_boost(body_f, 1.0);
+    let q = qp.parse_query(&query.text).map_err(|e| e.to_string())?;
     let top = searcher.search(&q, &TopDocs::with_limit(50)).map_err(|e| e.to_string())?;
+
+    let snippet_generator = match query.scope {
+        SearchScope::All | SearchScope::Content => {
+            SnippetGenerator::create(&searcher, &*q, body_f).ok()
+        }
+        _ => None,
+    };
 
     let mut hits = Vec::new();
     for (score, addr) in top {
@@ -256,14 +345,11 @@ pub fn index_search(app: AppHandle, vault_id: String, query: String) -> Result<V
             None => continue,
         };
 
-        let snippet = doc
-            .get_first(index.schema().get_field("body").unwrap())
-            .and_then(|v| v.as_str())
-            .map(|s| {
-                let s = s.replace('\n', " ");
-                let s = s.split_whitespace().take(32).collect::<Vec<_>>().join(" ");
-                s
-            });
+        let snippet = snippet_generator
+            .as_ref()
+            .map(|gen| gen.snippet_from_doc(&doc))
+            .map(|snippet| snippet.fragment().replace('\n', " "))
+            .filter(|s| !s.trim().is_empty());
 
         hits.push(SearchHit {
             note,
@@ -273,6 +359,58 @@ pub fn index_search(app: AppHandle, vault_id: String, query: String) -> Result<V
     }
 
     Ok(hits)
+}
+
+#[tauri::command]
+pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> Result<(), String> {
+    let vault_root = vault_path(&app, &vault_id)?;
+    let abs = note_abs_path(&vault_root, &note_id)?;
+    let markdown = std::fs::read_to_string(&abs).map_err(|e| e.to_string())?;
+    let meta = extract_meta(&abs, &vault_root)?;
+
+    let mut data = load_or_init_index_data(&vault_root)?;
+    data.notes.insert(meta.path.clone(), meta.clone());
+
+    let key_map = build_key_map(&data.notes);
+    let mut resolved: BTreeSet<String> = BTreeSet::new();
+    for token in wiki_link_targets(&markdown) {
+        if let Some(target) = resolve_wiki_target(&token, &key_map) {
+            if target != meta.path {
+                resolved.insert(target);
+            }
+        }
+    }
+    data.outlinks.insert(meta.path.clone(), resolved.into_iter().collect());
+    save_index_data(&vault_root, &data)?;
+
+    let (index, path_exact_f, path_f, title_f, body_f) = open_index(&vault_root)?;
+    let mut writer = index.writer(50_000_000).map_err(|e| e.to_string())?;
+    writer.delete_term(Term::from_field_text(path_exact_f, meta.path.as_str()));
+    writer
+        .add_document(doc!(
+            path_exact_f => meta.path.as_str(),
+            path_f => meta.path.as_str(),
+            title_f => meta.title.as_str(),
+            body_f => markdown.as_str()
+        ))
+        .map_err(|e| e.to_string())?;
+    writer.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn index_remove_note(app: AppHandle, vault_id: String, note_id: String) -> Result<(), String> {
+    let vault_root = vault_path(&app, &vault_id)?;
+    let mut data = load_or_init_index_data(&vault_root)?;
+    data.notes.remove(&note_id);
+    data.outlinks.remove(&note_id);
+    save_index_data(&vault_root, &data)?;
+
+    let (index, path_exact_f, _path_f, _title_f, _body_f) = open_index(&vault_root)?;
+    let mut writer = index.writer(50_000_000).map_err(|e| e.to_string())?;
+    writer.delete_term(Term::from_field_text(path_exact_f, note_id.as_str()));
+    writer.commit().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn note_list_from_paths(data: &IndexData, paths: &[String]) -> Vec<IndexNoteMeta> {

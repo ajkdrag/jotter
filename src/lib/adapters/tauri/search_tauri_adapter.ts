@@ -1,6 +1,6 @@
 import type { SearchPort } from '$lib/ports/search_port'
 import type { VaultId, NoteId } from '$lib/types/ids'
-import type { NoteSearchHit } from '$lib/types/search'
+import type { NoteSearchHit, SearchQuery } from '$lib/types/search'
 import { tauri_invoke } from '$lib/adapters/tauri/tauri_invoke'
 
 type TauriSearchHit = {
@@ -17,7 +17,7 @@ type TauriSearchHit = {
 
 export function create_search_tauri_adapter(): SearchPort {
   return {
-    async search_notes(vault_id: VaultId, query: string, limit = 50): Promise<NoteSearchHit[]> {
+    async search_notes(vault_id: VaultId, query: SearchQuery, limit = 50): Promise<NoteSearchHit[]> {
       const hits = await tauri_invoke<TauriSearchHit[]>('index_search', { vaultId: vault_id, query })
       return hits.slice(0, limit).map((hit) => ({
         note: {

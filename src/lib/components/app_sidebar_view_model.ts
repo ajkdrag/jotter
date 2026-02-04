@@ -6,6 +6,7 @@ import type { FolderLoadState } from '$lib/types/filetree'
 import type { ThemeMode } from '$lib/types/theme'
 import type { AppShellActions } from '$lib/controllers/app_shell_actions'
 import type { EditorSettings } from '$lib/types/editor_settings'
+import type { ImagePasteData } from '$lib/types/image_paste'
 
 export type AppSidebarViewModelInput = {
   editor_manager: EditorManager
@@ -29,6 +30,7 @@ export type AppSidebarViewModelInput = {
     | 'request_create_folder'
     | 'markdown_change'
     | 'dirty_state_change'
+    | 'handle_image_paste'
     | 'copy_open_note_markdown'
     | 'request_delete'
     | 'request_rename'
@@ -66,6 +68,7 @@ export type AppSidebarOps = {
   on_request_create_folder: (parent_path: string) => void
   on_markdown_change: (markdown: string) => void
   on_dirty_state_change: (is_dirty: boolean) => void
+  on_image_paste: (data: ImagePasteData) => void
   on_copy_open_note_markdown: () => void
   on_request_delete_note: (note: NoteMeta) => void
   on_request_rename_note: (note: NoteMeta) => void
@@ -124,6 +127,7 @@ export function build_app_sidebar_props(input: AppSidebarViewModelInput): AppSid
       on_request_create_folder: actions.request_create_folder,
       on_markdown_change: actions.markdown_change,
       on_dirty_state_change: actions.dirty_state_change,
+      on_image_paste: actions.handle_image_paste,
       on_copy_open_note_markdown: actions.copy_open_note_markdown,
       on_request_delete_note: actions.request_delete,
       on_request_rename_note: actions.request_rename,

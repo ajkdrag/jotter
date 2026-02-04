@@ -30,12 +30,12 @@ import { file_search_flow_machine } from '$lib/flows/file_search_flow'
 import type { FileSearchFlowContext, FileSearchFlowEvents } from '$lib/flows/file_search_flow'
 import { create_flow_handle } from '$lib/flows/flow_engine'
 import type { FlowHandle, FlowSnapshot } from '$lib/flows/flow_handle'
-import { is_tauri } from '$lib/adapters/detect_platform'
-import { create_search_web_adapter } from '$lib/adapters/web/search_web_adapter'
 import { clipboard_flow_machine } from '$lib/flows/clipboard_flow'
 import type { ClipboardFlowContext, ClipboardFlowEvents } from '$lib/flows/clipboard_flow'
 import { theme_flow_machine } from '$lib/flows/theme_flow'
 import type { ThemeFlowContext, ThemeFlowEvents } from '$lib/flows/theme_flow'
+import { image_paste_flow_machine } from '$lib/flows/image_paste_flow'
+import type { ImagePasteFlowContext, ImagePasteFlowEvents } from '$lib/flows/image_paste_flow'
 
 export type CreateAppFlowsCallbacks = {
   on_save_complete?: () => void
@@ -55,6 +55,7 @@ export type AppFlows = {
     save_note: FlowHandle<SaveNoteFlowEvents, FlowSnapshot<SaveNoteFlowContext>>
     create_folder: FlowHandle<CreateFolderFlowEvents, FlowSnapshot<CreateFolderFlowContext>>
     settings: FlowHandle<SettingsFlowEvents, FlowSnapshot<SettingsFlowContext>>
+    image_paste: FlowHandle<ImagePasteFlowEvents, FlowSnapshot<ImagePasteFlowContext>>
     command_palette: FlowHandle<CommandPaletteFlowEvents, FlowSnapshot<CommandPaletteFlowContext>>
     file_search: FlowHandle<FileSearchFlowEvents, FlowSnapshot<FileSearchFlowContext>>
     filetree: FlowHandle<FiletreeFlowEvents, FlowSnapshot<FiletreeFlowContext>>
@@ -108,7 +109,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const save_note = create_flow_handle(save_note_flow_machine, {
     input: {
-      ports: { notes: ports.notes },
+      ports: { notes: ports.notes, index: ports.index },
       stores,
       ...(callbacks?.on_save_complete && { on_save_complete: callbacks.on_save_complete })
     }
@@ -116,6 +117,10 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const settings = create_flow_handle(settings_flow_machine, {
     input: { ports: { settings: ports.settings }, stores }
+  })
+
+  const image_paste = create_flow_handle(image_paste_flow_machine, {
+    input: { ports: { assets: ports.assets, editor: ports.editor }, stores }
   })
 
   const create_folder = create_flow_handle(create_folder_flow_machine, {
@@ -128,13 +133,9 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })
 
-  const search_port = is_tauri
-    ? ports.search
-    : create_search_web_adapter(() => stores.notes.get_snapshot().notes)
-
   const file_search = create_flow_handle(file_search_flow_machine, {
     input: {
-      ports: { search: search_port },
+      ports: { search: ports.search },
       get_vault_id: () => stores.vault.get_snapshot().vault?.id ?? null
     }
   })
@@ -169,6 +170,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       save_note,
       create_folder,
       settings,
+      image_paste,
       command_palette,
       file_search,
       filetree,

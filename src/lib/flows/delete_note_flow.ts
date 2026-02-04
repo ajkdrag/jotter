@@ -68,7 +68,7 @@ export const delete_note_flow_machine = setup({
         const notes = stores.notes.get_snapshot().notes
         stores.editor.actions.ensure_open_note(vault, notes, stores.now_ms())
 
-        void ports.index.build_index(vault_id)
+        await ports.index.remove_note(vault_id, note.id)
       }
     )
   }

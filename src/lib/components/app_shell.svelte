@@ -35,6 +35,7 @@
   const delete_folder = use_flow_handle(stable_app.flows.delete_folder)
   const rename_folder = use_flow_handle(stable_app.flows.rename_folder)
   const save_note = use_flow_handle(stable_app.flows.save_note)
+  const image_paste = use_flow_handle(stable_app.flows.image_paste)
   const create_folder = use_flow_handle(stable_app.flows.create_folder)
   const settings = use_flow_handle(stable_app.flows.settings)
   const command_palette = use_flow_handle(stable_app.flows.command_palette)
@@ -102,6 +103,12 @@
       rename_folder.snapshot.matches('error')
   )
 
+  const image_paste_dialog_open = $derived(
+    image_paste.snapshot.matches('configuring') ||
+      image_paste.snapshot.matches('saving') ||
+      image_paste.snapshot.matches('error')
+  )
+
   const any_blocking_dialog_open = $derived(
     ui_store.state.system_dialog_open ||
       vault_dialog_open ||
@@ -111,7 +118,8 @@
       settings_dialog_open ||
       create_folder_dialog_open ||
       delete_folder_dialog_open ||
-      rename_folder_dialog_open
+      rename_folder_dialog_open ||
+      image_paste_dialog_open
   )
 
   const vault_selection_loading = $derived(
@@ -185,6 +193,7 @@
   rename_folder={rename_folder}
   create_folder_snapshot={create_folder.snapshot}
   settings_snapshot={settings.snapshot}
+  image_paste_snapshot={image_paste.snapshot}
   command_palette={command_palette}
   file_search={file_search}
   notes_store_state={notes_store.state}

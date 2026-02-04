@@ -83,7 +83,8 @@ export const rename_note_flow_machine = setup({
           stores.editor.actions.update_path(new_path)
         }
 
-        void ports.index.build_index(vault_id)
+        await ports.index.remove_note(vault_id, note.id)
+        await ports.index.upsert_note(vault_id, new_path)
       }
     )
   }

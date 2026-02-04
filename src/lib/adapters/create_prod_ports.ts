@@ -12,31 +12,39 @@ import { create_workspace_index_web_adapter } from '$lib/adapters/web/workspace_
 import { create_settings_web_adapter } from '$lib/adapters/web/settings_web_adapter'
 import { create_search_web_adapter } from '$lib/adapters/web/search_web_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
-import type { NoteMeta } from '$lib/types/note'
-import type { VaultId } from '$lib/types/ids'
 import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
 import { create_clipboard_web_adapter } from '$lib/adapters/web/clipboard_web_adapter'
 import { create_clipboard_tauri_adapter } from '$lib/adapters/tauri/clipboard_tauri_adapter'
 import type { Ports } from '$lib/ports/ports'
+import { create_search_index_web } from '$lib/adapters/web/search_index_web'
 
-export type CreateProdPortsInput = {
-  get_notes_for_search?: (vault_id: VaultId) => NoteMeta[]
-}
+export function create_prod_ports(): Ports {
+  if (is_tauri) {
+    return {
+      vault: create_vault_tauri_adapter(),
+      notes: create_notes_tauri_adapter(),
+      index: create_workspace_index_tauri_adapter(),
+      search: create_search_tauri_adapter(),
+      settings: create_settings_tauri_adapter(),
+      assets: create_assets_tauri_adapter(),
+      editor: milkdown_editor_port,
+      theme: create_theme_adapter(),
+      clipboard: create_clipboard_tauri_adapter()
+    }
+  }
 
-export function create_prod_ports(input?: CreateProdPortsInput): Ports {
-  const search_port = is_tauri
-    ? create_search_tauri_adapter()
-    : create_search_web_adapter(input?.get_notes_for_search ?? (() => []))
+  const notes = create_notes_web_adapter()
+  const search_index = create_search_index_web()
 
   return {
-    vault: is_tauri ? create_vault_tauri_adapter() : create_vault_web_adapter(),
-    notes: is_tauri ? create_notes_tauri_adapter() : create_notes_web_adapter(),
-    index: is_tauri ? create_workspace_index_tauri_adapter() : create_workspace_index_web_adapter(),
-    search: search_port,
-    settings: is_tauri ? create_settings_tauri_adapter() : create_settings_web_adapter(),
-    assets: is_tauri ? create_assets_tauri_adapter() : create_assets_web_adapter(),
+    vault: create_vault_web_adapter(),
+    notes,
+    index: create_workspace_index_web_adapter(notes, search_index),
+    search: create_search_web_adapter(search_index),
+    settings: create_settings_web_adapter(),
+    assets: create_assets_web_adapter(),
     editor: milkdown_editor_port,
     theme: create_theme_adapter(),
-    clipboard: is_tauri ? create_clipboard_tauri_adapter() : create_clipboard_web_adapter()
+    clipboard: create_clipboard_web_adapter()
   }
 }

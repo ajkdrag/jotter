@@ -3,6 +3,7 @@ import { rename_folder } from '$lib/operations/rename_folder'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
+import { as_note_path } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
 
 type RenameFolderPorts = {
@@ -55,19 +56,28 @@ export const rename_folder_flow_machine = setup({
         }
       }) => {
         const { ports, stores, vault_id, folder_path, new_path } = input
+        const old_prefix = folder_path + '/'
+        const new_prefix = new_path + '/'
+        const affected_notes = stores
+          .notes
+          .get_snapshot()
+          .notes
+          .filter((note) => note.path.startsWith(old_prefix))
 
         await rename_folder(ports, { vault_id, from_path: folder_path, to_path: new_path })
 
         stores.notes.actions.rename_folder(folder_path, new_path)
 
-        const old_prefix = folder_path + '/'
-        const new_prefix = new_path + '/'
         const open_note = stores.editor.get_snapshot().open_note
         if (open_note?.meta.path.startsWith(old_prefix)) {
           stores.editor.actions.update_path_prefix(old_prefix, new_prefix)
         }
 
-        void ports.index.build_index(vault_id)
+        for (const note of affected_notes) {
+          await ports.index.remove_note(vault_id, note.id)
+          const updated_path = new_prefix + note.path.slice(old_prefix.length)
+          await ports.index.upsert_note(vault_id, as_note_path(updated_path))
+        }
       }
     )
   }

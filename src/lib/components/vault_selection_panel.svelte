@@ -154,7 +154,7 @@
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
     background-color: var(--card);
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     color: var(--destructive);
   }
 
@@ -164,7 +164,7 @@
 
   .VaultPanel__section-title {
     margin-bottom: var(--space-3);
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -227,7 +227,7 @@
   }
 
   .VaultPanel__vault-path {
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     color: var(--muted-foreground);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -249,13 +249,13 @@
 
   .VaultPanel__empty-title {
     margin-bottom: var(--space-2);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     font-weight: 500;
     color: var(--foreground);
   }
 
   .VaultPanel__empty-desc {
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     color: var(--muted-foreground);
   }
 </style>

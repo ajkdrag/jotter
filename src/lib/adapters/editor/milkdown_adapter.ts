@@ -25,6 +25,7 @@ import {
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
 import { markdown_paste_plugin } from './markdown_paste_plugin'
+import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
@@ -84,7 +85,19 @@ function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
   }))
 }
 
+let active_editor: Editor | null = null
+
 export const milkdown_editor_port: EditorPort = {
+  insert_text_at_cursor: (text: string) => {
+    if (!active_editor) return
+    active_editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const { state } = view
+      const tr = state.tr.insertText(text, state.selection.from, state.selection.to)
+      view.dispatch(tr)
+      view.focus()
+    })
+  },
   create_editor: async (root, config) => {
     const { initial_markdown, note_path, link_syntax, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
 
@@ -150,8 +163,6 @@ export const milkdown_editor_port: EditorPort = {
       .use(create_wiki_link_converter_plugin(note_path))
       .use(listener)
       .use(history)
-      .use(markdown_paste_plugin)
-      .use(clipboard)
       .use(dirty_state_plugin_config_key)
       .use(dirty_state_plugin)
       .config((ctx) => {
@@ -174,6 +185,12 @@ export const milkdown_editor_port: EditorPort = {
         })
       })
 
+    if (config.on_image_paste) {
+      builder = builder.use(create_image_paste_plugin(config.on_image_paste))
+    }
+
+    builder = builder.use(markdown_paste_plugin).use(clipboard)
+
     if (on_wiki_link_click) {
       builder = builder.use(create_wiki_link_click_plugin(note_path, on_wiki_link_click))
     }
@@ -183,6 +200,7 @@ export const milkdown_editor_port: EditorPort = {
     }
 
     editor = await builder.create()
+    active_editor = editor
 
     if (!is_large_note) {
       editor.action((ctx) => {
@@ -205,6 +223,9 @@ export const milkdown_editor_port: EditorPort = {
     const handle = {
       destroy() {
         if (!editor) return
+        if (editor === active_editor) {
+          active_editor = null
+        }
         void editor.destroy()
         editor = null
       },

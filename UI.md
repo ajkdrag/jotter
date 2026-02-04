@@ -154,21 +154,35 @@ Base unit: **4px** (`0.25rem`)
 
 ## Typography
 
-### Font Sizes
+### Font Size Tokens
 
-| Size | Usage |
-|------|-------|
-| `0.6875rem` (11px) | Status bar, badges, section headers |
-| `0.8125rem` (13px) | Secondary text, descriptions |
-| `0.875rem` (14px) | Body text, list items |
-| `0.9375rem` (15px) | Emphasized body |
-| `1rem` (16px) | Primary content |
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--text-xs` | 0.6875rem (11px) | Status bar, badges, section headers |
+| `--text-sm` | 0.8125rem (13px) | Secondary text, descriptions |
+| `--text-base` | 0.875rem (14px) | Body text, list items |
+| `--text-md` | 0.9375rem (15px) | Emphasized body |
+| `--text-lg` | 1rem (16px) | Primary content |
+
+### Usage Rules
+
+```css
+/* GOOD: Use typography tokens */
+.item-title {
+  font-size: var(--text-base);
+}
+
+/* BAD: Hardcoded values */
+.item-title {
+  font-size: 0.875rem;  /* NO! Use --text-base */
+}
+```
 
 ### Section Headers
 
 ```css
 .SectionHeader {
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;

@@ -120,7 +120,10 @@ describe('delete_note_flow', () => {
       note_id: note.id
     })
     expect(stores.notes.get_snapshot().notes).toEqual([other_note])
-    expect(index_port._calls.build_index).toContain(vault.id)
+    expect(index_port._calls.remove_note).toContainEqual({
+      vault_id: vault.id,
+      note_id: note.id
+    })
   })
 
   test('creates untitled note when deleted note was open', async () => {

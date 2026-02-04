@@ -22,6 +22,8 @@ pub fn run() {
             assets_service::import_asset,
             index_service::index_build,
             index_service::index_search,
+            index_service::index_upsert_note,
+            index_service::index_remove_note,
             index_service::index_backlinks,
             index_service::index_outlinks,
             notes_service::list_notes,

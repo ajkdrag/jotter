@@ -3,7 +3,7 @@ import { createActor, waitFor } from 'xstate'
 import { delete_folder_flow_machine } from '$lib/flows/delete_folder_flow'
 import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
 import { create_mock_stores } from '../../unit/helpers/mock_stores'
-import { create_test_vault } from '../../unit/helpers/test_fixtures'
+import { create_test_note, create_test_vault } from '../../unit/helpers/test_fixtures'
 
 describe('delete_folder_flow', () => {
   it('fetches stats then deletes folder and updates stores', async () => {
@@ -13,6 +13,9 @@ describe('delete_folder_flow', () => {
     const stores = create_mock_stores()
     stores.vault.actions.set_vault(vault)
     stores.notes.actions.set_folder_paths(['docs'])
+    const note_a = create_test_note('docs/note-a', 'Note A')
+    const note_b = create_test_note('docs/sub/note-b', 'Note B')
+    stores.notes.actions.set_notes([note_a, note_b])
     notes_port.get_folder_stats = vi.fn().mockResolvedValue({ note_count: 2, folder_count: 1 })
 
     const actor = createActor(delete_folder_flow_machine, {
@@ -33,7 +36,14 @@ describe('delete_folder_flow', () => {
       { vault_id: vault.id, folder_path: 'docs' }
     ])
     expect(stores.notes.get_snapshot().folder_paths).not.toContain('docs')
-    expect(index_port._calls.build_index).toContain(vault.id)
+    expect(index_port._calls.remove_note).toContainEqual({
+      vault_id: vault.id,
+      note_id: note_a.id
+    })
+    expect(index_port._calls.remove_note).toContainEqual({
+      vault_id: vault.id,
+      note_id: note_b.id
+    })
   })
 
   it('clears open note when folder contains open note', async () => {

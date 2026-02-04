@@ -77,19 +77,19 @@
   }
 
   .NoteDetailsDialog__label {
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     color: hsl(var(--muted-foreground));
     flex-shrink: 0;
   }
 
   .NoteDetailsDialog__value {
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     text-align: right;
     word-break: break-word;
   }
 
   .NoteDetailsDialog__value--mono {
     font-family: monospace;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
   }
 </style>

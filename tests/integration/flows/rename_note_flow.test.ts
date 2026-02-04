@@ -144,7 +144,14 @@ describe('rename_note_flow', () => {
       to: new_path
     })
     expect(stores.notes.get_snapshot().notes[0]?.path).toEqual(new_path)
-    expect(index_port._calls.build_index).toContain(vault.id)
+    expect(index_port._calls.remove_note).toContainEqual({
+      vault_id: vault.id,
+      note_id: note.id
+    })
+    expect(index_port._calls.upsert_note).toContainEqual({
+      vault_id: vault.id,
+      note_id: new_path
+    })
   })
 
   test('detects conflict and transitions to conflict_confirm', async () => {

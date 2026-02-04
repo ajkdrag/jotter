@@ -71,6 +71,12 @@ export const delete_folder_flow_machine = setup({
         }
       }) => {
         const { ports, stores, vault_id, folder_path, contains_open_note } = input
+        const prefix = folder_path + '/'
+        const affected_notes = stores
+          .notes
+          .get_snapshot()
+          .notes
+          .filter((note) => note.path.startsWith(prefix))
 
         await delete_folder(ports, { vault_id, folder_path })
 
@@ -84,7 +90,9 @@ export const delete_folder_flow_machine = setup({
         const notes = stores.notes.get_snapshot().notes
         stores.editor.actions.ensure_open_note(vault, notes, stores.now_ms())
 
-        void ports.index.build_index(vault_id)
+        for (const note of affected_notes) {
+          await ports.index.remove_note(vault_id, note.id)
+        }
       }
     )
   }

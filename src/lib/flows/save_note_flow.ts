@@ -1,5 +1,6 @@
 import { setup, assign, fromPromise } from 'xstate'
 import type { NotesPort } from '$lib/ports/notes_port'
+import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NotePath } from '$lib/types/ids'
 import { as_note_path } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
@@ -9,6 +10,7 @@ import { note_path_exists } from '$lib/utils/note_path_exists'
 
 type SaveNotePorts = {
   notes: NotesPort
+  index: WorkspaceIndexPort
 }
 
 type FlowContext = {
@@ -101,8 +103,10 @@ export const save_note_flow_machine = setup({
           const new_note_meta = await ports.notes.create_note(vault.id, new_path, open_note.markdown)
           stores.editor.actions.update_path(new_path)
           stores.notes.actions.add_note(new_note_meta)
+          await ports.index.upsert_note(vault.id, new_note_meta.id)
         } else {
           await ports.notes.write_note(vault.id, open_note.meta.id, open_note.markdown)
+          await ports.index.upsert_note(vault.id, open_note.meta.id)
         }
       }
     )

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { save_note_flow_machine } from '$lib/flows/save_note_flow'
-import { create_mock_notes_port } from '../../unit/helpers/mock_ports'
+import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
 import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import { create_open_note_state, create_test_note, create_test_vault, create_untitled_note_state } from '../../unit/helpers/test_fixtures'
 import { as_note_path } from '$lib/types/ids'
@@ -9,10 +9,11 @@ import { as_note_path } from '$lib/types/ids'
 describe('save_note_flow', () => {
   test('starts in idle state', () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const stores = create_mock_stores()
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -21,10 +22,11 @@ describe('save_note_flow', () => {
 
   test('no-op when there is no vault', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const stores = create_mock_stores()
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -37,6 +39,7 @@ describe('save_note_flow', () => {
 
   test('creates untitled note when vault is active and has auto-created open note', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const stores = create_mock_stores()
     stores.vault.actions.set_vault(vault)
@@ -44,7 +47,7 @@ describe('save_note_flow', () => {
     stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -60,6 +63,7 @@ describe('save_note_flow', () => {
 
   test('writes existing note', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const note = create_test_note('note-1', 'My Note')
     const open_note = create_open_note_state(note)
@@ -69,7 +73,7 @@ describe('save_note_flow', () => {
     stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -86,6 +90,7 @@ describe('save_note_flow', () => {
 
   test('creates new note for Untitled and updates note id', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('Untitled-1')
     const stores = create_mock_stores({ now_ms: () => 123 })
@@ -94,7 +99,7 @@ describe('save_note_flow', () => {
     stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -118,6 +123,7 @@ describe('save_note_flow', () => {
 
   test('saves untitled note in selected folder', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('foo/Untitled-1')
     const stores = create_mock_stores({ now_ms: () => 123 })
@@ -127,7 +133,7 @@ describe('save_note_flow', () => {
     stores.ui.actions.set_selected_folder_path('foo')
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -151,6 +157,7 @@ describe('save_note_flow', () => {
 
   test('sanitizes filename on confirm (adds .md if missing)', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const open_note = create_untitled_note_state('Untitled-1')
     const stores = create_mock_stores({ now_ms: () => 123 })
@@ -159,7 +166,7 @@ describe('save_note_flow', () => {
     stores.editor.actions.set_open_note(open_note)
 
     const actor = createActor(save_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores }
     })
     actor.start()
 
@@ -179,6 +186,7 @@ describe('save_note_flow', () => {
 
   test('invokes on_save_complete callback on success', async () => {
     const notes_port = create_mock_notes_port()
+    const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const note = create_test_note('note-1', 'My Note')
     const open_note = create_open_note_state(note)
@@ -190,7 +198,7 @@ describe('save_note_flow', () => {
     const on_save_complete = vi.fn()
     const actor = createActor(save_note_flow_machine, {
       input: {
-        ports: { notes: notes_port },
+        ports: { notes: notes_port, index: index_port },
         stores,
         on_save_complete
       }
