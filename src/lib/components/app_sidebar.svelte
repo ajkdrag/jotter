@@ -68,12 +68,12 @@
                                 >
                                     {model.vault.name}
                                 </button>
-                                <div class="flex items-center gap-1 shrink-0">
+                                <div class="flex items-center shrink-0">
                                     <Tooltip.Root>
                                         <Tooltip.Trigger>
                                             {#snippet child({ props })}
-                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={ops.on_create_note}>
-                                                    <FilePlus class="h-4 w-4" />
+                                                <Button {...props} variant="ghost" size="icon" class="SidebarHeaderButton h-7 w-7" onclick={ops.on_create_note}>
+                                                    <FilePlus class="SidebarHeaderIcon" />
                                                 </Button>
                                             {/snippet}
                                         </Tooltip.Trigger>
@@ -86,10 +86,10 @@
                                                     {...props}
                                                     variant="ghost"
                                                     size="icon"
-                                                    class="h-7 w-7"
+                                                    class="SidebarHeaderButton h-7 w-7"
                                                     onclick={() => { ops.on_request_create_folder(model.selected_folder_path); }}
                                                 >
-                                                    <FolderPlus class="h-4 w-4" />
+                                                    <FolderPlus class="SidebarHeaderIcon" />
                                                 </Button>
                                             {/snippet}
                                         </Tooltip.Trigger>
@@ -98,8 +98,8 @@
                                     <Tooltip.Root>
                                         <Tooltip.Trigger>
                                             {#snippet child({ props })}
-                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={() => { console.log('Refresh triggered'); }}>
-                                                    <RefreshCw class="h-4 w-4" />
+                                                <Button {...props} variant="ghost" size="icon" class="SidebarHeaderButton h-7 w-7" onclick={() => { console.log('Refresh triggered'); }}>
+                                                    <RefreshCw class="SidebarHeaderIcon" />
                                                 </Button>
                                             {/snippet}
                                         </Tooltip.Trigger>
@@ -108,8 +108,8 @@
                                     <Tooltip.Root>
                                         <Tooltip.Trigger>
                                             {#snippet child({ props })}
-                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={ops.on_collapse_all}>
-                                                    <FoldVertical class="h-4 w-4" />
+                                                <Button {...props} variant="ghost" size="icon" class="SidebarHeaderButton h-7 w-7" onclick={ops.on_collapse_all}>
+                                                    <FoldVertical class="SidebarHeaderIcon" />
                                                 </Button>
                                             {/snippet}
                                         </Tooltip.Trigger>
@@ -207,3 +207,19 @@
         on_close={() => details_dialog_open = false}
     />
 {/if}
+
+<style>
+    :global(.SidebarHeaderButton) {
+        color: var(--muted-foreground);
+        transition: color var(--duration-fast) var(--ease-default);
+    }
+
+    :global(.SidebarHeaderButton:hover) {
+        color: var(--foreground);
+    }
+
+    :global(.SidebarHeaderIcon) {
+        width: var(--size-icon-sm);
+        height: var(--size-icon-sm);
+    }
+</style>
