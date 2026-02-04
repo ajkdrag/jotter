@@ -116,7 +116,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   })
 
   const settings = create_flow_handle(settings_flow_machine, {
-    input: { ports: { settings: ports.settings }, stores }
+    input: { ports: { settings: ports.settings, vault_settings: ports.vault_settings }, stores }
   })
 
   const image_paste = create_flow_handle(image_paste_flow_machine, {
@@ -128,7 +128,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   })
 
   const preferences_initialization = create_flow_handle(preferences_initialization_flow_machine, {
-    input: { ports: { theme: ports.theme, settings: ports.settings }, stores }
+    input: { ports: { theme: ports.theme, settings: ports.settings, vault_settings: ports.vault_settings }, stores }
   })
 
   const command_palette = create_flow_handle(command_palette_flow_machine, { input: {} })

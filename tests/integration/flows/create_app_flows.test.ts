@@ -3,6 +3,7 @@ import { create_app_flows } from '$lib/flows/create_app_flows'
 import { create_mock_notes_port, create_mock_index_port, create_mock_vault_port } from '../../unit/helpers/mock_ports'
 import { create_test_assets_adapter } from '$lib/adapters/test/test_assets_adapter'
 import { create_test_settings_adapter } from '$lib/adapters/test/test_settings_adapter'
+import { create_test_vault_settings_adapter } from '$lib/adapters/test/test_vault_settings_adapter'
 import { create_test_vault_adapter } from '$lib/adapters/test/test_vault_adapter'
 import { create_test_notes_adapter } from '$lib/adapters/test/test_notes_adapter'
 import { create_test_workspace_index_adapter } from '$lib/adapters/test/test_workspace_index_adapter'
@@ -21,6 +22,7 @@ describe('create_app_flows', () => {
       index: create_test_workspace_index_adapter(),
       search: create_test_search_adapter(),
       settings: create_test_settings_adapter(),
+      vault_settings: create_test_vault_settings_adapter(),
       assets: create_test_assets_adapter(),
       editor: milkdown_editor_port,
       theme: create_theme_adapter(),
@@ -56,6 +58,7 @@ describe('create_app_flows', () => {
       index: create_mock_index_port(),
       search: create_test_search_adapter(),
       settings: create_test_settings_adapter(),
+      vault_settings: create_test_vault_settings_adapter(),
       assets: create_test_assets_adapter(),
       editor: milkdown_editor_port,
       theme: create_theme_adapter(),

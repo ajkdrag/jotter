@@ -5,6 +5,7 @@ mod watcher_service;
 mod storage;
 mod vault_service;
 mod settings_service;
+mod vault_settings_service;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -34,7 +35,9 @@ pub fn run() {
             notes_service::delete_note,
             notes_service::list_folder_contents,
             settings_service::get_setting,
-            settings_service::set_setting
+            settings_service::set_setting,
+            vault_settings_service::get_vault_setting,
+            vault_settings_service::set_vault_setting
         ])
         .register_uri_scheme_protocol("imdown-asset", |ctx, req| {
             storage::handle_asset_request(ctx.app_handle(), req)

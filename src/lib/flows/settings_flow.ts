@@ -1,6 +1,8 @@
 import { setup, assign, fromPromise } from "xstate";
 import type { SettingsPort } from "$lib/ports/settings_port";
+import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { EditorSettings } from "$lib/types/editor_settings";
+import type { VaultId } from "$lib/types/ids";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
 import {
   load_editor_settings,
@@ -11,6 +13,7 @@ import type { AppStores } from "$lib/stores/create_app_stores";
 
 type SettingsFlowPorts = {
   settings: SettingsPort;
+  vault_settings: VaultSettingsPort;
 };
 
 type FlowContext = {
@@ -37,6 +40,10 @@ type FlowInput = {
   stores: AppStores;
 };
 
+function get_vault_id(stores: AppStores): VaultId | null {
+  return stores.vault.get_snapshot().vault?.id ?? null;
+}
+
 export const settings_flow_machine = setup({
   types: {
     context: {} as FlowContext,
@@ -45,17 +52,29 @@ export const settings_flow_machine = setup({
   },
   actors: {
     load_settings: fromPromise(
-      async ({ input }: { input: { ports: SettingsFlowPorts } }) => {
-        return await load_editor_settings(input.ports.settings);
+      async ({ input }: { input: { ports: SettingsFlowPorts; stores: AppStores } }) => {
+        const vault_id = get_vault_id(input.stores);
+        if (!vault_id) {
+          return DEFAULT_EDITOR_SETTINGS;
+        }
+        return await load_editor_settings(
+          input.ports.vault_settings,
+          vault_id,
+          input.ports.settings
+        );
       },
     ),
     save_settings: fromPromise(
       async ({
         input,
       }: {
-        input: { ports: SettingsFlowPorts; settings: EditorSettings };
+        input: { ports: SettingsFlowPorts; stores: AppStores; settings: EditorSettings };
       }) => {
-        await save_editor_settings(input.ports.settings, input.settings);
+        const vault_id = get_vault_id(input.stores);
+        if (!vault_id) {
+          throw new Error("No vault open");
+        }
+        await save_editor_settings(input.ports.vault_settings, vault_id, input.settings);
         apply_editor_styles(input.settings);
       },
     ),
@@ -79,7 +98,7 @@ export const settings_flow_machine = setup({
     loading: {
       invoke: {
         src: "load_settings",
-        input: ({ context }) => ({ ports: context.ports }),
+        input: ({ context }) => ({ ports: context.ports, stores: context.stores }),
         onDone: {
           target: "editing",
           actions: [
@@ -128,6 +147,7 @@ export const settings_flow_machine = setup({
         src: "save_settings",
         input: ({ context }) => ({
           ports: context.ports,
+          stores: context.stores,
           settings: context.current_settings,
         }),
         onDone: {

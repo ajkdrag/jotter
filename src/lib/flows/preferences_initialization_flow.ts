@@ -4,11 +4,14 @@ import { load_editor_settings } from '$lib/operations/load_editor_settings'
 import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
 import type { ThemePort } from '$lib/ports/theme_port'
 import type { SettingsPort } from '$lib/ports/settings_port'
+import type { VaultSettingsPort } from '$lib/ports/vault_settings_port'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 
 type PreferencesInitializationPorts = {
   theme: ThemePort
   settings: SettingsPort
+  vault_settings: VaultSettingsPort
 }
 
 type FlowContext = {
@@ -49,7 +52,17 @@ export const preferences_initialization_flow_machine = setup({
         const theme_mode = init_theme(ports.theme)
         stores.ui.actions.set_theme(theme_mode)
 
-        const editor_settings = await load_editor_settings(ports.settings)
+        const vault_id = stores.vault.get_snapshot().vault?.id
+        let editor_settings = DEFAULT_EDITOR_SETTINGS
+
+        if (vault_id) {
+          editor_settings = await load_editor_settings(
+            ports.vault_settings,
+            vault_id,
+            ports.settings
+          )
+        }
+
         stores.ui.actions.set_editor_settings(editor_settings)
         apply_editor_styles(editor_settings)
       }
