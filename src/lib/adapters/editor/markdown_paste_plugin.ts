@@ -22,8 +22,7 @@ export const markdown_paste_plugin = $prose((ctx) => {
         const mode = pick_paste_mode({ text_markdown, text_plain, text_html })
         if (mode !== 'markdown') return false
 
-        const source_raw = text_markdown.trim() !== '' ? text_markdown : text_plain
-        const source = source_raw.replace(/\r\n/g, '\n')
+        const source = (text_markdown.trim() !== '' ? text_markdown : text_plain).replace(/\r\n/g, '\n')
         if (source.trim() === '') return false
 
         const parser = ctx.get(parserCtx)
