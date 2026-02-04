@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
   import "../app.css";
   import "../styles/design_tokens.css";
+  import "../styles/component_overrides.css";
   import "../styles/editor.css";
   import { ModeWatcher } from "mode-watcher";
 

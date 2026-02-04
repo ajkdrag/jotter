@@ -91,9 +91,9 @@
 </script>
 
 <Dialog.Root {open} onOpenChange={on_open_change}>
-  <Dialog.Content class="max-w-lg p-0" showCloseButton={false}>
-    <div class="flex items-center border-b px-3">
-      <SearchIcon class="size-4 text-muted-foreground shrink-0" />
+  <Dialog.Content class="FileSearchDialog" showCloseButton={false}>
+    <div class="FileSearchDialog__search">
+      <SearchIcon />
       <Input
         bind:ref={input_ref}
         type="text"
@@ -103,7 +103,7 @@
         class="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       {#if is_searching}
-        <div class="size-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin shrink-0"></div>
+        <div class="FileSearchDialog__spinner"></div>
       {/if}
     </div>
 
@@ -113,23 +113,23 @@
       aria-activedescendant={display_items[selected_index]
         ? `note-${display_items[selected_index].note.id}`
         : undefined}
-      class="max-h-80 overflow-y-auto py-2"
+      class="FileSearchDialog__list"
     >
       {#if show_recent_header}
-        <div class="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-          <ClockIcon class="size-3" />
+        <div class="FileSearchDialog__header">
+          <ClockIcon />
           <span>Recent</span>
         </div>
       {/if}
 
       {#if show_results_header}
-        <div class="px-3 py-1.5 text-xs text-muted-foreground">
+        <div class="FileSearchDialog__results-count">
           {results.length} result{results.length === 1 ? '' : 's'}
         </div>
       {/if}
 
       {#if show_empty}
-        <div class="px-3 py-8 text-center text-sm text-muted-foreground">
+        <div class="FileSearchDialog__empty">
           {query.trim() ? 'No notes found' : 'No recent notes'}
         </div>
       {/if}
@@ -139,18 +139,18 @@
           id={`note-${item.note.id}`}
           role="option"
           aria-selected={index === selected_index}
-          class="w-full px-3 py-2 text-left transition-colors focus:outline-none"
-          class:bg-muted={index === selected_index}
+          class="FileSearchDialog__item"
+          class:FileSearchDialog__item--selected={index === selected_index}
           onmouseenter={() => { on_selected_index_change(index); }}
           onclick={() => { on_confirm(item.note.id); }}
         >
-          <div class="flex items-center gap-2">
-            <FileIcon class="size-4 text-muted-foreground shrink-0" />
-            <div class="flex flex-col min-w-0">
-              <span class="font-medium text-foreground truncate">{item.note.title}</span>
-              <span class="text-xs text-muted-foreground truncate">{item.note.path}</span>
+          <div class="FileSearchDialog__item-row">
+            <FileIcon />
+            <div class="FileSearchDialog__item-content">
+              <span class="FileSearchDialog__item-title">{item.note.title}</span>
+              <span class="FileSearchDialog__item-path">{item.note.path}</span>
               {#if item.snippet}
-                <span class="text-xs text-muted-foreground truncate">{item.snippet}</span>
+                <span class="FileSearchDialog__item-snippet">{item.snippet}</span>
               {/if}
             </div>
           </div>
@@ -161,3 +161,136 @@
 </Dialog.Root>
 
 <svelte:window onkeydown={handle_keydown} />
+
+<style>
+  :global(.FileSearchDialog) {
+    max-width: var(--size-dialog-lg);
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .FileSearchDialog__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.FileSearchDialog__search svg) {
+    width: var(--size-icon);
+    height: var(--size-icon);
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+  }
+
+  .FileSearchDialog__spinner {
+    width: var(--size-icon);
+    height: var(--size-icon);
+    border: 2px solid var(--muted-foreground);
+    border-top-color: transparent;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: spin 1s linear infinite;
+  }
+
+  .FileSearchDialog__list {
+    max-height: var(--size-dialog-list-height);
+    overflow-y: auto;
+    padding-block: var(--space-2);
+  }
+
+  .FileSearchDialog__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1-5) var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+
+  :global(.FileSearchDialog__header svg) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
+  }
+
+  .FileSearchDialog__results-count {
+    padding: var(--space-1-5) var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+
+  .FileSearchDialog__empty {
+    padding: var(--space-8) var(--space-3);
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
+  }
+
+  .FileSearchDialog__item {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    border-radius: 0;
+    transition: background-color var(--duration-fast) var(--ease-default);
+  }
+
+  .FileSearchDialog__item:focus {
+    outline: none;
+  }
+
+  .FileSearchDialog__item--selected {
+    background-color: var(--interactive-bg);
+  }
+
+  .FileSearchDialog__item--selected .FileSearchDialog__item-title {
+    color: var(--interactive);
+  }
+
+  .FileSearchDialog__item-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  :global(.FileSearchDialog__item-row svg) {
+    width: var(--size-icon);
+    height: var(--size-icon);
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+  }
+
+  .FileSearchDialog__item--selected :global(.FileSearchDialog__item-row svg) {
+    color: var(--interactive);
+  }
+
+  .FileSearchDialog__item-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .FileSearchDialog__item-title {
+    font-weight: 500;
+    color: var(--foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .FileSearchDialog__item-path,
+  .FileSearchDialog__item-snippet {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>

@@ -203,7 +203,7 @@
 
 <style>
   :global(.CommandPalette) {
-    max-width: 32rem;
+    max-width: var(--size-dialog-lg);
     padding: 0 !important;
     overflow: hidden;
   }
@@ -224,7 +224,7 @@
   }
 
   .CommandPalette__list {
-    max-height: 20rem;
+    max-height: var(--size-dialog-list-height);
     overflow-y: auto;
     padding-block: var(--space-2);
   }

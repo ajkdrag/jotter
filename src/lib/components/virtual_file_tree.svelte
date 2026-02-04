@@ -32,7 +32,7 @@
     on_retry_load
   }: Props = $props();
 
-  const ROW_HEIGHT = 32;
+  const ROW_HEIGHT = 30;
   const OVERSCAN = 5;
 
   let scroll_container: HTMLDivElement | null = $state(null);

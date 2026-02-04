@@ -65,20 +65,20 @@
   .NoteDetailsDialog__grid {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
   }
 
   .NoteDetailsDialog__row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 1rem;
+    gap: var(--space-4);
   }
 
   .NoteDetailsDialog__label {
     font-size: var(--text-base);
-    color: hsl(var(--muted-foreground));
+    color: var(--muted-foreground);
     flex-shrink: 0;
   }
 

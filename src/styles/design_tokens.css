@@ -19,12 +19,39 @@
   --accent-hue: 175;
   --accent-chroma: 0.12;
 
+  /* ----------------------------------------
+     TEAL SCALE (50-900)
+     ---------------------------------------- */
+  --teal-50: oklch(0.97 0.02 var(--accent-hue));
+  --teal-100: oklch(0.94 0.03 var(--accent-hue));
+  --teal-200: oklch(0.88 0.05 var(--accent-hue));
+  --teal-300: oklch(0.78 0.08 var(--accent-hue));
+  --teal-400: oklch(0.68 0.10 var(--accent-hue));
+  --teal-500: oklch(0.55 0.12 var(--accent-hue));
+  --teal-600: oklch(0.50 0.12 var(--accent-hue));
+  --teal-700: oklch(0.42 0.10 var(--accent-hue));
+  --teal-800: oklch(0.32 0.08 var(--accent-hue));
+  --teal-900: oklch(0.22 0.06 var(--accent-hue));
+
   /* Interactive accent - used for focus, selection, primary actions */
   --interactive: oklch(0.55 var(--accent-chroma) var(--accent-hue));
   --interactive-hover: oklch(0.50 var(--accent-chroma) var(--accent-hue));
   --interactive-muted: oklch(0.55 calc(var(--accent-chroma) * 0.5) var(--accent-hue));
   --interactive-bg: oklch(0.96 0.02 var(--accent-hue));
   --interactive-bg-hover: oklch(0.93 0.025 var(--accent-hue));
+
+  /* Semantic border tokens */
+  --interactive-border: var(--teal-300);
+  --interactive-border-subtle: var(--teal-200);
+  --interactive-border-strong: var(--teal-500);
+
+  /* Semantic text tokens */
+  --interactive-text-on-bg: var(--teal-700);
+  --interactive-text-subtle: var(--teal-400);
+
+  /* Disabled states */
+  --interactive-disabled: var(--teal-300);
+  --interactive-disabled-bg: var(--teal-50);
 
   /* Focus ring - teal-tinted for visibility */
   --focus-ring: oklch(0.65 0.1 var(--accent-hue));
@@ -106,6 +133,27 @@
   /* File tree row */
   --size-tree-row: 1.875rem;     /* 30px - slightly smaller than 32 */
 
+  /* Dialog sizing */
+  --size-dialog-sm: 24rem;
+  --size-dialog-md: 28rem;
+  --size-dialog-lg: 32rem;
+  --size-dialog-list-height: 20rem;
+
+  /* Tree dimensions */
+  --size-tree-indent: 1rem;
+  --size-tree-base-padding: 0.5rem;
+
+  /* Editor dimensions */
+  --editor-heading-1: 2.25em;
+  --editor-heading-2: 1.75em;
+  --editor-heading-3: 1.375em;
+  --editor-heading-4: 1.125em;
+  --editor-heading-5: 1em;
+  --editor-heading-6: 0.875em;
+  --editor-bullet-size: 5px;
+  --editor-bullet-nested-size: 4px;
+  --editor-checkbox-size: 14px;
+
   /* ----------------------------------------
      TRANSITION SYSTEM
      ---------------------------------------- */
@@ -135,15 +183,47 @@
   --z-modal: 40;
   --z-popover: 50;
   --z-tooltip: 60;
+
+  /* ----------------------------------------
+     SHADCN TOKEN REMAPPING
+     ----------------------------------------
+     Remap shadcn's base tokens to teal for
+     consistent theming across all components.
+     ---------------------------------------- */
+  --primary: var(--teal-500);
+  --primary-foreground: oklch(1 0 0);
+  --ring: var(--focus-ring);
+  --accent: var(--teal-100);
+  --accent-foreground: var(--teal-700);
 }
 
 .dark {
+  /* Inverted teal scale for dark mode */
+  --teal-50: oklch(0.22 0.04 var(--accent-hue));
+  --teal-100: oklch(0.26 0.05 var(--accent-hue));
+  --teal-200: oklch(0.32 0.06 var(--accent-hue));
+  --teal-300: oklch(0.42 0.08 var(--accent-hue));
+  --teal-400: oklch(0.55 0.10 var(--accent-hue));
+  --teal-500: oklch(0.70 0.12 var(--accent-hue));
+  --teal-600: oklch(0.75 0.12 var(--accent-hue));
+  --teal-700: oklch(0.82 0.10 var(--accent-hue));
+  --teal-800: oklch(0.90 0.06 var(--accent-hue));
+  --teal-900: oklch(0.96 0.03 var(--accent-hue));
+
   /* Adjusted interactive colors for dark mode */
   --interactive: oklch(0.70 var(--accent-chroma) var(--accent-hue));
   --interactive-hover: oklch(0.75 var(--accent-chroma) var(--accent-hue));
   --interactive-muted: oklch(0.65 calc(var(--accent-chroma) * 0.6) var(--accent-hue));
   --interactive-bg: oklch(0.25 0.03 var(--accent-hue));
   --interactive-bg-hover: oklch(0.30 0.035 var(--accent-hue));
+
+  /* Inverted semantic tokens */
+  --interactive-text-on-bg: var(--teal-800);
+  --interactive-border: var(--teal-400);
+  --interactive-border-subtle: var(--teal-300);
+  --interactive-border-strong: var(--teal-500);
+  --interactive-disabled: var(--teal-400);
+  --interactive-disabled-bg: var(--teal-100);
 
   --focus-ring: oklch(0.70 0.12 var(--accent-hue));
   --focus-ring-offset: oklch(0.145 0 0);
@@ -152,6 +232,13 @@
 
   /* Shadows are more subtle in dark mode */
   --shadow-color: oklch(0 0 0);
+
+  /* Shadcn token remapping for dark mode */
+  --primary: var(--teal-500);
+  --primary-foreground: oklch(0.1 0 0);
+  --ring: var(--focus-ring);
+  --accent: var(--teal-200);
+  --accent-foreground: var(--teal-800);
 }
 
 /* ============================================
@@ -177,6 +264,18 @@
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
+
+  /* Teal scale */
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-300: var(--teal-300);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal-800: var(--teal-800);
+  --color-teal-900: var(--teal-900);
 }
 
 /* ============================================

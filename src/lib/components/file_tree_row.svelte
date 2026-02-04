@@ -40,8 +40,6 @@
     on_retry_load
   }: Props = $props();
 
-  const INDENT_PX = 16;
-  const BASE_PADDING_PX = 8;
 
   function handle_click() {
     if (node.is_folder) {
@@ -83,7 +81,7 @@
   <div
     class="TreeRow"
     class:TreeRow--selected={is_selected}
-    style="--tree-indent: {BASE_PADDING_PX + node.depth * INDENT_PX}px"
+    style="--tree-depth: {node.depth}"
     role="treeitem"
     tabindex="0"
     aria-selected={is_selected}
@@ -190,7 +188,7 @@
     gap: var(--space-1);
     width: 100%;
     height: var(--size-tree-row);
-    padding-inline-start: var(--tree-indent);
+    padding-inline-start: calc(var(--size-tree-base-padding) + var(--tree-depth) * var(--size-tree-indent));
     padding-inline-end: var(--space-2);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);

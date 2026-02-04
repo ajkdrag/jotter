@@ -69,7 +69,7 @@
    ============================================ */
 
 .ProseMirror h1 {
-  font-size: 2.25em;
+  font-size: var(--editor-heading-1);
   font-weight: 700;
   line-height: 1.15;
   margin-top: calc(var(--editor-spacing) * 2);
@@ -84,7 +84,7 @@
 }
 
 .ProseMirror h2 {
-  font-size: 1.75em;
+  font-size: var(--editor-heading-2);
   font-weight: 700;
   line-height: 1.25;
   margin-top: calc(var(--editor-spacing) * 1.75);
@@ -97,7 +97,7 @@
 }
 
 .ProseMirror h3 {
-  font-size: 1.375em;
+  font-size: var(--editor-heading-3);
   font-weight: 650;
   line-height: 1.35;
   margin-top: calc(var(--editor-spacing) * 1.5);
@@ -107,7 +107,7 @@
 }
 
 .ProseMirror h4 {
-  font-size: 1.125em;
+  font-size: var(--editor-heading-4);
   font-weight: 650;
   line-height: 1.45;
   margin-top: calc(var(--editor-spacing) * 1.25);
@@ -117,7 +117,7 @@
 }
 
 .ProseMirror h5 {
-  font-size: 1em;
+  font-size: var(--editor-heading-5);
   font-weight: 650;
   line-height: 1.55;
   margin-top: calc(var(--editor-spacing) * 1);
@@ -125,11 +125,10 @@
   color: var(--editor-heading-color);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 0.875em;
 }
 
 .ProseMirror h6 {
-  font-size: 0.875em;
+  font-size: var(--editor-heading-6);
   font-weight: 600;
   line-height: 1.6;
   margin-top: calc(var(--editor-spacing) * 0.75);
@@ -260,8 +259,8 @@
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.bullet::before {
   content: '';
-  width: 5px;
-  height: 5px;
+  width: var(--editor-bullet-size);
+  height: var(--editor-bullet-size);
   border-radius: 50%;
   background-color: var(--editor-text-muted);
 }
@@ -284,15 +283,15 @@
 
 /* Nested list bullets */
 .ProseMirror ul ul > .milkdown-list-item-block > .list-item > .label-wrapper .label.bullet::before {
-  width: 4px;
-  height: 4px;
+  width: var(--editor-bullet-nested-size);
+  height: var(--editor-bullet-nested-size);
   background-color: transparent;
   border: 1.5px solid var(--editor-text-muted);
 }
 
 .ProseMirror ul ul ul > .milkdown-list-item-block > .list-item > .label-wrapper .label.bullet::before {
-  width: 4px;
-  height: 4px;
+  width: var(--editor-bullet-nested-size);
+  height: var(--editor-bullet-nested-size);
   border-radius: 1px;
   background-color: var(--editor-text-muted);
   border: none;
@@ -310,8 +309,8 @@
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.unchecked::before {
   content: '';
-  width: 14px;
-  height: 14px;
+  width: var(--editor-checkbox-size);
+  height: var(--editor-checkbox-size);
   border-radius: 3px;
   background-color: transparent;
   border: 1.5px solid var(--border-strong);
@@ -325,8 +324,8 @@
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.checked::before {
   content: '';
-  width: 14px;
-  height: 14px;
+  width: var(--editor-checkbox-size);
+  height: var(--editor-checkbox-size);
   border-radius: 3px;
   background-color: var(--primary);
   border: 1.5px solid var(--primary);
