@@ -2,8 +2,8 @@ import type { Ports } from '$lib/ports/ports'
 import { create_app_stores, type AppStores } from '$lib/stores/create_app_stores'
 import { change_vault_flow_machine } from '$lib/flows/change_vault_flow'
 import type { ChangeVaultFlowContext, ChangeVaultFlowEvents } from '$lib/flows/change_vault_flow'
-import { open_app_flow_machine } from '$lib/flows/open_app_flow'
-import type { OpenAppFlowContext, OpenAppFlowEvents } from '$lib/flows/open_app_flow'
+import { vault_bootstrap_flow_machine } from '$lib/flows/vault_bootstrap_flow'
+import type { VaultBootstrapFlowContext, VaultBootstrapFlowEvents } from '$lib/flows/vault_bootstrap_flow'
 import { open_note_flow_machine } from '$lib/flows/open_note_flow'
 import type { OpenNoteFlowContext, OpenNoteFlowEvents } from '$lib/flows/open_note_flow'
 import { delete_note_flow_machine } from '$lib/flows/delete_note_flow'
@@ -16,8 +16,8 @@ import { settings_flow_machine } from '$lib/flows/settings_flow'
 import type { SettingsFlowContext, SettingsFlowEvents } from '$lib/flows/settings_flow'
 import { create_folder_flow_machine } from '$lib/flows/create_folder_flow'
 import type { CreateFolderFlowContext, CreateFolderFlowEvents } from '$lib/flows/create_folder_flow'
-import { app_startup_flow_machine } from '$lib/flows/app_startup_flow'
-import type { AppStartupFlowContext, AppStartupFlowEvents } from '$lib/flows/app_startup_flow'
+import { preferences_initialization_flow_machine } from '$lib/flows/preferences_initialization_flow'
+import type { PreferencesInitializationFlowContext, PreferencesInitializationFlowEvents } from '$lib/flows/preferences_initialization_flow'
 import { command_palette_flow_machine } from '$lib/flows/command_palette_flow'
 import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
 import { filetree_flow_machine } from '$lib/flows/filetree_flow'
@@ -44,8 +44,8 @@ export type CreateAppFlowsCallbacks = {
 export type AppFlows = {
   stores: AppStores
   flows: {
-    app_startup: FlowHandle<AppStartupFlowEvents, FlowSnapshot<AppStartupFlowContext>>
-    open_app: FlowHandle<OpenAppFlowEvents, FlowSnapshot<OpenAppFlowContext>>
+    preferences_initialization: FlowHandle<PreferencesInitializationFlowEvents, FlowSnapshot<PreferencesInitializationFlowContext>>
+    vault_bootstrap: FlowHandle<VaultBootstrapFlowEvents, FlowSnapshot<VaultBootstrapFlowContext>>
     change_vault: FlowHandle<ChangeVaultFlowEvents, FlowSnapshot<ChangeVaultFlowContext>>
     open_note: FlowHandle<OpenNoteFlowEvents, FlowSnapshot<OpenNoteFlowContext>>
     delete_note: FlowHandle<DeleteNoteFlowEvents, FlowSnapshot<DeleteNoteFlowContext>>
@@ -80,7 +80,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
     }
   })
 
-  const open_app = create_flow_handle(open_app_flow_machine, {
+  const vault_bootstrap = create_flow_handle(vault_bootstrap_flow_machine, {
     input: {
       ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
       stores
@@ -122,7 +122,7 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
     input: { ports: { notes: ports.notes }, stores }
   })
 
-  const app_startup = create_flow_handle(app_startup_flow_machine, {
+  const preferences_initialization = create_flow_handle(preferences_initialization_flow_machine, {
     input: { ports: { theme: ports.theme, settings: ports.settings }, stores }
   })
 
@@ -158,8 +158,8 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
   return {
     stores,
     flows: {
-      app_startup,
-      open_app,
+      preferences_initialization,
+      vault_bootstrap,
       change_vault,
       open_note,
       delete_note,

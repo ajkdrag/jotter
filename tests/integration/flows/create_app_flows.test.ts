@@ -29,7 +29,8 @@ describe('create_app_flows', () => {
 
     const app_flows = create_app_flows(ports)
 
-    expect(app_flows.flows.open_app).toBeDefined()
+    expect(app_flows.flows.preferences_initialization).toBeDefined()
+    expect(app_flows.flows.vault_bootstrap).toBeDefined()
     expect(app_flows.flows.change_vault).toBeDefined()
     expect(app_flows.flows.open_note).toBeDefined()
     expect(app_flows.flows.delete_note).toBeDefined()

@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { createActor, waitFor } from 'xstate'
-import { open_app_flow_machine } from '$lib/flows/open_app_flow'
+import { vault_bootstrap_flow_machine } from '$lib/flows/vault_bootstrap_flow'
 import { create_mock_ports } from '../../unit/helpers/mock_ports'
 import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 
-describe('open_app_flow', () => {
+describe('vault_bootstrap_flow', () => {
   test('loads recents and updates stores', async () => {
     const ports = create_mock_ports()
     const stores = create_mock_stores({ now_ms: () => 123 })
@@ -27,7 +27,7 @@ describe('open_app_flow', () => {
 
     ports.vault._mock_vaults = [vault1, vault2]
 
-    const actor = createActor(open_app_flow_machine, {
+    const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
         stores
@@ -58,7 +58,7 @@ describe('open_app_flow', () => {
 
     ports.vault._mock_vaults = [vault]
 
-    const actor = createActor(open_app_flow_machine, {
+    const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
         stores
@@ -87,7 +87,7 @@ describe('open_app_flow', () => {
       throw new Error('Failed to list vaults')
     }
 
-    const actor = createActor(open_app_flow_machine, {
+    const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
         stores
@@ -120,7 +120,7 @@ describe('open_app_flow', () => {
       throw new Error('Failed to open vault')
     }
 
-    const actor = createActor(open_app_flow_machine, {
+    const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
         stores
@@ -145,7 +145,7 @@ describe('open_app_flow', () => {
       throw new Error('Failed to list vaults')
     }
 
-    const actor = createActor(open_app_flow_machine, {
+    const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
         stores
@@ -172,7 +172,7 @@ describe('open_app_flow', () => {
       throw new Error('Failed to list vaults')
     }
 
-    const actor = createActor(open_app_flow_machine, {
+    const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
         stores

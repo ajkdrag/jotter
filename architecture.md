@@ -172,8 +172,8 @@ A "Flow" represents a discrete unit of user experience. It encapsulates the **St
     -   Updates **Stores** with the results of operations.
 -   **Lean Machines**: Flows should be thin orchestrators. They delegate business logic to Operations and state updates to Stores.
 -   **Current Flows**:
-    -   `app_startup_flow.ts` - Theme and settings initialization on app load
-    -   `open_app_flow.ts` - Vault selection and application bootstrap
+    -   `preferences_initialization_flow.ts` - Load UI preferences (theme, editor settings) on app load
+    -   `vault_bootstrap_flow.ts` - Bootstrap workspace (vault selection, notes, search index)
     -   `change_vault_flow.ts` - Vault switching flow
     -   `open_note_flow.ts` - Note opening flow
     -   `delete_note_flow.ts` - Note deletion flow with confirmation
@@ -286,8 +286,8 @@ This file is where the application is "wired" together. It creates the stores an
 -   Optional `CreateAppFlowsCallbacks` for shell callbacks
 
 **Flow Dependencies:**
--   `app_startup` - Requires `theme`, `settings` ports + `stores`
--   `open_app` - Requires `vault`, `notes`, `index` ports + `stores`
+-   `preferences_initialization` - Requires `theme`, `settings` ports + `stores`
+-   `vault_bootstrap` - Requires `vault`, `notes`, `index` ports + `stores`
 -   `change_vault` - Requires `vault`, `notes`, `index` ports + `stores`
 -   `open_note` - Requires `notes` port + `stores`
 -   `delete_note` - Requires `notes`, `index` ports + `stores`

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
-import { app_startup_flow_machine } from '$lib/flows/app_startup_flow'
+import { preferences_initialization_flow_machine } from '$lib/flows/preferences_initialization_flow'
 import { create_test_ports } from '$lib/adapters/test/test_ports'
 import { create_mock_stores } from '../../unit/helpers/mock_stores'
 
-describe('app_startup_flow', () => {
+describe('preferences_initialization_flow', () => {
   it('initializes theme and editor settings', async () => {
     const ports = create_test_ports()
     const stores = create_mock_stores()
 
-    const actor = createActor(app_startup_flow_machine, {
+    const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
         stores
@@ -31,7 +31,7 @@ describe('app_startup_flow', () => {
 
     const stores = create_mock_stores()
 
-    const actor = createActor(app_startup_flow_machine, {
+    const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
         stores
@@ -58,7 +58,7 @@ describe('app_startup_flow', () => {
 
     const stores = create_mock_stores()
 
-    const actor = createActor(app_startup_flow_machine, {
+    const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
         stores
@@ -85,7 +85,7 @@ describe('app_startup_flow', () => {
 
     const stores = create_mock_stores()
 
-    const actor = createActor(app_startup_flow_machine, {
+    const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings },
         stores

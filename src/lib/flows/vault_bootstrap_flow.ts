@@ -7,37 +7,37 @@ import type { VaultPath } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 
-type OpenAppPorts = {
+type VaultBootstrapPorts = {
   vault: VaultPort
   notes: NotesPort
   index: WorkspaceIndexPort
 }
 
-type StartupConfig = {
+type BootstrapConfig = {
   reset_app_state: boolean
   bootstrap_default_vault_path: VaultPath | null
 }
 
-export type OpenAppStartupConfig = StartupConfig
+export type VaultBootstrapConfig = BootstrapConfig
 
 type FlowContext = {
   error: string | null
-  ports: OpenAppPorts
+  ports: VaultBootstrapPorts
   stores: AppStores
-  startup_config: StartupConfig
+  startup_config: BootstrapConfig
 }
 
-export type OpenAppFlowContext = FlowContext
+export type VaultBootstrapFlowContext = FlowContext
 
 type FlowEvents =
-  | { type: 'START'; config: StartupConfig }
+  | { type: 'START'; config: BootstrapConfig }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
 
-export type OpenAppFlowEvents = FlowEvents
+export type VaultBootstrapFlowEvents = FlowEvents
 
 type FlowInput = {
-  ports: OpenAppPorts
+  ports: VaultBootstrapPorts
   stores: AppStores
 }
 
@@ -53,7 +53,7 @@ function reset_all_stores(stores: AppStores): void {
   stores.ui.actions.set_editor_settings(DEFAULT_EDITOR_SETTINGS)
 }
 
-export const open_app_flow_machine = setup({
+export const vault_bootstrap_flow_machine = setup({
   types: {
     context: {} as FlowContext,
     events: {} as FlowEvents,
@@ -65,9 +65,9 @@ export const open_app_flow_machine = setup({
         input
       }: {
         input: {
-          ports: OpenAppPorts
+          ports: VaultBootstrapPorts
           stores: AppStores
-          config: StartupConfig
+          config: BootstrapConfig
         }
       }) => {
         const { ports, stores, config } = input
@@ -101,7 +101,7 @@ export const open_app_flow_machine = setup({
     )
   }
 }).createMachine({
-  id: 'open_app_flow',
+  id: 'vault_bootstrap_flow',
   initial: 'idle',
   context: ({ input }) => ({
     error: null,

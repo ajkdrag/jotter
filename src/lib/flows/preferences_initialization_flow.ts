@@ -6,29 +6,29 @@ import type { ThemePort } from '$lib/ports/theme_port'
 import type { SettingsPort } from '$lib/ports/settings_port'
 import type { AppStores } from '$lib/stores/create_app_stores'
 
-type AppStartupPorts = {
+type PreferencesInitializationPorts = {
   theme: ThemePort
   settings: SettingsPort
 }
 
 type FlowContext = {
   error: string | null
-  ports: AppStartupPorts
+  ports: PreferencesInitializationPorts
   stores: AppStores
 }
 
-export type AppStartupFlowContext = FlowContext
+export type PreferencesInitializationFlowContext = FlowContext
 
 type FlowEvents = { type: 'INITIALIZE' } | { type: 'RETRY' } | { type: 'CANCEL' }
 
-export type AppStartupFlowEvents = FlowEvents
+export type PreferencesInitializationFlowEvents = FlowEvents
 
 type FlowInput = {
-  ports: AppStartupPorts
+  ports: PreferencesInitializationPorts
   stores: AppStores
 }
 
-export const app_startup_flow_machine = setup({
+export const preferences_initialization_flow_machine = setup({
   types: {
     context: {} as FlowContext,
     events: {} as FlowEvents,
@@ -40,7 +40,7 @@ export const app_startup_flow_machine = setup({
         input
       }: {
         input: {
-          ports: AppStartupPorts
+          ports: PreferencesInitializationPorts
           stores: AppStores
         }
       }) => {
@@ -56,7 +56,7 @@ export const app_startup_flow_machine = setup({
     )
   }
 }).createMachine({
-  id: 'app_startup_flow',
+  id: 'preferences_initialization_flow',
   initial: 'idle',
   context: ({ input }) => ({
     error: null,

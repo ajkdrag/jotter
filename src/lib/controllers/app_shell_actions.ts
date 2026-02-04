@@ -77,9 +77,9 @@ export function create_app_shell_actions(input: {
 
   return {
     mount: () => {
-      app.flows.app_startup.send({ type: 'INITIALIZE' })
+      app.flows.preferences_initialization.send({ type: 'INITIALIZE' })
 
-      app.flows.open_app.send({
+      app.flows.vault_bootstrap.send({
         type: 'START',
         config: {
           reset_app_state: config.reset_state_on_mount,
