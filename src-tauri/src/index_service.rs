@@ -38,7 +38,7 @@ pub struct SearchHit {
 
 #[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
-enum SearchScope {
+pub enum SearchScope {
     All,
     Path,
     Title,
@@ -47,6 +47,7 @@ enum SearchScope {
 
 #[derive(Debug, Deserialize)]
 pub struct SearchQueryInput {
+    #[allow(dead_code)]
     pub raw: String,
     pub text: String,
     pub scope: SearchScope,
@@ -251,7 +252,8 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
     let (index, path_exact_f, path_f, title_f, body_f) = open_index(&vault_root)?;
-    let mut writer = index.writer(50_000_000).map_err(|e| e.to_string())?;
+    let mut writer: tantivy::IndexWriter<tantivy::TantivyDocument> =
+        index.writer(50_000_000).map_err(|e| e.to_string())?;
 
     let mut notes: BTreeMap<String, IndexNoteMeta> = BTreeMap::new();
     let mut bodies: BTreeMap<String, String> = BTreeMap::new();
@@ -384,7 +386,8 @@ pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> R
     save_index_data(&vault_root, &data)?;
 
     let (index, path_exact_f, path_f, title_f, body_f) = open_index(&vault_root)?;
-    let mut writer = index.writer(50_000_000).map_err(|e| e.to_string())?;
+    let mut writer: tantivy::IndexWriter<tantivy::TantivyDocument> =
+        index.writer(50_000_000).map_err(|e| e.to_string())?;
     writer.delete_term(Term::from_field_text(path_exact_f, meta.path.as_str()));
     writer
         .add_document(doc!(
@@ -407,7 +410,8 @@ pub fn index_remove_note(app: AppHandle, vault_id: String, note_id: String) -> R
     save_index_data(&vault_root, &data)?;
 
     let (index, path_exact_f, _path_f, _title_f, _body_f) = open_index(&vault_root)?;
-    let mut writer = index.writer(50_000_000).map_err(|e| e.to_string())?;
+    let mut writer: tantivy::IndexWriter<tantivy::TantivyDocument> =
+        index.writer(50_000_000).map_err(|e| e.to_string())?;
     writer.delete_term(Term::from_field_text(path_exact_f, note_id.as_str()));
     writer.commit().map_err(|e| e.to_string())?;
     Ok(())
