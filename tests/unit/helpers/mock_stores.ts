@@ -248,7 +248,8 @@ export function create_mock_ui_store(): UIStore {
       theme: 'system',
       sidebar_open: true,
       selected_folder_path: '',
-      editor_settings: DEFAULT_EDITOR_SETTINGS
+      editor_settings: DEFAULT_EDITOR_SETTINGS,
+      system_dialog_open: false
     },
     (get, set) => ({
       set_theme: (theme) => {
@@ -270,6 +271,10 @@ export function create_mock_ui_store(): UIStore {
 
       set_editor_settings: (editor_settings) => {
         set({ ...get(), editor_settings })
+      },
+
+      set_system_dialog_open: (system_dialog_open) => {
+        set({ ...get(), system_dialog_open })
       }
     })
   )

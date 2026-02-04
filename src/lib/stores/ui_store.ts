@@ -9,6 +9,7 @@ export type UIState = {
   sidebar_open: boolean
   selected_folder_path: string
   editor_settings: EditorSettings
+  system_dialog_open: boolean
 }
 
 export type UIActions = {
@@ -17,6 +18,7 @@ export type UIActions = {
   set_sidebar_open: (open: boolean) => void
   set_selected_folder_path: (path: string) => void
   set_editor_settings: (settings: EditorSettings) => void
+  set_system_dialog_open: (open: boolean) => void
 }
 
 export type UIStore = StoreHandle<UIState, UIActions>
@@ -27,7 +29,8 @@ export function create_ui_store(): UIStore {
       theme: 'system',
       sidebar_open: true,
       selected_folder_path: '',
-      editor_settings: DEFAULT_EDITOR_SETTINGS
+      editor_settings: DEFAULT_EDITOR_SETTINGS,
+      system_dialog_open: false
     },
     (get, set) => ({
       set_theme: (theme) => {
@@ -49,6 +52,10 @@ export function create_ui_store(): UIStore {
 
       set_editor_settings: (editor_settings) => {
         set({ ...get(), editor_settings })
+      },
+
+      set_system_dialog_open: (system_dialog_open) => {
+        set({ ...get(), system_dialog_open })
       }
     })
   )

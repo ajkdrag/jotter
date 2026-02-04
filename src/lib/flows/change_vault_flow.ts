@@ -3,7 +3,7 @@ import { change_vault } from '$lib/operations/change_vault'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
-import type { VaultId } from '$lib/types/ids'
+import type { VaultId, VaultPath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 import type { AppStores } from '$lib/stores/create_app_stores'
@@ -65,7 +65,13 @@ export const change_vault_flow_machine = setup({
 
         switch (change_mode.kind) {
           case 'choose_vault': {
-            const vault_path = await ports.vault.choose_vault()
+            stores.ui.actions.set_system_dialog_open(true)
+            let vault_path: VaultPath | null = null
+            try {
+              vault_path = await ports.vault.choose_vault()
+            } finally {
+              stores.ui.actions.set_system_dialog_open(false)
+            }
             if (!vault_path) return { changed: false }
             result = await change_vault({ vault: ports.vault, notes: ports.notes }, { vault_path })
             break

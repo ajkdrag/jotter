@@ -43,12 +43,86 @@
 
   const has_vault = $derived(vault_store.state.vault !== null)
 
+  const palette_open = $derived(command_palette.snapshot.matches('open'))
+  const file_search_open = $derived(file_search.snapshot.matches('open'))
+
+  const vault_dialog_open = $derived(
+    has_vault &&
+      (change_vault.snapshot.matches('dialog_open') ||
+        change_vault.snapshot.matches('changing') ||
+        change_vault.snapshot.matches('error'))
+  )
+
+  const delete_dialog_open = $derived(
+    delete_note.snapshot.matches('confirming') ||
+      delete_note.snapshot.matches('deleting') ||
+      delete_note.snapshot.matches('error')
+  )
+
+  const rename_dialog_open = $derived(
+    rename_note.snapshot.matches('confirming') ||
+      rename_note.snapshot.matches('checking_conflict') ||
+      rename_note.snapshot.matches('conflict_confirm') ||
+      rename_note.snapshot.matches('renaming') ||
+      rename_note.snapshot.matches('error')
+  )
+
+  const save_dialog_open = $derived(
+    save_note.snapshot.context.requires_dialog &&
+      (save_note.snapshot.matches('showing_save_dialog') ||
+        save_note.snapshot.matches('checking_existence') ||
+        save_note.snapshot.matches('conflict_confirm') ||
+        save_note.snapshot.matches('saving') ||
+        save_note.snapshot.matches('error'))
+  )
+
+  const settings_dialog_open = $derived(
+    settings.snapshot.matches('loading') ||
+      settings.snapshot.matches('editing') ||
+      settings.snapshot.matches('saving') ||
+      settings.snapshot.matches('error')
+  )
+
+  const create_folder_dialog_open = $derived(
+    create_folder.snapshot.matches('dialog_open') ||
+      create_folder.snapshot.matches('creating') ||
+      create_folder.snapshot.matches('error')
+  )
+
+  const delete_folder_dialog_open = $derived(
+    delete_folder.snapshot.matches('fetching_stats') ||
+      delete_folder.snapshot.matches('confirming') ||
+      delete_folder.snapshot.matches('deleting') ||
+      delete_folder.snapshot.matches('error')
+  )
+
+  const rename_folder_dialog_open = $derived(
+    rename_folder.snapshot.matches('confirming') ||
+      rename_folder.snapshot.matches('renaming') ||
+      rename_folder.snapshot.matches('error')
+  )
+
+  const any_blocking_dialog_open = $derived(
+    ui_store.state.system_dialog_open ||
+      vault_dialog_open ||
+      delete_dialog_open ||
+      rename_dialog_open ||
+      save_dialog_open ||
+      settings_dialog_open ||
+      create_folder_dialog_open ||
+      delete_folder_dialog_open ||
+      rename_folder_dialog_open
+  )
+
   const vault_selection_loading = $derived(
     open_app.snapshot.matches('starting') || change_vault.snapshot.matches('changing')
   )
 
   const keyboard = use_keyboard_shortcuts({
     is_enabled: () => has_vault,
+    is_blocked: () => any_blocking_dialog_open || palette_open || file_search_open,
+    is_palette_open: () => palette_open,
+    is_file_search_open: () => file_search_open,
     on_toggle_palette: () => {
       command_palette.send({ type: 'TOGGLE' })
     },
