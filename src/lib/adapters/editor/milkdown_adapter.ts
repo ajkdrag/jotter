@@ -89,7 +89,10 @@ let active_editor: Editor | null = null
 
 export const milkdown_editor_port: EditorPort = {
   insert_text_at_cursor: (text: string) => {
-    if (!active_editor) return
+    if (!active_editor) {
+      console.warn('[milkdown_adapter] insert_text_at_cursor called with no active editor')
+      return
+    }
     active_editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       const { state } = view

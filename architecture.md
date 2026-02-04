@@ -134,7 +134,8 @@ Operations are **pure functions** (or functional stateless modules) that impleme
     -   `create_folder.ts` - Folder creation
     -   `delete_note.ts` - Note deletion logic
     -   `ensure_open_note.ts` - Ensures a note is open (used by app state)
-    -   `insert_dropped_image.ts` - Image insertion from drag-and-drop
+    -   `insert_editor_text.ts` - Insert text at cursor (wraps EditorPort)
+    -   `insert_pasted_image.ts` - Image import and markdown generation
     -   `open_last_vault.ts` - Opens the last used vault
     -   `open_note.ts` - Note opening logic
     -   `open_note_or_create.ts` - Note open-or-create logic (wiki links)

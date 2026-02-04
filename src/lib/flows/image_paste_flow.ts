@@ -5,6 +5,7 @@ import type { VaultId, NoteId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
 import type { ImagePasteData } from '$lib/types/image_paste'
 import { insert_pasted_image } from '$lib/operations/insert_pasted_image'
+import { insert_editor_text } from '$lib/operations/insert_editor_text'
 
 type ImagePastePorts = {
   assets: AssetsPort
@@ -155,7 +156,10 @@ export const image_paste_flow_machine = setup({
               error: () => null
             }),
             ({ context, event }) => {
-              context.ports.editor.insert_text_at_cursor(event.output.markdown)
+              insert_editor_text(
+                { editor: context.ports.editor },
+                { text: event.output.markdown }
+              )
             }
           ]
         },
