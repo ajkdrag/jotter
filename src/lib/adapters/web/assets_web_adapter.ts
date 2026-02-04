@@ -5,115 +5,108 @@ import { get_vault } from './storage'
 const blob_url_cache = new Map<string, string>()
 
 async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryHandle> {
-  const record = await get_vault(vault_id)
-  if (!record) {
-    throw new Error(`Vault not found: ${vault_id}`)
-  }
+	const record = await get_vault(vault_id)
+	if (!record) {
+		throw new Error(`Vault not found: ${vault_id}`)
+	}
 
-  if ('requestPermission' in record.handle && typeof record.handle.requestPermission === 'function') {
-    try {
-      await (record.handle as { requestPermission: (opts: { mode: string }) => Promise<PermissionState> }).requestPermission({ mode: 'readwrite' })
-    } catch (e) {
-      throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
-    }
-  }
+	if ('requestPermission' in record.handle && typeof record.handle.requestPermission === 'function') {
+		try {
+			await (record.handle as { requestPermission: (opts: { mode: string }) => Promise<PermissionState> }).requestPermission({ mode: 'readwrite' })
+		} catch (e) {
+			throw new Error(`Permission denied for vault: ${vault_id}. ${e instanceof Error ? e.message : String(e)}`)
+		}
+	}
 
-  return record.handle
+	return record.handle
 }
 
-async function ensure_assets_directory(root: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle> {
-  return await root.getDirectoryHandle('assets', { create: true })
-}
+async function resolve_path_from_root(
+	root: FileSystemDirectoryHandle,
+	target_path: AssetPath,
+	options: { create_dirs: boolean; create_file: boolean }
+): Promise<{ dir: FileSystemDirectoryHandle; file_name: string; file_handle?: FileSystemFileHandle }> {
+	const parts = target_path.split('/').filter(Boolean)
+	if (parts.length === 0) {
+		throw new Error(`Invalid asset path: ${target_path}`)
+	}
 
-async function resolve_asset_path(
-  root: FileSystemDirectoryHandle,
-  target_path: AssetPath
-): Promise<{ handle: FileSystemFileHandle; parent: FileSystemDirectoryHandle; name: string }> {
-  const assets_dir = await ensure_assets_directory(root)
-  const parts = target_path.split('/').filter(Boolean)
-  let current = assets_dir
-  let name = ''
+	const file_name = parts.at(-1) ?? ''
+	if (file_name === '') {
+		throw new Error(`Invalid asset path: ${target_path}`)
+	}
+	const dir_parts = parts.slice(0, -1)
 
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i]
-    if (!part) continue
-    const is_last = i === parts.length - 1
+	let current = root
+	for (const part of dir_parts) {
+		current = await current.getDirectoryHandle(part, { create: options.create_dirs })
+	}
 
-    if (is_last) {
-      name = part
-      const handle = await current.getFileHandle(name, { create: false })
-      return { handle, parent: current, name }
-    } else {
-      current = await current.getDirectoryHandle(part, { create: false })
-    }
-  }
+	if (options.create_file) {
+		const file_handle = await current.getFileHandle(file_name, { create: true })
+		return { dir: current, file_name, file_handle }
+	}
 
-  throw new Error(`Invalid asset path: ${target_path}`)
+	return { dir: current, file_name }
 }
 
 export function create_assets_web_adapter(): AssetsPort {
-  return {
-    async import_asset(vault_id: VaultId, source: AssetImportSource, target_path: AssetPath): Promise<AssetPath> {
-      const root = await get_vault_handle(vault_id)
-      const assets_dir = await ensure_assets_directory(root)
-      const parts = target_path.split('/').filter(Boolean)
-      let current = assets_dir
-      let file_name = ''
+	return {
+		async import_asset(vault_id: VaultId, source: AssetImportSource, target_path: AssetPath): Promise<AssetPath> {
+			const root = await get_vault_handle(vault_id)
+			const { file_handle } = await resolve_path_from_root(root, target_path, {
+				create_dirs: true,
+				create_file: true
+			})
 
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i]
-        if (!part) continue
-        const is_last = i === parts.length - 1
+			if (!file_handle) {
+				throw new Error(`Failed to create file handle for: ${target_path}`)
+			}
 
-        if (is_last) {
-          file_name = part
-          const file_handle = await current.getFileHandle(file_name, { create: true })
-          const writable = await file_handle.createWritable()
+			const writable = await file_handle.createWritable()
 
-          if (source.kind === 'path') {
-            throw new Error('Path-based asset import not supported in web environment. Use bytes instead.')
-          } else {
-            const buffer = new Uint8Array(source.bytes).buffer
-            await writable.write(buffer)
-          }
+			if (source.kind === 'path') {
+				throw new Error('Path-based asset import not supported in web environment. Use bytes instead.')
+			}
 
-          await writable.close()
+			const src = source.bytes instanceof Uint8Array ? source.bytes : new Uint8Array(source.bytes)
+			const copy = new Uint8Array(src.length)
+			copy.set(src)
+			await writable.write(copy)
+			await writable.close()
 
-          const cache_key = `${vault_id}:${target_path}`
-          const existing_url = blob_url_cache.get(cache_key)
-          if (existing_url) {
-            URL.revokeObjectURL(existing_url)
-            blob_url_cache.delete(cache_key)
-          }
+			const cache_key = `${vault_id}:${target_path}`
+			const existing_url = blob_url_cache.get(cache_key)
+			if (existing_url) {
+				URL.revokeObjectURL(existing_url)
+				blob_url_cache.delete(cache_key)
+			}
 
-          return target_path
-        } else if (part) {
-          current = await current.getDirectoryHandle(part, { create: true })
-        }
-      }
+			return target_path
+		},
 
-      throw new Error(`Invalid asset path: ${target_path}`)
-    },
+		async resolve_asset_url(vault_id: VaultId, asset_path: AssetPath): Promise<string> {
+			const cache_key = `${vault_id}:${asset_path}`
 
-    async resolve_asset_url(vault_id: VaultId, asset_path: AssetPath): Promise<string> {
-      const cache_key = `${vault_id}:${asset_path}`
+			const cached_url = blob_url_cache.get(cache_key)
+			if (cached_url) {
+				return cached_url
+			}
 
-      const cached_url = blob_url_cache.get(cache_key)
-      if (cached_url) {
-        return cached_url
-      }
-
-      try {
-        const root = await get_vault_handle(vault_id)
-        const { handle } = await resolve_asset_path(root, asset_path)
-        const file_handle = handle
-        const file = await file_handle.getFile()
-        const blob_url = URL.createObjectURL(file)
-        blob_url_cache.set(cache_key, blob_url)
-        return blob_url
-      } catch (e) {
-        throw new Error(`Failed to resolve asset URL: ${asset_path}. ${e instanceof Error ? e.message : String(e)}`)
-      }
-    }
-  }
+			try {
+				const root = await get_vault_handle(vault_id)
+				const { dir, file_name } = await resolve_path_from_root(root, asset_path, {
+					create_dirs: false,
+					create_file: false
+				})
+				const file_handle = await dir.getFileHandle(file_name, { create: false })
+				const file = await file_handle.getFile()
+				const blob_url = URL.createObjectURL(file)
+				blob_url_cache.set(cache_key, blob_url)
+				return blob_url
+			} catch (e) {
+				throw new Error(`Failed to resolve asset URL: ${asset_path}. ${e instanceof Error ? e.message : String(e)}`)
+			}
+		}
+	}
 }

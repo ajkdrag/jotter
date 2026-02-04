@@ -10,15 +10,17 @@
   import type { AppFlows } from '$lib/flows/create_app_flows'
   import type { EditorManager } from '$lib/adapters/editor/editor_manager'
   import type { AppShellActions } from '$lib/controllers/app_shell_actions'
+  import type { AssetPath } from '$lib/types/ids'
 
   type Props = {
     app: AppFlows
     editor_manager: EditorManager
     actions: AppShellActions
+    resolve_asset_url: ((asset_path: AssetPath) => Promise<string>) | undefined
     hide_choose_vault_button?: boolean
   }
 
-  let { app, editor_manager, actions, hide_choose_vault_button = false }: Props = $props()
+  let { app, editor_manager, actions, resolve_asset_url, hide_choose_vault_button = false }: Props = $props()
 
   const stable_app = untrack(() => app)
   const stable_actions = untrack(() => actions)
@@ -158,6 +160,7 @@
     selected_folder_path: ui_store.state.selected_folder_path,
     current_theme: ui_store.state.theme,
     link_syntax: ui_store.state.editor_settings.link_syntax,
+    resolve_asset_url,
     actions: stable_actions
   }))
 </script>

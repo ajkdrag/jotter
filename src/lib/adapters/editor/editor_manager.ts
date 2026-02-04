@@ -2,6 +2,7 @@ import type { EditorHandle, EditorPort, CursorInfo } from '$lib/ports/editor_por
 import type { OpenNoteState } from '$lib/types/editor'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import type { ImagePasteData } from '$lib/types/image_paste'
+import type { AssetPath } from '$lib/types/ids'
 
 export type EditorManager = {
   mount: (
@@ -12,7 +13,8 @@ export type EditorManager = {
     link_syntax: EditorSettings['link_syntax'],
     on_cursor_change?: (info: CursorInfo) => void,
     on_wiki_link_click?: (note_path: string) => void,
-    on_image_paste?: (data: ImagePasteData) => void
+    on_image_paste?: (data: ImagePasteData) => void,
+    resolve_asset_url?: (asset_path: AssetPath) => Promise<string>
   ) => Promise<void>
   update: (note: OpenNoteState) => void
   destroy: () => void
@@ -33,7 +35,8 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
       link_syntax: EditorSettings['link_syntax'],
       on_cursor_change?: (info: CursorInfo) => void,
       on_wiki_link_click?: (note_path: string) => void,
-      on_image_paste?: (data: ImagePasteData) => void
+      on_image_paste?: (data: ImagePasteData) => void,
+      resolve_asset_url?: (asset_path: AssetPath) => Promise<string>
     ) {
       if (editor_handle) {
         editor_handle.destroy()
@@ -45,6 +48,7 @@ export function create_editor_manager(editor_port: EditorPort): EditorManager {
         initial_markdown: note.markdown,
         note_path: note.meta.path,
         link_syntax,
+        ...(resolve_asset_url && { resolve_asset_url }),
         on_markdown_change: on_change,
         on_dirty_state_change: on_dirty_change,
         ...(on_cursor_change && { on_cursor_change }),

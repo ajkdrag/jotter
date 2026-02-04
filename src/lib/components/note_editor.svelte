@@ -4,6 +4,7 @@
     import type { CursorInfo } from "$lib/ports/editor_port";
     import type { EditorSettings } from "$lib/types/editor_settings";
     import type { ImagePasteData } from "$lib/types/image_paste";
+    import type { AssetPath } from "$lib/types/ids";
 
     interface Props {
         editor_manager: EditorManager;
@@ -14,9 +15,10 @@
         on_cursor_change?: (info: CursorInfo) => void;
         on_wiki_link_click?: (note_path: string) => void;
         on_image_paste?: (data: ImagePasteData) => void;
+        resolve_asset_url: ((asset_path: AssetPath) => Promise<string>) | undefined;
     }
 
-    let { editor_manager, open_note, link_syntax, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click, on_image_paste }: Props = $props();
+    let { editor_manager, open_note, link_syntax, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click, on_image_paste, resolve_asset_url }: Props = $props();
 
     function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
         const mount_promise = editor_manager.mount(
@@ -27,7 +29,8 @@
             link_syntax,
             on_cursor_change,
             on_wiki_link_click,
-            on_image_paste
+            on_image_paste,
+            resolve_asset_url
         );
 
         void mount_promise.then(() => {

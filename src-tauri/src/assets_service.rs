@@ -7,7 +7,8 @@ use tauri::AppHandle;
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum AssetSource {
     Path { path: String },
-    Bytes { bytes: Vec<u8>, _file_name: String },
+    #[allow(dead_code)]
+    Bytes { bytes: Vec<u8>, file_name: String },
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,7 +1,8 @@
-import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx } from '@milkdown/kit/core'
+import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose } from '@milkdown/kit/utils'
 import type { CursorInfo } from '$lib/ports/editor_port'
+import { Slice } from '@milkdown/kit/prose/model'
 import type { Node as ProseNode } from '@milkdown/kit/prose/model'
 import type { Selection } from '@milkdown/kit/prose/state'
 import {
@@ -26,6 +27,7 @@ import {
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
 import { markdown_paste_plugin } from './markdown_paste_plugin'
 import { create_image_paste_plugin } from './image_paste_plugin'
+import { create_asset_image_plugin } from './asset_image_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
@@ -96,13 +98,22 @@ export const milkdown_editor_port: EditorPort = {
     active_editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       const { state } = view
-      const tr = state.tr.insertText(text, state.selection.from, state.selection.to)
-      view.dispatch(tr)
-      view.focus()
+      try {
+        const parser = ctx.get(parserCtx)
+        const doc = parser(text)
+        const tr = state.tr.replaceSelection(new Slice(doc.content, 0, 0))
+        view.dispatch(tr)
+        view.focus()
+      } catch (error) {
+        console.error('Failed to insert markdown at cursor:', error)
+        const tr = state.tr.insertText(text, state.selection.from, state.selection.to)
+        view.dispatch(tr)
+        view.focus()
+      }
     })
   },
   create_editor: async (root, config) => {
-    const { initial_markdown, note_path, link_syntax, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
+    const { initial_markdown, note_path, link_syntax, resolve_asset_url, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
 
     let current_markdown = initial_markdown
     let current_is_dirty = false
@@ -190,6 +201,10 @@ export const milkdown_editor_port: EditorPort = {
 
     if (config.on_image_paste) {
       builder = builder.use(create_image_paste_plugin(config.on_image_paste))
+    }
+
+    if (resolve_asset_url) {
+      builder = builder.use(create_asset_image_plugin(resolve_asset_url))
     }
 
     builder = builder.use(markdown_paste_plugin).use(clipboard)
