@@ -1,6 +1,6 @@
 import MiniSearch from 'minisearch'
 import type { SearchPort } from '$lib/ports/search_port'
-import type { VaultId } from '$lib/types/ids'
+import type { NotePath, VaultId } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { NoteSearchHit } from '$lib/types/search'
 
@@ -14,11 +14,11 @@ type GetNotesForVault = (vault_id: VaultId) => NoteMeta[]
 
 export function create_search_web_adapter(get_notes: GetNotesForVault): SearchPort {
   return {
-    async search_notes(vault_id: VaultId, query: string, limit = 50): Promise<NoteSearchHit[]> {
+    search_notes(vault_id: VaultId, query: string, limit = 50): Promise<NoteSearchHit[]> {
       const notes = get_notes(vault_id)
 
       if (!query.trim()) {
-        return []
+        return Promise.resolve([])
       }
 
       const mini = new MiniSearch<NoteDocument>({
@@ -42,13 +42,17 @@ export function create_search_web_adapter(get_notes: GetNotesForVault): SearchPo
       const results = mini.search(query).slice(0, limit)
       const notes_map = new Map(notes.map((n) => [n.id, n]))
 
-      return results.map((r) => {
-        const note = notes_map.get(r.id)!
+      return Promise.resolve(results.map((r) => {
+        const note_id = r.id as NotePath
+        const note = notes_map.get(note_id)
+        if (!note) {
+          throw new Error(`Note not found: ${note_id}`)
+        }
         return {
           note,
           score: r.score
         }
-      })
+      }))
     }
   }
 }

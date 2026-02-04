@@ -177,9 +177,7 @@ describe('delete_note_flow', () => {
 
   test('transitions to error state on delete failure and retains note_to_delete', async () => {
     const notes_port = create_mock_notes_port()
-    notes_port.delete_note = async () => {
-      throw new Error('Network error')
-    }
+    notes_port.delete_note = () => Promise.reject(new Error('Network error'))
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()
@@ -238,9 +236,7 @@ describe('delete_note_flow', () => {
 
   test('cancels from error state and clears context', async () => {
     const notes_port = create_mock_notes_port()
-    notes_port.delete_note = async () => {
-      throw new Error('Network error')
-    }
+    notes_port.delete_note = () => Promise.reject(new Error('Network error'))
     const index_port = create_mock_index_port()
     const note = create_test_note('note-1', 'My Note')
     const vault = create_test_vault()

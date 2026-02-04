@@ -80,8 +80,9 @@ export function create_assets_web_adapter(): AssetsPort {
           await writable.close()
 
           const cache_key = `${vault_id}:${target_path}`
-          if (blob_url_cache.has(cache_key)) {
-            URL.revokeObjectURL(blob_url_cache.get(cache_key)!)
+          const existing_url = blob_url_cache.get(cache_key)
+          if (existing_url) {
+            URL.revokeObjectURL(existing_url)
             blob_url_cache.delete(cache_key)
           }
 
@@ -97,14 +98,15 @@ export function create_assets_web_adapter(): AssetsPort {
     async resolve_asset_url(vault_id: VaultId, asset_path: AssetPath): Promise<string> {
       const cache_key = `${vault_id}:${asset_path}`
 
-      if (blob_url_cache.has(cache_key)) {
-        return blob_url_cache.get(cache_key)!
+      const cached_url = blob_url_cache.get(cache_key)
+      if (cached_url) {
+        return cached_url
       }
 
       try {
         const root = await get_vault_handle(vault_id)
         const { handle } = await resolve_asset_path(root, asset_path)
-        const file_handle = handle as FileSystemFileHandle
+        const file_handle = handle
         const file = await file_handle.getFile()
         const blob_url = URL.createObjectURL(file)
         blob_url_cache.set(cache_key, blob_url)

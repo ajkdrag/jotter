@@ -17,8 +17,8 @@ export function create_assets_tauri_adapter(): AssetsPort {
       })
       return as_asset_path(rel)
     },
-    async resolve_asset_url(vault_id: VaultId, asset_path: AssetPath) {
-      return imdown_asset_url(vault_id, asset_path)
+    resolve_asset_url(vault_id: VaultId, asset_path: AssetPath) {
+      return Promise.resolve(imdown_asset_url(vault_id, asset_path))
     }
   }
 }

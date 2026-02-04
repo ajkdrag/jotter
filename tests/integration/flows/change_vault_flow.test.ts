@@ -19,7 +19,7 @@ describe('change_vault_flow', () => {
     }
 
     ports.vault._mock_vaults = [vault]
-    ports.vault.choose_vault = async () => vault.path
+    ports.vault.choose_vault = () => Promise.resolve(vault.path)
 
     const actor = createActor(change_vault_flow_machine, {
       input: { ports, stores }

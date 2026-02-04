@@ -82,8 +82,6 @@ export const change_vault_flow_machine = setup({
           }
         }
 
-        if (!result) throw new Error('Invariant violation: vault change result missing')
-
         void ports.index.build_index(result.vault.id)
         const recent_vaults = await ports.vault.list_vaults()
 
@@ -138,11 +136,14 @@ export const change_vault_flow_machine = setup({
     changing: {
       invoke: {
         src: 'perform_change',
-        input: ({ context }) => ({
-          ports: context.ports,
-          change_mode: context.change_mode!,
-          stores: context.stores
-        }),
+        input: ({ context }) => {
+          if (!context.change_mode) throw new Error('change_mode required in changing state')
+          return {
+            ports: context.ports,
+            change_mode: context.change_mode,
+            stores: context.stores
+          }
+        },
         onDone: 'idle',
         onError: {
           target: 'error',

@@ -8,9 +8,7 @@ import { create_open_note_state, create_test_note, create_test_vault } from '../
 describe('save_note_flow errors', () => {
   it('transitions to error and can cancel', async () => {
     const notes_port = create_mock_notes_port()
-    notes_port.write_note = async () => {
-      throw new Error('Save failed')
-    }
+    notes_port.write_note = () => Promise.reject(new Error('Save failed'))
     const vault = create_test_vault()
     const note = create_test_note('note-1', 'My Note')
     const open_note = create_open_note_state(note)

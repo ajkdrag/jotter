@@ -120,11 +120,15 @@ export const delete_folder_flow_machine = setup({
     fetching_stats: {
       invoke: {
         src: 'fetch_stats',
-        input: ({ context }) => ({
-          ports: context.ports,
-          vault_id: context.vault_id!,
-          folder_path: context.folder_path!
-        }),
+        input: ({ context }) => {
+          if (!context.vault_id) throw new Error('vault_id required in fetching_stats state')
+          if (!context.folder_path) throw new Error('folder_path required in fetching_stats state')
+          return {
+            ports: context.ports,
+            vault_id: context.vault_id,
+            folder_path: context.folder_path
+          }
+        },
         onDone: {
           target: 'confirming',
           actions: assign({
@@ -158,13 +162,17 @@ export const delete_folder_flow_machine = setup({
     deleting: {
       invoke: {
         src: 'perform_delete',
-        input: ({ context }) => ({
-          ports: context.ports,
-          stores: context.stores,
-          vault_id: context.vault_id!,
-          folder_path: context.folder_path!,
-          contains_open_note: context.contains_open_note
-        }),
+        input: ({ context }) => {
+          if (!context.vault_id) throw new Error('vault_id required in deleting state')
+          if (!context.folder_path) throw new Error('folder_path required in deleting state')
+          return {
+            ports: context.ports,
+            stores: context.stores,
+            vault_id: context.vault_id,
+            folder_path: context.folder_path,
+            contains_open_note: context.contains_open_note
+          }
+        },
         onDone: {
           target: 'idle',
           actions: assign({

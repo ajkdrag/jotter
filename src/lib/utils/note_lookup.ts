@@ -18,13 +18,23 @@ export function resolve_existing_note_path(notes: NoteMeta[], target_path: strin
   const target_key = ascii_lower(target_path)
   const matches = notes.filter((n) => ascii_lower(n.path) === target_key)
   if (matches.length === 0) return null
-  if (matches.length === 1) return matches[0]!.path
+  if (matches.length === 1) {
+    const match = matches[0]
+    if (!match) return null
+    return match.path
+  }
 
   const target_parent_key = ascii_lower(parent_folder_path(target_path))
   const same_folder = matches.filter((n) => ascii_lower(parent_folder_path(n.path)) === target_parent_key)
-  if (same_folder.length === 1) return same_folder[0]!.path
+  if (same_folder.length === 1) {
+    const match = same_folder[0]
+    if (!match) return null
+    return match.path
+  }
 
   const deterministic = [...(same_folder.length ? same_folder : matches)].sort(sort_by_path)
-  return deterministic[0]!.path
+  const first = deterministic[0]
+  if (!first) return null
+  return first.path
 }
 

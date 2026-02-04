@@ -5,7 +5,7 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 import svelteConfig from './svelte.config.js';
 
-export default ts.config(
+export default [
 	{
 		ignores: [
 			'.svelte-kit/**',
@@ -18,12 +18,18 @@ export default ts.config(
 	},
 	js.configs.recommended,
 	...ts.configs.recommended,
+	...ts.configs.strictTypeChecked,
 	...svelte.configs.recommended,
 	{
 		languageOptions: {
 			globals: {
 				...globals.browser,
 				...globals.node
+			},
+			parserOptions: {
+				projectService: {
+					allowDefaultProject: ['*.js', '*.mjs']
+				}
 			}
 		},
 		rules: {
@@ -49,6 +55,11 @@ export default ts.config(
 					runes: true
 				}
 			}
+		},
+		rules: {
+			'@typescript-eslint/no-confusing-void-expression': 'off',
+			'@typescript-eslint/no-unnecessary-condition': 'off',
+			'@typescript-eslint/no-unsafe-call': 'off'
 		}
 	},
 	{
@@ -62,5 +73,9 @@ export default ts.config(
 				}
 			}
 		}
+	},
+	{
+		files: ['*.js', '*.mjs'],
+		...ts.configs.disableTypeChecked
 	}
-);
+];

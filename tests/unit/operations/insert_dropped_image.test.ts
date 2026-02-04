@@ -10,11 +10,13 @@ describe('insert_dropped_image', () => {
     const calls: { target_path: AssetPath }[] = []
     const ports: { assets: AssetsPort } = {
       assets: {
-        import_asset: async (_vault_id: VaultId, _source: AssetImportSource, target_path: AssetPath) => {
+        import_asset(_vault_id: VaultId, _source: AssetImportSource, target_path: AssetPath) {
           calls.push({ target_path })
-          return target_path
+          return Promise.resolve(target_path)
         },
-        resolve_asset_url: async () => ''
+        resolve_asset_url() {
+          return Promise.resolve('')
+        }
       }
     }
 
@@ -35,11 +37,13 @@ describe('insert_dropped_image', () => {
     const calls: { target_path: AssetPath }[] = []
     const ports: { assets: AssetsPort } = {
       assets: {
-        import_asset: async (_vault_id: VaultId, _source: AssetImportSource, target_path: AssetPath) => {
+        import_asset(_vault_id: VaultId, _source: AssetImportSource, target_path: AssetPath) {
           calls.push({ target_path })
-          return target_path
+          return Promise.resolve(target_path)
         },
-        resolve_asset_url: async () => ''
+        resolve_asset_url() {
+          return Promise.resolve('')
+        }
       }
     }
 

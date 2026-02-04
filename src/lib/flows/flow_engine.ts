@@ -30,11 +30,11 @@ export function create_flow_handle<TMachine extends AnyStateMachine>(
   }
 
   return {
-    send: (event) => actor.send(event),
+    send: (event) => { actor.send(event); },
     get_snapshot: () => wrap(actor.getSnapshot()),
     subscribe: (listener) => {
-      const sub = actor.subscribe((next) => listener(wrap(next)))
-      return () => sub.unsubscribe()
+      const sub = actor.subscribe((next) => { listener(wrap(next)); })
+      return () => { sub.unsubscribe(); }
     },
     stop
   }

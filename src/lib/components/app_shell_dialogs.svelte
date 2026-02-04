@@ -138,7 +138,7 @@
       if (!open) actions.close_change_vault_dialog()
     }}
     recent_vaults={vault_store_state.recent_vaults}
-    current_vault_id={vault_store_state.vault!.id}
+    current_vault_id={vault_store_state.vault?.id ?? null}
     is_loading={vault_selection_loading}
     error={change_vault_snapshot.context.error}
     on_choose_vault_dir={actions.choose_vault_dir}
@@ -224,11 +224,11 @@
       command_palette.send({ type: 'CLOSE' })
     }
   }}
-  on_query_change={(query) => {
-    command_palette.send({ type: 'SET_QUERY', query })
+  on_query_change={(q: string) => {
+    command_palette.send({ type: 'SET_QUERY', query: q })
   }}
-  on_selected_index_change={(index) => {
-    command_palette.send({ type: 'SET_SELECTED_INDEX', index })
+  on_selected_index_change={(i: number) => {
+    command_palette.send({ type: 'SET_SELECTED_INDEX', index: i })
   }}
   on_select_command={(cmd) => {
     command_palette.send({ type: 'CLOSE' })
@@ -267,15 +267,15 @@
       file_search.send({ type: 'CLOSE' })
     }
   }}
-  on_query_change={(query) => {
-    file_search.send({ type: 'SET_QUERY', query })
+  on_query_change={(q: string) => {
+    file_search.send({ type: 'SET_QUERY', query: q })
   }}
-  on_selected_index_change={(index) => {
-    file_search.send({ type: 'SET_SELECTED_INDEX', index })
+  on_selected_index_change={(i: number) => {
+    file_search.send({ type: 'SET_SELECTED_INDEX', index: i })
   }}
-  on_confirm={(note_id) => {
-    file_search.send({ type: 'ADD_RECENT', note_id })
+  on_confirm={(id: NoteId) => {
+    file_search.send({ type: 'ADD_RECENT', note_id: id })
     file_search.send({ type: 'CLOSE' })
-    on_open_note(note_id)
+    on_open_note(id)
   }}
 />

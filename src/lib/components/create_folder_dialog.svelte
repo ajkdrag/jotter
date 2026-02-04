@@ -30,7 +30,8 @@
 
   $effect(() => {
     if (open && input_el) {
-      tick().then(() => input_el?.focus())
+      const el = input_el
+      void tick().then(() => { el.focus(); })
     }
   })
 
@@ -58,7 +59,7 @@
         bind:ref={input_el}
         type="text"
         value={folder_name}
-        oninput={(e) => on_folder_name_change(e.currentTarget.value)}
+        oninput={(e: Event & { currentTarget: HTMLInputElement }) => { on_folder_name_change(e.currentTarget.value); }}
         placeholder="Folder name"
         disabled={is_creating}
       />

@@ -280,16 +280,22 @@ export function create_notes_web_adapter(): NotesPort {
 
       let from_parent = root
       for (let i = 0; i < from_parts.length - 1; i++) {
-        from_parent = await from_parent.getDirectoryHandle(from_parts[i]!, { create: false })
+        const part = from_parts[i]
+        if (!part) throw new Error(`Invalid from path part at index ${String(i)}`)
+        from_parent = await from_parent.getDirectoryHandle(part, { create: false })
       }
-      const from_name = from_parts[from_parts.length - 1]!
+      const from_name = from_parts[from_parts.length - 1]
+      if (!from_name) throw new Error('Invalid from path: missing name')
       const from_handle = await from_parent.getDirectoryHandle(from_name, { create: false })
 
       let to_parent = root
       for (let i = 0; i < to_parts.length - 1; i++) {
-        to_parent = await to_parent.getDirectoryHandle(to_parts[i]!, { create: true })
+        const part = to_parts[i]
+        if (!part) throw new Error(`Invalid to path part at index ${String(i)}`)
+        to_parent = await to_parent.getDirectoryHandle(part, { create: true })
       }
-      const to_name = to_parts[to_parts.length - 1]!
+      const to_name = to_parts[to_parts.length - 1]
+      if (!to_name) throw new Error('Invalid to path: missing name')
       const to_handle = await to_parent.getDirectoryHandle(to_name, { create: true })
 
       async function copy_dir_contents(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle) {
@@ -301,7 +307,7 @@ export function create_notes_web_adapter(): NotesPort {
             const writable = await target_file.createWritable()
             await writable.write(await file.text())
             await writable.close()
-          } else if (entry.kind === 'directory') {
+          } else {
             const sub_target = await target.getDirectoryHandle(entry.name, { create: true })
             await copy_dir_contents(entry as FileSystemDirectoryHandle, sub_target)
           }
@@ -318,9 +324,12 @@ export function create_notes_web_adapter(): NotesPort {
       const parts = folder_path.split('/').filter(Boolean)
       let parent = root
       for (let i = 0; i < parts.length - 1; i++) {
-        parent = await parent.getDirectoryHandle(parts[i]!, { create: false })
+        const part = parts[i]
+        if (!part) throw new Error(`Invalid folder path part at index ${String(i)}`)
+        parent = await parent.getDirectoryHandle(part, { create: false })
       }
-      const folder_name = parts[parts.length - 1]!
+      const folder_name = parts[parts.length - 1]
+      if (!folder_name) throw new Error('Invalid folder path: missing name')
 
       const deleted_notes: NotePath[] = []
       const deleted_folders: string[] = []

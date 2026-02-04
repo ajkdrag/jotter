@@ -17,10 +17,10 @@ setInterval(() => {
 }, 30000)
 
 function generate_vault_id(): VaultId {
-  return as_vault_id(`web_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`)
+  return as_vault_id(`web_${String(Date.now())}_${Math.random().toString(36).slice(2, 9)}`)
 }
 
-async function read_vault_metadata(handle: FileSystemDirectoryHandle): Promise<{ name: string; path: string }> {
+function read_vault_metadata(handle: FileSystemDirectoryHandle): { name: string; path: string } {
   const name = handle.name
   const path = name
   return { name, path }
@@ -64,11 +64,7 @@ export function create_vault_web_adapter(): VaultPort {
         handle = await show_picker()
       }
 
-      if (!handle) {
-        throw new Error('Failed to get directory handle')
-      }
-
-      const { name, path } = await read_vault_metadata(handle)
+      const { name, path } = read_vault_metadata(handle)
       const vault_id = generate_vault_id()
       const created_at = Date.now()
 
@@ -116,13 +112,14 @@ export function create_vault_web_adapter(): VaultPort {
       }))
     },
 
-    async remember_last_vault(vault_id: VaultId): Promise<void> {
+    remember_last_vault(vault_id: VaultId): Promise<void> {
       localStorage.setItem(LAST_VAULT_KEY, vault_id)
+      return Promise.resolve()
     },
 
-    async get_last_vault_id(): Promise<VaultId | null> {
+    get_last_vault_id(): Promise<VaultId | null> {
       const stored = localStorage.getItem(LAST_VAULT_KEY)
-      return stored ? as_vault_id(stored) : null
+      return Promise.resolve(stored ? as_vault_id(stored) : null)
     }
   }
 }

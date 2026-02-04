@@ -9,9 +9,6 @@ export function create_clipboard_web_adapter(input?: { clipboard?: ClipboardLike
 
   return {
     async write_text(text) {
-      if (!clipboard) {
-        throw new Error('Clipboard API not available')
-      }
       await clipboard.writeText(text)
     }
   }

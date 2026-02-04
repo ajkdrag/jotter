@@ -67,10 +67,10 @@ describe('settings_flow', () => {
     const settings_port = create_test_settings_adapter()
     const stores = create_mock_stores()
     let attempts = 0
-    settings_port.get_setting = async <T,>(_key: string) => {
+    settings_port.get_setting = <T,>(_key: string) => {
       attempts++
-      if (attempts === 1) throw new Error('Load failed')
-      return DEFAULT_EDITOR_SETTINGS as T
+      if (attempts === 1) return Promise.reject(new Error('Load failed'))
+      return Promise.resolve(DEFAULT_EDITOR_SETTINGS as T)
     }
 
     const actor = createActor(settings_flow_machine, {

@@ -79,9 +79,10 @@
   }
 
   $effect(() => {
-    if (open && input_ref) {
-      setTimeout(() => input_ref?.focus(), 0)
-    }
+    if (!open) return
+    const ref = input_ref
+    if (!ref) return
+    setTimeout(() => { ref.focus() }, 0)
   })
 </script>
 
@@ -94,7 +95,7 @@
         type="text"
         placeholder="Search notes..."
         value={query}
-        oninput={(e) => on_query_change(e.currentTarget.value)}
+        oninput={(e: Event & { currentTarget: HTMLInputElement }) => { on_query_change(e.currentTarget.value); }}
         class="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       {#if is_searching}
@@ -136,8 +137,8 @@
           aria-selected={index === selected_index}
           class="w-full px-3 py-2 text-left transition-colors focus:outline-none"
           class:bg-muted={index === selected_index}
-          onmouseenter={() => on_selected_index_change(index)}
-          onclick={() => on_confirm(item.id)}
+          onmouseenter={() => { on_selected_index_change(index); }}
+          onclick={() => { on_confirm(item.id); }}
         >
           <div class="flex items-center gap-2">
             <FileIcon class="size-4 text-muted-foreground shrink-0" />

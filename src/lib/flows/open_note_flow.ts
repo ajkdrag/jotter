@@ -132,13 +132,17 @@ export const open_note_flow_machine = setup({
       },
       invoke: {
         src: 'perform_open',
-        input: ({ context }) => ({
-          ports: context.ports,
-          stores: context.stores,
-          vault_id: context.last_vault_id!,
-          note_path: context.last_note_path!,
-          create_if_missing: context.create_if_missing
-        }),
+        input: ({ context }) => {
+          if (!context.last_vault_id) throw new Error('last_vault_id required in opening state')
+          if (!context.last_note_path) throw new Error('last_note_path required in opening state')
+          return {
+            ports: context.ports,
+            stores: context.stores,
+            vault_id: context.last_vault_id,
+            note_path: context.last_note_path,
+            create_if_missing: context.create_if_missing
+          }
+        },
         onDone: 'idle',
         onError: {
           target: 'error',

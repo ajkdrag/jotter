@@ -15,7 +15,7 @@ let { mode, on_change }: ThemeToggleProps = $props()
     type="button"
     class="ThemeToggle__option"
     class:ThemeToggle__option--active={mode === 'light'}
-    onclick={() => on_change('light')}
+    onclick={() => { on_change('light'); }}
     role="radio"
     aria-checked={mode === 'light'}
     aria-label="Light theme"
@@ -26,7 +26,7 @@ let { mode, on_change }: ThemeToggleProps = $props()
     type="button"
     class="ThemeToggle__option"
     class:ThemeToggle__option--active={mode === 'dark'}
-    onclick={() => on_change('dark')}
+    onclick={() => { on_change('dark'); }}
     role="radio"
     aria-checked={mode === 'dark'}
     aria-label="Dark theme"
@@ -37,7 +37,7 @@ let { mode, on_change }: ThemeToggleProps = $props()
     type="button"
     class="ThemeToggle__option"
     class:ThemeToggle__option--active={mode === 'system'}
-    onclick={() => on_change('system')}
+    onclick={() => { on_change('system'); }}
     role="radio"
     aria-checked={mode === 'system'}
     aria-label="System theme"

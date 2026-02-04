@@ -75,7 +75,7 @@ export const save_note_flow_machine = setup({
         }
       }) => {
         const { notes, new_path } = input
-        return note_path_exists(notes, new_path)
+        return Promise.resolve(note_path_exists(notes, new_path))
       }
     ),
     perform_save: fromPromise(
@@ -183,10 +183,11 @@ export const save_note_flow_machine = setup({
       invoke: {
         src: 'check_path_exists',
         input: ({ context }) => {
+          if (!context.new_path) throw new Error('new_path required in checking_existence state')
           const notes = context.stores.notes.get_snapshot().notes
           return {
             notes,
-            new_path: context.new_path!
+            new_path: context.new_path
           }
         },
         onDone: {

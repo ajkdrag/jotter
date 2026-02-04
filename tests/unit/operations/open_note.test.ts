@@ -19,7 +19,7 @@ describe('open_note', () => {
       markdown: as_markdown_text('hello')
     }
 
-    notes_port.read_note = async () => expected
+    notes_port.read_note = () => Promise.resolve(expected)
 
     const result = await open_note({ notes: notes_port }, { vault_id, note_id })
 

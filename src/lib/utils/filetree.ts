@@ -39,7 +39,8 @@ export function build_filetree(notes: NoteMeta[], folder_paths: string[] = []): 
           is_folder: !is_last
         })
       }
-      const next = current.children.get(part)!
+      const next = current.children.get(part)
+      if (!next) throw new Error(`Missing node for part: ${part}`)
       if (is_last) {
         next.note = note
         next.is_folder = false
@@ -63,7 +64,9 @@ export function build_filetree(notes: NoteMeta[], folder_paths: string[] = []): 
           is_folder: true
         })
       }
-      current = current.children.get(part)!
+      const next_node = current.children.get(part)
+      if (!next_node) throw new Error(`Missing node for part: ${part}`)
+      current = next_node
     }
   }
 

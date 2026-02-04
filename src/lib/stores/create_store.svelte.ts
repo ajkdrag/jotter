@@ -11,7 +11,7 @@ export function create_store<TState extends object, TActions>(
   const get = (): TState => state
   const set = (next: TState): void => {
     state = next
-    listeners.forEach(fn => fn(state))
+    listeners.forEach(fn => { fn(state); })
   }
 
   return {

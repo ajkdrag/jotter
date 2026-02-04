@@ -20,7 +20,7 @@ describe('open_last_vault', () => {
     const note = create_test_note('note-1', 'Note')
 
     vault_port._mock_vaults = [vault]
-    vault_port.get_last_vault_id = async () => vault.id
+    vault_port.get_last_vault_id = () => Promise.resolve(vault.id)
     notes_port._mock_notes.set(vault.id, [note])
 
     const result = await open_last_vault({ vault: vault_port, notes: notes_port })

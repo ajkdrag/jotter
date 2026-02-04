@@ -24,13 +24,14 @@ import {
   dirty_state_plugin_key
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
+import { markdown_paste_plugin } from './markdown_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
 function resize_icon(svg: string, size: number): string {
   return svg
-    .replace(/width="24"/, `width="${size}"`)
-    .replace(/height="24"/, `height="${size}"`)
+    .replace(/width="24"/, `width="${String(size)}"`)
+    .replace(/height="24"/, `height="${String(size)}"`)
 }
 
 const LINK_TOOLTIP_ICONS = {
@@ -149,6 +150,7 @@ export const milkdown_editor_port: EditorPort = {
       .use(create_wiki_link_converter_plugin(note_path))
       .use(listener)
       .use(history)
+      .use(markdown_paste_plugin)
       .use(clipboard)
       .use(dirty_state_plugin_config_key)
       .use(dirty_state_plugin)
@@ -203,7 +205,7 @@ export const milkdown_editor_port: EditorPort = {
     const handle = {
       destroy() {
         if (!editor) return
-        editor.destroy()
+        void editor.destroy()
         editor = null
       },
       set_markdown(markdown: string) {

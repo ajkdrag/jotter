@@ -108,13 +108,16 @@ export const create_folder_flow_machine = setup({
     creating: {
       invoke: {
         src: 'perform_create',
-        input: ({ context }) => ({
-          ports: context.ports,
-          stores: context.stores,
-          vault_id: context.vault_id!,
-          parent_path: context.parent_path,
-          folder_name: context.folder_name
-        }),
+        input: ({ context }) => {
+          if (!context.vault_id) throw new Error('vault_id required in creating state')
+          return {
+            ports: context.ports,
+            stores: context.stores,
+            vault_id: context.vault_id,
+            parent_path: context.parent_path,
+            folder_name: context.folder_name
+          }
+        },
         onDone: 'idle',
         onError: {
           target: 'error',

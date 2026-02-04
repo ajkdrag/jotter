@@ -9,8 +9,8 @@
     File,
     Trash2,
     Pencil,
-    Loader2,
-    AlertCircle,
+    LoaderCircle,
+    CircleAlert,
     RefreshCw
   } from "@lucide/svelte";
 
@@ -100,9 +100,9 @@
         disabled={node.is_loading}
       >
         {#if node.is_loading}
-          <Loader2 class="TreeRow__icon TreeRow__icon--spin" />
+          <LoaderCircle class="TreeRow__icon TreeRow__icon--spin" />
         {:else if node.has_error}
-          <AlertCircle class="TreeRow__icon TreeRow__icon--error" />
+          <CircleAlert class="TreeRow__icon TreeRow__icon--error" />
         {:else if node.is_expanded}
           <ChevronDown class="TreeRow__icon" />
         {:else}
@@ -136,11 +136,19 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
-        <ContextMenu.Item onclick={() => on_request_rename_folder?.(node.path)}>
+        <ContextMenu.Item onclick={() => {
+          if (on_request_rename_folder) {
+            on_request_rename_folder(node.path)
+          }
+        }}>
           <Pencil class="mr-2 h-4 w-4" />
           <span>Rename</span>
         </ContextMenu.Item>
-        <ContextMenu.Item onclick={() => on_request_delete_folder?.(node.path)}>
+        <ContextMenu.Item onclick={() => {
+          if (on_request_delete_folder) {
+            on_request_delete_folder(node.path)
+          }
+        }}>
           <Trash2 class="mr-2 h-4 w-4" />
           <span>Delete</span>
         </ContextMenu.Item>
@@ -154,11 +162,19 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
-        <ContextMenu.Item onclick={() => on_request_rename?.(node.note!)}>
+        <ContextMenu.Item onclick={() => {
+          if (node.note && on_request_rename) {
+            on_request_rename(node.note)
+          }
+        }}>
           <Pencil class="mr-2 h-4 w-4" />
           <span>Rename</span>
         </ContextMenu.Item>
-        <ContextMenu.Item onclick={() => on_request_delete?.(node.note!)}>
+        <ContextMenu.Item onclick={() => {
+          if (node.note && on_request_delete) {
+            on_request_delete(node.note)
+          }
+        }}>
           <Trash2 class="mr-2 h-4 w-4" />
           <span>Delete</span>
         </ContextMenu.Item>

@@ -27,7 +27,7 @@
             on_wiki_link_click
         );
 
-        mount_promise.then(() => {
+        void mount_promise.then(() => {
             editor_manager.focus();
         });
 

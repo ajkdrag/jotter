@@ -12,7 +12,7 @@ const FALLBACK_TEST_NOTES = new Map<NotePath, { markdown: MarkdownText; mtime_ms
 ])
 
 function resolve_test_url(path: string): string | null {
-  if (typeof window !== 'undefined' && window.location?.origin) {
+  if (typeof window !== 'undefined' && window.location.origin) {
     return new URL(path, window.location.origin).toString()
   }
 
@@ -140,30 +140,32 @@ export function create_test_notes_adapter(): NotesPort {
       return { meta, markdown: as_markdown_text(note_data.markdown) }
     },
 
-    async write_note(_vault_id: VaultId, note_id: NoteId, markdown: MarkdownText): Promise<void> {
+    write_note(_vault_id: VaultId, note_id: NoteId, markdown: MarkdownText): Promise<void> {
       const note_path = as_note_path(note_id)
       user_notes.set(note_path, { markdown, mtime_ms: Date.now() })
+      return Promise.resolve()
     },
 
-    async create_note(_vault_id: VaultId, note_path: NotePath, initial_markdown: MarkdownText): Promise<NoteMeta> {
+    create_note(_vault_id: VaultId, note_path: NotePath, initial_markdown: MarkdownText): Promise<NoteMeta> {
       const full_path = note_path.endsWith('.md') ? as_note_path(note_path) : as_note_path(`${note_path}.md`)
       user_notes.set(full_path, { markdown: initial_markdown, mtime_ms: Date.now() })
       const parts = full_path.split('/').filter(Boolean)
       const last_part = parts[parts.length - 1] || ''
       const title = last_part.replace(/\.md$/, '')
 
-      return {
+      return Promise.resolve({
         id: full_path,
         path: full_path,
         title,
         mtime_ms: Date.now(),
         size_bytes: new Blob([initial_markdown]).size
-      }
+      })
     },
 
-    async create_folder(_vault_id: VaultId, parent_path: string, folder_name: string): Promise<void> {
+    create_folder(_vault_id: VaultId, parent_path: string, folder_name: string): Promise<void> {
       const full_path = parent_path ? `${parent_path}/${folder_name}` : folder_name
       created_folders.add(full_path)
+      return Promise.resolve()
     },
 
     async rename_note(_vault_id: VaultId, _from: NotePath, _to: NotePath): Promise<void> {
@@ -223,11 +225,12 @@ export function create_test_notes_adapter(): NotesPort {
       }
     },
 
-    async rename_folder(_vault_id: VaultId, from_path: string, to_path: string): Promise<void> {
+    rename_folder(_vault_id: VaultId, from_path: string, to_path: string): Promise<void> {
       if (created_folders.has(from_path)) {
         created_folders.delete(from_path)
         created_folders.add(to_path)
       }
+      return Promise.resolve()
     },
 
     async delete_folder(_vault_id: VaultId, folder_path: string): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }> {

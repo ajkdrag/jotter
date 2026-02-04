@@ -83,9 +83,7 @@ describe('vault_bootstrap_flow', () => {
     const ports = create_mock_ports()
     const stores = create_mock_stores()
 
-    ports.vault.list_vaults = async () => {
-      throw new Error('Failed to list vaults')
-    }
+    ports.vault.list_vaults = () => Promise.reject(new Error('Failed to list vaults'))
 
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
@@ -116,9 +114,7 @@ describe('vault_bootstrap_flow', () => {
     }
 
     ports.vault._mock_vaults = [vault]
-    ports.vault.open_vault = async () => {
-      throw new Error('Failed to open vault')
-    }
+    ports.vault.open_vault = () => Promise.reject(new Error('Failed to open vault'))
 
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
@@ -141,9 +137,7 @@ describe('vault_bootstrap_flow', () => {
     const ports = create_mock_ports()
     const stores = create_mock_stores()
 
-    ports.vault.list_vaults = async () => {
-      throw new Error('Failed to list vaults')
-    }
+    ports.vault.list_vaults = () => Promise.reject(new Error('Failed to list vaults'))
 
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
@@ -159,7 +153,7 @@ describe('vault_bootstrap_flow', () => {
     })
     await waitFor(actor, (snapshot) => snapshot.value === 'error')
 
-    ports.vault.list_vaults = async () => []
+    ports.vault.list_vaults = () => Promise.resolve([])
     actor.send({ type: 'RETRY' })
     await waitFor(actor, (snapshot) => snapshot.value === 'idle')
   })
@@ -168,9 +162,7 @@ describe('vault_bootstrap_flow', () => {
     const ports = create_mock_ports()
     const stores = create_mock_stores()
 
-    ports.vault.list_vaults = async () => {
-      throw new Error('Failed to list vaults')
-    }
+    ports.vault.list_vaults = () => Promise.reject(new Error('Failed to list vaults'))
 
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {

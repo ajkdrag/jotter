@@ -88,9 +88,10 @@
   }
 
   $effect(() => {
-    if (open && input_ref) {
-      setTimeout(() => input_ref?.focus(), 0)
-    }
+    if (!open) return
+    const ref = input_ref
+    if (!ref) return
+    setTimeout(() => { ref.focus() }, 0)
   })
 
   function commands_start_index(): number {
@@ -111,7 +112,7 @@
         type="text"
         placeholder="Search commands and settings..."
         value={query}
-        oninput={(e) => on_query_change(e.currentTarget.value)}
+        oninput={(e: Event & { currentTarget: HTMLInputElement }) => { on_query_change(e.currentTarget.value); }}
         class="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
       />
     </div>
@@ -137,8 +138,8 @@
           aria-selected={global_index === selected_index}
           class="CommandPalette__item"
           class:CommandPalette__item--selected={global_index === selected_index}
-          onmouseenter={() => on_selected_index_change(global_index)}
-          onclick={() => on_select_command(command.id)}
+          onmouseenter={() => { on_selected_index_change(global_index); }}
+          onclick={() => { on_select_command(command.id); }}
         >
           <div class="CommandPalette__item-title">{command.label}</div>
           <div class="CommandPalette__item-desc">{command.description}</div>
@@ -160,8 +161,8 @@
           aria-selected={global_index === selected_index}
           class="CommandPalette__item"
           class:CommandPalette__item--selected={global_index === selected_index}
-          onmouseenter={() => on_selected_index_change(global_index)}
-          onclick={() => on_select_setting(setting.key)}
+          onmouseenter={() => { on_selected_index_change(global_index); }}
+          onclick={() => { on_select_setting(setting.key); }}
         >
           <div class="CommandPalette__item-row">
             <span class="CommandPalette__item-title">{setting.label}</span>

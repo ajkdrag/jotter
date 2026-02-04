@@ -60,7 +60,7 @@ export function create_editor_store(): EditorStore {
         set({
           open_note: {
             ...state.open_note,
-            meta: { ...state.open_note.meta, id: new_path as NoteId, path: new_path, title }
+            meta: { ...state.open_note.meta, id: new_path, path: new_path, title }
           }
         })
       },

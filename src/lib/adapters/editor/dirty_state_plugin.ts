@@ -22,6 +22,14 @@ type PluginState = {
   is_dirty: boolean
 }
 
+type DirtyStateMeta = { action: 'mark_clean' }
+
+function is_mark_clean_action(value: unknown): value is DirtyStateMeta {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
+  return obj.action === 'mark_clean'
+}
+
 export const dirty_state_plugin = $prose((ctx) => {
   const config = ctx.get(dirty_state_plugin_config_key.key)
 
@@ -42,7 +50,7 @@ export const dirty_state_plugin = $prose((ctx) => {
           }
         }
 
-        if (tr.getMeta(dirty_state_plugin_key)?.action === 'mark_clean') {
+        if (is_mark_clean_action(tr.getMeta(dirty_state_plugin_key))) {
           if (plugin_state.is_dirty) {
             config.on_dirty_state_change(false)
           }

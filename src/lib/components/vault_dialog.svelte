@@ -39,7 +39,7 @@
       error={error}
       on_choose_vault_dir={on_choose_vault_dir}
       on_select_vault={on_select_vault}
-      on_close={() => on_open_change(false)}
+      on_close={() => { on_open_change(false); }}
       hide_choose_vault_button={hide_choose_vault_button}
     />
   </Dialog.Content>

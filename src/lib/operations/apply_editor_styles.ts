@@ -7,8 +7,8 @@ export function apply_editor_styles(settings: EditorSettings): void {
 
   const root = document.documentElement;
 
-  root.style.setProperty("--editor-font-size", `${settings.font_size}rem`);
-  root.style.setProperty("--editor-line-height", `${settings.line_height}`);
+  root.style.setProperty("--editor-font-size", `${String(settings.font_size)}rem`);
+  root.style.setProperty("--editor-line-height", String(settings.line_height));
 
   const heading_color_map = {
     inherit: "--foreground",

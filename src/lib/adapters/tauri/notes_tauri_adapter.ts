@@ -20,7 +20,7 @@ export function create_notes_tauri_adapter(): NotesPort {
       return await tauri_invoke<NoteDoc>('read_note', { vaultId: vault_id, noteId: note_id })
     },
     async write_note(vault_id: VaultId, note_id: NoteId, markdown: MarkdownText) {
-      await tauri_invoke<void>('write_note', { args: { vault_id, note_id, markdown } })
+      await tauri_invoke<undefined>('write_note', { args: { vault_id, note_id, markdown } })
     },
     async create_note(vault_id: VaultId, note_path: NotePath, initial_markdown: MarkdownText) {
       return await tauri_invoke<NoteMeta>('create_note', {
@@ -29,7 +29,7 @@ export function create_notes_tauri_adapter(): NotesPort {
     },
     async create_folder(vault_id: VaultId, parent_path: string, folder_name: string) {
       try {
-        await tauri_invoke<void>('create_folder', {
+        await tauri_invoke<undefined>('create_folder', {
           args: { vault_id, parent_path, folder_name }
         })
       } catch {
@@ -37,10 +37,10 @@ export function create_notes_tauri_adapter(): NotesPort {
       }
     },
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath) {
-      await tauri_invoke<void>('rename_note', { args: { vault_id, from, to } })
+      await tauri_invoke<undefined>('rename_note', { args: { vault_id, from, to } })
     },
     async delete_note(vault_id: VaultId, note_id: NoteId) {
-      await tauri_invoke<void>('delete_note', { args: { vault_id, note_id } })
+      await tauri_invoke<undefined>('delete_note', { args: { vault_id, note_id } })
     },
     async list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
       return await tauri_invoke<FolderContents>('list_folder_contents', {
@@ -49,7 +49,7 @@ export function create_notes_tauri_adapter(): NotesPort {
       })
     },
     async rename_folder(vault_id: VaultId, from_path: string, to_path: string) {
-      await tauri_invoke<void>('rename_folder', { args: { vault_id, from_path, to_path } })
+      await tauri_invoke<undefined>('rename_folder', { args: { vault_id, from_path, to_path } })
     },
     async delete_folder(vault_id: VaultId, folder_path: string) {
       return await tauri_invoke<{ deleted_notes: NotePath[]; deleted_folders: string[] }>('delete_folder', {

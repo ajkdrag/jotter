@@ -111,13 +111,17 @@ export const delete_note_flow_machine = setup({
     deleting: {
       invoke: {
         src: 'perform_delete',
-        input: ({ context }) => ({
-          ports: context.ports,
-          stores: context.stores,
-          vault_id: context.vault_id!,
-          note: context.note_to_delete!,
-          is_note_currently_open: context.is_note_currently_open
-        }),
+        input: ({ context }) => {
+          if (!context.vault_id) throw new Error('vault_id required in deleting state')
+          if (!context.note_to_delete) throw new Error('note_to_delete required in deleting state')
+          return {
+            ports: context.ports,
+            stores: context.stores,
+            vault_id: context.vault_id,
+            note: context.note_to_delete,
+            is_note_currently_open: context.is_note_currently_open
+          }
+        },
         onDone: {
           target: 'idle',
           actions: assign({

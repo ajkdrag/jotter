@@ -57,9 +57,10 @@
       const parent = parts.slice(0, -1).join("/");
       const start_pos = parent ? parent.length + 1 : 0;
 
+      const ref = input_ref
       setTimeout(() => {
-        input_ref?.focus();
-        input_ref?.setSelectionRange(start_pos, start_pos + folder_name.length);
+        ref.focus();
+        ref.setSelectionRange(start_pos, start_pos + folder_name.length);
       }, 0);
     }
   }

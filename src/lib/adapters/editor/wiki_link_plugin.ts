@@ -7,6 +7,14 @@ import { encode_wiki_link_href, format_wiki_target_for_markdown, resolve_wiki_ta
 const ZERO_WIDTH_SPACE = '\u200B'
 const WIKI_LINK_REGEX = /\[\[([^\]\n]+?)(?:\|([^\]\n]+?))?\]\]/
 
+type WikiLinkMeta = { action: 'full_scan' }
+
+function is_full_scan_action(value: unknown): value is WikiLinkMeta {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
+  return obj.action === 'full_scan'
+}
+
 export const wiki_link_plugin_key = new PluginKey('wiki-link-plugin')
 
 type Segment = {
@@ -88,7 +96,7 @@ function build_replacement(input: {
     resolved_note_path
   })
 
-  const display = (input.raw_label ?? '').trim() !== '' ? input.raw_label!.trim() : target_for_markdown
+  const display = (input.raw_label ?? '').trim() !== '' ? (input.raw_label ?? '').trim() : target_for_markdown
   return { resolved_note_path, display, href }
 }
 
@@ -99,7 +107,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
   return new Plugin({
     key: wiki_link_plugin_key,
     appendTransaction(transactions, _old_state, new_state) {
-      const force_full_scan = transactions.some((tr) => tr.getMeta(wiki_link_plugin_key)?.action === 'full_scan')
+      const force_full_scan = transactions.some((tr) => is_full_scan_action(tr.getMeta(wiki_link_plugin_key)))
       const should_scan = force_full_scan || transactions.some((tr) => tr.docChanged)
       if (!should_scan) return null
 
@@ -107,7 +115,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
 
       const scan_textblock = (text_block: ProseNode, block_start: number, selection_anchor: number | null) => {
         if (!text_block.isTextblock) return
-        if (text_block.type?.name === 'code_block') return
+        if (text_block.type.name === 'code_block') return
 
         const { segments, combined, has_non_text_inline } = build_segments({
           text_block,
@@ -188,10 +196,8 @@ export function create_wiki_link_converter_prose_plugin(input: {
           new_state.schema.text(ZERO_WIDTH_SPACE)
         ])
 
-        if (selection_anchor !== null) {
-          tr.setSelection(TextSelection.create(tr.doc, start + replacement.display.length + 1))
-          tr.setStoredMarks([])
-        }
+        tr.setSelection(TextSelection.create(tr.doc, start + replacement.display.length + 1))
+        tr.setStoredMarks([])
       }
 
       if (force_full_scan) {
@@ -206,7 +212,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
       const from = new_state.selection.$from
       const text_block = from.parent
       if (!text_block.isTextblock) return null
-      if (from.parent.type?.name === 'code_block') return null
+      if (from.parent.type.name === 'code_block') return null
 
       scan_textblock(text_block, from.start(), from.parentOffset)
       return tr.docChanged ? tr : null
@@ -319,7 +325,7 @@ export function create_wiki_link_click_prose_plugin(input: {
         const $pos = view.state.doc.resolve(pos)
         const marks = $pos.marks()
         const link_mark = marks.find((m) => m.type === input.link_type)
-        const raw_href = href_from_dom_event_target(event) ?? link_mark?.attrs?.href
+        const raw_href = href_from_dom_event_target(event) ?? (link_mark?.attrs.href as unknown)
         if (typeof raw_href !== 'string') return false
 
         return handle_internal_link_click({ href: raw_href, event, stop_propagation: false })

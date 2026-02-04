@@ -29,7 +29,7 @@
     hide_choose_vault_button = false
   }: Props = $props()
 
-  function handle_choose_vault(event?: Event) {
+  function handle_choose_vault(event?: MouseEvent) {
     if (event) {
       event.stopPropagation()
       event.preventDefault()
@@ -85,6 +85,7 @@
         <Card.Description>Choose a vault directory or select from recent vaults</Card.Description>
       </Card.Header>
       <Card.Content class="space-y-6">
+        <!-- eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -->
         {@render content()}
       </Card.Content>
     </Card.Root>
@@ -94,7 +95,7 @@
 {#snippet content()}
   {#if !hide_choose_vault_button}
     <Button
-      onclick={(e) => handle_choose_vault(e)}
+      onclick={(e: MouseEvent) => { handle_choose_vault(e); }}
       disabled={is_loading}
       class="VaultPanel__action-btn"
     >
@@ -118,7 +119,7 @@
         {#each recent_vaults as vault (vault.id)}
           <button
             type="button"
-            onclick={(e) => handle_select_vault(vault, e)}
+            onclick={(e) => { handle_select_vault(vault, e); }}
             disabled={is_loading || current_vault_id === vault.id}
             class="VaultPanel__vault-item"
             class:VaultPanel__vault-item--active={current_vault_id === vault.id}

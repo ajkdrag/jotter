@@ -17,7 +17,7 @@ export function create_vault_tauri_adapter(): VaultPort {
       return await tauri_invoke<Vault[]>('list_vaults')
     },
     async remember_last_vault(vault_id: VaultId) {
-      await tauri_invoke<void>('remember_last_vault', { args: { vault_id: vault_id } })
+      await tauri_invoke<undefined>('remember_last_vault', { args: { vault_id: vault_id } })
     },
     async get_last_vault_id() {
       return await tauri_invoke<VaultId | null>('get_last_vault_id')

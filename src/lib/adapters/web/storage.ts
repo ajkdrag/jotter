@@ -15,8 +15,8 @@ async function open_db(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => { reject(request.error ? new Error(String(request.error)) : new Error('IndexedDB open failed')); }
+    request.onsuccess = () => { resolve(request.result); }
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result
@@ -48,10 +48,10 @@ export async function store_vault(
 
   return new Promise<void>((resolve, reject) => {
     const request = store.put(record)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve()
-    tx.onerror = () => reject(tx.error)
-    tx.oncomplete = () => resolve()
+    request.onerror = () => { reject(request.error ? new Error(String(request.error)) : new Error('IndexedDB put failed')); }
+    request.onsuccess = () => { resolve(); }
+    tx.onerror = () => { reject(tx.error ? new Error(String(tx.error)) : new Error('IndexedDB transaction failed')); }
+    tx.oncomplete = () => { resolve(); }
   })
 }
 
@@ -62,7 +62,7 @@ export async function get_vault(id: string): Promise<VaultRecord | null> {
 
   return new Promise((resolve, reject) => {
     const request = store.get(id)
-    request.onerror = () => reject(request.error)
+    request.onerror = () => { reject(request.error ? new Error(String(request.error)) : new Error('IndexedDB get failed')); }
     request.onsuccess = () => {
       const result = request.result as VaultRecord | undefined
       if (result) {
@@ -81,9 +81,9 @@ export async function list_vaults(): Promise<VaultRecord[]> {
 
   return new Promise((resolve, reject) => {
     const request = store.getAll()
-    request.onerror = () => reject(request.error)
+    request.onerror = () => { reject(request.error ? new Error(String(request.error)) : new Error('IndexedDB getAll failed')); }
     request.onsuccess = () => {
-      const results = (request.result as VaultRecord[]) ?? []
+      const results = (request.result as VaultRecord[])
       resolve(results.sort((a, b) => b.last_accessed - a.last_accessed))
     }
   })
@@ -96,9 +96,9 @@ export async function remove_vault(id: string): Promise<void> {
 
   return new Promise<void>((resolve, reject) => {
     const request = store.delete(id)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve()
-    tx.onerror = () => reject(tx.error)
-    tx.oncomplete = () => resolve()
+    request.onerror = () => { reject(request.error ? new Error(String(request.error)) : new Error('IndexedDB delete failed')); }
+    request.onsuccess = () => { resolve(); }
+    tx.onerror = () => { reject(tx.error ? new Error(String(tx.error)) : new Error('IndexedDB transaction failed')); }
+    tx.oncomplete = () => { resolve(); }
   })
 }

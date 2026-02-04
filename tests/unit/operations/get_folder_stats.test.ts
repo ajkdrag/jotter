@@ -8,7 +8,7 @@ describe('get_folder_stats', () => {
     const notes_port = create_mock_notes_port()
     const vault_id = as_vault_id('vault-1')
 
-    notes_port.get_folder_stats = async () => ({ note_count: 2, folder_count: 3 })
+    notes_port.get_folder_stats = () => Promise.resolve({ note_count: 2, folder_count: 3 })
 
     const result = await get_folder_stats({ notes: notes_port }, { vault_id, folder_path: 'docs' })
 

@@ -63,7 +63,7 @@ const load_folder_actor = fromCallback<FlowEvents, LoadFolderInput>(({ sendBack,
     .then((contents) => {
       send_if_active({ type: 'FOLDER_LOAD_DONE', path, contents })
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       send_if_active({ type: 'FOLDER_LOAD_ERROR', path, error: String(error) })
     })
 
@@ -135,7 +135,7 @@ export const filetree_flow_machine = setup({
       if (!should_load_folder(current_state) && event.type !== 'RETRY_LOAD') return {}
 
       const existing = context.active_loads.get(path)
-      if (existing) existing.stop?.()
+      if (existing) existing.stop()
 
       const new_load_states = new Map(context.load_states)
       new_load_states.set(path, 'loading')
@@ -143,7 +143,7 @@ export const filetree_flow_machine = setup({
       const new_active_loads = new Map(context.active_loads)
       const actor = spawn('load_folder', {
         input: { ports: context.ports, vault_id, path },
-        id: `load-${path}-${Date.now()}`
+        id: `load-${path}-${String(Date.now())}`
       })
       new_active_loads.set(path, actor)
 
@@ -188,10 +188,10 @@ export const filetree_flow_machine = setup({
       const new_load_states = new Map<string, FolderLoadState>()
       new_load_states.set('', 'loading')
 
-      const new_active_loads = new Map()
+      const new_active_loads = new Map<string, AnyActorRef>()
       const actor = spawn('load_folder', {
         input: { ports: context.ports, vault_id, path: '' },
-        id: `load-root-${Date.now()}`
+        id: `load-root-${String(Date.now())}`
       })
       new_active_loads.set('', actor)
 

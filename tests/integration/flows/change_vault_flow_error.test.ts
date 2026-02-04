@@ -9,9 +9,7 @@ describe('change_vault_flow errors', () => {
   it('transitions to error when open fails and can cancel', async () => {
     const ports = create_mock_ports()
     const stores = create_mock_stores()
-    ports.vault.open_vault_by_id = async () => {
-      throw new Error('Open failed')
-    }
+    ports.vault.open_vault_by_id = () => Promise.reject(new Error('Open failed'))
 
     const actor = createActor(change_vault_flow_machine, {
       input: { ports, stores }

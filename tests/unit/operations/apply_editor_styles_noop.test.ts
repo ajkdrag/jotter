@@ -5,8 +5,7 @@ import type { EditorSettings } from '$lib/types/editor_settings'
 describe('apply_editor_styles (no document)', () => {
   it('does not throw when document is undefined', () => {
     const original_document = globalThis.document
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (globalThis as any).document
+    ;(globalThis as { document: Document | undefined }).document = undefined
 
     const settings: EditorSettings = {
       font_size: 1,
@@ -16,7 +15,7 @@ describe('apply_editor_styles (no document)', () => {
       link_syntax: 'wikilink'
     }
 
-    expect(() => apply_editor_styles(settings)).not.toThrow()
+    expect(() => { apply_editor_styles(settings); }).not.toThrow()
 
     globalThis.document = original_document
   })

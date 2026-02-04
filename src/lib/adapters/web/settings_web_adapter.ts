@@ -4,21 +4,22 @@ const SETTINGS_PREFIX = 'imdown_settings_'
 
 export function create_settings_web_adapter(): SettingsPort {
   return {
-    async get_setting<T>(key: string): Promise<T | null> {
+    get_setting<T>(key: string): Promise<T | null> {
       try {
         const value = localStorage.getItem(`${SETTINGS_PREFIX}${key}`)
-        return value ? JSON.parse(value) : null
+        return Promise.resolve(value ? JSON.parse(value) : null)
       } catch {
-        return null
+        return Promise.resolve(null)
       }
     },
 
-    async set_setting<T>(key: string, value: T): Promise<void> {
+    set_setting(key: string, value: unknown): Promise<void> {
       try {
         localStorage.setItem(`${SETTINGS_PREFIX}${key}`, JSON.stringify(value))
       } catch {
         // Ignore errors
       }
+      return Promise.resolve()
     }
   }
 }

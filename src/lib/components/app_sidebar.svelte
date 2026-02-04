@@ -63,7 +63,7 @@
                                 <button
                                     type="button"
                                     class="font-semibold truncate min-w-0 text-left hover:text-foreground/90 transition-colors"
-                                    onclick={() => ops.on_select_folder_path('')}
+                                    onclick={() => { ops.on_select_folder_path(''); }}
                                     aria-label="Select vault root"
                                 >
                                     {model.vault.name}
@@ -87,7 +87,7 @@
                                                     variant="ghost"
                                                     size="icon"
                                                     class="h-7 w-7"
-                                                    onclick={() => ops.on_request_create_folder(model.selected_folder_path)}
+                                                    onclick={() => { ops.on_request_create_folder(model.selected_folder_path); }}
                                                 >
                                                     <FolderPlus class="h-4 w-4" />
                                                 </Button>
@@ -98,7 +98,7 @@
                                     <Tooltip.Root>
                                         <Tooltip.Trigger>
                                             {#snippet child({ props })}
-                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={() => console.log('Refresh triggered')}>
+                                                <Button {...props} variant="ghost" size="icon" class="h-7 w-7" onclick={() => { console.log('Refresh triggered'); }}>
                                                     <RefreshCw class="h-4 w-4" />
                                                 </Button>
                                             {/snippet}

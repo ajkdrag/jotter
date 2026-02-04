@@ -9,7 +9,7 @@ describe('delete_folder', () => {
     const vault_id = as_vault_id('vault-1')
     const expected = { deleted_notes: [as_note_path('a.md')], deleted_folders: ['a'] }
 
-    notes_port.delete_folder = async () => expected
+    notes_port.delete_folder = () => Promise.resolve(expected)
 
     const result = await delete_folder({ notes: notes_port }, { vault_id, folder_path: 'a' })
 

@@ -8,7 +8,7 @@
   const ports = create_test_ports()
   const editor_manager = create_editor_manager(ports.editor)
   const app = create_app_flows(ports, {
-    on_save_complete: () => editor_manager.mark_clean()
+    on_save_complete: () => { editor_manager.mark_clean(); }
   })
   const actions = create_app_shell_actions({
     config: { reset_state_on_mount: true },

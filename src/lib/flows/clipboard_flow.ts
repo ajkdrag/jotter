@@ -37,7 +37,7 @@ export const clipboard_flow_machine = setup({
         COPY_TEXT: {
           actions: ({ context, event }) => {
             void context.ports.clipboard.write_text(event.text)
-              .catch((error) => {
+              .catch((error: unknown) => {
                 console.error('Failed to copy text to clipboard:', error)
               })
           }

@@ -46,7 +46,8 @@
 
   $effect(() => {
     if (open && !show_overwrite_confirm && !error && input_el) {
-      tick().then(() => input_el?.focus())
+      const el = input_el
+      void tick().then(() => { el.focus(); })
     }
   })
 
@@ -63,7 +64,7 @@
 
   function get_description() {
     if (error) return `Failed to save note: ${error}`
-    if (show_overwrite_confirm) return `A note already exists at "${new_path}". Do you want to overwrite it?`
+    if (show_overwrite_confirm) return `A note already exists at "${new_path ?? ''}". Do you want to overwrite it?`
     return 'Enter a filename for your note.'
   }
 
@@ -92,8 +93,8 @@
           bind:ref={input_el}
           type="text"
           value={display_filename()}
-          onchange={(e) => update_filename(e.currentTarget.value)}
-          oninput={(e) => update_filename(e.currentTarget.value)}
+          onchange={(e: Event & { currentTarget: HTMLInputElement }) => { update_filename(e.currentTarget.value); }}
+          oninput={(e: Event & { currentTarget: HTMLInputElement }) => { update_filename(e.currentTarget.value); }}
           placeholder="e.g., my-note.md"
           disabled={is_busy}
         />

@@ -52,7 +52,7 @@
       return `Failed to rename ${note?.title ?? 'this note'}: ${error}`
     }
     if (show_overwrite_confirm) {
-      return `A note already exists at ${new_path}. Do you want to overwrite it?`
+      return `A note already exists at ${new_path ?? ''}. Do you want to overwrite it?`
     }
     return `Enter the new path for ${note?.title ?? 'this note'}.`
   }
@@ -76,8 +76,8 @@
         <Input
           type="text"
           value={input_value}
-          onchange={(e) => update_input(e.currentTarget.value)}
-          oninput={(e) => update_input(e.currentTarget.value)}
+          onchange={(e: Event & { currentTarget: HTMLInputElement }) => { update_input(e.currentTarget.value); }}
+          oninput={(e: Event & { currentTarget: HTMLInputElement }) => { update_input(e.currentTarget.value); }}
           placeholder="e.g., folder/new-title.md"
           disabled={is_renaming || is_checking_conflict}
         />

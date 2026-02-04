@@ -2,7 +2,7 @@ import { readdirSync } from 'fs'
 import { resolve } from 'path'
 import { error } from '@sveltejs/kit'
 
-export async function GET() {
+export function GET() {
   try {
     const test_files_dir = resolve(process.cwd(), 'test', 'files')
     const files = readdirSync(test_files_dir)
@@ -14,7 +14,7 @@ export async function GET() {
         'Content-Type': 'application/json'
       }
     })
-  } catch {
-    throw error(500, 'Failed to list test files')
+  } catch (e) {
+    error(500, e instanceof Error ? e.message : 'Failed to list test files')
   }
 }

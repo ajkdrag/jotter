@@ -116,7 +116,8 @@ describe('filetree', () => {
     ]
 
     const tree = sort_tree(build_filetree(notes))
-    const root = tree.children.get('root')!
+    const root = tree.children.get('root')
+    if (!root) throw new Error('root should exist')
     const entries = Array.from(root.children.entries())
 
     expect(entries[0]?.[0]).toBe('subfolder')

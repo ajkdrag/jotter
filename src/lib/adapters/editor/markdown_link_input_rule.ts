@@ -76,7 +76,7 @@ export const markdown_link_input_rule_plugin = $prose((ctx) => {
       const from = newState.selection.$from
       const text_block = from.parent
       if (!text_block.isTextblock) return null
-      if (text_block.type?.name === 'code_block') return null
+      if (text_block.type.name === 'code_block') return null
 
       const { segments, combined, has_non_text_inline } = build_segments({
         text_block,

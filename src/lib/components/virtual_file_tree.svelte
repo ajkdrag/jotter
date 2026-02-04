@@ -52,11 +52,15 @@
 
   let virtual_items = $derived.by(() => {
     if (!virtualizer) return []
-    return $virtualizer!.getVirtualItems()
+    const v = $virtualizer
+    if (!v) return []
+    return v.getVirtualItems()
   });
   let total_size = $derived.by(() => {
     if (!virtualizer) return nodes.length * ROW_HEIGHT
-    return $virtualizer!.getTotalSize()
+    const v = $virtualizer
+    if (!v) return nodes.length * ROW_HEIGHT
+    return v.getTotalSize()
   });
 </script>
 

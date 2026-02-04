@@ -39,7 +39,7 @@ function get_link_href(doc: ProseNode, link_mark: MarkType): string | null {
     if (!node.isText) return true
     const mark = node.marks.find((m: Mark) => m.type === link_mark)
     if (!mark) return true
-    href = mark.attrs.href
+    href = String(mark.attrs['href'] ?? '')
     return false
   })
   return href

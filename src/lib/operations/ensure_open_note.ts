@@ -15,7 +15,7 @@ function next_untitled_name_in_folder(notes: NoteMeta[], folder_prefix: string):
     if (!Number.isFinite(value)) continue
     if (value > max) max = value
   }
-  return `Untitled-${max + 1}`
+  return `Untitled-${String(max + 1)}`
 }
 
 export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: number }): OpenNoteState {
@@ -39,7 +39,7 @@ export function create_untitled_open_note_in_folder(args: {
       size_bytes: 0
     },
     markdown: as_markdown_text(''),
-    buffer_id: `untitled:${args.now_ms}:${path_with_folder}`,
+    buffer_id: `untitled:${String(args.now_ms)}:${path_with_folder}`,
     is_dirty: false
   }
 }

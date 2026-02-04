@@ -8,8 +8,8 @@ export function create_settings_tauri_adapter(): SettingsPort {
       return value ?? null
     },
 
-    async set_setting<T>(key: string, value: T): Promise<void> {
-      await tauri_invoke<void>('set_setting', { key, value })
+    async set_setting(key: string, value: unknown): Promise<void> {
+      await tauri_invoke<undefined>('set_setting', { key, value })
     }
   }
 }

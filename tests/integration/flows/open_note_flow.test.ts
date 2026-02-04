@@ -23,7 +23,7 @@ describe('open_note_flow', () => {
       markdown: as_markdown_text('content')
     }
 
-    notes_port.read_note = async () => doc
+    notes_port.read_note = () => Promise.resolve(doc)
 
     const actor = createActor(open_note_flow_machine, {
       input: { ports: { notes: notes_port }, stores }
@@ -49,10 +49,10 @@ describe('open_note_flow', () => {
     const note_path = as_note_path('note.md')
 
     let attempts = 0
-    notes_port.read_note = async () => {
+    notes_port.read_note = () => {
       attempts++
-      if (attempts === 1) throw new Error('Read failed')
-      return {
+      if (attempts === 1) return Promise.reject(new Error('Read failed'))
+      return Promise.resolve({
         meta: {
           id: note_path,
           path: note_path,
@@ -61,7 +61,7 @@ describe('open_note_flow', () => {
           size_bytes: 10
         },
         markdown: as_markdown_text('content')
-      }
+      })
     }
 
     const actor = createActor(open_note_flow_machine, {
@@ -85,9 +85,9 @@ describe('open_note_flow', () => {
     const first_path = as_note_path('missing.md')
     const second_path = as_note_path('ok.md')
 
-    notes_port.read_note = async (_vault_id, note_id) => {
-      if (note_id === first_path) throw new Error('Read failed')
-      return {
+    notes_port.read_note = (_vault_id, note_id) => {
+      if (note_id === first_path) return Promise.reject(new Error('Read failed'))
+      return Promise.resolve({
         meta: {
           id: second_path,
           path: second_path,
@@ -96,7 +96,7 @@ describe('open_note_flow', () => {
           size_bytes: 10
         },
         markdown: as_markdown_text('content')
-      }
+      })
     }
 
     const actor = createActor(open_note_flow_machine, {
@@ -119,9 +119,7 @@ describe('open_note_flow', () => {
     const vault_id = as_vault_id('vault-1')
     const note_path = as_note_path('wiki/new_note.md')
 
-    notes_port.read_note = async () => {
-      throw new Error('Missing')
-    }
+    notes_port.read_note = () => Promise.reject(new Error('Missing'))
 
     const actor = createActor(open_note_flow_machine, {
       input: { ports: { notes: notes_port }, stores }

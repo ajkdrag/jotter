@@ -26,7 +26,7 @@ export async function insert_dropped_image(
   const ts = Date.now()
   const slug = slugify_note_id(args.note_id)
   const ext = extension_from_source(args.source)
-  const target_path = as_asset_path(`.assets/${slug}-${ts}.${ext}`)
+  const target_path = as_asset_path(`.assets/${slug}-${String(ts)}.${ext}`)
   const asset_path = await ports.assets.import_asset(args.vault_id, args.source, target_path)
   return { asset_path }
 }

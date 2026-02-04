@@ -5,8 +5,9 @@ export function create_test_clipboard_adapter(): ClipboardPort & { _calls: { wri
 
   return {
     _calls: calls,
-    async write_text(text) {
+    write_text(text) {
       calls.write_text.push(text)
+      return Promise.resolve()
     }
   }
 }

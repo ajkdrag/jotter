@@ -147,11 +147,15 @@ export const file_search_flow_machine = setup({
         searching: {
           invoke: {
             src: 'perform_search',
-            input: ({ context }) => ({
-              ports: context.ports,
-              vault_id: context.get_vault_id()!,
-              query: context.query
-            }),
+            input: ({ context }) => {
+              const vault_id = context.get_vault_id()
+              if (!vault_id) throw new Error('vault_id required in searching state')
+              return {
+                ports: context.ports,
+                vault_id,
+                query: context.query
+              }
+            },
             onDone: {
               target: 'idle',
               actions: assign({

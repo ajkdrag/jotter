@@ -118,13 +118,18 @@ export const rename_folder_flow_machine = setup({
     renaming: {
       invoke: {
         src: 'perform_rename',
-        input: ({ context }) => ({
-          ports: context.ports,
-          stores: context.stores,
-          vault_id: context.vault_id!,
-          folder_path: context.folder_path!,
-          new_path: context.new_path!
-        }),
+        input: ({ context }) => {
+          if (!context.vault_id) throw new Error('vault_id required in renaming state')
+          if (!context.folder_path) throw new Error('folder_path required in renaming state')
+          if (!context.new_path) throw new Error('new_path required in renaming state')
+          return {
+            ports: context.ports,
+            stores: context.stores,
+            vault_id: context.vault_id,
+            folder_path: context.folder_path,
+            new_path: context.new_path
+          }
+        },
         onDone: {
           target: 'idle',
           actions: assign({
