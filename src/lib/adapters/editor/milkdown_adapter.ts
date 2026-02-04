@@ -16,6 +16,8 @@ import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { clipboard } from '@milkdown/kit/plugin/clipboard'
+import { prism } from '@milkdown/plugin-prism'
+import { indent } from '@milkdown/plugin-indent'
 import { replaceAll } from '@milkdown/kit/utils'
 import { Link, Pencil, Trash2, Check } from 'lucide-static'
 import type { EditorPort } from '$lib/ports/editor_port'
@@ -171,6 +173,8 @@ export const milkdown_editor_port: EditorPort = {
       })
       .use(commonmark)
       .use(gfm)
+      .use(prism)
+      .use(indent)
       .use(linkTooltipPlugin)
       .use(listItemBlockComponent)
       .use(markdown_link_input_rule_plugin)

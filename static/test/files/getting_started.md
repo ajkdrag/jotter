@@ -39,12 +39,45 @@ Visit [Google](https://www.google.com) for more information.
 
 ## Code Blocks
 
-```
-if __name__ == "__main__":
-    print("foo")
+```python
+def greet(name):
+    """Greet a person with their name"""
+    message = f"Hello, {name}!"
+    return message
 
-def foo():
-   print("bar")
+if __name__ == "__main__":
+    result = greet("World")
+    print(result)
+```
+
+```javascript
+function calculateSum(numbers) {
+  // Calculate sum using reduce
+  const total = numbers.reduce((acc, num) => acc + num, 0);
+  return total;
+}
+
+const numbers = [1, 2, 3, 4, 5];
+const result = calculateSum(numbers);
+console.log(`The sum is: ${result}`);
+```
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+function createUser(name: string, email: string): User {
+  return {
+    id: Math.random(),
+    name,
+    email
+  };
+}
+
+const user = createUser("John Doe", "john@example.com");
 ```
 
 ## Lists

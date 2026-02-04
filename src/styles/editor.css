@@ -30,6 +30,29 @@
   --editor-hr-gradient-end: transparent;
   --editor-mark-bg: oklch(0.95 0.08 100);
   --editor-mark-text: oklch(0.35 0.08 100);
+
+  /* Syntax highlighting tokens - Light mode */
+  --syntax-comment: oklch(0.55 0.02 240);
+  --syntax-punctuation: oklch(0.45 0.03 240);
+  --syntax-property: oklch(0.45 0.08 240);
+  --syntax-selector: oklch(0.40 0.12 160);
+  --syntax-operator: oklch(0.45 0.08 240);
+  --syntax-keyword: oklch(0.45 0.10 280);
+  --syntax-function: oklch(0.45 0.12 240);
+  --syntax-variable: oklch(0.40 0.08 20);
+  --syntax-string: oklch(0.45 0.10 140);
+  --syntax-number: oklch(0.50 0.12 140);
+  --syntax-boolean: oklch(0.45 0.12 280);
+  --syntax-constant: oklch(0.40 0.10 20);
+  --syntax-class: oklch(0.45 0.10 60);
+  --syntax-tag: oklch(0.45 0.12 340);
+  --syntax-attr-name: oklch(0.45 0.10 60);
+  --syntax-attr-value: oklch(0.45 0.10 140);
+  --syntax-namespace: oklch(0.45 0.08 60);
+  --syntax-regex: oklch(0.40 0.12 340);
+  --syntax-important: oklch(0.40 0.12 20);
+  --syntax-deleted: oklch(0.45 0.12 20);
+  --syntax-inserted: oklch(0.45 0.12 140);
 }
 
 .dark {
@@ -37,6 +60,29 @@
   --editor-blockquote-bg: color-mix(in oklch, var(--muted) 30%, transparent);
   --editor-mark-bg: oklch(0.35 0.1 85);
   --editor-mark-text: oklch(0.85 0.08 85);
+
+  /* Syntax highlighting tokens - Dark mode */
+  --syntax-comment: oklch(0.55 0.02 240);
+  --syntax-punctuation: oklch(0.65 0.03 240);
+  --syntax-property: oklch(0.75 0.08 200);
+  --syntax-selector: oklch(0.75 0.12 160);
+  --syntax-operator: oklch(0.75 0.08 240);
+  --syntax-keyword: oklch(0.75 0.10 280);
+  --syntax-function: oklch(0.80 0.12 220);
+  --syntax-variable: oklch(0.80 0.08 40);
+  --syntax-string: oklch(0.75 0.10 140);
+  --syntax-number: oklch(0.75 0.12 140);
+  --syntax-boolean: oklch(0.75 0.12 280);
+  --syntax-constant: oklch(0.80 0.10 40);
+  --syntax-class: oklch(0.80 0.10 80);
+  --syntax-tag: oklch(0.75 0.12 340);
+  --syntax-attr-name: oklch(0.80 0.10 80);
+  --syntax-attr-value: oklch(0.75 0.10 140);
+  --syntax-namespace: oklch(0.80 0.08 80);
+  --syntax-regex: oklch(0.75 0.12 340);
+  --syntax-important: oklch(0.80 0.12 20);
+  --syntax-deleted: oklch(0.75 0.12 20);
+  --syntax-inserted: oklch(0.75 0.12 140);
 }
 
 /* ============================================
@@ -420,6 +466,140 @@
   color: inherit;
   border: none;
   font-weight: inherit;
+}
+
+/* ============================================
+   SYNTAX HIGHLIGHTING (PRISM)
+   ============================================ */
+
+/* Comments and documentation */
+.ProseMirror .token.comment,
+.ProseMirror .token.prolog,
+.ProseMirror .token.doctype,
+.ProseMirror .token.cdata {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+
+/* Punctuation */
+.ProseMirror .token.punctuation {
+  color: var(--syntax-punctuation);
+}
+
+/* Properties and definitions */
+.ProseMirror .token.property,
+.ProseMirror .token.tag,
+.ProseMirror .token.boolean,
+.ProseMirror .token.number,
+.ProseMirror .token.constant,
+.ProseMirror .token.symbol {
+  color: var(--syntax-property);
+}
+
+/* Selectors, attributes, strings */
+.ProseMirror .token.selector,
+.ProseMirror .token.attr-name,
+.ProseMirror .token.string,
+.ProseMirror .token.char,
+.ProseMirror .token.builtin {
+  color: var(--syntax-string);
+}
+
+/* Operators and entities */
+.ProseMirror .token.operator,
+.ProseMirror .token.entity,
+.ProseMirror .token.url,
+.ProseMirror .language-css .token.string,
+.ProseMirror .style .token.string {
+  color: var(--syntax-operator);
+}
+
+/* Keywords and control flow */
+.ProseMirror .token.keyword,
+.ProseMirror .token.control,
+.ProseMirror .token.directive,
+.ProseMirror .token.unit,
+.ProseMirror .token.statement,
+.ProseMirror .token.regex,
+.ProseMirror .token.atrule {
+  color: var(--syntax-keyword);
+}
+
+/* Functions and methods */
+.ProseMirror .token.function,
+.ProseMirror .token.method,
+.ProseMirror .token.function-name {
+  color: var(--syntax-function);
+}
+
+/* Variables and parameters */
+.ProseMirror .token.variable,
+.ProseMirror .token.parameter,
+.ProseMirror .token.attr-value {
+  color: var(--syntax-variable);
+}
+
+/* Classes and types */
+.ProseMirror .token.class-name,
+.ProseMirror .token.type-class,
+.ProseMirror .token.class {
+  color: var(--syntax-class);
+}
+
+/* Numbers and boolean literals */
+.ProseMirror .token.number,
+.ProseMirror .token.hexcode {
+  color: var(--syntax-number);
+}
+
+.ProseMirror .token.boolean {
+  color: var(--syntax-boolean);
+}
+
+/* Constants and enums */
+.ProseMirror .token.constant {
+  color: var(--syntax-constant);
+}
+
+/* HTML/XML tags */
+.ProseMirror .token.tag {
+  color: var(--syntax-tag);
+}
+
+/* Namespaces and modules */
+.ProseMirror .token.namespace,
+.ProseMirror .token.module {
+  color: var(--syntax-namespace);
+}
+
+/* Regular expressions */
+.ProseMirror .token.regex {
+  color: var(--syntax-regex);
+}
+
+/* Important and deleted text */
+.ProseMirror .token.important,
+.ProseMirror .token.bold {
+  font-weight: 650;
+  color: var(--syntax-important);
+}
+
+.ProseMirror .token.deleted {
+  color: var(--syntax-deleted);
+}
+
+.ProseMirror .token.inserted {
+  color: var(--syntax-inserted);
+}
+
+/* Italic tokens */
+.ProseMirror .token.italic {
+  font-style: italic;
+}
+
+/* Ensure tokens don't have background */
+.ProseMirror .token {
+  background: transparent;
 }
 
 /* ============================================
