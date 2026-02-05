@@ -1,3 +1,9 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/logo_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/logo_light.png">
+  <img src="./assets/logo_light.png" alt="Jotter" width="60">
+</picture>
+
 # Jotter
 
 A local-first markdown vault for your notes. No cloud, no accounts, no sync — just your files on your machine.
