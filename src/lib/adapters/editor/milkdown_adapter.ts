@@ -28,11 +28,9 @@ import {
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
 import { markdown_paste_plugin } from './markdown_paste_plugin'
-import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_asset_image_plugin } from './asset_image_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
-
 function resize_icon(svg: string, size: number): string {
   return svg
     .replace(/width="24"/, `width="${String(size)}"`)
@@ -109,7 +107,7 @@ export const milkdown_editor_port: EditorPort = {
       } catch (error) {
         console.error('Failed to insert markdown at cursor:', error)
         const tr = state.tr.insertText(text, state.selection.from, state.selection.to)
-        view.dispatch(tr)
+        view.dispatch(tr.scrollIntoView())
         view.focus()
       }
     })
@@ -202,10 +200,6 @@ export const milkdown_editor_port: EditorPort = {
           on_markdown_change(normalized)
         })
       })
-
-    if (config.on_image_paste) {
-      builder = builder.use(create_image_paste_plugin(config.on_image_paste))
-    }
 
     if (resolve_asset_url) {
       builder = builder.use(create_asset_image_plugin(resolve_asset_url))

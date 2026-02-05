@@ -8,8 +8,7 @@ import type { EditorSettings } from '$lib/types/editor_settings'
 	    line_height: 1.8,
 	    heading_color: 'accent',
 	    spacing: 'spacious',
-	    link_syntax: 'wikilink',
-	    attachments_folder: '.assets'
+	    link_syntax: 'wikilink'
 	  }
 
   const original_document = globalThis.document

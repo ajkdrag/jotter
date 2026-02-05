@@ -3,12 +3,10 @@ import * as Dialog from '$lib/components/ui/dialog/index.js'
 import * as Select from '$lib/components/ui/select/index.js'
 import * as Slider from '$lib/components/ui/slider/index.js'
 import { Button } from '$lib/components/ui/button'
-import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 	import TypeIcon from '@lucide/svelte/icons/type'
 	import LayoutIcon from '@lucide/svelte/icons/layout-template'
 	import Link2Icon from '@lucide/svelte/icons/link-2'
-	import FolderIcon from '@lucide/svelte/icons/folder'
 	import type { EditorSettings } from '$lib/types/editor_settings'
 
 type Props = {
@@ -56,11 +54,6 @@ function handle_heading_color_change(value: string | undefined) {
 			editor_settings.link_syntax = value as EditorSettings['link_syntax']
 			on_update_settings(editor_settings)
 		}
-	}
-
-	function handle_attachments_folder_change(value: string) {
-		editor_settings.attachments_folder = value
-		on_update_settings(editor_settings)
 	}
 
 	const heading_color_options = [
@@ -206,26 +199,6 @@ function handle_heading_color_change(value: string | undefined) {
         </div>
       </section>
 
-	      <Separator />
-
-	      <section class="flex flex-col gap-4">
-	        <div class="flex items-center gap-2">
-	          <FolderIcon class="size-4 text-muted-foreground" />
-	          <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Attachments</span>
-	        </div>
-
-	        <div class="flex flex-col gap-2">
-	          <span class="text-sm font-medium">Attachments Folder</span>
-	          <Input
-	            value={editor_settings.attachments_folder}
-	            placeholder=".assets"
-	            oninput={(event: Event & { currentTarget: HTMLInputElement }) => handle_attachments_folder_change(event.currentTarget.value)}
-	          />
-	          <span class="text-xs text-muted-foreground">
-	            Folder path relative to vault root for pasted images
-	          </span>
-	        </div>
-	      </section>
 	    </div>
 
     <Dialog.Footer class="pt-4 border-t">

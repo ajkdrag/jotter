@@ -90,7 +90,7 @@ Ports define the **interfaces** for external dependencies. They are pure TypeScr
     -   `NotesPort` - Note CRUD operations (`list_notes`, `read_note`, `write_note`, `create_note`, `rename_note`, `delete_note`)
     -   `VaultPort` - Vault management (`open_vault`, `list_vaults`, `remember_last_vault`, etc.)
     -   `WorkspaceIndexPort` - Search and indexing operations (`index_build`, `index_search`, `index_backlinks`, `index_outlinks`)
-    -   `AssetsPort` - Asset management (`import_asset`)
+    -   `AssetsPort` - Asset URL resolution (`resolve_asset_url`)
     -   `SearchPort` - Search operations (`search_notes`)
     -   `SettingsPort` - Application settings (`get_setting`, `set_setting`)
     -   `ThemePort` - Theme management (`get_theme`, `set_theme`, `get_resolved_theme`)

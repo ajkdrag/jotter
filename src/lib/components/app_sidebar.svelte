@@ -181,7 +181,6 @@
 	                                link_syntax={model.link_syntax}
 	                                on_markdown_change={ops.on_markdown_change}
 	                                on_dirty_state_change={ops.on_dirty_state_change}
-	                                on_image_paste={ops.on_image_paste}
 	                                resolve_asset_url={ops.on_resolve_asset_url}
 	                                on_cursor_change={handle_cursor_change}
 	                                on_wiki_link_click={ops.on_wiki_link_click}

@@ -5,7 +5,6 @@ import type { NoteMeta } from '$lib/types/note'
 import { parent_folder_path } from '$lib/utils/filetree'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import type { ThemeMode } from '$lib/types/theme'
-import type { ImagePasteData } from '$lib/types/image_paste'
 
 export type AppShellActionsConfig = {
   bootstrap_default_vault_path?: VaultPath
@@ -26,7 +25,6 @@ export type AppShellActions = {
   open_wiki_link: (note_path: string) => void
   markdown_change: (markdown: string) => void
   dirty_state_change: (is_dirty: boolean) => void
-  handle_image_paste: (data: ImagePasteData) => void
   copy_open_note_markdown: () => void
 
   request_delete: (note: NoteMeta) => void
@@ -47,11 +45,6 @@ export type AppShellActions = {
   confirm_save_overwrite: () => void
   retry_save: () => void
   cancel_save: () => void
-
-  update_image_paste_name: (name: string) => void
-  confirm_image_paste: () => void
-  cancel_image_paste: () => void
-  retry_image_paste: () => void
 
   open_settings: () => void
   close_settings: () => void
@@ -150,22 +143,6 @@ export function create_app_shell_actions(input: {
       app.stores.editor.actions.update_dirty_state(is_dirty)
     },
 
-    handle_image_paste: (data) => {
-      const vault_id = app.stores.vault.get_snapshot().vault?.id
-      const open_note = app.stores.editor.get_snapshot().open_note
-      if (!vault_id || !open_note) return
-
-      const attachments_folder = app.stores.ui.get_snapshot().editor_settings.attachments_folder
-
-      app.flows.image_paste.send({
-        type: 'REQUEST_PASTE',
-        data,
-        vault_id,
-        note_id: open_note.meta.id,
-        attachments_folder
-      })
-    },
-
     copy_open_note_markdown: () => {
       const open_note = app.stores.editor.get_snapshot().open_note
       if (!open_note) return
@@ -243,22 +220,6 @@ export function create_app_shell_actions(input: {
 
     cancel_save: () => {
       app.flows.save_note.send({ type: 'CANCEL' })
-    },
-
-    update_image_paste_name: (name) => {
-      app.flows.image_paste.send({ type: 'UPDATE_NAME', name })
-    },
-
-    confirm_image_paste: () => {
-      app.flows.image_paste.send({ type: 'CONFIRM' })
-    },
-
-    cancel_image_paste: () => {
-      app.flows.image_paste.send({ type: 'CANCEL' })
-    },
-
-    retry_image_paste: () => {
-      app.flows.image_paste.send({ type: 'RETRY' })
     },
 
     open_settings: () => {

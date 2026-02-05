@@ -1,5 +1,4 @@
 mod notes_service;
-mod assets_service;
 mod index_service;
 mod watcher_service;
 mod storage;
@@ -31,7 +30,6 @@ pub fn run() {
             vault_service::get_last_vault_id,
             watcher_service::watch_vault,
             watcher_service::unwatch_vault,
-            assets_service::import_asset,
             index_service::index_build,
             index_service::index_search,
             index_service::index_upsert_note,

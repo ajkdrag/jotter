@@ -5,7 +5,6 @@
   import DeleteFolderDialog from '$lib/components/delete_folder_dialog.svelte'
   import RenameFolderDialog from '$lib/components/rename_folder_dialog.svelte'
   import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
-  import ImagePasteDialog from '$lib/components/image_paste_dialog.svelte'
   import SettingsDialog from '$lib/components/settings_dialog.svelte'
   import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
   import CommandPalette from '$lib/components/command_palette.svelte'
@@ -19,7 +18,6 @@
   import type { RenameNoteFlowContext } from '$lib/flows/rename_note_flow'
   import type { SaveNoteFlowContext } from '$lib/flows/save_note_flow'
   import type { SettingsFlowContext } from '$lib/flows/settings_flow'
-  import type { ImagePasteFlowContext } from '$lib/flows/image_paste_flow'
   import type { CreateFolderFlowContext } from '$lib/flows/create_folder_flow'
   import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
   import type { FileSearchFlowContext, FileSearchFlowEvents } from '$lib/flows/file_search_flow'
@@ -47,7 +45,6 @@
     save_note_snapshot: FlowSnapshot<SaveNoteFlowContext>
     create_folder_snapshot: FlowSnapshot<CreateFolderFlowContext>
     settings_snapshot: FlowSnapshot<SettingsFlowContext>
-    image_paste_snapshot: FlowSnapshot<ImagePasteFlowContext>
 
     delete_folder: FlowView<DeleteFolderFlowEvents, DeleteFolderFlowContext>
     rename_folder: FlowView<RenameFolderFlowEvents, RenameFolderFlowContext>
@@ -72,7 +69,6 @@
     rename_folder,
     create_folder_snapshot,
     settings_snapshot,
-    image_paste_snapshot,
     command_palette,
     file_search,
     notes_store_state,
@@ -134,11 +130,6 @@
       create_folder_snapshot.matches('error')
   )
 
-  const image_paste_dialog_open = $derived(
-    image_paste_snapshot.matches('configuring') ||
-      image_paste_snapshot.matches('saving') ||
-      image_paste_snapshot.matches('error')
-  )
 </script>
 
 {#if has_vault}
@@ -210,18 +201,6 @@
   on_update_settings={actions.update_settings}
   on_save={actions.save_settings}
   on_close={actions.close_settings}
-/>
-
-<ImagePasteDialog
-  open={image_paste_dialog_open}
-  image_data={image_paste_snapshot.context.image_data}
-  custom_name={image_paste_snapshot.context.custom_name}
-  is_saving={image_paste_snapshot.matches('saving')}
-  error={image_paste_snapshot.context.error}
-  on_name_change={actions.update_image_paste_name}
-  on_confirm={actions.confirm_image_paste}
-  on_cancel={actions.cancel_image_paste}
-  on_retry={actions.retry_image_paste}
 />
 
 <CreateFolderDialog

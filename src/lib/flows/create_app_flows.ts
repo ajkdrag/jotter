@@ -34,8 +34,6 @@ import { clipboard_flow_machine } from '$lib/flows/clipboard_flow'
 import type { ClipboardFlowContext, ClipboardFlowEvents } from '$lib/flows/clipboard_flow'
 import { theme_flow_machine } from '$lib/flows/theme_flow'
 import type { ThemeFlowContext, ThemeFlowEvents } from '$lib/flows/theme_flow'
-import { image_paste_flow_machine } from '$lib/flows/image_paste_flow'
-import type { ImagePasteFlowContext, ImagePasteFlowEvents } from '$lib/flows/image_paste_flow'
 
 export type CreateAppFlowsCallbacks = {
   on_save_complete?: () => void
@@ -55,7 +53,6 @@ export type AppFlows = {
     save_note: FlowHandle<SaveNoteFlowEvents, FlowSnapshot<SaveNoteFlowContext>>
     create_folder: FlowHandle<CreateFolderFlowEvents, FlowSnapshot<CreateFolderFlowContext>>
     settings: FlowHandle<SettingsFlowEvents, FlowSnapshot<SettingsFlowContext>>
-    image_paste: FlowHandle<ImagePasteFlowEvents, FlowSnapshot<ImagePasteFlowContext>>
     command_palette: FlowHandle<CommandPaletteFlowEvents, FlowSnapshot<CommandPaletteFlowContext>>
     file_search: FlowHandle<FileSearchFlowEvents, FlowSnapshot<FileSearchFlowContext>>
     filetree: FlowHandle<FiletreeFlowEvents, FlowSnapshot<FiletreeFlowContext>>
@@ -119,10 +116,6 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
     input: { ports: { settings: ports.settings, vault_settings: ports.vault_settings }, stores }
   })
 
-  const image_paste = create_flow_handle(image_paste_flow_machine, {
-    input: { ports: { assets: ports.assets, editor: ports.editor }, stores }
-  })
-
   const create_folder = create_flow_handle(create_folder_flow_machine, {
     input: { ports: { notes: ports.notes }, stores }
   })
@@ -170,7 +163,6 @@ export function create_app_flows(ports: Ports, callbacks?: CreateAppFlowsCallbac
       save_note,
       create_folder,
       settings,
-      image_paste,
       command_palette,
       file_search,
       filetree,

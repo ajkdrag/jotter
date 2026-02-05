@@ -42,7 +42,6 @@ describe('create_app_flows', () => {
     expect(app_flows.flows.save_note).toBeDefined()
     expect(app_flows.flows.create_folder).toBeDefined()
     expect(app_flows.flows.settings).toBeDefined()
-    expect(app_flows.flows.image_paste).toBeDefined()
     expect(app_flows.flows.command_palette).toBeDefined()
     expect(app_flows.flows.file_search).toBeDefined()
     expect(app_flows.flows.filetree).toBeDefined()
