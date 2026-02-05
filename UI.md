@@ -1,6 +1,6 @@
 # UI Design System
 
-This document defines the design system, conventions, and standards for imdown's user interface. Follow these guidelines when adding or updating UI components.
+This document defines the design system, conventions, and standards for jotter's user interface. Follow these guidelines when adding or updating UI components.
 
 ---
 

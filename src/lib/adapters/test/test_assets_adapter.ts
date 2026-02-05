@@ -1,7 +1,7 @@
 import type { AssetsPort, AssetImportSource } from '$lib/ports/assets_port'
 import type { AssetPath, VaultId } from '$lib/types/ids'
 
-const STORAGE_KEY_PREFIX = 'imdown_test_assets_'
+const STORAGE_KEY_PREFIX = 'jotter_test_assets_'
 const blob_url_cache = new Map<string, string>()
 const memory_storage = new Map<string, string>()
 

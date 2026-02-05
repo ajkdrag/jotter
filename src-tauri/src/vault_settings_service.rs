@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-const SETTINGS_DIR: &str = ".imdown";
+const SETTINGS_DIR: &str = ".jotter";
 const SETTINGS_FILE: &str = "settings.json";
 
 fn vault_settings_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {

@@ -34,7 +34,7 @@ fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
 fn rel_path(root: &Path, abs: &Path) -> Option<String> {
     let rel = abs.strip_prefix(root).ok()?;
     let rel = storage::normalize_relative_path(rel);
-    if rel.starts_with(".imdown/") || rel == ".imdown" {
+    if rel.starts_with(".jotter/") || rel == ".jotter" {
         return None;
     }
     if rel.starts_with(".git/") || rel == ".git" {

@@ -1,16 +1,16 @@
 [package]
-name = "imdown"
+name = "jotter"
 version = "0.1.0"
 description = "Local-first markdown vault"
 authors = ["altamkhan"]
 edition = "2021"
 
 [lib]
-name = "imdown_lib"
+name = "jotter_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "imdown"
+name = "jotter"
 path = "src/main.rs"
 
 [build-dependencies]

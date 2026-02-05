@@ -37,7 +37,7 @@ pub fn vault_id_for_path(path: &str) -> String {
 
 pub fn store_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    let dir = dir.join("imdown");
+    let dir = dir.join("jotter");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir.join("vaults.json"))
 }
@@ -91,8 +91,8 @@ pub fn normalize_relative_path(path: &Path) -> String {
 pub fn handle_asset_request(app: &AppHandle, req: Request<Vec<u8>>) -> Response<Vec<u8>> {
     let uri = req.uri().to_string();
     let rel = uri
-        .trim_start_matches("imdown-asset://")
-        .trim_start_matches("imdown-asset:")
+        .trim_start_matches("jotter-asset://")
+        .trim_start_matches("jotter-asset:")
         .trim_start_matches('/');
 
     let parts: Vec<&str> = rel.splitn(3, '/').collect();

@@ -3,7 +3,7 @@ import { as_vault_id, as_vault_path, type VaultId, type VaultPath } from '$lib/t
 import type { Vault } from '$lib/types/vault'
 import { store_vault, get_vault, list_vaults as list_stored_vaults } from './storage'
 
-const LAST_VAULT_KEY = 'imdown_last_vault_id'
+const LAST_VAULT_KEY = 'jotter_last_vault_id'
 
 const pending_handles = new Map<string, { handle: FileSystemDirectoryHandle; timestamp: number }>()
 

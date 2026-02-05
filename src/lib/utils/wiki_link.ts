@@ -1,6 +1,6 @@
 import { parent_folder_path } from '$lib/utils/filetree'
 
-const WIKI_LINK_PROTOCOL = 'imdown:'
+const WIKI_LINK_PROTOCOL = 'jotter:'
 const WIKI_LINK_HOST = 'wiki'
 
 export function encode_wiki_link_href(note_path: string): string {

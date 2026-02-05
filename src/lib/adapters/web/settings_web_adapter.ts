@@ -1,7 +1,7 @@
 import type { SettingsPort } from '$lib/ports/settings_port'
 import { logger } from '$lib/utils/logger'
 
-const SETTINGS_PREFIX = 'imdown_settings_'
+const SETTINGS_PREFIX = 'jotter_settings_'
 
 export function create_settings_web_adapter(): SettingsPort {
   return {

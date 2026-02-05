@@ -60,7 +60,7 @@ fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
 }
 
 fn index_dir(vault_root: &Path) -> PathBuf {
-    vault_root.join(".imdown").join("index")
+    vault_root.join(".jotter").join("index")
 }
 
 fn index_data_path(vault_root: &Path) -> PathBuf {
@@ -130,7 +130,7 @@ fn list_markdown_files(root: &Path) -> Vec<PathBuf> {
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            name != ".imdown" && name != ".git"
+            name != ".jotter" && name != ".git"
         })
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())

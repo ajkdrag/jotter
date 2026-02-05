@@ -3,7 +3,7 @@ import type { VaultId } from '$lib/types/ids'
 import { logger } from '$lib/utils/logger'
 import { get_vault } from './storage'
 
-const SETTINGS_DIR = '.imdown'
+const SETTINGS_DIR = '.jotter'
 const SETTINGS_FILE = 'settings.json'
 
 async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryHandle> {

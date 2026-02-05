@@ -1,4 +1,4 @@
-const DB_NAME = 'imdown_vaults'
+const DB_NAME = 'jotter_vaults'
 const DB_VERSION = 1
 const STORE_NAME = 'vaults'
 

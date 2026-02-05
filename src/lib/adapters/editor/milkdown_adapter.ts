@@ -124,13 +124,13 @@ export const milkdown_editor_port: EditorPort = {
 
     function normalize_markdown(raw: string): string {
       const needs_zws_cleanup = raw.includes('\u200B')
-      const needs_wiki_cleanup = raw.includes('imdown://wiki')
+      const needs_wiki_cleanup = raw.includes('jotter://wiki')
       if (!needs_zws_cleanup && !needs_wiki_cleanup) return raw
 
       const without_zws = needs_zws_cleanup ? raw.replaceAll('\u200B', '') : raw
       if (!needs_wiki_cleanup) return without_zws
 
-      return without_zws.replace(/\[([^\]]+)\]\((imdown:\/\/wiki\/?\?[^)\s]+)\)/g, (full, label, href) => {
+      return without_zws.replace(/\[([^\]]+)\]\((jotter:\/\/wiki\/?\?[^)\s]+)\)/g, (full, label, href) => {
         const resolved_note_path = try_decode_wiki_link_href(String(href))
         if (!resolved_note_path) return full
 

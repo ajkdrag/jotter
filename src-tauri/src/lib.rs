@@ -50,7 +50,7 @@ pub fn run() {
             vault_settings_service::get_vault_setting,
             vault_settings_service::set_vault_setting
         ])
-        .register_uri_scheme_protocol("imdown-asset", |ctx, req| {
+        .register_uri_scheme_protocol("jotter-asset", |ctx, req| {
             storage::handle_asset_request(ctx.app_handle(), req)
         })
         .run(tauri::generate_context!())

@@ -342,7 +342,7 @@ mod tests {
     use super::*;
 
     fn mk_temp_dir() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("imdown-test-{}", storage::now_ms()));
+        let dir = std::env::temp_dir().join(format!("jotter-test-{}", storage::now_ms()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }

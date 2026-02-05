@@ -10,7 +10,7 @@ const TEST_VAULT_2_PATH = as_vault_path('another-vault')
 const TEST_VAULT_2_ID = as_vault_id('test_vault_002')
 const TEST_VAULT_2_NAME = 'Another Vault'
 
-const LAST_VAULT_KEY = 'imdown_test_last_vault_id'
+const LAST_VAULT_KEY = 'jotter_test_last_vault_id'
 
 export function create_test_vault_adapter(): VaultPort {
   let last_vault_id: VaultId | null = null
