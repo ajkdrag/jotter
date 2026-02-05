@@ -245,7 +245,10 @@ fn save_index_data(vault_root: &Path, data: &IndexData) -> Result<(), String> {
 
 #[tauri::command]
 pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
-    let vault_root = vault_path(&app, &vault_id)?;
+    let vault_root = vault_path(&app, &vault_id).map_err(|e| {
+        log::error!("index_build: failed to resolve vault {}: {}", vault_id, e);
+        e
+    })?;
     let dir = index_dir(&vault_root);
     let _ = std::fs::create_dir_all(dir.parent().unwrap());
     let _ = std::fs::remove_dir_all(&dir);
@@ -291,7 +294,10 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
     }
 
-    writer.commit().map_err(|e| e.to_string())?;
+    writer.commit().map_err(|e| {
+        log::error!("index_build: failed to commit index for vault {}: {}", vault_id, e);
+        e.to_string()
+    })?;
 
     let data = IndexData {
         notes,
@@ -308,8 +314,14 @@ pub fn index_search(app: AppHandle, vault_id: String, query: SearchQueryInput) -
         return Ok(Vec::new());
     }
 
-    let data = load_or_init_index_data(&vault_root)?;
-    let (index, _path_exact_f, path_f, title_f, body_f) = open_index(&vault_root)?;
+    let data = load_or_init_index_data(&vault_root).map_err(|e| {
+        log::error!("index_search: failed to load index data: {}", e);
+        e
+    })?;
+    let (index, _path_exact_f, path_f, title_f, body_f) = open_index(&vault_root).map_err(|e| {
+        log::error!("index_search: failed to open index: {}", e);
+        e
+    })?;
     let reader = open_reader(&index)?;
     let searcher = reader.searcher();
 

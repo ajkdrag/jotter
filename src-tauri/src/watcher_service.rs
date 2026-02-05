@@ -73,10 +73,14 @@ pub fn watch_vault(app: AppHandle, state: State<WatcherState>, vault_id: String)
             Config::default(),
         ) {
             Ok(w) => w,
-            Err(_) => return,
+            Err(e) => {
+                log::error!("Failed to create file watcher: {}", e);
+                return;
+            }
         };
 
-        if watcher.watch(&root_canon, RecursiveMode::Recursive).is_err() {
+        if let Err(e) = watcher.watch(&root_canon, RecursiveMode::Recursive) {
+            log::error!("Failed to start watching {}: {}", root_canon.display(), e);
             return;
         }
 

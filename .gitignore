@@ -4,6 +4,7 @@
 .codex/**
 node_modules/
 .svelte-kit/
+src-tauri/gen/
 build/
 dist/
 .DS_Store

@@ -41,8 +41,14 @@ fn upsert_vault(store: &mut VaultStore, vault: Vault) {
 
 #[tauri::command]
 pub fn open_vault(app: AppHandle, args: OpenVaultArgs) -> Result<Vault, String> {
-    let vault_path = canonicalize_path(&args.vault_path)?;
-    let meta = std::fs::metadata(&vault_path).map_err(|e| e.to_string())?;
+    let vault_path = canonicalize_path(&args.vault_path).map_err(|e| {
+        log::error!("Failed to canonicalize vault path {}: {}", args.vault_path, e);
+        e
+    })?;
+    let meta = std::fs::metadata(&vault_path).map_err(|e| {
+        log::error!("Failed to read metadata for vault {}: {}", vault_path, e);
+        e.to_string()
+    })?;
     if !meta.is_dir() {
         return Err("vault path is not a directory".to_string());
     }
@@ -75,7 +81,10 @@ pub fn open_vault_by_id(app: AppHandle, vault_id: String) -> Result<Vault, Strin
         .vaults
         .iter()
         .find(|v| v.vault.id == vault_id)
-        .ok_or("vault not found")?;
+        .ok_or_else(|| {
+            log::error!("Vault not found: {}", vault_id);
+            "vault not found".to_string()
+        })?;
     Ok(entry.vault.clone())
 }
 

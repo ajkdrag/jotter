@@ -19,6 +19,30 @@
   color: var(--interactive);
 }
 
+/* Toast overrides — align sonner with design system */
+[data-sonner-toaster] {
+  font-family: inherit;
+}
+
+[data-sonner-toast] {
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+[data-sonner-toast] [data-icon] {
+  width: var(--size-icon);
+  height: var(--size-icon);
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: var(--interactive);
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: var(--destructive);
+}
+
 /* Dialog section header pattern */
 .DialogSection__header {
   display: flex;

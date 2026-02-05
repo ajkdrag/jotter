@@ -1,4 +1,5 @@
 import type { SettingsPort } from '$lib/ports/settings_port'
+import { logger } from '$lib/utils/logger'
 
 const SETTINGS_PREFIX = 'imdown_settings_'
 
@@ -8,7 +9,8 @@ export function create_settings_web_adapter(): SettingsPort {
       try {
         const value = localStorage.getItem(`${SETTINGS_PREFIX}${key}`)
         return Promise.resolve(value ? JSON.parse(value) : null)
-      } catch {
+      } catch (e) {
+        logger.from_error(`Failed to parse setting "${key}"`, e)
         return Promise.resolve(null)
       }
     },
@@ -16,8 +18,8 @@ export function create_settings_web_adapter(): SettingsPort {
     set_setting(key: string, value: unknown): Promise<void> {
       try {
         localStorage.setItem(`${SETTINGS_PREFIX}${key}`, JSON.stringify(value))
-      } catch {
-        // Ignore errors
+      } catch (e) {
+        logger.from_error(`Failed to save setting "${key}"`, e)
       }
       return Promise.resolve()
     }

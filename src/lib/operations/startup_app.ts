@@ -5,6 +5,8 @@ import type { VaultPath } from '$lib/types/ids'
 import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 import { change_vault } from '$lib/operations/change_vault'
+import { logger } from '$lib/utils/logger'
+import { toast } from 'svelte-sonner'
 
 export async function startup_app(
   ports: { vault: VaultPort; notes: NotesPort; index: WorkspaceIndexPort },
@@ -25,7 +27,10 @@ export async function startup_app(
       { vault: ports.vault, notes: ports.notes },
       { vault_path: bootstrap_vault_path }
     )
-    void ports.index.build_index(result.vault.id)
+    ports.index.build_index(result.vault.id).catch((e: unknown) => {
+      logger.from_error('Background index build failed', e)
+      toast.error('Failed to build search index')
+    })
 
     return { recent_vaults, bootstrapped_vault: result }
   }

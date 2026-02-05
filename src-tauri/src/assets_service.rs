@@ -56,12 +56,18 @@ pub fn import_asset(app: AppHandle, args: ImportAssetArgs) -> Result<String, Str
 
     let bytes = match args.source {
         AssetSource::Path { path } => {
-            let p = PathBuf::from(path);
-            std::fs::read(&p).map_err(|e| e.to_string())?
+            let p = PathBuf::from(&path);
+            std::fs::read(&p).map_err(|e| {
+                log::error!("Failed to read source asset {}: {}", path, e);
+                e.to_string()
+            })?
         }
         AssetSource::Bytes { bytes, .. } => bytes,
     };
-    std::fs::write(&abs, bytes).map_err(|e| e.to_string())?;
+    std::fs::write(&abs, &bytes).map_err(|e| {
+        log::error!("Failed to write asset to {}: {}", abs.display(), e);
+        e.to_string()
+    })?;
     Ok(storage::normalize_relative_path(&rel))
 }
 

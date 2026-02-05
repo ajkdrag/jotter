@@ -47,17 +47,29 @@ pub fn load_store(app: &AppHandle) -> Result<VaultStore, String> {
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(VaultStore::default()),
-        Err(e) => return Err(e.to_string()),
+        Err(e) => {
+            log::error!("Failed to read vault store at {}: {}", path.display(), e);
+            return Err(e.to_string());
+        }
     };
-    serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+    serde_json::from_slice(&bytes).map_err(|e| {
+        log::error!("Failed to parse vault store at {}: {}", path.display(), e);
+        e.to_string()
+    })
 }
 
 pub fn save_store(app: &AppHandle, store: &VaultStore) -> Result<(), String> {
     let path = store_path(app)?;
     let tmp = path.with_extension("json.tmp");
     let bytes = serde_json::to_vec_pretty(store).map_err(|e| e.to_string())?;
-    std::fs::write(&tmp, bytes).map_err(|e| e.to_string())?;
-    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+    std::fs::write(&tmp, &bytes).map_err(|e| {
+        log::error!("Failed to write vault store to {}: {}", tmp.display(), e);
+        e.to_string()
+    })?;
+    std::fs::rename(&tmp, &path).map_err(|e| {
+        log::error!("Failed to rename vault store {} -> {}: {}", tmp.display(), path.display(), e);
+        e.to_string()
+    })?;
     Ok(())
 }
 

@@ -25,7 +25,9 @@ regex = "1.11.1"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.138"
 tantivy = "0.22.0"
+log = "0.4"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-log = "2"
 tokio = { version = "1.43.0", features = ["fs", "rt-multi-thread", "sync"] }
 walkdir = "2.5.0"

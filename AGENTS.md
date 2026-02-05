@@ -108,8 +108,11 @@ Always use shadcn semantic utilities. Use custom utilities only when shadcn lack
 
 Once you are done making any code changes and are about to finalize. Do the following tasks:
 
-- Run `pnpm check` and fix any issues
-- Verify TypeScript types. Use the linter's feedback
+- Run all validation commands and fix any issues:
+  - `pnpm check` — Svelte/TypeScript type checking
+  - `pnpm lint` — ESLint linting
+  - `pnpm test` — Vitest unit/integration tests
+  - `cd src-tauri && cargo check` — Rust type checking (run from `src-tauri/` directory)
 - See if you can simplify your implementation WITHOUT breaking the logic or the "requirement" that user proposed. Simplification will be penalized if it breaks existing code patterns, standards or guidelines
 - Remove docstrings, comments which are redundant
 - Add tests in the right location (if we should), even if the user might have forgotten to ask you to create them

@@ -1,5 +1,7 @@
 import { setup } from 'xstate'
 import type { ClipboardPort } from '$lib/ports/clipboard_port'
+import { toast } from 'svelte-sonner'
+import { logger } from '$lib/utils/logger'
 
 type ClipboardFlowPorts = {
   clipboard: ClipboardPort
@@ -37,8 +39,12 @@ export const clipboard_flow_machine = setup({
         COPY_TEXT: {
           actions: ({ context, event }) => {
             void context.ports.clipboard.write_text(event.text)
+              .then(() => {
+                toast.success('Copied to clipboard')
+              })
               .catch((error: unknown) => {
-                console.error('Failed to copy text to clipboard:', error)
+                logger.from_error('Clipboard write failed', error)
+                toast.error('Failed to copy to clipboard')
               })
           }
         }

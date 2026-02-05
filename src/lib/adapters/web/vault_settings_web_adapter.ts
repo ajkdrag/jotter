@@ -1,5 +1,6 @@
 import type { VaultSettingsPort } from '$lib/ports/vault_settings_port'
 import type { VaultId } from '$lib/types/ids'
+import { logger } from '$lib/utils/logger'
 import { get_vault } from './storage'
 
 const SETTINGS_DIR = '.imdown'
@@ -27,12 +28,18 @@ async function ensure_settings_dir(root: FileSystemDirectoryHandle): Promise<Fil
 }
 
 async function read_settings_file(settings_dir: FileSystemDirectoryHandle): Promise<Record<string, unknown>> {
+	let text: string
 	try {
 		const file_handle = await settings_dir.getFileHandle(SETTINGS_FILE, { create: false })
 		const file = await file_handle.getFile()
-		const text = await file.text()
-		return JSON.parse(text) as Record<string, unknown>
+		text = await file.text()
 	} catch {
+		return {}
+	}
+	try {
+		return JSON.parse(text) as Record<string, unknown>
+	} catch (e) {
+		logger.from_error('Failed to parse vault settings', e)
 		return {}
 	}
 }

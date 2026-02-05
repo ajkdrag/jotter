@@ -99,7 +99,10 @@ pub(crate) fn file_meta(path: &Path) -> Result<(i64, i64), String> {
 
 #[tauri::command]
 pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, String> {
-    let root = vault_path(&app, &vault_id)?;
+    let root = vault_path(&app, &vault_id).map_err(|e| {
+        log::error!("Failed to resolve vault path for {}: {}", vault_id, e);
+        e
+    })?;
     let mut out = Vec::new();
 
     for entry in WalkDir::new(&root)
@@ -141,7 +144,10 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
 pub fn read_note(app: AppHandle, vault_id: String, note_id: String) -> Result<NoteDoc, String> {
     let root = vault_path(&app, &vault_id)?;
     let abs = safe_note_abs(&root, &note_id)?;
-    let markdown = std::fs::read_to_string(&abs).map_err(|e| e.to_string())?;
+    let markdown = std::fs::read_to_string(&abs).map_err(|e| {
+        log::error!("Failed to read note {}: {}", note_id, e);
+        e.to_string()
+    })?;
     let title = extract_title(&abs);
     let (mtime_ms, size_bytes) = file_meta(&abs)?;
     Ok(NoteDoc {
@@ -158,11 +164,20 @@ pub fn read_note(app: AppHandle, vault_id: String, note_id: String) -> Result<No
 
 fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
     let dir = path.parent().ok_or("invalid note path")?;
-    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(dir).map_err(|e| {
+        log::error!("Failed to create directory {}: {}", dir.display(), e);
+        e.to_string()
+    })?;
     let name = format!("{}.tmp", storage::now_ms());
     let tmp = dir.join(name);
-    std::fs::write(&tmp, content.as_bytes()).map_err(|e| e.to_string())?;
-    std::fs::rename(&tmp, path).map_err(|e| e.to_string())?;
+    std::fs::write(&tmp, content.as_bytes()).map_err(|e| {
+        log::error!("Failed to write temp file {}: {}", tmp.display(), e);
+        e.to_string()
+    })?;
+    std::fs::rename(&tmp, path).map_err(|e| {
+        log::error!("Failed to rename {} -> {}: {}", tmp.display(), path.display(), e);
+        e.to_string()
+    })?;
     Ok(())
 }
 
