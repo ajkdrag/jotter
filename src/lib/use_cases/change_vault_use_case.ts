@@ -3,7 +3,7 @@ import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId, VaultPath } from '$lib/types/ids'
 import type { AppEvent } from '$lib/events/app_event'
-import { ensure_open_note } from '$lib/operations/ensure_open_note'
+import { ensure_open_note } from '$lib/utils/ensure_open_note'
 
 export async function change_vault_use_case(
   ports: { vault: VaultPort; notes: NotesPort; index: WorkspaceIndexPort },

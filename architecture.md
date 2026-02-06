@@ -50,7 +50,7 @@ This is the canonical, non-negotiable workflow for adding new features. If a cha
 -   **Long-lived state** → `stores/` (vault, notes, editor, UI preferences) via reducers.
 -   **Transient UX state** → `flows/` (dialogs, loading, error states, confirmation steps).
 -   **Facts about change** → `events/` (event type definitions).
--   **One-off computations** → `utils/` (pure helpers).
+-   **Pure helpers and computations** → `utils/` (pure helpers, no side effects).
 -   **Domain types** → `types/` (no dependencies on stores/adapters).
 
 ### Where to Put New Code (File Placement)
@@ -58,13 +58,12 @@ This is the canonical, non-negotiable workflow for adding new features. If a cha
 -   **Adapters**: `src/lib/adapters/<web|tauri|editor|test>/...`.
 -   **Events**: `src/lib/events/*` (event type definitions).
 -   **Use Cases**: `src/lib/use_cases/*` (effectful, returns events).
--   **Operations**: `src/lib/operations/*` (pure helpers used by use cases).
 -   **Flows**: `src/lib/flows/*_flow.ts` (state machines + orchestration).
 -   **Controllers**: `src/lib/controllers/*` (UI intent → Flow events).
 -   **Stores**: `src/lib/stores/*` (global state + reducers).
 -   **Shell**: `src/lib/shell/*` (runtime-only side effects).
 -   **Components**: `src/lib/components/*` (presentational UI).
--   **Utils**: `src/lib/utils/*` (pure helpers).
+-   **Utils**: `src/lib/utils/*` (pure helpers, no side effects).
 -   **Types**: `src/lib/types/*` (domain and UI types).
 
 ### Feature Development Checklist
@@ -76,7 +75,7 @@ This is the canonical, non-negotiable workflow for adding new features. If a cha
 -   Wire everything in the **composition root** (route).
 -   Add tests:
     -   Use Cases → `tests/unit/use_cases/*`
-    -   Operations (helpers) → `tests/unit/operations/*`
+    -   Utils (helpers) → `tests/unit/utils/*`
     -   Flows → `tests/integration/flows/*`
     -   Stores → `tests/unit/stores/*`
     -   Adapters → `tests/unit/adapters/*` as appropriate
@@ -162,7 +161,7 @@ Use cases perform **business IO** through Ports and return `AppEvent[]`.
     -   Effectful (call ports).
     -   Return events (facts), not store mutations.
     -   No UI or DOM access.
--   **Pure Helpers**: `src/lib/operations/*` holds pure helper functions used by use cases.
+-   **Pure Helpers**: `src/lib/utils/*` holds pure helper functions with no side effects.
 
 ### 5. Stores (Reducers + Source of Truth)
 **Location:** `src/lib/stores/`
@@ -303,6 +302,8 @@ Pure utility functions with no side effects.
 -   `asset_url.ts` - Asset URL generation utilities
 -   `search_commands.ts`, `search_settings.ts` - Command palette filtering
 -   `note_path_exists.ts` - Note path normalization + existence check
+-   `init_theme.ts` - Theme initialization helper
+-   `ensure_open_note.ts` - Open note state creation and untitled note generation
 
 ---
 
@@ -347,7 +348,6 @@ src/lib/
 ├── adapters/        # Platform implementations (web/, tauri/, editor/, theme, test/)
 ├── events/          # Event type definitions
 ├── use_cases/       # Effectful application logic (returns events)
-├── operations/      # Pure helper functions used by use cases
 ├── stores/          # Global reactive state + reducers
 ├── flows/           # Feature state machines + orchestration
 ├── controllers/     # UI intent → Flow events
@@ -355,7 +355,7 @@ src/lib/
 ├── hooks/           # Svelte integration layer
 ├── components/      # UI components (feature + ui primitives)
 ├── types/           # Domain type definitions
-└── utils/           # Pure utility functions
+└── utils/           # Pure utility functions (no side effects)
 ```
 
 ## Key Implementation Guidelines

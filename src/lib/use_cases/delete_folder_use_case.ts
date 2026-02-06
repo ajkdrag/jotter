@@ -5,7 +5,7 @@ import type { Vault } from '$lib/types/vault'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { NoteMeta } from '$lib/types/note'
 import type { AppEvent } from '$lib/events/app_event'
-import { ensure_open_note } from '$lib/operations/ensure_open_note'
+import { ensure_open_note } from '$lib/utils/ensure_open_note'
 
 export async function delete_folder_use_case(
   ports: { notes: NotesPort; index: WorkspaceIndexPort },

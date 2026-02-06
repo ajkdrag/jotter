@@ -1,6 +1,6 @@
 import type { NoteMeta } from '$lib/types/note'
 import type { AppEvent } from '$lib/events/app_event'
-import { create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
+import { create_untitled_open_note_in_folder } from '$lib/utils/ensure_open_note'
 
 export function create_untitled_note_use_case(args: {
   notes: NoteMeta[]

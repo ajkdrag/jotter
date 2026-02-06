@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { ensure_open_note, create_untitled_open_note_in_folder } from '$lib/operations/ensure_open_note'
+import { ensure_open_note, create_untitled_open_note_in_folder } from '$lib/utils/ensure_open_note'
 import type { Vault } from '$lib/types/vault'
 import type { VaultId, VaultPath, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'

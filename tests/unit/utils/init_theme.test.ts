@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { init_theme } from '$lib/operations/init_theme'
+import { init_theme } from '$lib/utils/init_theme'
 import type { ThemePort } from '$lib/ports/theme_port'
 
 describe('init_theme', () => {
