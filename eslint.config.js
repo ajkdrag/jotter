@@ -28,7 +28,7 @@ export default [
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['*.js', '*.mjs']
+					allowDefaultProject: ['*.js', '*.mjs', 'scripts/*.js', 'scripts/*.mjs']
 				}
 			}
 		},
@@ -75,7 +75,7 @@ export default [
 		}
 	},
 	{
-		files: ['*.js', '*.mjs'],
+		files: ['*.js', '*.mjs', 'scripts/**/*.js', 'scripts/**/*.mjs'],
 		...ts.configs.disableTypeChecked
 	}
 ];

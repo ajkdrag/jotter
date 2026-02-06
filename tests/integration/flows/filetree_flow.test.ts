@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
 import { filetree_flow_machine } from '$lib/flows/filetree_flow'
-import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import type { VaultId } from '$lib/types/ids'
 import type { FolderContents } from '$lib/types/filetree'
 
 function create_mock_input() {
-  const stores = create_mock_stores()
   const get_vault_id = vi.fn(() => 'test-vault' as VaultId)
+  const get_vault_generation = vi.fn(() => 0)
+  const dispatch_many = vi.fn()
   const list_folder_contents = vi.fn(
     (_vault_id: VaultId, _folder_path: string): Promise<FolderContents> => Promise.resolve({
       notes: [],
@@ -32,8 +32,9 @@ function create_mock_input() {
         get_folder_stats: vi.fn(() => Promise.resolve({ note_count: 0, folder_count: 0 }))
       }
     },
-    stores,
-    get_vault_id
+    get_vault_id,
+    get_vault_generation,
+    dispatch_many
   }
 }
 
@@ -84,7 +85,8 @@ describe('filetree_flow', () => {
     actor.send({
       type: 'FOLDER_LOAD_DONE',
       path: 'docs',
-      contents: { notes: [], subfolders: [] }
+      generation: 0,
+      events: []
     })
 
     const snapshot = actor.getSnapshot()
@@ -101,6 +103,7 @@ describe('filetree_flow', () => {
     actor.send({
       type: 'FOLDER_LOAD_ERROR',
       path: 'docs',
+      generation: 0,
       error: 'Network error'
     })
 
@@ -119,6 +122,7 @@ describe('filetree_flow', () => {
     actor.send({
       type: 'FOLDER_LOAD_ERROR',
       path: 'docs',
+      generation: 0,
       error: 'Network error'
     })
     actor.send({ type: 'RETRY_LOAD', path: 'docs' })
@@ -150,6 +154,7 @@ describe('filetree_flow', () => {
     actor.send({
       type: 'FOLDER_LOAD_ERROR',
       path: 'docs',
+      generation: 0,
       error: 'Error'
     })
     actor.send({ type: 'RESET' })
@@ -170,7 +175,8 @@ describe('filetree_flow', () => {
     actor.send({
       type: 'FOLDER_LOAD_DONE',
       path: 'docs',
-      contents: { notes: [], subfolders: [] }
+      generation: 0,
+      events: []
     })
 
     actor.send({ type: 'TOGGLE_FOLDER', path: 'docs' })
@@ -195,6 +201,24 @@ describe('filetree_flow', () => {
     expect(snapshot.context.expanded_paths.size).toBe(0)
     expect(snapshot.context.load_states.get('')).toBe('loaded')
     expect(snapshot.context.active_loads.has('')).toBe(false)
+
+    actor.stop()
+  })
+
+  it('ignores stale load completion from previous generation', () => {
+    const input = create_mock_input()
+    input.get_vault_generation.mockReturnValue(2)
+    const actor = createActor(filetree_flow_machine, { input }).start()
+
+    actor.send({
+      type: 'FOLDER_LOAD_DONE',
+      path: 'docs',
+      generation: 1,
+      events: [{ type: 'notes_set', notes: [] }]
+    })
+
+    expect(actor.getSnapshot().context.load_states.get('docs')).not.toBe('loaded')
+    expect(input.dispatch_many).not.toHaveBeenCalled()
 
     actor.stop()
   })

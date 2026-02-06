@@ -44,7 +44,7 @@ describe('rename_note_flow', () => {
     const stores = create_mock_stores()
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -58,11 +58,11 @@ describe('rename_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const stores = create_mock_stores()
     const vault = create_test_vault()
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -79,11 +79,11 @@ describe('rename_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const stores = create_mock_stores()
     const vault = create_test_vault()
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -100,11 +100,11 @@ describe('rename_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const stores = create_mock_stores()
     const vault = create_test_vault()
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -122,11 +122,11 @@ describe('rename_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -162,11 +162,11 @@ describe('rename_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note1, note2])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note1, note2])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note1, note2] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -187,11 +187,11 @@ describe('rename_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note1, note2])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note1, note2])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note1, note2] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -219,11 +219,11 @@ describe('rename_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note1, note2])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note1, note2])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note1, note2] })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -245,12 +245,12 @@ describe('rename_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
-    stores.editor.actions.set_open_note(create_open_note_state(note))
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
+    stores.dispatch({ type: 'open_note_set', open_note: create_open_note_state(note) })
 
     const actor = createActor(rename_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 

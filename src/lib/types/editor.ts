@@ -5,6 +5,12 @@ export type OpenNoteState = NoteDoc & {
   is_dirty: boolean
 }
 
+export type CursorInfo = {
+  line: number
+  column: number
+  total_lines: number
+}
+
 export function to_open_note_state(doc: NoteDoc): OpenNoteState {
   return {
     ...doc,

@@ -3,7 +3,7 @@ import type { SearchPort } from '$lib/ports/search_port'
 import type { VaultId, NoteId } from '$lib/types/ids'
 import type { NoteSearchHit } from '$lib/types/search'
 import { parse_search_query } from '$lib/utils/search_query_parser'
-import { search_notes } from '$lib/operations/search_notes'
+import { search_notes_use_case } from '$lib/use_cases/search_notes_use_case'
 
 type FileSearchPorts = {
   search: SearchPort
@@ -54,7 +54,7 @@ export const file_search_flow_machine = setup({
         input: { ports: FileSearchPorts; vault_id: VaultId; query: string }
       }): Promise<NoteSearchHit[]> => {
         const parsed = parse_search_query(input.query)
-        return search_notes(
+        return search_notes_use_case(
           { search: input.ports.search },
           { vault_id: input.vault_id, query: parsed, limit: 20 }
         )

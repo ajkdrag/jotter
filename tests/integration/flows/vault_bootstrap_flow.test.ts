@@ -30,7 +30,9 @@ describe('vault_bootstrap_flow', () => {
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many,
+        now_ms: stores.now_ms
       }
     })
     actor.start()
@@ -61,7 +63,9 @@ describe('vault_bootstrap_flow', () => {
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many,
+        now_ms: stores.now_ms
       }
     })
     actor.start()
@@ -88,7 +92,9 @@ describe('vault_bootstrap_flow', () => {
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many,
+        now_ms: stores.now_ms
       }
     })
     actor.start()
@@ -119,7 +125,9 @@ describe('vault_bootstrap_flow', () => {
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many,
+        now_ms: stores.now_ms
       }
     })
     actor.start()
@@ -142,7 +150,9 @@ describe('vault_bootstrap_flow', () => {
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many,
+        now_ms: stores.now_ms
       }
     })
     actor.start()
@@ -167,7 +177,9 @@ describe('vault_bootstrap_flow', () => {
     const actor = createActor(vault_bootstrap_flow_machine, {
       input: {
         ports: { vault: ports.vault, notes: ports.notes, index: ports.index },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many,
+        now_ms: stores.now_ms
       }
     })
     actor.start()

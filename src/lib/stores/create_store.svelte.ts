@@ -1,10 +1,10 @@
 import { SvelteSet } from 'svelte/reactivity'
 import type { StoreHandle } from './store_handle'
 
-export function create_store<TState extends object, TActions>(
+export function create_store<TState extends object, TEvent>(
   initial_state: TState,
-  create_actions: (get: () => TState, set: (s: TState) => void) => TActions
-): StoreHandle<TState, TActions> {
+  reduce: (state: TState, event: TEvent) => TState
+): StoreHandle<TState, TEvent> {
   let state = $state(initial_state)
   const listeners = new SvelteSet<(s: TState) => void>()
 
@@ -20,6 +20,10 @@ export function create_store<TState extends object, TActions>(
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
-    actions: create_actions(get, set)
+    reduce: (event) => {
+      const next = reduce(get(), event)
+      if (next === state) return
+      set(next)
+    }
   }
 }

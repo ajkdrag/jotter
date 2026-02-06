@@ -8,19 +8,15 @@
   import { use_keyboard_shortcuts } from '$lib/hooks/use_keyboard_shortcuts.svelte'
   import { build_app_sidebar_props } from '$lib/components/app_sidebar_view_model'
   import type { AppFlows } from '$lib/flows/create_app_flows'
-  import type { EditorManager } from '$lib/adapters/editor/editor_manager'
   import type { AppShellActions } from '$lib/controllers/app_shell_actions'
-  import type { AssetPath } from '$lib/types/ids'
 
   type Props = {
     app: AppFlows
-    editor_manager: EditorManager
     actions: AppShellActions
-    resolve_asset_url: ((asset_path: AssetPath) => Promise<string>) | undefined
     hide_choose_vault_button?: boolean
   }
 
-  let { app, editor_manager, actions, resolve_asset_url, hide_choose_vault_button = false }: Props = $props()
+  let { app, actions, hide_choose_vault_button = false }: Props = $props()
 
   const stable_app = untrack(() => app)
   const stable_actions = untrack(() => actions)
@@ -140,7 +136,6 @@
   })
 
   const sidebar_props = $derived(build_app_sidebar_props({
-    editor_manager,
     vault: vault_store.state.vault,
     notes: notes_store.state.notes,
     folder_paths: notes_store.state.folder_paths,
@@ -148,11 +143,11 @@
     load_states: filetree.snapshot.context.load_states,
     open_note_title: editor_store.state.open_note?.meta.title ?? 'Notes',
     open_note: editor_store.state.open_note,
+    cursor_info: editor_store.state.cursor,
     sidebar_open: ui_store.state.sidebar_open,
     selected_folder_path: ui_store.state.selected_folder_path,
     current_theme: ui_store.state.theme,
     link_syntax: ui_store.state.editor_settings.link_syntax,
-    resolve_asset_url,
     actions: stable_actions
   }))
 </script>

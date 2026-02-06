@@ -1,10 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { delete_folder } from '$lib/operations/delete_folder'
-import { get_folder_stats } from '$lib/operations/get_folder_stats'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { get_folder_stats_use_case } from '$lib/use_cases/get_folder_stats_use_case'
+import { delete_folder_use_case } from '$lib/use_cases/delete_folder_use_case'
 
 type DeleteFolderPorts = {
   notes: NotesPort
@@ -20,6 +21,8 @@ type FlowContext = {
   error: string | null
   ports: DeleteFolderPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export type DeleteFolderFlowContext = FlowContext
@@ -35,6 +38,8 @@ export type DeleteFolderFlowEvents = FlowEvents
 type FlowInput = {
   ports: DeleteFolderPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export const delete_folder_flow_machine = setup({
@@ -55,7 +60,7 @@ export const delete_folder_flow_machine = setup({
         }
       }) => {
         const { ports, vault_id, folder_path } = input
-        return await get_folder_stats(ports, { vault_id, folder_path })
+        return await get_folder_stats_use_case({ notes: ports.notes }, { vault_id, folder_path })
       }
     ),
     perform_delete: fromPromise(
@@ -68,31 +73,22 @@ export const delete_folder_flow_machine = setup({
           vault_id: VaultId
           folder_path: string
           contains_open_note: boolean
+          dispatch_many: (events: AppEvent[]) => void
+          now_ms: () => number
         }
-      }) => {
-        const { ports, stores, vault_id, folder_path, contains_open_note } = input
-        const prefix = folder_path + '/'
-        const affected_notes = stores
-          .notes
-          .get_snapshot()
-          .notes
-          .filter((note) => note.path.startsWith(prefix))
-
-        await delete_folder(ports, { vault_id, folder_path })
-
-        stores.notes.actions.remove_folder(folder_path)
-
-        if (contains_open_note) {
-          stores.editor.actions.clear_open_note()
-        }
-
-        const vault = stores.vault.get_snapshot().vault
-        const notes = stores.notes.get_snapshot().notes
-        stores.editor.actions.ensure_open_note(vault, notes, stores.now_ms())
-
-        for (const note of affected_notes) {
-          await ports.index.remove_note(vault_id, note.id)
-        }
+      }): Promise<AppEvent[]> => {
+        return await delete_folder_use_case(
+          { notes: input.ports.notes, index: input.ports.index },
+          {
+            vault_id: input.vault_id,
+            folder_path: input.folder_path,
+            contains_open_note: input.contains_open_note,
+            current_vault: input.stores.vault.get_snapshot().vault,
+            current_notes: input.stores.notes.get_snapshot().notes,
+            current_open_note: input.stores.editor.get_snapshot().open_note,
+            now_ms: input.now_ms()
+          }
+        )
       }
     )
   }
@@ -107,7 +103,9 @@ export const delete_folder_flow_machine = setup({
     affected_folder_count: 0,
     error: null,
     ports: input.ports,
-    stores: input.stores
+    stores: input.stores,
+    dispatch_many: input.dispatch_many,
+    now_ms: input.now_ms
   }),
   states: {
     idle: {
@@ -178,18 +176,25 @@ export const delete_folder_flow_machine = setup({
             stores: context.stores,
             vault_id: context.vault_id,
             folder_path: context.folder_path,
-            contains_open_note: context.contains_open_note
+            contains_open_note: context.contains_open_note,
+            dispatch_many: context.dispatch_many,
+            now_ms: context.now_ms
           }
         },
         onDone: {
           target: 'idle',
-          actions: assign({
-            folder_path: () => null,
-            vault_id: () => null,
-            contains_open_note: () => false,
-            affected_note_count: () => 0,
-            affected_folder_count: () => 0
-          })
+          actions: [
+            assign({
+              folder_path: () => null,
+              vault_id: () => null,
+              contains_open_note: () => false,
+              affected_note_count: () => 0,
+              affected_folder_count: () => 0
+            }),
+            ({ context, event }) => {
+              context.dispatch_many(event.output)
+            }
+          ]
         },
         onError: {
           target: 'error',

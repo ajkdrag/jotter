@@ -1,23 +1,18 @@
 import type { EditorSettings } from '$lib/types/editor_settings'
 import type { AssetPath } from '$lib/types/ids'
-
-export type CursorInfo = {
-  line: number
-  column: number
-  total_lines: number
-}
+import type { CursorInfo } from '$lib/types/editor'
 
 export type EditorHandle = {
   destroy: () => void
   set_markdown: (markdown: string) => void
   get_markdown: () => string
+  insert_text_at_cursor: (text: string) => void
   mark_clean: () => void
   is_dirty: () => boolean
   focus: () => void
 }
 
 export type EditorPort = {
-  insert_text_at_cursor: (text: string) => void
   create_editor: (
     root: HTMLElement,
     config: {

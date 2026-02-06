@@ -1,14 +1,16 @@
-import { setup, assign, fromCallback, type AnyActorRef } from 'xstate'
-import type { FolderLoadState, FolderContents } from '$lib/types/filetree'
+import { setup, assign, fromCallback, enqueueActions, type AnyActorRef } from 'xstate'
+import type { FolderLoadState } from '$lib/types/filetree'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
-import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { load_folder_contents_use_case } from '$lib/use_cases/load_folder_contents_use_case'
 
 type FiletreePorts = {
   notes: NotesPort
 }
 
 type GetVaultId = () => VaultId | null
+type GetVaultGeneration = () => number
 
 type FlowContext = {
   expanded_paths: Set<string>
@@ -16,8 +18,9 @@ type FlowContext = {
   error_messages: Map<string, string>
   active_loads: Map<string, AnyActorRef>
   ports: FiletreePorts
-  stores: AppStores
   get_vault_id: GetVaultId
+  get_vault_generation: GetVaultGeneration
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type FiletreeFlowContext = FlowContext
@@ -27,8 +30,8 @@ type FlowEvents =
   | { type: 'EXPAND_FOLDER'; path: string }
   | { type: 'COLLAPSE_FOLDER'; path: string }
   | { type: 'REQUEST_LOAD'; path: string }
-  | { type: 'FOLDER_LOAD_DONE'; path: string; contents: FolderContents }
-  | { type: 'FOLDER_LOAD_ERROR'; path: string; error: string }
+  | { type: 'FOLDER_LOAD_DONE'; path: string; generation: number; events: AppEvent[] }
+  | { type: 'FOLDER_LOAD_ERROR'; path: string; generation: number; error: string }
   | { type: 'RETRY_LOAD'; path: string }
   | { type: 'COLLAPSE_ALL' }
   | { type: 'RESET' }
@@ -38,18 +41,20 @@ export type FiletreeFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: FiletreePorts
-  stores: AppStores
   get_vault_id: GetVaultId
+  get_vault_generation: GetVaultGeneration
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 type LoadFolderInput = {
   ports: FiletreePorts
   vault_id: VaultId
+  generation: number
   path: string
 }
 
 const load_folder_actor = fromCallback<FlowEvents, LoadFolderInput>(({ sendBack, input, self }) => {
-  const { ports, vault_id, path } = input
+  const { ports, vault_id, generation, path } = input
   let active = true
   const parent = (self as { _parent?: { getSnapshot: () => { status: string } } })._parent
 
@@ -59,12 +64,15 @@ const load_folder_actor = fromCallback<FlowEvents, LoadFolderInput>(({ sendBack,
     sendBack(event)
   }
 
-  ports.notes.list_folder_contents(vault_id, path)
-    .then((contents) => {
-      send_if_active({ type: 'FOLDER_LOAD_DONE', path, contents })
+  load_folder_contents_use_case(
+    { notes: ports.notes },
+    { vault_id, folder_path: path }
+  )
+    .then((events) => {
+      send_if_active({ type: 'FOLDER_LOAD_DONE', path, generation, events })
     })
     .catch((error: unknown) => {
-      send_if_active({ type: 'FOLDER_LOAD_ERROR', path, error: String(error) })
+      send_if_active({ type: 'FOLDER_LOAD_ERROR', path, generation, error: String(error) })
     })
 
   return () => {
@@ -130,19 +138,17 @@ export const filetree_flow_machine = setup({
       const path = event.path
       const vault_id = context.get_vault_id()
       if (!vault_id) return {}
+      const generation = context.get_vault_generation()
 
       const current_state = context.load_states.get(path)
       if (!should_load_folder(current_state) && event.type !== 'RETRY_LOAD') return {}
-
-      const existing = context.active_loads.get(path)
-      if (existing) existing.stop()
 
       const new_load_states = new Map(context.load_states)
       new_load_states.set(path, 'loading')
 
       const new_active_loads = new Map(context.active_loads)
       const actor = spawn('load_folder', {
-        input: { ports: context.ports, vault_id, path },
+        input: { ports: context.ports, vault_id, generation, path },
         id: `load-${path}-${String(Date.now())}`
       })
       new_active_loads.set(path, actor)
@@ -152,16 +158,20 @@ export const filetree_flow_machine = setup({
     handle_load_done: assign(({ context, event }) => {
       if (event.type !== 'FOLDER_LOAD_DONE') return {}
 
-      const { path, contents } = event
+      const { path, events } = event
       const new_load_states = new Map(context.load_states)
       const new_error_messages = new Map(context.error_messages)
       const new_active_loads = new Map(context.active_loads)
+      if (event.generation !== context.get_vault_generation()) {
+        new_active_loads.delete(path)
+        return { active_loads: new_active_loads }
+      }
 
       new_load_states.set(path, 'loaded')
       new_error_messages.delete(path)
       new_active_loads.delete(path)
 
-      context.stores.notes.actions.merge_folder_contents(path, contents)
+      context.dispatch_many(events)
 
       return { load_states: new_load_states, error_messages: new_error_messages, active_loads: new_active_loads }
     }),
@@ -172,6 +182,10 @@ export const filetree_flow_machine = setup({
       const new_load_states = new Map(context.load_states)
       const new_error_messages = new Map(context.error_messages)
       const new_active_loads = new Map(context.active_loads)
+      if (event.generation !== context.get_vault_generation()) {
+        new_active_loads.delete(path)
+        return { active_loads: new_active_loads }
+      }
 
       new_load_states.set(path, 'error')
       new_error_messages.set(path, error)
@@ -179,18 +193,24 @@ export const filetree_flow_machine = setup({
 
       return { load_states: new_load_states, error_messages: new_error_messages, active_loads: new_active_loads }
     }),
+    stop_active_loads: enqueueActions(({ context, enqueue }) => {
+      context.active_loads.forEach((actor) => {
+        enqueue.stopChild(actor)
+      })
+    }),
     reset_state: assign(() => create_empty_state()),
     clear_expanded: assign(() => ({ expanded_paths: new Set<string>() })),
     load_root_folder: assign(({ context, spawn }) => {
       const vault_id = context.get_vault_id()
       if (!vault_id) return {}
+      const generation = context.get_vault_generation()
 
       const new_load_states = new Map<string, FolderLoadState>()
       new_load_states.set('', 'loading')
 
       const new_active_loads = new Map<string, AnyActorRef>()
       const actor = spawn('load_folder', {
-        input: { ports: context.ports, vault_id, path: '' },
+        input: { ports: context.ports, vault_id, generation, path: '' },
         id: `load-root-${String(Date.now())}`
       })
       new_active_loads.set('', actor)
@@ -204,14 +224,15 @@ export const filetree_flow_machine = setup({
   context: ({ input }) => ({
     ...create_empty_state(),
     ports: input.ports,
-    stores: input.stores,
-    get_vault_id: input.get_vault_id
+    get_vault_id: input.get_vault_id,
+    get_vault_generation: input.get_vault_generation,
+    dispatch_many: input.dispatch_many
   }),
   states: {
     active: {
       on: {
         VAULT_CHANGED: {
-          actions: ['reset_state', 'load_root_folder']
+          actions: ['stop_active_loads', 'reset_state', 'load_root_folder']
         },
         TOGGLE_FOLDER: [
           {
@@ -244,7 +265,7 @@ export const filetree_flow_machine = setup({
           actions: 'clear_expanded'
         },
         RESET: {
-          actions: 'reset_state'
+          actions: ['stop_active_loads', 'reset_state']
         }
       }
     }

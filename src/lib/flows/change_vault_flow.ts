@@ -1,12 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { change_vault } from '$lib/operations/change_vault'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId, VaultPath } from '$lib/types/ids'
-import type { Vault } from '$lib/types/vault'
-import type { NoteMeta } from '$lib/types/note'
-import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { change_vault_use_case } from '$lib/use_cases/change_vault_use_case'
+import { choose_vault_use_case } from '$lib/use_cases/choose_vault_use_case'
 
 type ChangeVaultPorts = {
   vault: VaultPort
@@ -22,7 +21,8 @@ type FlowContext = {
   error: string | null
   change_mode: ChangeMode | null
   ports: ChangeVaultPorts
-  stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export type ChangeVaultFlowContext = FlowContext
@@ -39,7 +39,8 @@ export type ChangeVaultFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: ChangeVaultPorts
-  stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export const change_vault_flow_machine = setup({
@@ -56,41 +57,40 @@ export const change_vault_flow_machine = setup({
         input: {
           ports: ChangeVaultPorts
           change_mode: ChangeMode
-          stores: AppStores
+          dispatch_many: (events: AppEvent[]) => void
+          now_ms: () => number
         }
       }) => {
-        const { ports, change_mode, stores } = input
-
-        let result: { vault: Vault; notes: NoteMeta[]; folder_paths: string[] } | null = null
+        const { ports, change_mode, dispatch_many, now_ms } = input
 
         switch (change_mode.kind) {
           case 'choose_vault': {
-            stores.ui.actions.set_system_dialog_open(true)
             let vault_path: VaultPath | null = null
             try {
-              vault_path = await ports.vault.choose_vault()
+              dispatch_many([{ type: 'ui_system_dialog_set', open: true }])
+              vault_path = await choose_vault_use_case({ vault: ports.vault })
             } finally {
-              stores.ui.actions.set_system_dialog_open(false)
+              dispatch_many([{ type: 'ui_system_dialog_set', open: false }])
             }
             if (!vault_path) return { changed: false }
-            result = await change_vault({ vault: ports.vault, notes: ports.notes }, { vault_path })
+            const events = await change_vault_use_case(
+              { vault: ports.vault, notes: ports.notes, index: ports.index },
+              { vault_path },
+              now_ms()
+            )
+            dispatch_many(events)
             break
           }
           case 'select_recent': {
-            result = await change_vault({ vault: ports.vault, notes: ports.notes }, { vault_id: change_mode.vault_id })
+            const events = await change_vault_use_case(
+              { vault: ports.vault, notes: ports.notes, index: ports.index },
+              { vault_id: change_mode.vault_id },
+              now_ms()
+            )
+            dispatch_many(events)
             break
           }
         }
-
-        void ports.index.build_index(result.vault.id)
-        const recent_vaults = await ports.vault.list_vaults()
-
-        stores.vault.actions.set_vault(result.vault)
-        stores.notes.actions.set_notes(result.notes)
-        stores.notes.actions.set_folder_paths(result.folder_paths)
-        stores.editor.actions.clear_open_note()
-        stores.editor.actions.ensure_open_note(result.vault, result.notes, stores.now_ms())
-        stores.vault.actions.set_recent_vaults(recent_vaults)
 
         return { changed: true }
       }
@@ -103,7 +103,8 @@ export const change_vault_flow_machine = setup({
     error: null,
     change_mode: null,
     ports: input.ports,
-    stores: input.stores
+    dispatch_many: input.dispatch_many,
+    now_ms: input.now_ms
   }),
   states: {
     idle: {
@@ -141,7 +142,8 @@ export const change_vault_flow_machine = setup({
           return {
             ports: context.ports,
             change_mode: context.change_mode,
-            stores: context.stores
+            dispatch_many: context.dispatch_many,
+            now_ms: context.now_ms
           }
         },
         onDone: 'idle',

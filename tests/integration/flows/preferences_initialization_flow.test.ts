@@ -21,7 +21,8 @@ describe('preferences_initialization_flow', () => {
     const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings, vault_settings: ports.vault_settings },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 
@@ -39,12 +40,13 @@ describe('preferences_initialization_flow', () => {
     ports.vault_settings.get_vault_setting = vi.fn().mockRejectedValue(new Error('Settings load failed'))
 
     const stores = create_mock_stores()
-    stores.vault.actions.set_vault(TEST_VAULT)
+    stores.dispatch({ type: 'vault_set', vault: TEST_VAULT })
 
     const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings, vault_settings: ports.vault_settings },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 
@@ -67,12 +69,13 @@ describe('preferences_initialization_flow', () => {
     })
 
     const stores = create_mock_stores()
-    stores.vault.actions.set_vault(TEST_VAULT)
+    stores.dispatch({ type: 'vault_set', vault: TEST_VAULT })
 
     const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings, vault_settings: ports.vault_settings },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 
@@ -95,12 +98,13 @@ describe('preferences_initialization_flow', () => {
     ports.vault_settings.get_vault_setting = vi.fn().mockRejectedValue(new Error('Settings load failed'))
 
     const stores = create_mock_stores()
-    stores.vault.actions.set_vault(TEST_VAULT)
+    stores.dispatch({ type: 'vault_set', vault: TEST_VAULT })
 
     const actor = createActor(preferences_initialization_flow_machine, {
       input: {
         ports: { theme: ports.theme, settings: ports.settings, vault_settings: ports.vault_settings },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 

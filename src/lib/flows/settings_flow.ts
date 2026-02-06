@@ -4,12 +4,10 @@ import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { EditorSettings } from "$lib/types/editor_settings";
 import type { VaultId } from "$lib/types/ids";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
-import {
-  load_editor_settings,
-  save_editor_settings,
-} from "$lib/operations/load_editor_settings";
-import { apply_editor_styles } from "$lib/operations/apply_editor_styles";
+import { load_editor_settings_use_case } from "$lib/use_cases/load_editor_settings_use_case";
+import { save_editor_settings_use_case } from "$lib/use_cases/save_editor_settings_use_case";
 import type { AppStores } from "$lib/stores/create_app_stores";
+import type { AppEvent } from "$lib/events/app_event";
 
 type SettingsFlowPorts = {
   settings: SettingsPort;
@@ -19,6 +17,7 @@ type SettingsFlowPorts = {
 type FlowContext = {
   ports: SettingsFlowPorts;
   stores: AppStores;
+  dispatch_many: (events: AppEvent[]) => void;
   current_settings: EditorSettings;
   has_unsaved_changes: boolean;
   error: string | null;
@@ -38,6 +37,7 @@ export type SettingsFlowEvents = FlowEvents;
 type FlowInput = {
   ports: SettingsFlowPorts;
   stores: AppStores;
+  dispatch_many: (events: AppEvent[]) => void;
 };
 
 function get_vault_id(stores: AppStores): VaultId | null {
@@ -55,12 +55,11 @@ export const settings_flow_machine = setup({
       async ({ input }: { input: { ports: SettingsFlowPorts; stores: AppStores } }) => {
         const vault_id = get_vault_id(input.stores);
         if (!vault_id) {
-          return DEFAULT_EDITOR_SETTINGS;
+          return [{ type: "ui_editor_settings_set", settings: DEFAULT_EDITOR_SETTINGS }] as AppEvent[];
         }
-        return await load_editor_settings(
-          input.ports.vault_settings,
-          vault_id,
-          input.ports.settings
+        return await load_editor_settings_use_case(
+          { vault_settings: input.ports.vault_settings, settings: input.ports.settings },
+          { vault_id }
         );
       },
     ),
@@ -74,8 +73,10 @@ export const settings_flow_machine = setup({
         if (!vault_id) {
           throw new Error("No vault open");
         }
-        await save_editor_settings(input.ports.vault_settings, vault_id, input.settings);
-        apply_editor_styles(input.settings);
+        return await save_editor_settings_use_case(
+          { vault_settings: input.ports.vault_settings },
+          { vault_id, settings: input.settings }
+        );
       },
     ),
   },
@@ -85,6 +86,7 @@ export const settings_flow_machine = setup({
   context: ({ input }) => ({
     ports: input.ports,
     stores: input.stores,
+    dispatch_many: input.dispatch_many,
     current_settings: DEFAULT_EDITOR_SETTINGS,
     has_unsaved_changes: false,
     error: null,
@@ -103,13 +105,15 @@ export const settings_flow_machine = setup({
           target: "editing",
           actions: [
             assign({
-              current_settings: ({ event }) => event.output,
+              current_settings: ({ event }) => {
+                const updated = event.output.find((e) => e.type === "ui_editor_settings_set");
+                return updated ? updated.settings : DEFAULT_EDITOR_SETTINGS;
+              },
               has_unsaved_changes: false,
               error: null,
             }),
             ({ event, context }) => {
-              context.stores.ui.actions.set_editor_settings(event.output)
-              apply_editor_styles(event.output)
+              context.dispatch_many(event.output)
             }
           ],
         },
@@ -133,9 +137,8 @@ export const settings_flow_machine = setup({
               has_unsaved_changes: true,
             }),
             ({ event, context }) => {
-              context.stores.ui.actions.set_editor_settings(event.settings)
-              apply_editor_styles(event.settings)
-            },
+              context.dispatch_many([{ type: "ui_editor_settings_set", settings: event.settings }])
+            }
           ],
         },
         SAVE: "saving",
@@ -152,10 +155,15 @@ export const settings_flow_machine = setup({
         }),
         onDone: {
           target: "editing",
-          actions: assign({
-            has_unsaved_changes: false,
-            error: null,
-          }),
+          actions: [
+            assign({
+              has_unsaved_changes: false,
+              error: null,
+            }),
+            ({ event, context }) => {
+              context.dispatch_many(event.output)
+            }
+          ],
         },
         onError: {
           target: "error",

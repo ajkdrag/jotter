@@ -21,7 +21,7 @@ describe('change_vault_flow (select recent)', () => {
     ports.vault._mock_vaults = [vault]
 
     const actor = createActor(change_vault_flow_machine, {
-      input: { ports, stores }
+      input: { ports, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 

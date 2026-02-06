@@ -1,6 +1,6 @@
 import { setup, assign } from 'xstate'
 import { parse_search_query } from '$lib/utils/search_query_parser'
-import { search_palette } from '$lib/operations/search_palette'
+import { search_palette } from '$lib/utils/search_palette'
 import type { CommandDefinition } from '$lib/utils/search_commands'
 import type { SettingDefinition } from '$lib/types/settings_registry'
 

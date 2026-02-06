@@ -14,7 +14,8 @@ describe('create_folder_flow', () => {
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 
@@ -39,7 +40,8 @@ describe('create_folder_flow', () => {
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 
@@ -64,7 +66,8 @@ describe('create_folder_flow', () => {
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 
@@ -96,7 +99,8 @@ describe('create_folder_flow', () => {
     const actor = createActor(create_folder_flow_machine, {
       input: {
         ports: { notes: ports.notes },
-        stores
+        stores,
+        dispatch_many: stores.dispatch_many
       }
     })
 

@@ -1,11 +1,11 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { init_theme } from '$lib/operations/init_theme'
-import { load_editor_settings } from '$lib/operations/load_editor_settings'
-import { apply_editor_styles } from '$lib/operations/apply_editor_styles'
+import { init_theme_use_case } from '$lib/use_cases/init_theme_use_case'
+import { load_editor_settings_use_case } from '$lib/use_cases/load_editor_settings_use_case'
 import type { ThemePort } from '$lib/ports/theme_port'
 import type { SettingsPort } from '$lib/ports/settings_port'
 import type { VaultSettingsPort } from '$lib/ports/vault_settings_port'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 
 type PreferencesInitializationPorts = {
@@ -18,6 +18,7 @@ type FlowContext = {
   error: string | null
   ports: PreferencesInitializationPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type PreferencesInitializationFlowContext = FlowContext
@@ -29,6 +30,7 @@ export type PreferencesInitializationFlowEvents = FlowEvents
 type FlowInput = {
   ports: PreferencesInitializationPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export const preferences_initialization_flow_machine = setup({
@@ -45,26 +47,26 @@ export const preferences_initialization_flow_machine = setup({
         input: {
           ports: PreferencesInitializationPorts
           stores: AppStores
+          dispatch_many: (events: AppEvent[]) => void
         }
-      }) => {
+      }): Promise<AppEvent[]> => {
         const { ports, stores } = input
 
-        const theme_mode = init_theme(ports.theme)
-        stores.ui.actions.set_theme(theme_mode)
+        const events: AppEvent[] = []
+        events.push(...init_theme_use_case({ theme: ports.theme }))
 
         const vault_id = stores.vault.get_snapshot().vault?.id
-        let editor_settings = DEFAULT_EDITOR_SETTINGS
-
         if (vault_id) {
-          editor_settings = await load_editor_settings(
-            ports.vault_settings,
-            vault_id,
-            ports.settings
+          const settings_events = await load_editor_settings_use_case(
+            { vault_settings: ports.vault_settings, settings: ports.settings },
+            { vault_id }
           )
+          events.push(...settings_events)
+        } else {
+          events.push({ type: 'ui_editor_settings_set', settings: DEFAULT_EDITOR_SETTINGS })
         }
 
-        stores.ui.actions.set_editor_settings(editor_settings)
-        apply_editor_styles(editor_settings)
+        return events
       }
     )
   }
@@ -74,7 +76,8 @@ export const preferences_initialization_flow_machine = setup({
   context: ({ input }) => ({
     error: null,
     ports: input.ports,
-    stores: input.stores
+    stores: input.stores,
+    dispatch_many: input.dispatch_many
   }),
   states: {
     idle: {
@@ -95,9 +98,15 @@ export const preferences_initialization_flow_machine = setup({
         src: 'perform_startup',
         input: ({ context }) => ({
           ports: context.ports,
-          stores: context.stores
+          stores: context.stores,
+          dispatch_many: context.dispatch_many
         }),
-        onDone: 'idle',
+        onDone: {
+          target: 'idle',
+          actions: ({ context, event }) => {
+            context.dispatch_many(event.output)
+          }
+        },
         onError: {
           target: 'error',
           actions: assign({

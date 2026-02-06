@@ -1,7 +1,8 @@
 import { setup } from 'xstate'
 import type { ThemePort } from '$lib/ports/theme_port'
 import type { ThemeMode } from '$lib/types/theme'
-import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { set_theme_use_case } from '$lib/use_cases/set_theme_use_case'
 
 type ThemeFlowPorts = {
   theme: ThemePort
@@ -9,7 +10,7 @@ type ThemeFlowPorts = {
 
 type FlowContext = {
   ports: ThemeFlowPorts
-  stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type ThemeFlowContext = FlowContext
@@ -20,7 +21,7 @@ export type ThemeFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: ThemeFlowPorts
-  stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export const theme_flow_machine = setup({
@@ -34,7 +35,7 @@ export const theme_flow_machine = setup({
   initial: 'idle',
   context: ({ input }) => ({
     ports: input.ports,
-    stores: input.stores
+    dispatch_many: input.dispatch_many
   }),
   states: {
     idle: {
@@ -42,10 +43,10 @@ export const theme_flow_machine = setup({
         SET_THEME: {
           actions: ({ context, event }) => {
             try {
-              context.ports.theme.set_theme(event.theme)
-              context.stores.ui.actions.set_theme(event.theme)
+              const events = set_theme_use_case({ theme: context.ports.theme }, { theme: event.theme })
+              context.dispatch_many(events)
             } catch (error) {
-              console.error('Failed to set theme:', error)
+              context.dispatch_many([{ type: 'ui_theme_set_failed', error: String(error) }])
             }
           }
         }

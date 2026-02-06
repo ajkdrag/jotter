@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Info, GitBranch } from "@lucide/svelte"
-  import type { CursorInfo } from "$lib/ports/editor_port"
+  import type { CursorInfo } from "$lib/types/editor"
 
   interface Props {
     cursor_info: CursorInfo | null

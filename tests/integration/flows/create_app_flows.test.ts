@@ -1,25 +1,36 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { create_app_flows } from '$lib/flows/create_app_flows'
-import { create_mock_notes_port, create_mock_index_port, create_mock_vault_port } from '../../unit/helpers/mock_ports'
+import { create_mock_vault_port } from '../../unit/helpers/mock_ports'
 import { create_test_assets_adapter } from '$lib/adapters/test/test_assets_adapter'
 import { create_test_settings_adapter } from '$lib/adapters/test/test_settings_adapter'
 import { create_test_vault_settings_adapter } from '$lib/adapters/test/test_vault_settings_adapter'
-import { create_test_vault_adapter } from '$lib/adapters/test/test_vault_adapter'
 import { create_test_notes_adapter } from '$lib/adapters/test/test_notes_adapter'
-import { create_test_workspace_index_adapter } from '$lib/adapters/test/test_workspace_index_adapter'
 import { create_test_search_adapter } from '$lib/adapters/test/test_search_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
 import { create_test_clipboard_adapter } from '$lib/adapters/test/test_clipboard_adapter'
-import { as_vault_id, as_vault_path } from '$lib/types/ids'
 import type { Ports } from '$lib/ports/ports'
 import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
+import { create_app_stores } from '$lib/stores/create_app_stores'
+import { create_event_bus } from '$lib/events/event_bus'
+import type { EditorRuntime } from '$lib/shell/editor_runtime'
+
+const editor_runtime_stub: EditorRuntime = {
+  mount: async () => {},
+  unmount: () => {},
+  open_buffer: async () => {},
+  apply_settings: async () => {},
+  insert_text: () => {},
+  mark_clean: () => {},
+  flush: () => null,
+  focus: () => {}
+}
 
 describe('create_app_flows', () => {
   it('returns handles for all flows', () => {
     const ports: Ports = {
-      vault: create_test_vault_adapter(),
+      vault: create_mock_vault_port(),
       notes: create_test_notes_adapter(),
-      index: create_test_workspace_index_adapter(),
+      index: create_test_search_adapter() as never,
       search: create_test_search_adapter(),
       settings: create_test_settings_adapter(),
       vault_settings: create_test_vault_settings_adapter(),
@@ -29,7 +40,16 @@ describe('create_app_flows', () => {
       clipboard: create_test_clipboard_adapter()
     }
 
-    const app_flows = create_app_flows(ports)
+    const stores = create_app_stores()
+    const event_bus = create_event_bus(stores)
+    const app_flows = create_app_flows({
+      ports,
+      stores,
+      dispatch: event_bus.dispatch,
+      dispatch_many: event_bus.dispatch_many,
+      now_ms: stores.now_ms,
+      editor_runtime: editor_runtime_stub
+    })
 
     expect(app_flows.flows.preferences_initialization).toBeDefined()
     expect(app_flows.flows.vault_bootstrap).toBeDefined()
@@ -48,29 +68,5 @@ describe('create_app_flows', () => {
     expect(app_flows.flows.clipboard).toBeDefined()
     expect(app_flows.flows.theme).toBeDefined()
     expect(app_flows.stores).toBeDefined()
-  })
-
-  it('dispatches VAULT_CHANGED to filetree when vault changes', async () => {
-    const ports: Ports = {
-      vault: create_mock_vault_port(),
-      notes: create_mock_notes_port(),
-      index: create_mock_index_port(),
-      search: create_test_search_adapter(),
-      settings: create_test_settings_adapter(),
-      vault_settings: create_test_vault_settings_adapter(),
-      assets: create_test_assets_adapter(),
-      editor: milkdown_editor_port,
-      theme: create_theme_adapter(),
-      clipboard: create_test_clipboard_adapter()
-    }
-
-    const app_flows = create_app_flows(ports)
-    const filetree_spy = vi.spyOn(app_flows.flows.filetree, 'send')
-
-    const vault = { id: as_vault_id('vault-1'), name: 'Vault', path: as_vault_path('/vault'), created_at: 0 }
-    app_flows.stores.vault.actions.set_vault(vault)
-
-    await vi.waitUntil(() => filetree_spy.mock.calls.length > 0)
-    expect(filetree_spy).toHaveBeenCalledWith({ type: 'VAULT_CHANGED' })
   })
 })

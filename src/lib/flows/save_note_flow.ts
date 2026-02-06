@@ -7,6 +7,9 @@ import type { NoteMeta } from '$lib/types/note'
 import { sanitize_note_name } from '$lib/utils/sanitize_note_name'
 import type { AppStores } from '$lib/stores/create_app_stores'
 import { note_path_exists } from '$lib/utils/note_path_exists'
+import type { AppEvent } from '$lib/events/app_event'
+import { save_note_use_case } from '$lib/use_cases/save_note_use_case'
+import { flush_editor, type EditorFlowHandle } from '$lib/flows/flush_editor'
 
 type SaveNotePorts = {
   notes: NotesPort
@@ -21,7 +24,8 @@ type FlowContext = {
   requires_dialog: boolean
   ports: SaveNotePorts
   stores: AppStores
-  on_save_complete: (() => void) | undefined
+  dispatch_many: (events: AppEvent[]) => void
+  editor_flow: EditorFlowHandle
 }
 
 export type SaveNoteFlowContext = FlowContext
@@ -39,7 +43,8 @@ export type SaveNoteFlowEvents = FlowEvents
 type FlowInput = {
   ports: SaveNotePorts
   stores: AppStores
-  on_save_complete?: () => void
+  dispatch_many: (events: AppEvent[]) => void
+  editor_flow: EditorFlowHandle
 }
 
 function get_filename_from_path(path: string): string {
@@ -88,26 +93,29 @@ export const save_note_flow_machine = setup({
           ports: SaveNotePorts
           stores: AppStores
           new_path: NotePath | null
+          editor_flow: EditorFlowHandle
         }
-      }) => {
-        const { ports, stores, new_path } = input
+      }): Promise<AppEvent[]> => {
+        const { ports, stores, new_path, editor_flow } = input
 
         const vault = stores.vault.get_snapshot().vault
         const open_note = stores.editor.get_snapshot().open_note
 
-        if (!vault || !open_note) return
+        if (!vault || !open_note) return []
 
-        const is_untitled = !open_note.meta.path.endsWith('.md')
+        const flushed = await flush_editor(editor_flow)
 
-        if (is_untitled && new_path) {
-          const new_note_meta = await ports.notes.create_note(vault.id, new_path, open_note.markdown)
-          stores.editor.actions.update_path(new_path)
-          stores.notes.actions.add_note(new_note_meta)
-          await ports.index.upsert_note(vault.id, new_note_meta.id)
-        } else {
-          await ports.notes.write_note(vault.id, open_note.meta.id, open_note.markdown)
-          await ports.index.upsert_note(vault.id, open_note.meta.id)
-        }
+        const latest_open_note = stores.editor.get_snapshot().open_note
+        if (!latest_open_note) return []
+        const open_note_for_save =
+          flushed && flushed.note_id === latest_open_note.meta.id
+            ? { ...latest_open_note, markdown: flushed.markdown }
+            : latest_open_note
+
+        return await save_note_use_case(
+          { notes: ports.notes, index: ports.index },
+          { vault_id: vault.id, open_note: open_note_for_save, new_path }
+        )
       }
     )
   }
@@ -122,7 +130,8 @@ export const save_note_flow_machine = setup({
     requires_dialog: false,
     ports: input.ports,
     stores: input.stores,
-    on_save_complete: input.on_save_complete
+    dispatch_many: input.dispatch_many,
+    editor_flow: input.editor_flow
   }),
   states: {
     idle: {
@@ -231,7 +240,8 @@ export const save_note_flow_machine = setup({
         input: ({ context }) => ({
           ports: context.ports,
           stores: context.stores,
-          new_path: context.new_path
+          new_path: context.new_path,
+          editor_flow: context.editor_flow
         }),
         onDone: {
           target: 'idle',
@@ -242,8 +252,8 @@ export const save_note_flow_machine = setup({
               target_exists: () => false,
               requires_dialog: () => false
             }),
-            ({ context }) => {
-              context.on_save_complete?.()
+            ({ context, event }) => {
+              context.dispatch_many(event.output)
             }
           ]
         },

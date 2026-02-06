@@ -1,11 +1,12 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { startup_app } from '$lib/operations/startup_app'
+import { startup_app_use_case } from '$lib/use_cases/startup_app_use_case'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultPort } from '$lib/ports/vault_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultPath } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
+import type { AppEvent } from '$lib/events/app_event'
 
 type VaultBootstrapPorts = {
   vault: VaultPort
@@ -25,6 +26,8 @@ type FlowContext = {
   ports: VaultBootstrapPorts
   stores: AppStores
   startup_config: BootstrapConfig
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export type VaultBootstrapFlowContext = FlowContext
@@ -39,18 +42,22 @@ export type VaultBootstrapFlowEvents = FlowEvents
 type FlowInput = {
   ports: VaultBootstrapPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
-function reset_all_stores(stores: AppStores): void {
-  stores.vault.actions.clear_vault()
-  stores.vault.actions.set_recent_vaults([])
-  stores.notes.actions.set_notes([])
-  stores.notes.actions.set_folder_paths([])
-  stores.editor.actions.clear_open_note()
-  stores.ui.actions.set_theme('system')
-  stores.ui.actions.set_sidebar_open(true)
-  stores.ui.actions.set_selected_folder_path('')
-  stores.ui.actions.set_editor_settings(DEFAULT_EDITOR_SETTINGS)
+function reset_all_events(): AppEvent[] {
+  return [
+    { type: 'vault_cleared' },
+    { type: 'recent_vaults_set', vaults: [] },
+    { type: 'notes_set', notes: [] },
+    { type: 'folders_set', folder_paths: [] },
+    { type: 'open_note_cleared' },
+    { type: 'ui_theme_set', theme: 'system' },
+    { type: 'ui_sidebar_set', open: true },
+    { type: 'ui_selected_folder_set', path: '' },
+    { type: 'ui_editor_settings_set', settings: DEFAULT_EDITOR_SETTINGS }
+  ]
 }
 
 export const vault_bootstrap_flow_machine = setup({
@@ -68,35 +75,26 @@ export const vault_bootstrap_flow_machine = setup({
           ports: VaultBootstrapPorts
           stores: AppStores
           config: BootstrapConfig
+          dispatch_many: (events: AppEvent[]) => void
+          now_ms: () => number
         }
-      }) => {
-        const { ports, stores, config } = input
+      }): Promise<AppEvent[]> => {
+        const { ports, stores, config, now_ms } = input
 
+        const events: AppEvent[] = []
         if (config.reset_app_state) {
-          reset_all_stores(stores)
+          events.push(...reset_all_events())
         }
 
         const has_vault = stores.vault.get_snapshot().vault !== null
 
-        const result = await startup_app(ports, {
+        const startup_events = await startup_app_use_case(ports, {
           bootstrap_vault_path: config.bootstrap_default_vault_path,
           current_app_state: has_vault ? 'vault_open' : 'no_vault'
-        })
+        }, now_ms())
 
-        stores.vault.actions.set_recent_vaults(result.recent_vaults)
-
-        if (result.bootstrapped_vault) {
-          stores.vault.actions.set_vault(result.bootstrapped_vault.vault)
-          stores.notes.actions.set_notes(result.bootstrapped_vault.notes)
-          stores.notes.actions.set_folder_paths(result.bootstrapped_vault.folder_paths)
-          stores.editor.actions.ensure_open_note(
-            result.bootstrapped_vault.vault,
-            result.bootstrapped_vault.notes,
-            stores.now_ms()
-          )
-          const updated_recent_vaults = await ports.vault.list_vaults()
-          stores.vault.actions.set_recent_vaults(updated_recent_vaults)
-        }
+        events.push(...startup_events)
+        return events
       }
     )
   }
@@ -110,7 +108,9 @@ export const vault_bootstrap_flow_machine = setup({
     startup_config: {
       reset_app_state: false,
       bootstrap_default_vault_path: null
-    }
+    },
+    dispatch_many: input.dispatch_many,
+    now_ms: input.now_ms
   }),
   states: {
     idle: {
@@ -134,9 +134,16 @@ export const vault_bootstrap_flow_machine = setup({
         input: ({ context }) => ({
           ports: context.ports,
           stores: context.stores,
-          config: context.startup_config
+          config: context.startup_config,
+          dispatch_many: context.dispatch_many,
+          now_ms: context.now_ms
         }),
-        onDone: 'idle',
+        onDone: {
+          target: 'idle',
+          actions: ({ context, event }) => {
+            context.dispatch_many(event.output)
+          }
+        },
         onError: {
           target: 'error',
           actions: assign({ error: ({ event }) => String(event.error) })

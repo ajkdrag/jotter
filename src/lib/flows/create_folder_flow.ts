@@ -1,8 +1,9 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { create_folder } from '$lib/operations/create_folder'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { VaultId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { create_folder_use_case } from '$lib/use_cases/create_folder_use_case'
 
 type CreateFolderPorts = {
   notes: NotesPort
@@ -15,6 +16,7 @@ type FlowContext = {
   error: string | null
   ports: CreateFolderPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type CreateFolderFlowContext = FlowContext
@@ -31,6 +33,7 @@ export type CreateFolderFlowEvents = FlowEvents
 type FlowInput = {
   ports: CreateFolderPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 const reset_form = {
@@ -57,16 +60,13 @@ export const create_folder_flow_machine = setup({
           vault_id: VaultId
           parent_path: string
           folder_name: string
+          dispatch_many: (events: AppEvent[]) => void
         }
-      }) => {
-        const { ports, stores, vault_id, parent_path, folder_name } = input
-
-        const result = await create_folder(
-          { notes: ports.notes },
-          { vault_id, parent_path, folder_name }
+      }): Promise<AppEvent[]> => {
+        return await create_folder_use_case(
+          { notes: input.ports.notes },
+          { vault_id: input.vault_id, parent_path: input.parent_path, folder_name: input.folder_name }
         )
-
-        stores.notes.actions.add_folder_path(result.new_folder_path)
       }
     )
   },
@@ -79,7 +79,8 @@ export const create_folder_flow_machine = setup({
   context: ({ input }) => ({
     ...reset_form,
     ports: input.ports,
-    stores: input.stores
+    stores: input.stores,
+    dispatch_many: input.dispatch_many
   }),
   states: {
     idle: {
@@ -115,10 +116,16 @@ export const create_folder_flow_machine = setup({
             stores: context.stores,
             vault_id: context.vault_id,
             parent_path: context.parent_path,
-            folder_name: context.folder_name
+            folder_name: context.folder_name,
+            dispatch_many: context.dispatch_many
           }
         },
-        onDone: 'idle',
+        onDone: {
+          target: 'idle',
+          actions: ({ context, event }) => {
+            context.dispatch_many(event.output)
+          }
+        },
         onError: {
           target: 'error',
           actions: assign({

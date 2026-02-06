@@ -1,7 +1,7 @@
 import { Editor, defaultValueCtx, editorViewOptionsCtx, rootCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose } from '@milkdown/kit/utils'
-import type { CursorInfo } from '$lib/ports/editor_port'
+import type { CursorInfo } from '$lib/types/editor'
 import { Slice } from '@milkdown/kit/prose/model'
 import type { Node as ProseNode } from '@milkdown/kit/prose/model'
 import type { Selection } from '@milkdown/kit/prose/state'
@@ -87,31 +87,7 @@ function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
   }))
 }
 
-let active_editor: Editor | null = null
-
 export const milkdown_editor_port: EditorPort = {
-  insert_text_at_cursor: (text: string) => {
-    if (!active_editor) {
-      console.warn('[milkdown_adapter] insert_text_at_cursor called with no active editor')
-      return
-    }
-    active_editor.action((ctx) => {
-      const view = ctx.get(editorViewCtx)
-      const { state } = view
-      try {
-        const parser = ctx.get(parserCtx)
-        const doc = parser(text)
-        const tr = state.tr.replaceSelection(new Slice(doc.content, 0, 0))
-        view.dispatch(tr)
-        view.focus()
-      } catch (error) {
-        console.error('Failed to insert markdown at cursor:', error)
-        const tr = state.tr.insertText(text, state.selection.from, state.selection.to)
-        view.dispatch(tr.scrollIntoView())
-        view.focus()
-      }
-    })
-  },
   create_editor: async (root, config) => {
     const { initial_markdown, note_path, link_syntax, resolve_asset_url, on_markdown_change, on_dirty_state_change, on_cursor_change, on_wiki_link_click } = config
 
@@ -216,7 +192,6 @@ export const milkdown_editor_port: EditorPort = {
     }
 
     editor = await builder.create()
-    active_editor = editor
 
     if (!is_large_note) {
       editor.action((ctx) => {
@@ -239,9 +214,6 @@ export const milkdown_editor_port: EditorPort = {
     const handle = {
       destroy() {
         if (!editor) return
-        if (editor === active_editor) {
-          active_editor = null
-        }
         void editor.destroy()
         editor = null
       },
@@ -260,6 +232,25 @@ export const milkdown_editor_port: EditorPort = {
       },
       get_markdown() {
         return current_markdown
+      },
+      insert_text_at_cursor(text: string) {
+        if (!editor) return
+        editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx)
+          const { state } = view
+          try {
+            const parser = ctx.get(parserCtx)
+            const doc = parser(text)
+            const tr = state.tr.replaceSelection(new Slice(doc.content, 0, 0))
+            view.dispatch(tr)
+            view.focus()
+          } catch (error) {
+            console.error('Failed to insert markdown at cursor:', error)
+            const tr = state.tr.insertText(text, state.selection.from, state.selection.to)
+            view.dispatch(tr.scrollIntoView())
+            view.focus()
+          }
+        })
       },
       mark_clean,
       is_dirty() {

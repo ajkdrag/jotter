@@ -1,7 +1,7 @@
 export type StoreUnsubscribe = () => void
 
-export type StoreHandle<TState, TActions> = {
+export type StoreHandle<TState, TEvent> = {
   get_snapshot: () => TState
   subscribe: (listener: (state: TState) => void) => StoreUnsubscribe
-  actions: TActions
+  reduce: (event: TEvent) => void
 }

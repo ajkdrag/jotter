@@ -11,7 +11,7 @@
     import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
     import ThemeToggle from "$lib/components/theme_toggle.svelte";
     import type { AppSidebarModel, AppSidebarOps } from "$lib/components/app_sidebar_view_model";
-    import type { CursorInfo } from "$lib/ports/editor_port";
+    import type { OpenNoteState } from "$lib/types/editor";
     import { flatten_filetree } from "$lib/utils/flatten_filetree";
     import { count_words } from "$lib/utils/count_words";
     import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical, Copy } from "@lucide/svelte";
@@ -30,13 +30,16 @@
         load_states: model.load_states
     }));
 
-    let cursor_info: CursorInfo | null = $state(null);
     let details_dialog_open = $state(false);
 
     const word_count = $derived(model.open_note ? count_words(model.open_note.markdown) : 0);
 
-    function handle_cursor_change(info: CursorInfo) {
-        cursor_info = info;
+    function handle_editor_mount(root: HTMLDivElement, note: OpenNoteState) {
+        ops.on_editor_mount({
+            root,
+            note,
+            link_syntax: model.link_syntax
+        });
     }
 </script>
 
@@ -98,7 +101,7 @@
                                     <Tooltip.Root>
                                         <Tooltip.Trigger>
                                             {#snippet child({ props })}
-                                                <Button {...props} variant="ghost" size="icon" class="SidebarHeaderButton h-7 w-7" onclick={() => { console.log('Refresh triggered'); }}>
+                                                <Button {...props} variant="ghost" size="icon" class="SidebarHeaderButton h-7 w-7" onclick={ops.on_refresh_filetree}>
                                                     <RefreshCw class="SidebarHeaderIcon" />
                                                 </Button>
                                             {/snippet}
@@ -176,14 +179,9 @@
 	                        </header>
                         <div class="flex flex-1 flex-col min-h-0">
 	                            <NoteEditor
-	                                editor_manager={model.editor_manager}
 	                                open_note={model.open_note}
-	                                link_syntax={model.link_syntax}
-	                                on_markdown_change={ops.on_markdown_change}
-	                                on_dirty_state_change={ops.on_dirty_state_change}
-	                                resolve_asset_url={ops.on_resolve_asset_url}
-	                                on_cursor_change={handle_cursor_change}
-	                                on_wiki_link_click={ops.on_wiki_link_click}
+	                                on_mount={handle_editor_mount}
+	                                on_unmount={ops.on_editor_unmount}
 	                            />
                         </div>
                     </Sidebar.Inset>
@@ -192,7 +190,7 @@
             </Sidebar.Provider>
         </div>
         <EditorStatusBar
-            cursor_info={cursor_info}
+            cursor_info={model.cursor_info}
             word_count={word_count}
             has_note={!!model.open_note}
             on_info_click={() => details_dialog_open = true}
@@ -203,7 +201,7 @@
         open={details_dialog_open}
         note={model.open_note}
         word_count={word_count}
-        line_count={cursor_info?.total_lines ?? 0}
+        line_count={model.cursor_info?.total_lines ?? 0}
         on_close={() => details_dialog_open = false}
     />
 {/if}

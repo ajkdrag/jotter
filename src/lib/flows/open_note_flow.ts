@@ -1,12 +1,10 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { open_note_or_create } from '$lib/operations/open_note_or_create'
-import { to_open_note_state } from '$lib/types/editor'
-import { parent_folder_path } from '$lib/utils/filetree'
-import { resolve_existing_note_path } from '$lib/utils/note_lookup'
-import { as_note_path } from '$lib/types/ids'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { NotePath, VaultId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { open_note_use_case } from '$lib/use_cases/open_note_use_case'
+import { create_untitled_note_use_case } from '$lib/use_cases/create_untitled_note_use_case'
 
 type OpenNotePorts = {
   notes: NotesPort
@@ -19,6 +17,8 @@ type FlowContext = {
   create_if_missing: boolean
   ports: OpenNotePorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export type OpenNoteFlowContext = FlowContext
@@ -26,6 +26,7 @@ export type OpenNoteFlowContext = FlowContext
 type FlowEvents =
   | { type: 'OPEN_NOTE'; vault_id: VaultId; note_path: NotePath }
   | { type: 'OPEN_WIKI_LINK'; vault_id: VaultId; note_path: NotePath }
+  | { type: 'CREATE_NEW_NOTE'; folder_prefix: string }
   | { type: 'RETRY' }
   | { type: 'CANCEL' }
 
@@ -34,6 +35,8 @@ export type OpenNoteFlowEvents = FlowEvents
 type FlowInput = {
   ports: OpenNotePorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
+  now_ms: () => number
 }
 
 export const open_note_flow_machine = setup({
@@ -54,24 +57,12 @@ export const open_note_flow_machine = setup({
           note_path: NotePath
           create_if_missing: boolean
         }
-      }) => {
+      }): Promise<AppEvent[]> => {
         const notes = input.stores.notes.get_snapshot().notes
-        const resolved = input.create_if_missing
-          ? resolve_existing_note_path(notes, input.note_path)
-          : null
-        const resolved_path = resolved ? as_note_path(resolved) : input.note_path
-
-        const result = await open_note_or_create(
+        return await open_note_use_case(
           { notes: input.ports.notes },
-          { vault_id: input.vault_id, note_path: resolved_path, create_if_missing: input.create_if_missing }
+          { vault_id: input.vault_id, note_path: input.note_path, create_if_missing: input.create_if_missing, known_notes: notes }
         )
-
-        const parent_path = parent_folder_path(resolved_path)
-        input.stores.ui.actions.set_selected_folder_path(parent_path)
-        if (result.created) {
-          input.stores.notes.actions.add_note(result.doc.meta)
-        }
-        input.stores.editor.actions.set_open_note(to_open_note_state(result.doc))
       }
     )
   }
@@ -84,11 +75,24 @@ export const open_note_flow_machine = setup({
     last_vault_id: null,
     create_if_missing: false,
     ports: input.ports,
-    stores: input.stores
+    stores: input.stores,
+    dispatch_many: input.dispatch_many,
+    now_ms: input.now_ms
   }),
   states: {
     idle: {
       on: {
+        CREATE_NEW_NOTE: {
+          actions: ({ context, event }) => {
+            const notes = context.stores.notes.get_snapshot().notes
+            const events = create_untitled_note_use_case({
+              notes,
+              folder_prefix: event.folder_prefix,
+              now_ms: context.now_ms()
+            })
+            context.dispatch_many(events)
+          }
+        },
         OPEN_NOTE: {
           target: 'opening',
           actions: assign({
@@ -143,7 +147,12 @@ export const open_note_flow_machine = setup({
             create_if_missing: context.create_if_missing
           }
         },
-        onDone: 'idle',
+        onDone: {
+          target: 'idle',
+          actions: ({ context, event }) => {
+            context.dispatch_many(event.output)
+          }
+        },
         onError: {
           target: 'error',
           actions: assign({

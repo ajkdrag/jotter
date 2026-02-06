@@ -1,10 +1,10 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { rename_folder } from '$lib/operations/rename_folder'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { VaultId } from '$lib/types/ids'
-import { as_note_path } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
+import type { AppEvent } from '$lib/events/app_event'
+import { rename_folder_use_case } from '$lib/use_cases/rename_folder_use_case'
 
 type RenameFolderPorts = {
   notes: NotesPort
@@ -18,6 +18,7 @@ type FlowContext = {
   error: string | null
   ports: RenameFolderPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type RenameFolderFlowContext = FlowContext
@@ -34,6 +35,7 @@ export type RenameFolderFlowEvents = FlowEvents
 type FlowInput = {
   ports: RenameFolderPorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export const rename_folder_flow_machine = setup({
@@ -53,31 +55,19 @@ export const rename_folder_flow_machine = setup({
           vault_id: VaultId
           folder_path: string
           new_path: string
+          dispatch_many: (events: AppEvent[]) => void
         }
-      }) => {
-        const { ports, stores, vault_id, folder_path, new_path } = input
-        const old_prefix = folder_path + '/'
-        const new_prefix = new_path + '/'
-        const affected_notes = stores
-          .notes
-          .get_snapshot()
-          .notes
-          .filter((note) => note.path.startsWith(old_prefix))
-
-        await rename_folder(ports, { vault_id, from_path: folder_path, to_path: new_path })
-
-        stores.notes.actions.rename_folder(folder_path, new_path)
-
-        const open_note = stores.editor.get_snapshot().open_note
-        if (open_note?.meta.path.startsWith(old_prefix)) {
-          stores.editor.actions.update_path_prefix(old_prefix, new_prefix)
-        }
-
-        for (const note of affected_notes) {
-          await ports.index.remove_note(vault_id, note.id)
-          const updated_path = new_prefix + note.path.slice(old_prefix.length)
-          await ports.index.upsert_note(vault_id, as_note_path(updated_path))
-        }
+      }): Promise<AppEvent[]> => {
+        return await rename_folder_use_case(
+          { notes: input.ports.notes, index: input.ports.index },
+          {
+            vault_id: input.vault_id,
+            folder_path: input.folder_path,
+            new_path: input.new_path,
+            current_notes: input.stores.notes.get_snapshot().notes,
+            current_open_note: input.stores.editor.get_snapshot().open_note
+          }
+        )
       }
     )
   }
@@ -90,7 +80,8 @@ export const rename_folder_flow_machine = setup({
     new_path: null,
     error: null,
     ports: input.ports,
-    stores: input.stores
+    stores: input.stores,
+    dispatch_many: input.dispatch_many
   }),
   states: {
     idle: {
@@ -137,16 +128,22 @@ export const rename_folder_flow_machine = setup({
             stores: context.stores,
             vault_id: context.vault_id,
             folder_path: context.folder_path,
-            new_path: context.new_path
+            new_path: context.new_path,
+            dispatch_many: context.dispatch_many
           }
         },
         onDone: {
           target: 'idle',
-          actions: assign({
-            folder_path: () => null,
-            vault_id: () => null,
-            new_path: () => null
-          })
+          actions: [
+            assign({
+              folder_path: () => null,
+              vault_id: () => null,
+              new_path: () => null
+            }),
+            ({ context, event }) => {
+              context.dispatch_many(event.output)
+            }
+          ]
         },
         onError: {
           target: 'error',

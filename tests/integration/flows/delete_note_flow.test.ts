@@ -44,7 +44,7 @@ describe('delete_note_flow', () => {
     const stores = create_mock_stores()
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -58,11 +58,11 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const stores = create_mock_stores()
     const vault = create_test_vault()
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -78,11 +78,11 @@ describe('delete_note_flow', () => {
     const note = create_test_note('note-1', 'My Note')
     const stores = create_mock_stores()
     const vault = create_test_vault()
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -101,11 +101,11 @@ describe('delete_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note, other_note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note, other_note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note, other_note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -133,12 +133,12 @@ describe('delete_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
-    stores.editor.actions.set_open_note(create_open_note_state(note))
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
+    stores.dispatch({ type: 'open_note_set', open_note: create_open_note_state(note) })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -160,12 +160,12 @@ describe('delete_note_flow', () => {
     notes_port._mock_notes.set(vault.id, [note_to_delete, open_note])
     const open_note_state = create_open_note_state(open_note)
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note_to_delete, open_note])
-    stores.editor.actions.set_open_note(open_note_state)
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note_to_delete, open_note] })
+    stores.dispatch({ type: 'open_note_set', open_note: open_note_state })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -186,11 +186,11 @@ describe('delete_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -218,11 +218,11 @@ describe('delete_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -245,11 +245,11 @@ describe('delete_note_flow', () => {
     const vault = create_test_vault()
     notes_port._mock_notes.set(vault.id, [note])
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_notes([note])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'notes_set', notes: [note] })
 
     const actor = createActor(delete_note_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 

@@ -1,11 +1,12 @@
 import { setup, assign, fromPromise } from 'xstate'
-import { rename_note } from '$lib/operations/rename_note'
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
 import type { NoteMeta } from '$lib/types/note'
 import type { NotePath, VaultId } from '$lib/types/ids'
 import type { AppStores } from '$lib/stores/create_app_stores'
 import { note_path_exists } from '$lib/utils/note_path_exists'
+import type { AppEvent } from '$lib/events/app_event'
+import { rename_note_use_case } from '$lib/use_cases/rename_note_use_case'
 
 type RenameNotePorts = {
   notes: NotesPort
@@ -21,6 +22,7 @@ type FlowContext = {
   target_exists: boolean
   ports: RenameNotePorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type RenameNoteFlowContext = FlowContext
@@ -38,6 +40,7 @@ export type RenameNoteFlowEvents = FlowEvents
 type FlowInput = {
   ports: RenameNotePorts
   stores: AppStores
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export const rename_note_flow_machine = setup({
@@ -71,20 +74,18 @@ export const rename_note_flow_machine = setup({
           note: NoteMeta
           new_path: NotePath
           is_note_currently_open: boolean
+          dispatch_many: (events: AppEvent[]) => void
         }
-      }) => {
-        const { ports, stores, vault_id, note, new_path, is_note_currently_open } = input
-
-        await rename_note(ports, { vault_id, from: note.path, to: new_path })
-
-        stores.notes.actions.rename_note(note.path, new_path)
-
-        if (is_note_currently_open) {
-          stores.editor.actions.update_path(new_path)
-        }
-
-        await ports.index.remove_note(vault_id, note.id)
-        await ports.index.upsert_note(vault_id, new_path)
+      }): Promise<AppEvent[]> => {
+        return await rename_note_use_case(
+          { notes: input.ports.notes, index: input.ports.index },
+          {
+            vault_id: input.vault_id,
+            note: input.note,
+            new_path: input.new_path,
+            is_note_currently_open: input.is_note_currently_open
+          }
+        )
       }
     )
   }
@@ -99,7 +100,8 @@ export const rename_note_flow_machine = setup({
     error: null,
     target_exists: false,
     ports: input.ports,
-    stores: input.stores
+    stores: input.stores,
+    dispatch_many: input.dispatch_many
   }),
   states: {
     idle: {
@@ -193,18 +195,24 @@ export const rename_note_flow_machine = setup({
             vault_id: context.vault_id,
             note: context.note_to_rename,
             new_path: context.new_path,
-            is_note_currently_open: context.is_note_currently_open
+            is_note_currently_open: context.is_note_currently_open,
+            dispatch_many: context.dispatch_many
           }
         },
         onDone: {
           target: 'idle',
-          actions: assign({
-            note_to_rename: () => null,
-            vault_id: () => null,
-            new_path: () => null,
-            is_note_currently_open: () => false,
-            target_exists: () => false
-          })
+          actions: [
+            assign({
+              note_to_rename: () => null,
+              vault_id: () => null,
+              new_path: () => null,
+              is_note_currently_open: () => false,
+              target_exists: () => false
+            }),
+            ({ context, event }) => {
+              context.dispatch_many(event.output)
+            }
+          ]
         },
         onError: {
           target: 'error',

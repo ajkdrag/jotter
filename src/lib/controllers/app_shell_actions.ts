@@ -1,10 +1,10 @@
 import type { AppFlows } from '$lib/flows/create_app_flows'
 import type { VaultId, VaultPath } from '$lib/types/ids'
-import { as_markdown_text, as_note_path } from '$lib/types/ids'
+import { as_note_path } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
-import { parent_folder_path } from '$lib/utils/filetree'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import type { ThemeMode } from '$lib/types/theme'
+import type { OpenNoteState } from '$lib/types/editor'
 
 export type AppShellActionsConfig = {
   bootstrap_default_vault_path?: VaultPath
@@ -13,6 +13,12 @@ export type AppShellActionsConfig = {
 
 export type AppShellActions = {
   mount: () => void
+  mount_editor: (args: {
+    root: HTMLDivElement
+    note: OpenNoteState
+    link_syntax: EditorSettings['link_syntax']
+  }) => void
+  unmount_editor: () => void
 
   create_new_note: () => void
 
@@ -23,8 +29,6 @@ export type AppShellActions = {
 
   open_note: (note_path: string) => void
   open_wiki_link: (note_path: string) => void
-  markdown_change: (markdown: string) => void
-  dirty_state_change: (is_dirty: boolean) => void
   copy_open_note_markdown: () => void
 
   request_delete: (note: NoteMeta) => void
@@ -64,6 +68,7 @@ export type AppShellActions = {
   toggle_filetree_folder: (path: string) => void
   retry_load_folder: (path: string) => void
   collapse_all_folders: () => void
+  refresh_filetree: () => void
 
   request_delete_folder: (folder_path: string) => void
   request_rename_folder: (folder_path: string) => void
@@ -88,10 +93,22 @@ export function create_app_shell_actions(input: {
       })
     },
 
+    mount_editor: ({ root, note, link_syntax }) => {
+      app.flows.editor.send({
+        type: 'MOUNT_REQUESTED',
+        root,
+        note,
+        link_syntax
+      })
+    },
+
+    unmount_editor: () => {
+      app.flows.editor.send({ type: 'UNMOUNT_REQUESTED' })
+    },
+
     create_new_note: () => {
-      const notes = app.stores.notes.get_snapshot().notes
       const selected_folder_path = app.stores.ui.get_snapshot().selected_folder_path
-      app.stores.editor.actions.create_new_note_in_folder(notes, selected_folder_path, app.stores.now_ms())
+      app.flows.open_note.send({ type: 'CREATE_NEW_NOTE', folder_prefix: selected_folder_path })
     },
 
     request_change_vault: () => {
@@ -115,8 +132,6 @@ export function create_app_shell_actions(input: {
       if (!vault_id) return
 
       const normalized_path = as_note_path(note_path)
-      app.stores.ui.actions.set_selected_folder_path(parent_folder_path(normalized_path))
-
       const current_note_id = app.stores.editor.get_snapshot().open_note?.meta.id
       if (current_note_id && current_note_id === normalized_path) return
 
@@ -133,14 +148,6 @@ export function create_app_shell_actions(input: {
       if (current_note_id && current_note_id === normalized_path) return
 
       app.flows.open_note.send({ type: 'OPEN_WIKI_LINK', vault_id: vault.id, note_path: normalized_path })
-    },
-
-    markdown_change: (markdown) => {
-      app.stores.editor.actions.update_markdown(as_markdown_text(markdown))
-    },
-
-    dirty_state_change: (is_dirty) => {
-      app.stores.editor.actions.update_dirty_state(is_dirty)
     },
 
     copy_open_note_markdown: () => {
@@ -262,11 +269,12 @@ export function create_app_shell_actions(input: {
     },
 
     toggle_sidebar: () => {
-      app.stores.ui.actions.toggle_sidebar()
+      const open = app.stores.ui.get_snapshot().sidebar_open
+      app.dispatch({ type: 'ui_sidebar_set', open: !open })
     },
 
     select_folder_path: (path) => {
-      app.stores.ui.actions.set_selected_folder_path(path)
+      app.dispatch({ type: 'ui_selected_folder_set', path })
     },
 
     toggle_filetree_folder: (path) => {
@@ -279,6 +287,11 @@ export function create_app_shell_actions(input: {
 
     collapse_all_folders: () => {
       app.flows.filetree.send({ type: 'COLLAPSE_ALL' })
+    },
+
+    refresh_filetree: () => {
+      if (!app.stores.vault.get_snapshot().vault) return
+      app.flows.filetree.send({ type: 'REQUEST_LOAD', path: '' })
     },
 
     request_delete_folder: (folder_path) => {

@@ -3,6 +3,7 @@ import { create_store } from './create_store.svelte'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 import type { ThemeMode } from '$lib/types/theme'
+import type { AppEvent } from '$lib/events/app_event'
 
 export type UIState = {
   theme: ThemeMode
@@ -12,19 +13,10 @@ export type UIState = {
   system_dialog_open: boolean
 }
 
-export type UIActions = {
-  set_theme: (theme: ThemeMode) => void
-  toggle_sidebar: () => void
-  set_sidebar_open: (open: boolean) => void
-  set_selected_folder_path: (path: string) => void
-  set_editor_settings: (settings: EditorSettings) => void
-  set_system_dialog_open: (open: boolean) => void
-}
-
-export type UIStore = StoreHandle<UIState, UIActions>
+export type UIStore = StoreHandle<UIState, AppEvent>
 
 export function create_ui_store(): UIStore {
-  return create_store<UIState, UIActions>(
+  return create_store<UIState, AppEvent>(
     {
       theme: 'system',
       sidebar_open: true,
@@ -32,31 +24,21 @@ export function create_ui_store(): UIStore {
       editor_settings: DEFAULT_EDITOR_SETTINGS,
       system_dialog_open: false
     },
-    (get, set) => ({
-      set_theme: (theme) => {
-        set({ ...get(), theme })
-      },
-
-      toggle_sidebar: () => {
-        const state = get()
-        set({ ...state, sidebar_open: !state.sidebar_open })
-      },
-
-      set_sidebar_open: (open) => {
-        set({ ...get(), sidebar_open: open })
-      },
-
-      set_selected_folder_path: (path) => {
-        set({ ...get(), selected_folder_path: path })
-      },
-
-      set_editor_settings: (editor_settings) => {
-        set({ ...get(), editor_settings })
-      },
-
-      set_system_dialog_open: (system_dialog_open) => {
-        set({ ...get(), system_dialog_open })
+    (state, event) => {
+      switch (event.type) {
+        case 'ui_theme_set':
+          return { ...state, theme: event.theme }
+        case 'ui_sidebar_set':
+          return { ...state, sidebar_open: event.open }
+        case 'ui_selected_folder_set':
+          return { ...state, selected_folder_path: event.path }
+        case 'ui_editor_settings_set':
+          return { ...state, editor_settings: event.settings }
+        case 'ui_system_dialog_set':
+          return { ...state, system_dialog_open: event.open }
+        default:
+          return state
       }
-    })
+    }
   )
 }

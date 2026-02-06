@@ -4,6 +4,7 @@ import { delete_folder_flow_machine } from '$lib/flows/delete_folder_flow'
 import { create_mock_notes_port, create_mock_index_port } from '../../unit/helpers/mock_ports'
 import { create_mock_stores } from '../../unit/helpers/mock_stores'
 import { create_test_note, create_test_vault } from '../../unit/helpers/test_fixtures'
+import type { VaultId } from '$lib/types/ids'
 
 describe('delete_folder_flow', () => {
   it('fetches stats then deletes folder and updates stores', async () => {
@@ -11,15 +12,22 @@ describe('delete_folder_flow', () => {
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const stores = create_mock_stores()
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_folder_paths(['docs'])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'folders_set', folder_paths: ['docs'] })
     const note_a = create_test_note('docs/note-a', 'Note A')
     const note_b = create_test_note('docs/sub/note-b', 'Note B')
-    stores.notes.actions.set_notes([note_a, note_b])
+    stores.dispatch({ type: 'notes_set', notes: [note_a, note_b] })
     notes_port.get_folder_stats = vi.fn().mockResolvedValue({ note_count: 2, folder_count: 1 })
+    notes_port.delete_folder = vi.fn((vault_id: VaultId, folder_path: string) => {
+      notes_port._calls.delete_folder.push({ vault_id, folder_path })
+      return Promise.resolve({
+        deleted_notes: [note_a.id, note_b.id],
+        deleted_folders: ['docs', 'docs/sub']
+      })
+    })
 
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -51,12 +59,12 @@ describe('delete_folder_flow', () => {
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const stores = create_mock_stores({ now_ms: () => 123 })
-    stores.vault.actions.set_vault(vault)
-    stores.notes.actions.set_folder_paths(['docs'])
+    stores.dispatch({ type: 'vault_set', vault })
+    stores.dispatch({ type: 'folders_set', folder_paths: ['docs'] })
     notes_port.get_folder_stats = vi.fn().mockResolvedValue({ note_count: 0, folder_count: 0 })
 
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -76,7 +84,7 @@ describe('delete_folder_flow', () => {
     const stores = create_mock_stores()
 
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -91,7 +99,7 @@ describe('delete_folder_flow', () => {
     const index_port = create_mock_index_port()
     const vault = create_test_vault()
     const stores = create_mock_stores()
-    stores.vault.actions.set_vault(vault)
+    stores.dispatch({ type: 'vault_set', vault })
     let calls = 0
     notes_port.delete_folder = vi.fn().mockImplementation(() => {
       calls++
@@ -100,7 +108,7 @@ describe('delete_folder_flow', () => {
     })
 
     const actor = createActor(delete_folder_flow_machine, {
-      input: { ports: { notes: notes_port, index: index_port }, stores }
+      input: { ports: { notes: notes_port, index: index_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 

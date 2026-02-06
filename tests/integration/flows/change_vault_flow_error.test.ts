@@ -12,7 +12,7 @@ describe('change_vault_flow errors', () => {
     ports.vault.open_vault_by_id = () => Promise.reject(new Error('Open failed'))
 
     const actor = createActor(change_vault_flow_machine, {
-      input: { ports, stores }
+      input: { ports, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 

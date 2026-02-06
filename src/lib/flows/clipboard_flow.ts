@@ -1,7 +1,7 @@
-import { setup } from 'xstate'
+import { setup, fromPromise } from 'xstate'
 import type { ClipboardPort } from '$lib/ports/clipboard_port'
-import { toast } from 'svelte-sonner'
-import { logger } from '$lib/utils/logger'
+import type { AppEvent } from '$lib/events/app_event'
+import { write_clipboard_use_case } from '$lib/use_cases/write_clipboard_use_case'
 
 type ClipboardFlowPorts = {
   clipboard: ClipboardPort
@@ -9,6 +9,7 @@ type ClipboardFlowPorts = {
 
 type FlowContext = {
   ports: ClipboardFlowPorts
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export type ClipboardFlowContext = FlowContext
@@ -19,6 +20,7 @@ export type ClipboardFlowEvents = FlowEvents
 
 type FlowInput = {
   ports: ClipboardFlowPorts
+  dispatch_many: (events: AppEvent[]) => void
 }
 
 export const clipboard_flow_machine = setup({
@@ -26,27 +28,53 @@ export const clipboard_flow_machine = setup({
     context: {} as FlowContext,
     events: {} as FlowEvents,
     input: {} as FlowInput
+  },
+  actors: {
+    perform_copy: fromPromise(
+      async ({
+        input
+      }: {
+        input: { ports: ClipboardFlowPorts; text: string }
+      }): Promise<AppEvent[]> => {
+        return await write_clipboard_use_case(
+          { clipboard: input.ports.clipboard },
+          { text: input.text }
+        )
+      }
+    )
   }
 }).createMachine({
   id: 'clipboard_flow',
   initial: 'idle',
   context: ({ input }) => ({
-    ports: input.ports
+    ports: input.ports,
+    dispatch_many: input.dispatch_many
   }),
   states: {
     idle: {
       on: {
         COPY_TEXT: {
-          actions: ({ context, event }) => {
-            void context.ports.clipboard.write_text(event.text)
-              .then(() => {
-                toast.success('Copied to clipboard')
-              })
-              .catch((error: unknown) => {
-                logger.from_error('Clipboard write failed', error)
-                toast.error('Failed to copy to clipboard')
-              })
+          target: 'copying'
+        }
+      }
+    },
+    copying: {
+      invoke: {
+        src: 'perform_copy',
+        input: ({ context, event }) => {
+          return {
+            ports: context.ports,
+            text: event.text
           }
+        },
+        onDone: {
+          target: 'idle',
+          actions: ({ context, event }) => {
+            context.dispatch_many(event.output)
+          }
+        },
+        onError: {
+          target: 'idle'
         }
       }
     }

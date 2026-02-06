@@ -17,7 +17,7 @@ const TEST_VAULT: Vault = {
 
 function create_stores_with_vault() {
   const stores = create_mock_stores()
-  stores.vault.actions.set_vault(TEST_VAULT)
+  stores.dispatch({ type: 'vault_set', vault: TEST_VAULT })
   return stores
 }
 
@@ -28,7 +28,7 @@ describe('settings_flow', () => {
     const stores = create_stores_with_vault()
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores }
+      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -45,7 +45,7 @@ describe('settings_flow', () => {
     const stores = create_stores_with_vault()
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores }
+      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -65,7 +65,7 @@ describe('settings_flow', () => {
     const stores = create_stores_with_vault()
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores }
+      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 
@@ -94,7 +94,7 @@ describe('settings_flow', () => {
     }
 
     const actor = createActor(settings_flow_machine, {
-      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores }
+      input: { ports: { settings: settings_port, vault_settings: vault_settings_port }, stores, dispatch_many: stores.dispatch_many }
     })
     actor.start()
 

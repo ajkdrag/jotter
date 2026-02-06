@@ -26,7 +26,7 @@ describe('open_note_flow', () => {
     notes_port.read_note = () => Promise.resolve(doc)
 
     const actor = createActor(open_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -65,7 +65,7 @@ describe('open_note_flow', () => {
     }
 
     const actor = createActor(open_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -100,7 +100,7 @@ describe('open_note_flow', () => {
     }
 
     const actor = createActor(open_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
@@ -122,7 +122,7 @@ describe('open_note_flow', () => {
     notes_port.read_note = () => Promise.reject(new Error('Missing'))
 
     const actor = createActor(open_note_flow_machine, {
-      input: { ports: { notes: notes_port }, stores }
+      input: { ports: { notes: notes_port }, stores, dispatch_many: stores.dispatch_many, now_ms: stores.now_ms }
     })
     actor.start()
 
