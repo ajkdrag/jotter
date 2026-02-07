@@ -50,6 +50,55 @@ function image_alt_text(file_name: string | null): string {
   return stem !== '' ? stem : 'image'
 }
 
+function safe_stem(input: string): string {
+  const normalized = input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return normalized.length > 0 ? normalized : 'image'
+}
+
+function image_extension(mime_type: string, file_name: string | null): string {
+  const from_name = file_name?.split('/').pop()?.split('.').pop()?.toLowerCase()
+  if (from_name && from_name.length > 0) return from_name
+
+  const from_mime = mime_type.toLowerCase()
+  if (from_mime === 'image/jpeg') return 'jpg'
+  if (from_mime === 'image/png') return 'png'
+  if (from_mime === 'image/gif') return 'gif'
+  if (from_mime === 'image/webp') return 'webp'
+  if (from_mime === 'image/bmp') return 'bmp'
+  if (from_mime === 'image/svg+xml') return 'svg'
+  return 'png'
+}
+
+function generate_default_filename(
+  note_path: NotePath,
+  image: { mime_type: string; file_name: string | null },
+  now_ms: number
+): string {
+  const note_parts = String(note_path).split('/').filter(Boolean)
+  const note_file = note_parts.pop() ?? 'note.md'
+  const note_stem = safe_stem(note_file.replace(/\.md$/i, ''))
+  const source_name = image.file_name?.split('/').pop() ?? ''
+  const source_stem = source_name.length > 0 ? safe_stem(source_name.replace(/\.[^.]+$/i, '')) : note_stem
+  const ext = image_extension(image.mime_type, image.file_name)
+  return `${source_stem}-${String(now_ms)}.${ext}`
+}
+
+function close_image_paste_dialog(input: ActionRegistrationInput) {
+  input.stores.ui.image_paste_dialog = {
+    open: false,
+    note_id: null,
+    note_path: null,
+    image: null,
+    filename: '',
+    estimated_size_bytes: 0,
+    target_folder: ''
+  }
+}
+
 export function register_note_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input
 
@@ -120,6 +169,86 @@ export function register_note_actions(input: ActionRegistrationInput) {
       const target = to_markdown_asset_target(payload.note_path, write_result.asset_path)
       const alt = image_alt_text(payload.image.file_name)
       services.editor.insert_text(`![${alt}](${target})`)
+    }
+  })
+
+  registry.register({
+    id: ACTION_IDS.note_request_image_paste,
+    label: 'Request Image Paste',
+    when: () => stores.vault.vault !== null,
+    execute: (request: unknown) => {
+      const payload = request as ImagePasteRequest
+      const open_note = stores.editor.open_note
+      if (!open_note) return
+      if (open_note.meta.id !== payload.note_id) return
+
+      const estimated_size_bytes = payload.image.bytes.byteLength
+      const default_filename = generate_default_filename(payload.note_path, payload.image, Date.now())
+      const attachment_folder = stores.ui.editor_settings.attachment_folder || '.assets'
+
+      const note_parts = String(payload.note_path).split('/').filter(Boolean)
+      note_parts.pop()
+      const note_dir = note_parts.length > 0 ? note_parts.join('/') : ''
+      const target_folder = note_dir ? `${note_dir}/${attachment_folder}` : attachment_folder
+
+      stores.ui.image_paste_dialog = {
+        open: true,
+        note_id: payload.note_id,
+        note_path: payload.note_path,
+        image: payload.image,
+        filename: default_filename,
+        estimated_size_bytes,
+        target_folder
+      }
+      stores.op.reset('asset.write')
+    }
+  })
+
+  registry.register({
+    id: ACTION_IDS.note_update_image_paste_filename,
+    label: 'Update Image Paste Filename',
+    execute: (filename: unknown) => {
+      stores.ui.image_paste_dialog.filename = String(filename)
+    }
+  })
+
+  registry.register({
+    id: ACTION_IDS.note_confirm_image_paste,
+    label: 'Confirm Image Paste',
+    execute: async () => {
+      const dialog = stores.ui.image_paste_dialog
+      if (!dialog.open || !dialog.note_id || !dialog.note_path || !dialog.image) return
+
+      const open_note = stores.editor.open_note
+      if (!open_note) return
+      if (open_note.meta.id !== dialog.note_id) return
+
+      const attachment_folder = stores.ui.editor_settings.attachment_folder || '.assets'
+      const write_result = await services.note.save_pasted_image(dialog.note_path, dialog.image, {
+        custom_filename: dialog.filename,
+        attachment_folder
+      })
+
+      if (write_result.status !== 'saved') return
+
+      const latest_open_note = stores.editor.open_note
+      if (!latest_open_note) return
+      if (latest_open_note.meta.id !== dialog.note_id) return
+
+      const target = to_markdown_asset_target(dialog.note_path, write_result.asset_path)
+      const alt = image_alt_text(dialog.image.file_name)
+      services.editor.insert_text(`![${alt}](${target})`)
+
+      close_image_paste_dialog(input)
+    }
+  })
+
+  registry.register({
+    id: ACTION_IDS.note_cancel_image_paste,
+    label: 'Cancel Image Paste',
+    execute: () => {
+      close_image_paste_dialog(input)
+      stores.op.reset('asset.write')
     }
   })
 

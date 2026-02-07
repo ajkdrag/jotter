@@ -4,6 +4,8 @@ import type { PastedImagePayload } from '$lib/types/editor'
 export type WriteImageAssetInput = {
   note_path: NotePath
   image: PastedImagePayload
+  custom_filename?: string
+  attachment_folder?: string
 }
 
 export interface AssetsPort {

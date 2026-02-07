@@ -69,15 +69,27 @@ function safe_stem(input: string): string {
 	return normalized.length > 0 ? normalized : 'image'
 }
 
-function create_asset_path(note_path: string, input: { mime_type: string; file_name: string | null }): AssetPath {
+function create_asset_path(
+	note_path: string,
+	input: { mime_type: string; file_name: string | null },
+	options?: { custom_filename?: string; attachment_folder?: string }
+): AssetPath {
 	const note_parts = note_path.split('/').filter(Boolean)
-	const note_file = note_parts.pop() ?? 'note.md'
-	const note_stem = safe_stem(note_file.replace(/\.md$/i, ''))
-	const source_name = input.file_name?.split('/').pop() ?? ''
-	const source_stem = source_name.length > 0 ? safe_stem(source_name.replace(/\.[^.]+$/i, '')) : note_stem
-	const ext = image_extension(input)
-	const filename = `${source_stem}-${String(Date.now())}.${ext}`
-	const directory = note_parts.length > 0 ? `${note_parts.join('/')}/.assets` : '.assets'
+	const attachment_folder = options?.attachment_folder || '.assets'
+
+	let filename: string
+	if (options?.custom_filename) {
+		filename = options.custom_filename
+	} else {
+		const note_file = note_parts.pop() ?? 'note.md'
+		const note_stem = safe_stem(note_file.replace(/\.md$/i, ''))
+		const source_name = input.file_name?.split('/').pop() ?? ''
+		const source_stem = source_name.length > 0 ? safe_stem(source_name.replace(/\.[^.]+$/i, '')) : note_stem
+		const ext = image_extension(input)
+		filename = `${source_stem}-${String(Date.now())}.${ext}`
+	}
+
+	const directory = note_parts.length > 0 ? `${note_parts.join('/')}/${attachment_folder}` : attachment_folder
 	return as_asset_path(`${directory}/${filename}`)
 }
 
@@ -129,7 +141,14 @@ export function create_assets_web_adapter(): AssetsPort {
 		async write_image_asset(vault_id, input) {
 			try {
 				const root = await get_vault_handle(vault_id)
-				const asset_path = create_asset_path(String(input.note_path), input.image)
+				const options: Parameters<typeof create_asset_path>[2] = {}
+				if (input.custom_filename) {
+					options.custom_filename = input.custom_filename
+				}
+				if (input.attachment_folder) {
+					options.attachment_folder = input.attachment_folder
+				}
+				const asset_path = create_asset_path(String(input.note_path), input.image, options)
 				const { dir, file_name } = await ensure_path_from_root(root, asset_path)
 				const file_handle = await dir.getFileHandle(file_name, { create: true })
 				const writable = await file_handle.createWritable()

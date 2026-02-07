@@ -222,6 +222,10 @@ pub struct WriteImageAssetArgs {
     pub mime_type: String,
     pub file_name: Option<String>,
     pub bytes: Vec<u8>,
+    #[serde(default)]
+    pub custom_filename: Option<String>,
+    #[serde(default)]
+    pub attachment_folder: Option<String>,
 }
 
 fn image_extension(mime_type: &str, file_name: Option<&str>) -> String {
@@ -278,19 +282,25 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         .and_then(|stem| stem.to_str())
         .unwrap_or("image");
 
-    let source_stem = args
-        .file_name
-        .as_deref()
-        .and_then(|name| Path::new(name).file_stem())
-        .and_then(|stem| stem.to_str())
-        .unwrap_or(note_stem);
-    let ext = image_extension(&args.mime_type, args.file_name.as_deref());
-    let filename = format!("{}-{}.{}", sanitize_stem(source_stem), storage::now_ms(), ext);
+    let attachment_folder = args.attachment_folder.as_deref().unwrap_or(".assets");
+
+    let filename = if let Some(custom_filename) = args.custom_filename {
+        custom_filename
+    } else {
+        let source_stem = args
+            .file_name
+            .as_deref()
+            .and_then(|name| Path::new(name).file_stem())
+            .and_then(|stem| stem.to_str())
+            .unwrap_or(note_stem);
+        let ext = image_extension(&args.mime_type, args.file_name.as_deref());
+        format!("{}-{}.{}", sanitize_stem(source_stem), storage::now_ms(), ext)
+    };
 
     let rel_path = if note_parent.as_os_str().is_empty() {
-        PathBuf::from(".assets").join(filename)
+        PathBuf::from(attachment_folder).join(filename)
     } else {
-        note_parent.join(".assets").join(filename)
+        note_parent.join(attachment_folder).join(filename)
     };
     let rel = storage::normalize_relative_path(&rel_path);
     let abs = safe_note_abs(&root, &rel)?;

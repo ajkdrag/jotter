@@ -127,7 +127,8 @@ export class NoteService {
 
   async save_pasted_image(
     note_path: NotePath,
-    image: PastedImagePayload
+    image: PastedImagePayload,
+    options?: { custom_filename?: string; attachment_folder?: string }
   ): Promise<{ status: 'saved'; asset_path: AssetPath } | { status: 'skipped' } | { status: 'failed'; error: string }> {
     const vault_id = this.vault_store.vault?.id
     if (!vault_id) {
@@ -137,10 +138,17 @@ export class NoteService {
     this.op_store.start('asset.write')
 
     try {
-      const asset_path = await this.assets_port.write_image_asset(vault_id, {
+      const input: Parameters<AssetsPort['write_image_asset']>[1] = {
         note_path,
         image
-      })
+      }
+      if (options?.custom_filename) {
+        input.custom_filename = options.custom_filename
+      }
+      if (options?.attachment_folder) {
+        input.attachment_folder = options.attachment_folder
+      }
+      const asset_path = await this.assets_port.write_image_asset(vault_id, input)
       this.op_store.succeed('asset.write')
       return {
         status: 'saved',

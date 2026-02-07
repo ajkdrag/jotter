@@ -16,7 +16,9 @@ export function create_assets_tauri_adapter(): AssetsPort {
           note_path: input.note_path,
           mime_type: input.image.mime_type,
           file_name: input.image.file_name,
-          bytes: Array.from(input.image.bytes)
+          bytes: Array.from(input.image.bytes),
+          custom_filename: input.custom_filename,
+          attachment_folder: input.attachment_folder
         }
       })
 

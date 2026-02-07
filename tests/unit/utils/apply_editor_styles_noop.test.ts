@@ -12,7 +12,8 @@ describe('apply_editor_styles (no document)', () => {
       line_height: 1.5,
       heading_color: 'inherit',
       spacing: 'normal',
-      link_syntax: 'wikilink'
+      link_syntax: 'wikilink',
+      attachment_folder: '.assets'
     }
 
     expect(() => {

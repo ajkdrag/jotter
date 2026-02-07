@@ -7,6 +7,7 @@ import type { FolderLoadState } from '$lib/types/filetree'
 import type { NoteSearchHit } from '$lib/types/search'
 import type { CommandDefinition } from '$lib/types/command_palette'
 import type { SettingDefinition } from '$lib/types/settings_registry'
+import type { PastedImagePayload } from '$lib/types/editor'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 export type AsyncStatus = 'idle' | 'loading' | 'error'
@@ -146,6 +147,24 @@ export class UIStore {
     error_messages: new SvelteMap<string, string>()
   })
 
+  image_paste_dialog = $state<{
+    open: boolean
+    note_id: NoteId | null
+    note_path: NotePath | null
+    image: PastedImagePayload | null
+    filename: string
+    estimated_size_bytes: number
+    target_folder: string
+  }>({
+    open: false,
+    note_id: null,
+    note_path: null,
+    image: null,
+    filename: '',
+    estimated_size_bytes: 0,
+    target_folder: ''
+  })
+
   set_theme(theme: ThemeMode) {
     this.theme = theme
   }
@@ -225,6 +244,15 @@ export class UIStore {
       expanded_paths: new SvelteSet<string>(),
       load_states: new SvelteMap<string, FolderLoadState>(),
       error_messages: new SvelteMap<string, string>()
+    }
+    this.image_paste_dialog = {
+      open: false,
+      note_id: null,
+      note_path: null,
+      image: null,
+      filename: '',
+      estimated_size_bytes: 0,
+      target_folder: ''
     }
   }
 }

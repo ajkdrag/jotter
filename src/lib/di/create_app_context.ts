@@ -33,7 +33,7 @@ export function create_app_context(input: {
       on_internal_link_click: (note_path) =>
         void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path),
       on_image_paste_requested: (note_id, note_path, image) =>
-        void action_registry.execute(ACTION_IDS.note_insert_pasted_image, { note_id, note_path, image })
+        void action_registry.execute(ACTION_IDS.note_request_image_paste, { note_id, note_path, image })
     }
   )
 

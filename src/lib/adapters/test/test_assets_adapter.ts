@@ -22,9 +22,18 @@ export function create_test_assets_adapter(): AssetsPort {
 
       const note_path = String(input.note_path)
       const parts = note_path.split('/').filter(Boolean)
-      const note_name = (parts.pop() ?? 'note.md').replace(/\.md$/i, '')
+      const attachment_folder = input.attachment_folder || '.assets'
+      
+      let filename: string
+      if (input.custom_filename) {
+        filename = input.custom_filename
+      } else {
+        const note_name = (parts.pop() ?? 'note.md').replace(/\.md$/i, '')
+        filename = `${note_name}-${String(write_count)}.png`
+      }
+
       const prefix = parts.length > 0 ? `${parts.join('/')}/` : ''
-      const asset_path = as_asset_path(`${prefix}.assets/${note_name}-${String(write_count)}.png`)
+      const asset_path = as_asset_path(`${prefix}${attachment_folder}/${filename}`)
       const cache_key = `${vault_id}:${asset_path}`
       blob_url_cache.set(cache_key, `test://assets/${encodeURIComponent(String(asset_path))}`)
       return Promise.resolve(asset_path)

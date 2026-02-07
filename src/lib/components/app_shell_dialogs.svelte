@@ -9,6 +9,7 @@
   import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
   import CommandPalette from '$lib/components/command_palette.svelte'
   import FileSearchDialog from '$lib/components/file_search_dialog.svelte'
+  import ImagePasteDialog from '$lib/components/image_paste_dialog.svelte'
   import { use_app_context } from '$lib/context/app_context.svelte'
   import { ACTION_IDS } from '$lib/actions/action_ids'
   import type { CommandId } from '$lib/types/command_palette'
@@ -38,6 +39,7 @@
   const delete_folder_error = $derived(stores.op.get('folder.delete').error)
   const rename_folder_error = $derived(stores.op.get('folder.rename').error)
   const settings_error = $derived(stores.op.get('settings.save').error ?? stores.op.get('settings.load').error)
+  const image_paste_error = $derived(stores.op.get('asset.write').error)
 
   const delete_folder_status = $derived.by(() => {
     const op_state = stores.op.get('folder.delete').status
@@ -199,4 +201,17 @@
   on_selected_index_change={(index: number) =>
     void action_registry.execute(ACTION_IDS.search_set_selected_index, index)}
   on_confirm={(note_id: NoteId) => void action_registry.execute(ACTION_IDS.search_confirm_note, note_id)}
+/>
+
+<ImagePasteDialog
+  open={stores.ui.image_paste_dialog.open}
+  filename={stores.ui.image_paste_dialog.filename}
+  estimated_size_bytes={stores.ui.image_paste_dialog.estimated_size_bytes}
+  target_folder={stores.ui.image_paste_dialog.target_folder}
+  is_saving={stores.op.is_pending('asset.write')}
+  error={image_paste_error}
+  on_update_filename={(filename: string) => void action_registry.execute(ACTION_IDS.note_update_image_paste_filename, filename)}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.note_confirm_image_paste)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.note_cancel_image_paste)}
+  on_retry={() => void action_registry.execute(ACTION_IDS.note_confirm_image_paste)}
 />

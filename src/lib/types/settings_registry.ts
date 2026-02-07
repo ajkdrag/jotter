@@ -43,5 +43,12 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: 'Choose between wikilinks or markdown links',
     category: 'Links',
     keywords: ['wiki', 'wikilink', 'markdown', 'link', 'format', 'syntax', 'brackets']
+  },
+  {
+    key: 'attachment_folder',
+    label: 'Attachment Folder',
+    description: 'Folder name for storing pasted images and attachments',
+    category: 'Files',
+    keywords: ['assets', 'images', 'attachments', 'folder', 'path', 'upload', 'paste']
   }
 ]
