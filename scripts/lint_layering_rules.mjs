@@ -66,6 +66,10 @@ const layer_rules = [
       {
         regex: /\$effect\b/g,
         message: 'services must not subscribe to reactive effects; use reactors'
+      },
+      {
+        regex: /ui_store\.svelte/g,
+        message: 'services must not import UIStore; orchestrate UI in actions/components'
       }
     ]
   },

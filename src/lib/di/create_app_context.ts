@@ -32,7 +32,6 @@ export function create_app_context(input: {
   const settings_service = new SettingsService(
     input.ports.vault_settings,
     stores.vault,
-    stores.ui,
     stores.op
   )
 
@@ -42,7 +41,6 @@ export function create_app_context(input: {
     stores.vault,
     stores.notes,
     stores.editor,
-    stores.ui,
     stores.op,
     editor_service,
     now_ms
@@ -54,14 +52,13 @@ export function create_app_context(input: {
     stores.vault,
     stores.notes,
     stores.editor,
-    stores.ui,
     stores.op,
     now_ms
   )
 
   const clipboard_service = new ClipboardService(input.ports.clipboard, stores.editor, stores.op)
 
-  const search_service = new SearchService(input.ports.search, stores.vault, stores.ui, stores.op)
+  const search_service = new SearchService(input.ports.search, stores.vault, stores.op)
 
   const vault_service = new VaultService(
     input.ports.vault,
@@ -73,7 +70,6 @@ export function create_app_context(input: {
     stores.vault,
     stores.notes,
     stores.editor,
-    stores.ui,
     stores.op,
     now_ms
   )
@@ -84,7 +80,10 @@ export function create_app_context(input: {
     registry: action_registry,
     stores: {
       ui: stores.ui,
-      vault: stores.vault
+      vault: stores.vault,
+      notes: stores.notes,
+      editor: stores.editor,
+      op: stores.op
     },
     services: {
       vault: vault_service,
@@ -101,10 +100,8 @@ export function create_app_context(input: {
   const cleanup_reactors = mount_reactors({
     editor_store: stores.editor,
     ui_store: stores.ui,
-    vault_store: stores.vault,
     op_store: stores.op,
-    editor_service,
-    folder_service
+    editor_service
   })
 
   return {

@@ -40,8 +40,7 @@
     "minisearch": "^7.2.0",
     "mode-watcher": "^1.1.0",
     "prismjs": "^1.30.0",
-    "svelte-themes": "^2.0.10",
-    "xstate": "^5.25.1"
+    "svelte-themes": "^2.0.10"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

@@ -3,7 +3,6 @@ import { NoteService } from '$lib/services/note_service'
 import { VaultStore } from '$lib/stores/vault_store.svelte'
 import { NotesStore } from '$lib/stores/notes_store.svelte'
 import { EditorStore } from '$lib/stores/editor_store.svelte'
-import { UIStore } from '$lib/stores/ui_store.svelte'
 import { OpStore } from '$lib/stores/op_store.svelte'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
 import { create_test_vault } from '../helpers/test_fixtures'
@@ -15,7 +14,6 @@ describe('NoteService', () => {
     const vault_store = new VaultStore()
     const notes_store = new NotesStore()
     const editor_store = new EditorStore()
-    const ui_store = new UIStore()
     const op_store = new OpStore()
 
     vault_store.set_vault(create_test_vault())
@@ -48,17 +46,19 @@ describe('NoteService', () => {
       vault_store,
       notes_store,
       editor_store,
-      ui_store,
       op_store,
       editor_service,
       () => 1
     )
 
-    await service.open_note('docs/alpha.md', false)
+    const result = await service.open_note('docs/alpha.md', false)
 
     expect(editor_store.open_note?.meta.path).toBe(as_note_path('docs/alpha.md'))
     expect(editor_store.open_note?.markdown).toBe(as_markdown_text('# Alpha'))
-    expect(ui_store.selected_folder_path).toBe('docs')
+    expect(result).toEqual({
+      status: 'opened',
+      selected_folder_path: 'docs'
+    })
     expect(op_store.get('note.open:docs/alpha.md').status).toBe('success')
   })
 
@@ -66,11 +66,9 @@ describe('NoteService', () => {
     const vault_store = new VaultStore()
     const notes_store = new NotesStore()
     const editor_store = new EditorStore()
-    const ui_store = new UIStore()
     const op_store = new OpStore()
 
     vault_store.set_vault(create_test_vault())
-    ui_store.set_selected_folder_path('docs')
 
     editor_store.set_open_note({
       meta: {
@@ -102,15 +100,12 @@ describe('NoteService', () => {
       vault_store,
       notes_store,
       editor_store,
-      ui_store,
       op_store,
       editor_service,
       () => 1
     )
 
-    service.request_save()
-    service.update_save_path('docs/my-note.md')
-    await service.confirm_save()
+    const result = await service.save_note(as_note_path('docs/my-note.md'), false)
 
     const vault = vault_store.vault
     expect(vault).not.toBeNull()
@@ -122,7 +117,10 @@ describe('NoteService', () => {
     })
     expect(editor_store.open_note?.meta.path).toBe(as_note_path('docs/my-note.md'))
     expect(editor_store.open_note?.is_dirty).toBe(false)
-    expect(ui_store.save_note_dialog.open).toBe(false)
+    expect(result).toEqual({
+      status: 'saved',
+      saved_path: as_note_path('docs/my-note.md')
+    })
     expect(op_store.get('note.save').status).toBe('success')
   })
 })

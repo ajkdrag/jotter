@@ -19,9 +19,10 @@ Most user-triggered operations follow this loop:
 
 1. UI calls `action_registry.execute(...)`
 2. Action executes a service method (or direct UI store mutation for pure UI concerns)
-3. Service performs IO through ports and updates stores
-4. Components rerender from store state
-5. Reactors observe relevant store changes and trigger side effects through services or pure runtime utilities
+3. Service performs IO through ports and updates domain/op stores
+4. Action applies UI mutations from service outcomes when needed
+5. Components rerender from store state
+6. Reactors observe relevant store changes and trigger side effects through services or pure runtime utilities
 
 ## State ownership
 
@@ -86,8 +87,8 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 - async use-case orchestration
 - IO via ports only
-- writes state via store methods
-- error classification + surfacing via `op_store`/`ui_store`
+- writes state via domain store + `op_store` methods only
+- never imports `ui_store`; UI orchestration stays in actions/components
 
 ### `src/lib/reactors`
 
@@ -97,8 +98,9 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 ### `src/lib/actions`
 
-- typed action IDs + registry + registration
+- typed action IDs + registry + domain registration modules
 - central place for user-triggerable intents (clicks, shortcuts, palette, menu equivalents)
+- owns cross-cutting UI workflow state (dialogs, pending flags, selection state) driven by service outcomes
 
 ### `src/lib/components`
 
@@ -137,6 +139,7 @@ Bootstrap sequence:
 5. User-triggerable behavior is exposed through the action registry.
 6. Components do not directly import services for side-effect execution.
 7. No global singleton app instances; use context + composition root.
+8. Services never import `UIStore`.
 
 ## XState policy
 
@@ -151,6 +154,7 @@ Current rules include:
 - `components` cannot import ports/adapters/services/reactors
 - `stores` cannot import ports/adapters/services/reactors/actions/components/utils and cannot use `async`/`await`
 - `services` cannot import adapters/components/reactors and cannot use `$effect`
+- `services` cannot import `ui_store.svelte`
 - `reactors` cannot import adapters/components and should not use inline `await`
 - `actions` cannot import ports/adapters/components
 - `routes` cannot import ports/services/stores/reactors/actions and should use context helpers

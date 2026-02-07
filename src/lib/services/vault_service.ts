@@ -9,12 +9,22 @@ import type { Vault } from '$lib/types/vault'
 import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import type { NotesStore } from '$lib/stores/notes_store.svelte'
 import type { EditorStore } from '$lib/stores/editor_store.svelte'
-import type { UIStore } from '$lib/stores/ui_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
-import { DEFAULT_EDITOR_SETTINGS, SETTINGS_KEY, type EditorSettings } from '$lib/types/editor_settings'
+import {
+  DEFAULT_EDITOR_SETTINGS,
+  SETTINGS_KEY,
+  type EditorSettings
+} from '$lib/types/editor_settings'
+import type {
+  ThemeSetResult,
+  VaultChoosePathResult,
+  VaultInitializeResult,
+  VaultOpenResult
+} from '$lib/types/vault_service_result'
 import { ensure_open_note } from '$lib/utils/ensure_open_note'
 import { error_message } from '$lib/utils/error_message'
 import { logger } from '$lib/utils/logger'
+import type { ThemeMode } from '$lib/types/theme'
 
 export type AppMountConfig = {
   reset_app_state: boolean
@@ -32,163 +42,150 @@ export class VaultService {
     private readonly vault_store: VaultStore,
     private readonly notes_store: NotesStore,
     private readonly editor_store: EditorStore,
-    private readonly ui_store: UIStore,
     private readonly op_store: OpStore,
     private readonly now_ms: () => number
   ) {}
 
-  async initialize(config: AppMountConfig): Promise<void> {
-    this.op_store.start('app.startup')
-    this.ui_store.startup = {
-      status: 'loading',
-      error: null
+  async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
+    const theme = this.get_theme()
+
+    if (config.reset_app_state) {
+      this.reset_app_state()
     }
 
-    try {
-      this.ui_store.set_theme(this.theme_port.get_theme())
+    this.op_store.start('app.startup')
 
-      if (config.reset_app_state) {
-        this.reset_app_state()
-      }
+    try {
+      let editor_settings: EditorSettings | null = null
 
       const has_vault = this.vault_store.vault !== null
 
       if (!has_vault && config.bootstrap_default_vault_path) {
-        await this.open_vault_by_path(config.bootstrap_default_vault_path)
+        editor_settings = await this.open_vault_by_path(config.bootstrap_default_vault_path)
       } else {
         const recent_vaults = await this.vault_port.list_vaults()
         this.vault_store.set_recent_vaults(recent_vaults)
+
+        const current_vault_id = this.vault_store.vault?.id
+        if (current_vault_id) {
+          editor_settings = await this.load_editor_settings(current_vault_id)
+        }
       }
 
-      this.ui_store.startup = {
-        status: 'idle',
-        error: null
-      }
       this.op_store.succeed('app.startup')
+
+      return {
+        status: 'ready',
+        theme,
+        has_vault: this.vault_store.vault !== null,
+        editor_settings
+      }
     } catch (error) {
       const message = error_message(error)
       logger.error(`App startup failed: ${message}`)
-      this.ui_store.startup = {
+      this.op_store.fail('app.startup', message)
+      return {
         status: 'error',
+        theme,
         error: message
       }
-      this.op_store.fail('app.startup', message)
     }
   }
 
-  open_change_vault_dialog() {
-    this.ui_store.change_vault = {
-      ...this.ui_store.change_vault,
-      open: true,
-      error: null
+  get_theme(): ThemeMode {
+    return this.theme_port.get_theme()
+  }
+
+  async choose_vault_path(): Promise<VaultChoosePathResult> {
+    try {
+      const vault_path = await this.vault_port.choose_vault()
+      if (!vault_path) {
+        return { status: 'cancelled' }
+      }
+
+      return {
+        status: 'selected',
+        path: vault_path
+      }
+    } catch (error) {
+      return {
+        status: 'failed',
+        error: error_message(error)
+      }
     }
   }
 
-  close_change_vault_dialog() {
-    this.ui_store.change_vault = {
-      ...this.ui_store.change_vault,
-      open: false,
-      error: null
-    }
-    this.op_store.reset('vault.change')
-  }
-
-  async choose_vault(): Promise<void> {
-    this.ui_store.change_vault = {
-      ...this.ui_store.change_vault,
-      is_loading: true,
-      error: null
-    }
+  async change_vault_by_path(vault_path: VaultPath): Promise<VaultOpenResult> {
     this.op_store.start('vault.change')
 
     try {
-      this.ui_store.set_system_dialog_open(true)
-      const vault_path = await this.vault_port.choose_vault()
-      this.ui_store.set_system_dialog_open(false)
-
-      if (!vault_path) {
-        this.ui_store.change_vault = {
-          ...this.ui_store.change_vault,
-          is_loading: false
-        }
-        this.op_store.reset('vault.change')
-        return
-      }
-
-      await this.open_vault_by_path(vault_path)
-
-      this.ui_store.change_vault = {
-        open: false,
-        is_loading: false,
-        error: null
-      }
+      const editor_settings = await this.open_vault_by_path(vault_path)
       this.op_store.succeed('vault.change')
+      return {
+        status: 'opened',
+        editor_settings
+      }
     } catch (error) {
-      this.ui_store.set_system_dialog_open(false)
       const message = error_message(error)
       logger.error(`Choose vault failed: ${message}`)
-      this.ui_store.change_vault = {
-        ...this.ui_store.change_vault,
-        is_loading: false,
+      this.op_store.fail('vault.change', message)
+      return {
+        status: 'failed',
         error: message
       }
-      this.op_store.fail('vault.change', message)
     }
   }
 
-  async select_vault(vault_id: VaultId): Promise<void> {
-    this.ui_store.change_vault = {
-      ...this.ui_store.change_vault,
-      is_loading: true,
-      error: null
-    }
+  async change_vault_by_id(vault_id: VaultId): Promise<VaultOpenResult> {
     this.op_store.start('vault.change')
 
     try {
-      await this.open_vault_by_id(vault_id)
-      this.ui_store.change_vault = {
-        open: false,
-        is_loading: false,
-        error: null
-      }
+      const editor_settings = await this.open_vault_by_id(vault_id)
       this.op_store.succeed('vault.change')
+      return {
+        status: 'opened',
+        editor_settings
+      }
     } catch (error) {
       const message = error_message(error)
       logger.error(`Select vault failed: ${message}`)
-      this.ui_store.change_vault = {
-        ...this.ui_store.change_vault,
-        is_loading: false,
+      this.op_store.fail('vault.change', message)
+      return {
+        status: 'failed',
         error: message
       }
-      this.op_store.fail('vault.change', message)
     }
   }
 
-  set_theme(theme: 'light' | 'dark' | 'system') {
+  set_theme(theme: ThemeMode): ThemeSetResult {
     this.op_store.start('theme.set')
 
     try {
       this.theme_port.set_theme(theme)
-      this.ui_store.set_theme(theme)
       this.op_store.succeed('theme.set')
+      return { status: 'success' }
     } catch (error) {
-      logger.error(`Set theme failed: ${error_message(error)}`)
-      this.op_store.fail('theme.set', error_message(error))
-      throw error
+      const message = error_message(error)
+      logger.error(`Set theme failed: ${message}`)
+      this.op_store.fail('theme.set', message)
+      return {
+        status: 'failed',
+        error: message
+      }
     }
   }
 
-  private async open_vault_by_path(vault_path: VaultPath): Promise<void> {
+  private async open_vault_by_path(vault_path: VaultPath): Promise<EditorSettings> {
     const vault = await this.vault_port.open_vault(vault_path)
-    await this.finish_open_vault(vault)
+    return this.finish_open_vault(vault)
   }
 
-  private async open_vault_by_id(vault_id: VaultId): Promise<void> {
+  private async open_vault_by_id(vault_id: VaultId): Promise<EditorSettings> {
     const vault = await this.vault_port.open_vault_by_id(vault_id)
-    await this.finish_open_vault(vault)
+    return this.finish_open_vault(vault)
   }
 
-  private async finish_open_vault(vault: Vault): Promise<void> {
+  private async finish_open_vault(vault: Vault): Promise<EditorSettings> {
     await this.vault_port.remember_last_vault(vault.id)
 
     const [notes, folder_paths, recent_vaults] = await Promise.all([
@@ -219,16 +216,7 @@ export class VaultService {
       this.editor_store.set_open_note(ensured_note)
     }
 
-    this.ui_store.reset_for_new_vault()
-    this.ui_store.change_vault = {
-      ...this.ui_store.change_vault,
-      open: false,
-      error: null,
-      is_loading: false
-    }
-
-    const settings = await this.load_editor_settings(vault.id)
-    this.ui_store.set_editor_settings(settings)
+    return this.load_editor_settings(vault.id)
   }
 
   private async load_editor_settings(vault_id: VaultId): Promise<EditorSettings> {
@@ -251,9 +239,6 @@ export class VaultService {
     this.vault_store.reset()
     this.notes_store.reset()
     this.editor_store.reset()
-    this.ui_store.reset_for_new_vault()
-    this.ui_store.set_theme('system')
-    this.ui_store.set_editor_settings({ ...DEFAULT_EDITOR_SETTINGS })
     this.op_store.reset_all()
   }
 }
