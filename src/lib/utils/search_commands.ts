@@ -1,14 +1,10 @@
-export type CommandId = 'create_new_note' | 'change_vault' | 'open_settings' | 'open_file_search'
+import type { CommandDefinition } from '$lib/types/command_palette'
 
-export type CommandIcon = 'file-plus' | 'folder-open' | 'settings' | 'search'
-
-export type CommandDefinition = {
-  id: CommandId
-  label: string
-  description: string
-  keywords: string[]
-  icon: CommandIcon
-}
+export type {
+  CommandId,
+  CommandIcon,
+  CommandDefinition
+} from '$lib/types/command_palette'
 
 export const COMMANDS_REGISTRY: CommandDefinition[] = [
   {

@@ -21,7 +21,9 @@ const internal_roots = {
   services: path.join(project_root, 'src/lib/services'),
   reactors: path.join(project_root, 'src/lib/reactors'),
   actions: path.join(project_root, 'src/lib/actions'),
-  components: path.join(project_root, 'src/lib/components')
+  components: path.join(project_root, 'src/lib/components'),
+  utils: path.join(project_root, 'src/lib/utils'),
+  types: path.join(project_root, 'src/lib/types')
 }
 
 const layer_rules = [
@@ -37,7 +39,15 @@ const layer_rules = [
   },
   {
     layer: 'stores',
-    disallow_import_categories: new Set(['ports', 'adapters', 'services', 'reactors', 'actions', 'components']),
+    disallow_import_categories: new Set([
+      'ports',
+      'adapters',
+      'services',
+      'reactors',
+      'actions',
+      'components',
+      'utils'
+    ]),
     disallow_patterns: [
       {
         regex: /\bawait\b/g,

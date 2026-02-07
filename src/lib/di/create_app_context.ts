@@ -2,7 +2,6 @@ import type { Ports } from '$lib/ports/ports'
 import { create_app_stores } from '$lib/stores/create_app_stores'
 import { ActionRegistry } from '$lib/actions/registry'
 import { register_actions } from '$lib/actions/register_actions'
-import { ACTION_IDS } from '$lib/actions/action_ids'
 import type { AppMountConfig } from '$lib/services/vault_service'
 import { VaultService } from '$lib/services/vault_service'
 import { NoteService } from '$lib/services/note_service'
@@ -97,10 +96,6 @@ export function create_app_context(input: {
       clipboard: clipboard_service
     },
     default_mount_config: input.default_mount_config
-  })
-
-  editor_service.set_wiki_link_handler((note_path: string) => {
-    void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path)
   })
 
   const cleanup_reactors = mount_reactors({

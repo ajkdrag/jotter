@@ -11,9 +11,9 @@
   import FileSearchDialog from '$lib/components/file_search_dialog.svelte'
   import { use_app_context } from '$lib/context/app_context.svelte'
   import { ACTION_IDS } from '$lib/actions/action_ids'
+  import type { CommandId } from '$lib/types/command_palette'
   import type { EditorSettings } from '$lib/types/editor_settings'
   import type { NoteId, VaultId } from '$lib/types/ids'
-  import type { CommandId } from '$lib/utils/search_commands'
 
   type Props = {
     hide_choose_vault_button?: boolean

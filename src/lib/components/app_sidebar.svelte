@@ -14,7 +14,6 @@
   import { count_words } from '$lib/utils/count_words'
   import { use_app_context } from '$lib/context/app_context.svelte'
   import { ACTION_IDS } from '$lib/actions/action_ids'
-  import type { OpenNoteState } from '$lib/types/editor'
   import type { NoteMeta } from '$lib/types/note'
   import { Circle, FilePlus, FolderPlus, RefreshCw, FoldVertical, Copy } from '@lucide/svelte'
 
@@ -33,19 +32,6 @@
   const word_count = $derived(stores.editor.open_note ? count_words(stores.editor.open_note.markdown) : 0)
 
   let details_dialog_open = $state(false)
-
-  function handle_editor_mount(root: HTMLDivElement, note: OpenNoteState) {
-    void action_registry.execute(
-      ACTION_IDS.app_editor_mount,
-      root,
-      note,
-      stores.ui.editor_settings.link_syntax
-    )
-  }
-
-  function handle_editor_unmount() {
-    void action_registry.execute(ACTION_IDS.app_editor_unmount)
-  }
 
   function handle_theme_change(theme: 'light' | 'dark' | 'system') {
     void action_registry.execute(ACTION_IDS.ui_set_theme, theme)
@@ -213,11 +199,7 @@
                 </div>
               </header>
               <div class="flex min-h-0 flex-1 flex-col">
-                <NoteEditor
-                  open_note={stores.editor.open_note}
-                  on_mount={handle_editor_mount}
-                  on_unmount={handle_editor_unmount}
-                />
+                <NoteEditor />
               </div>
             </Sidebar.Inset>
           </Resizable.Pane>

@@ -5,7 +5,7 @@ import type { NoteMeta } from '$lib/types/note'
 import type { NoteId, NotePath } from '$lib/types/ids'
 import type { FolderLoadState } from '$lib/types/filetree'
 import type { NoteSearchHit } from '$lib/types/search'
-import type { CommandDefinition } from '$lib/utils/search_commands'
+import type { CommandDefinition } from '$lib/types/command_palette'
 import type { SettingDefinition } from '$lib/types/settings_registry'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 

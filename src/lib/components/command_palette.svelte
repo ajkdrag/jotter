@@ -6,7 +6,11 @@
   import SettingsIcon from '@lucide/svelte/icons/settings'
   import FilePlusIcon from '@lucide/svelte/icons/file-plus'
   import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
-  import type { CommandId, CommandDefinition, CommandIcon as CommandIconType } from '$lib/utils/search_commands'
+  import type {
+    CommandId,
+    CommandDefinition,
+    CommandIcon as CommandIconType
+  } from '$lib/types/command_palette'
   import type { SettingDefinition } from '$lib/types/settings_registry'
   import type { Component } from 'svelte'
 

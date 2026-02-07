@@ -1,4 +1,4 @@
-import { apply_editor_styles } from '$lib/shell/apply_editor_styles'
+import { apply_editor_styles } from '$lib/utils/apply_editor_styles'
 import type { UIStore } from '$lib/stores/ui_store.svelte'
 
 export function create_editor_styles_reactor(ui_store: UIStore): () => void {

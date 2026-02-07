@@ -1,5 +1,6 @@
 import type { SearchQuery } from '$lib/types/search'
-import { COMMANDS_REGISTRY, type CommandDefinition } from '$lib/utils/search_commands'
+import type { CommandDefinition } from '$lib/types/command_palette'
+import { COMMANDS_REGISTRY } from '$lib/utils/search_commands'
 import { SETTINGS_REGISTRY, type SettingDefinition } from '$lib/types/settings_registry'
 
 type PaletteSearchResult = {

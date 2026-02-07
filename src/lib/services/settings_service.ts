@@ -5,6 +5,7 @@ import type { OpStore } from '$lib/stores/op_store.svelte'
 import type { EditorSettings } from '$lib/types/editor_settings'
 import { SETTINGS_KEY } from '$lib/types/editor_settings'
 import { error_message } from '$lib/utils/error_message'
+import { logger } from '$lib/utils/logger'
 
 export class SettingsService {
   constructor(
@@ -39,6 +40,7 @@ export class SettingsService {
       this.ui_store.set_editor_settings(settings)
       this.op_store.succeed('settings.load')
     } catch (error) {
+      logger.error(`Load settings failed: ${error_message(error)}`)
       this.op_store.fail('settings.load', error_message(error))
     }
   }
@@ -78,6 +80,7 @@ export class SettingsService {
       }
       this.op_store.succeed('settings.save')
     } catch (error) {
+      logger.error(`Save settings failed: ${error_message(error)}`)
       this.op_store.fail('settings.save', error_message(error))
     }
   }

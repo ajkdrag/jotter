@@ -4,7 +4,7 @@ import type { NoteMeta } from '$lib/types/note'
 import type { NoteId, VaultId } from '$lib/types/ids'
 import type { ThemeMode } from '$lib/types/theme'
 import type { EditorSettings } from '$lib/types/editor_settings'
-import type { CommandId } from '$lib/utils/search_commands'
+import type { CommandId } from '$lib/types/command_palette'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { AppMountConfig } from '$lib/services/vault_service'
 import type { VaultService } from '$lib/services/vault_service'
@@ -38,31 +38,6 @@ export type ActionRegistrationInput = {
 export function register_actions(input: ActionRegistrationInput) {
   const { registry, stores, services, default_mount_config } = input
 
-  services.search.set_command_handler(async (command) => {
-    switch (command) {
-      case 'create_new_note':
-        await registry.execute(ACTION_IDS.note_create)
-        break
-      case 'change_vault':
-        await registry.execute(ACTION_IDS.vault_request_change)
-        break
-      case 'open_settings':
-        await registry.execute(ACTION_IDS.settings_open)
-        break
-      case 'open_file_search':
-        await registry.execute(ACTION_IDS.search_open)
-        break
-    }
-  })
-
-  services.search.set_setting_handler(async (_key) => {
-    await registry.execute(ACTION_IDS.settings_open)
-  })
-
-  services.search.set_note_handler(async (note_id) => {
-    await services.note.open_note(note_id, false)
-  })
-
   registry.register({
     id: ACTION_IDS.app_mounted,
     label: 'App Mounted',
@@ -74,11 +49,17 @@ export function register_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.app_editor_mount,
     label: 'Editor Mount',
-    execute: async (root: unknown, note: unknown, link_syntax: unknown) => {
+    execute: async (
+      root: unknown,
+      note: unknown,
+      link_syntax: unknown,
+      on_wiki_link_click: unknown
+    ) => {
       await services.editor.mount({
         root: root as HTMLDivElement,
         note: note as OpenNoteState,
-        link_syntax: link_syntax as EditorSettings['link_syntax']
+        link_syntax: link_syntax as EditorSettings['link_syntax'],
+        on_wiki_link_click: on_wiki_link_click as (note_path: string) => void
       })
     }
   })
@@ -519,7 +500,23 @@ export function register_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.palette_select_command,
     label: 'Select Command Palette Command',
     execute: async (command: unknown) => {
-      await services.search.select_command_palette_command(command as CommandId)
+      const command_id = command as CommandId
+      services.search.select_command_palette_command(command_id)
+
+      switch (command_id) {
+        case 'create_new_note':
+          await registry.execute(ACTION_IDS.note_create)
+          break
+        case 'change_vault':
+          await registry.execute(ACTION_IDS.vault_request_change)
+          break
+        case 'open_settings':
+          await registry.execute(ACTION_IDS.settings_open)
+          break
+        case 'open_file_search':
+          await registry.execute(ACTION_IDS.search_open)
+          break
+      }
     }
   })
 
@@ -527,7 +524,8 @@ export function register_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.palette_select_setting,
     label: 'Select Command Palette Setting',
     execute: async (key: unknown) => {
-      await services.search.select_command_palette_setting(key as keyof EditorSettings)
+      services.search.select_command_palette_setting(String(key))
+      await registry.execute(ACTION_IDS.settings_open)
     }
   })
 
@@ -576,7 +574,9 @@ export function register_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.search_confirm_note,
     label: 'Confirm File Search Note',
     execute: async (note_id: unknown) => {
-      await services.search.confirm_file_search_note(note_id as NoteId)
+      const selected_note_id = note_id as NoteId
+      services.search.confirm_file_search_note(selected_note_id)
+      await registry.execute(ACTION_IDS.note_open, selected_note_id)
     }
   })
 }

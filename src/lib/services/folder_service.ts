@@ -7,6 +7,7 @@ import type { UIStore } from '$lib/stores/ui_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
 import { error_message } from '$lib/utils/error_message'
 import { ensure_open_note } from '$lib/utils/ensure_open_note'
+import { logger } from '$lib/utils/logger'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 function should_load_folder(state: 'unloaded' | 'loading' | 'loaded' | 'error' | undefined): boolean {
@@ -109,6 +110,7 @@ export class FolderService {
       this.cancel_create()
       this.op_store.succeed('folder.create')
     } catch (error) {
+      logger.error(`Create folder failed: ${error_message(error)}`)
       this.op_store.fail('folder.create', error_message(error))
     }
   }
@@ -136,6 +138,7 @@ export class FolderService {
         affected_folder_count: stats.folder_count
       }
     } catch (error) {
+      logger.error(`Load folder delete stats failed: ${error_message(error)}`)
       this.op_store.fail('folder.delete', error_message(error))
     }
   }
@@ -188,6 +191,7 @@ export class FolderService {
       this.cancel_delete()
       this.op_store.succeed('folder.delete')
     } catch (error) {
+      logger.error(`Delete folder failed: ${error_message(error)}`)
       this.op_store.fail('folder.delete', error_message(error))
     }
   }
@@ -243,6 +247,7 @@ export class FolderService {
       this.cancel_rename()
       this.op_store.succeed('folder.rename')
     } catch (error) {
+      logger.error(`Rename folder failed: ${error_message(error)}`)
       this.op_store.fail('folder.rename', error_message(error))
     }
   }
@@ -296,7 +301,9 @@ export class FolderService {
       next_load_states.set(path, 'error')
 
       const next_error_messages = new SvelteMap(this.ui_store.filetree.error_messages)
-      next_error_messages.set(path, error_message(error))
+      const message = error_message(error)
+      logger.error(`Load folder failed (${path}): ${message}`)
+      next_error_messages.set(path, message)
 
       this.ui_store.filetree = {
         ...this.ui_store.filetree,

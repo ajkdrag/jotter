@@ -166,6 +166,7 @@ export class NoteService {
       }
       this.op_store.succeed('note.delete')
     } catch (error) {
+      logger.error(`Delete note failed: ${error_message(error)}`)
       this.op_store.fail('note.delete', error_message(error))
     }
   }
@@ -248,6 +249,7 @@ export class NoteService {
       this.cancel_rename()
       this.op_store.succeed('note.rename')
     } catch (error) {
+      logger.error(`Rename note failed: ${error_message(error)}`)
       this.op_store.fail('note.rename', error_message(error))
     }
   }
@@ -377,6 +379,7 @@ export class NoteService {
       this.cancel_save()
       this.op_store.succeed('note.save')
     } catch (error) {
+      logger.error(`Save note failed: ${error_message(error)}`)
       this.op_store.fail('note.save', error_message(error))
     }
   }

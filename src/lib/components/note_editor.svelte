@@ -1,40 +1,46 @@
 <script lang="ts">
-    import type { OpenNoteState } from "$lib/types/editor";
+  import { use_app_context } from '$lib/context/app_context.svelte'
+  import { ACTION_IDS } from '$lib/actions/action_ids'
+  import type { OpenNoteState } from '$lib/types/editor'
 
-    interface Props {
-        open_note: OpenNoteState | null;
-        on_mount: (root: HTMLDivElement, note: OpenNoteState) => void;
-        on_unmount: () => void;
+  const { stores, action_registry } = use_app_context()
+
+  const open_note = $derived(stores.editor.open_note)
+
+  function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
+    void action_registry.execute(
+      ACTION_IDS.app_editor_mount,
+      node,
+      note,
+      stores.ui.editor_settings.link_syntax,
+      (note_path: string) => {
+        void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path)
+      }
+    )
+
+    return {
+      destroy() {
+        void action_registry.execute(ACTION_IDS.app_editor_unmount)
+      }
     }
-
-    let { open_note, on_mount, on_unmount }: Props = $props();
-
-    function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-        on_mount(node, note);
-
-        return {
-            destroy() {
-                on_unmount();
-            }
-        };
-    }
+  }
 </script>
 
 <div class="NoteEditor">
-    {#if open_note}
-        <div use:mount_editor={open_note} class="NoteEditor__content"></div>
-    {:else}
-        <div class="NoteEditor__content"></div>
-    {/if}
+  {#if open_note}
+    <div use:mount_editor={open_note} class="NoteEditor__content"></div>
+  {:else}
+    <div class="NoteEditor__content"></div>
+  {/if}
 </div>
 
 <style>
-    .NoteEditor {
-        overflow-y: auto;
-    }
+  .NoteEditor {
+    overflow-y: auto;
+  }
 
-    .NoteEditor__content {
-        max-width: 65ch;
-        padding: 1.5rem 1.5rem;
-    }
+  .NoteEditor__content {
+    max-width: 65ch;
+    padding: 1.5rem 1.5rem;
+  }
 </style>

@@ -19,7 +19,7 @@ export class EditorService {
   private root: HTMLDivElement | null = null
   private current_note: OpenNoteState | null = null
   private current_link_syntax: EditorSettings['link_syntax'] = 'wikilink'
-  private on_wiki_link_click: ((note_path: string) => void) | null = null
+  private wiki_link_handler: ((note_path: string) => void) | null = null
 
   constructor(
     private readonly editor_port: EditorPort,
@@ -27,10 +27,6 @@ export class EditorService {
     private readonly vault_store: VaultStore,
     private readonly editor_store: EditorStore
   ) {}
-
-  set_wiki_link_handler(handler: (note_path: string) => void) {
-    this.on_wiki_link_click = handler
-  }
 
   is_mounted(): boolean {
     return this.root !== null && this.handle !== null
@@ -40,12 +36,14 @@ export class EditorService {
     root: HTMLDivElement
     note: OpenNoteState
     link_syntax: EditorSettings['link_syntax']
+    on_wiki_link_click: (note_path: string) => void
   }): Promise<void> {
     this.teardown_handle()
 
     this.root = args.root
     this.current_note = args.note
     this.current_link_syntax = args.link_syntax
+    this.wiki_link_handler = args.on_wiki_link_click
 
     await this.create_handle(args.root, args.note, args.link_syntax)
     this.focus()
@@ -55,6 +53,7 @@ export class EditorService {
     this.teardown_handle()
     this.root = null
     this.current_note = null
+    this.wiki_link_handler = null
   }
 
   async open_buffer(note: OpenNoteState, link_syntax: EditorSettings['link_syntax']): Promise<void> {
@@ -135,7 +134,7 @@ export class EditorService {
         this.editor_store.set_cursor(active_note.meta.id, cursor)
       },
       on_wiki_link_click: (note_path: string) => {
-        this.on_wiki_link_click?.(note_path)
+        this.wiki_link_handler?.(note_path)
       }
     })
   }

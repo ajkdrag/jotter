@@ -41,7 +41,7 @@ describe('SearchService', () => {
     expect(op_store.get('search.notes').status).toBe('success')
   })
 
-  it('adds recent notes and confirms selection via handler', async () => {
+  it('adds recent notes and closes file search on confirm', () => {
     const search_port = {
       search_notes: vi.fn().mockResolvedValue([])
     }
@@ -49,15 +49,12 @@ describe('SearchService', () => {
     const vault_store = new VaultStore()
     const ui_store = new UIStore()
     const op_store = new OpStore()
-    const on_note = vi.fn()
 
     const service = new SearchService(search_port, vault_store, ui_store, op_store)
-    service.set_note_handler(on_note)
 
-    await service.confirm_file_search_note(as_note_path('docs/a.md'))
+    service.confirm_file_search_note(as_note_path('docs/a.md'))
 
     expect(ui_store.file_search.recent_note_ids).toEqual([as_note_path('docs/a.md')])
-    expect(on_note).toHaveBeenCalledWith(as_note_path('docs/a.md'))
     expect(ui_store.file_search.open).toBe(false)
   })
 })

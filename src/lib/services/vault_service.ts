@@ -14,6 +14,7 @@ import type { OpStore } from '$lib/stores/op_store.svelte'
 import { DEFAULT_EDITOR_SETTINGS, SETTINGS_KEY, type EditorSettings } from '$lib/types/editor_settings'
 import { ensure_open_note } from '$lib/utils/ensure_open_note'
 import { error_message } from '$lib/utils/error_message'
+import { logger } from '$lib/utils/logger'
 
 export type AppMountConfig = {
   reset_app_state: boolean
@@ -66,6 +67,7 @@ export class VaultService {
       this.op_store.succeed('app.startup')
     } catch (error) {
       const message = error_message(error)
+      logger.error(`App startup failed: ${message}`)
       this.ui_store.startup = {
         status: 'error',
         error: message
@@ -124,6 +126,7 @@ export class VaultService {
     } catch (error) {
       this.ui_store.set_system_dialog_open(false)
       const message = error_message(error)
+      logger.error(`Choose vault failed: ${message}`)
       this.ui_store.change_vault = {
         ...this.ui_store.change_vault,
         is_loading: false,
@@ -151,6 +154,7 @@ export class VaultService {
       this.op_store.succeed('vault.change')
     } catch (error) {
       const message = error_message(error)
+      logger.error(`Select vault failed: ${message}`)
       this.ui_store.change_vault = {
         ...this.ui_store.change_vault,
         is_loading: false,
@@ -168,6 +172,7 @@ export class VaultService {
       this.ui_store.set_theme(theme)
       this.op_store.succeed('theme.set')
     } catch (error) {
+      logger.error(`Set theme failed: ${error_message(error)}`)
       this.op_store.fail('theme.set', error_message(error))
       throw error
     }

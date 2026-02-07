@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { apply_editor_styles } from '$lib/shell/apply_editor_styles'
+import { apply_editor_styles } from '$lib/utils/apply_editor_styles'
 import type { EditorSettings } from '$lib/types/editor_settings'
 
 describe('apply_editor_styles', () => {

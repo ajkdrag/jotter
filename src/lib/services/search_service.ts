@@ -3,16 +3,13 @@ import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import type { UIStore } from '$lib/stores/ui_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
 import type { NoteId } from '$lib/types/ids'
+import type { CommandId } from '$lib/types/command_palette'
 import { parse_search_query } from '$lib/utils/search_query_parser'
 import { search_palette } from '$lib/utils/search_palette'
-import type { CommandId } from '$lib/utils/search_commands'
-import type { EditorSettings } from '$lib/types/editor_settings'
+import { logger } from '$lib/utils/logger'
 
 export class SearchService {
   private active_search_revision = 0
-  private on_command_selected: ((command: CommandId) => Promise<void> | void) | null = null
-  private on_setting_selected: ((key: keyof EditorSettings) => Promise<void> | void) | null = null
-  private on_note_selected: ((note_id: NoteId) => Promise<void> | void) | null = null
 
   constructor(
     private readonly search_port: SearchPort,
@@ -20,18 +17,6 @@ export class SearchService {
     private readonly ui_store: UIStore,
     private readonly op_store: OpStore
   ) {}
-
-  set_command_handler(handler: (command: CommandId) => Promise<void> | void) {
-    this.on_command_selected = handler
-  }
-
-  set_setting_handler(handler: (key: keyof EditorSettings) => Promise<void> | void) {
-    this.on_setting_selected = handler
-  }
-
-  set_note_handler(handler: (note_id: NoteId) => Promise<void> | void) {
-    this.on_note_selected = handler
-  }
 
   open_command_palette() {
     const result = search_palette({ query: parse_search_query('') })
@@ -77,14 +62,14 @@ export class SearchService {
     }
   }
 
-  async select_command_palette_command(command: CommandId): Promise<void> {
+  select_command_palette_command(command: CommandId): void {
     this.close_command_palette()
-    await this.on_command_selected?.(command)
+    void command
   }
 
-  async select_command_palette_setting(key: keyof EditorSettings): Promise<void> {
+  select_command_palette_setting(key: string): void {
     this.close_command_palette()
-    await this.on_setting_selected?.(key)
+    void key
   }
 
   open_file_search() {
@@ -163,7 +148,7 @@ export class SearchService {
         is_searching: false
       }
       this.op_store.succeed('search.notes')
-    } catch {
+    } catch (error) {
       if (revision !== this.active_search_revision) return
 
       this.ui_store.file_search = {
@@ -171,6 +156,7 @@ export class SearchService {
         results: [],
         is_searching: false
       }
+      logger.error(`Search failed: ${String(error)}`)
       this.op_store.fail('search.notes', 'Search failed')
     }
   }
@@ -183,9 +169,8 @@ export class SearchService {
     }
   }
 
-  async confirm_file_search_note(note_id: NoteId): Promise<void> {
+  confirm_file_search_note(note_id: NoteId): void {
     this.add_recent_note(note_id)
     this.close_file_search()
-    await this.on_note_selected?.(note_id)
   }
 }
