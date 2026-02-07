@@ -1,26 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import { create_vault_store } from '$lib/stores/vault_store'
-import { as_vault_id, as_vault_path } from '$lib/types/ids'
+import { VaultStore } from '$lib/stores/vault_store.svelte'
+import { create_test_vault } from '../helpers/test_fixtures'
 
-describe('vault_store', () => {
-  it('increments generation on vault clear and set events', () => {
-    const store = create_vault_store()
+describe('VaultStore', () => {
+  it('sets and clears vault while updating generation', () => {
+    const store = new VaultStore()
+    const initial_generation = store.generation
 
-    const initial = store.get_snapshot().generation
-    store.reduce({ type: 'vault_cleared' })
-    const after_clear = store.get_snapshot().generation
-    store.reduce({
-      type: 'vault_set',
-      vault: {
-        id: as_vault_id('vault-1'),
-        name: 'Vault',
-        path: as_vault_path('/vault'),
-        created_at: 0
-      }
-    })
-    const after_set = store.get_snapshot().generation
+    const vault = create_test_vault()
+    store.set_vault(vault)
 
-    expect(after_clear).toBe(initial + 1)
-    expect(after_set).toBe(after_clear + 1)
+    expect(store.vault).toEqual(vault)
+    expect(store.generation).toBe(initial_generation + 1)
+
+    store.clear()
+
+    expect(store.vault).toBeNull()
+    expect(store.generation).toBe(initial_generation + 2)
+  })
+
+  it('sets recent vaults', () => {
+    const store = new VaultStore()
+    const vault = create_test_vault()
+
+    store.set_recent_vaults([vault])
+
+    expect(store.recent_vaults).toEqual([vault])
   })
 })

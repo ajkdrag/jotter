@@ -9,276 +9,194 @@
   import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
   import CommandPalette from '$lib/components/command_palette.svelte'
   import FileSearchDialog from '$lib/components/file_search_dialog.svelte'
-
-  import type { VaultState } from '$lib/stores/vault_store'
-  import type { NotesState } from '$lib/stores/notes_store'
-  import type { FlowSnapshot } from '$lib/flows/flow_handle'
-  import type { ChangeVaultFlowContext } from '$lib/flows/change_vault_flow'
-  import type { DeleteNoteFlowContext } from '$lib/flows/delete_note_flow'
-  import type { RenameNoteFlowContext } from '$lib/flows/rename_note_flow'
-  import type { SaveNoteFlowContext } from '$lib/flows/save_note_flow'
-  import type { SettingsFlowContext } from '$lib/flows/settings_flow'
-  import type { CreateFolderFlowContext } from '$lib/flows/create_folder_flow'
-  import type { CommandPaletteFlowContext, CommandPaletteFlowEvents } from '$lib/flows/command_palette_flow'
-  import type { FileSearchFlowContext, FileSearchFlowEvents } from '$lib/flows/file_search_flow'
-  import type { DeleteFolderFlowContext, DeleteFolderFlowEvents } from '$lib/flows/delete_folder_flow'
-  import type { RenameFolderFlowContext, RenameFolderFlowEvents } from '$lib/flows/rename_folder_flow'
-  import type { NoteId } from '$lib/types/ids'
-
-  import type { AppShellActions } from '$lib/controllers/app_shell_actions'
-
-  type FlowView<TEvent, TContext> = {
-    snapshot: FlowSnapshot<TContext>
-    send: (event: TEvent) => void
-  }
+  import { use_app_context } from '$lib/context/app_context.svelte'
+  import { ACTION_IDS } from '$lib/actions/action_ids'
+  import type { EditorSettings } from '$lib/types/editor_settings'
+  import type { NoteId, VaultId } from '$lib/types/ids'
+  import type { CommandId } from '$lib/utils/search_commands'
 
   type Props = {
-    has_vault: boolean
-    hide_choose_vault_button: boolean
-    vault_selection_loading: boolean
-
-    vault_store_state: VaultState
-
-    change_vault_snapshot: FlowSnapshot<ChangeVaultFlowContext>
-    delete_note_snapshot: FlowSnapshot<DeleteNoteFlowContext>
-    rename_note_snapshot: FlowSnapshot<RenameNoteFlowContext>
-    save_note_snapshot: FlowSnapshot<SaveNoteFlowContext>
-    create_folder_snapshot: FlowSnapshot<CreateFolderFlowContext>
-    settings_snapshot: FlowSnapshot<SettingsFlowContext>
-
-    delete_folder: FlowView<DeleteFolderFlowEvents, DeleteFolderFlowContext>
-    rename_folder: FlowView<RenameFolderFlowEvents, RenameFolderFlowContext>
-    command_palette: FlowView<CommandPaletteFlowEvents, CommandPaletteFlowContext>
-    file_search: FlowView<FileSearchFlowEvents, FileSearchFlowContext>
-    notes_store_state: NotesState
-    on_open_note: (note_id: NoteId) => void
-
-    actions: AppShellActions
+    hide_choose_vault_button?: boolean
   }
 
-  let {
-    has_vault,
-    hide_choose_vault_button,
-    vault_selection_loading,
-    vault_store_state,
-    change_vault_snapshot,
-    delete_note_snapshot,
-    rename_note_snapshot,
-    save_note_snapshot,
-    delete_folder,
-    rename_folder,
-    create_folder_snapshot,
-    settings_snapshot,
-    command_palette,
-    file_search,
-    notes_store_state,
-    on_open_note,
-    actions
-  }: Props = $props()
+  let { hide_choose_vault_button = false }: Props = $props()
 
-  const palette_open = $derived(command_palette.snapshot.matches('open'))
-  const palette_context = $derived(command_palette.snapshot.context)
+  const { stores, action_registry } = use_app_context()
 
-  const file_search_open = $derived(file_search.snapshot.matches('open'))
-  const file_search_context = $derived(file_search.snapshot.context)
+  const has_vault = $derived(stores.vault.vault !== null)
+
   const recent_notes_for_display = $derived(
-    file_search_context.recent_notes
-      .map((id) => notes_store_state.notes.find((n) => n.id === id))
-      .filter((n): n is NonNullable<typeof n> => n != null)
+    stores.ui.file_search.recent_note_ids
+      .map((id) => stores.notes.notes.find((note) => note.id === id))
+      .filter((note): note is NonNullable<typeof note> => note != null)
   )
 
-  const vault_dialog_open = $derived(
-    has_vault &&
-      (change_vault_snapshot.matches('dialog_open') ||
-        change_vault_snapshot.matches('changing') ||
-        change_vault_snapshot.matches('error'))
-  )
+  const delete_note_error = $derived(stores.op.get('note.delete').error)
+  const rename_note_error = $derived(stores.op.get('note.rename').error)
+  const save_note_error = $derived(stores.op.get('note.save').error)
+  const create_folder_error = $derived(stores.op.get('folder.create').error)
+  const delete_folder_error = $derived(stores.op.get('folder.delete').error)
+  const rename_folder_error = $derived(stores.op.get('folder.rename').error)
+  const settings_error = $derived(stores.op.get('settings.save').error ?? stores.op.get('settings.load').error)
 
-  const delete_dialog_open = $derived(
-    delete_note_snapshot.matches('confirming') ||
-      delete_note_snapshot.matches('deleting') ||
-      delete_note_snapshot.matches('error')
-  )
+  const delete_folder_status = $derived.by(() => {
+    const op_state = stores.op.get('folder.delete').status
+    if (op_state === 'pending') return 'deleting'
+    if (op_state === 'error') return 'error'
+    return stores.ui.delete_folder_dialog.status
+  })
 
-  const rename_dialog_open = $derived(
-    rename_note_snapshot.matches('confirming') ||
-      rename_note_snapshot.matches('checking_conflict') ||
-      rename_note_snapshot.matches('conflict_confirm') ||
-      rename_note_snapshot.matches('renaming') ||
-      rename_note_snapshot.matches('error')
-  )
-
-  const save_dialog_open = $derived(
-    save_note_snapshot.context.requires_dialog &&
-      (save_note_snapshot.matches('showing_save_dialog') ||
-        save_note_snapshot.matches('checking_existence') ||
-        save_note_snapshot.matches('conflict_confirm') ||
-        save_note_snapshot.matches('saving') ||
-        save_note_snapshot.matches('error'))
-  )
-
-  const settings_dialog_open = $derived(
-    settings_snapshot.matches('loading') ||
-      settings_snapshot.matches('editing') ||
-      settings_snapshot.matches('saving') ||
-      settings_snapshot.matches('error')
-  )
-
-  const create_folder_dialog_open = $derived(
-    create_folder_snapshot.matches('dialog_open') ||
-      create_folder_snapshot.matches('creating') ||
-      create_folder_snapshot.matches('error')
-  )
-
+  const rename_folder_status = $derived.by(() => {
+    const op_state = stores.op.get('folder.rename').status
+    if (op_state === 'pending') return 'renaming'
+    if (op_state === 'error') return 'error'
+    if (stores.ui.rename_folder_dialog.open) return 'confirming'
+    return 'idle'
+  })
 </script>
 
 {#if has_vault}
   <VaultDialog
-    open={vault_dialog_open}
+    open={stores.ui.change_vault.open}
     on_open_change={(open) => {
-      if (!open) actions.close_change_vault_dialog()
+      if (!open) {
+        void action_registry.execute(ACTION_IDS.vault_close_change)
+      }
     }}
-    recent_vaults={vault_store_state.recent_vaults}
-    current_vault_id={vault_store_state.vault?.id ?? null}
-    is_loading={vault_selection_loading}
-    error={change_vault_snapshot.context.error}
-    on_choose_vault_dir={actions.choose_vault_dir}
-    on_select_vault={actions.select_vault}
+    recent_vaults={stores.vault.recent_vaults}
+    current_vault_id={stores.vault.vault?.id ?? null}
+    is_loading={stores.ui.change_vault.is_loading}
+    error={stores.ui.change_vault.error}
+    on_choose_vault_dir={() => void action_registry.execute(ACTION_IDS.vault_choose)}
+    on_select_vault={(vault_id: VaultId) => void action_registry.execute(ACTION_IDS.vault_select, vault_id)}
     hide_choose_vault_button={hide_choose_vault_button}
   />
 {/if}
 
 <DeleteNoteDialog
-  open={delete_dialog_open}
-  note={delete_note_snapshot.context.note_to_delete}
-  is_deleting={delete_note_snapshot.matches('deleting')}
-  error={delete_note_snapshot.context.error}
-  on_confirm={actions.confirm_delete}
-  on_cancel={actions.cancel_delete}
-  on_retry={actions.retry_delete}
+  open={stores.ui.delete_note_dialog.open}
+  note={stores.ui.delete_note_dialog.note}
+  is_deleting={stores.op.is_pending('note.delete')}
+  error={delete_note_error}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.note_confirm_delete)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.note_cancel_delete)}
+  on_retry={() => void action_registry.execute(ACTION_IDS.note_confirm_delete)}
 />
 
 <RenameNoteDialog
-  open={rename_dialog_open}
-  note={rename_note_snapshot.context.note_to_rename}
-  new_path={rename_note_snapshot.context.new_path}
-  is_renaming={rename_note_snapshot.matches('renaming')}
-  is_checking_conflict={rename_note_snapshot.matches('checking_conflict')}
-  error={rename_note_snapshot.context.error}
-  show_overwrite_confirm={rename_note_snapshot.matches('conflict_confirm')}
-  on_update_path={actions.update_rename_path}
-  on_confirm={actions.confirm_rename}
-  on_confirm_overwrite={actions.confirm_rename_overwrite}
-  on_cancel={actions.cancel_rename}
-  on_retry={actions.retry_rename}
+  open={stores.ui.rename_note_dialog.open}
+  note={stores.ui.rename_note_dialog.note}
+  new_path={stores.ui.rename_note_dialog.new_path}
+  is_renaming={stores.op.is_pending('note.rename')}
+  is_checking_conflict={stores.ui.rename_note_dialog.is_checking_conflict}
+  error={rename_note_error}
+  show_overwrite_confirm={stores.ui.rename_note_dialog.show_overwrite_confirm}
+  on_update_path={(path: string) => void action_registry.execute(ACTION_IDS.note_update_rename_path, path)}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.note_confirm_rename)}
+  on_confirm_overwrite={() =>
+    void action_registry.execute(ACTION_IDS.note_confirm_rename_overwrite)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.note_cancel_rename)}
+  on_retry={() => void action_registry.execute(ACTION_IDS.note_retry_rename)}
 />
 
-<DeleteFolderDialog snapshot={delete_folder.snapshot} send={delete_folder.send} />
+<DeleteFolderDialog
+  open={stores.ui.delete_folder_dialog.open}
+  folder_path={stores.ui.delete_folder_dialog.folder_path}
+  affected_note_count={stores.ui.delete_folder_dialog.affected_note_count}
+  affected_folder_count={stores.ui.delete_folder_dialog.affected_folder_count}
+  status={delete_folder_status}
+  error={delete_folder_error}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.folder_confirm_delete)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.folder_cancel_delete)}
+  on_retry={() => void action_registry.execute(ACTION_IDS.folder_retry_delete)}
+/>
 
-<RenameFolderDialog snapshot={rename_folder.snapshot} send={rename_folder.send} />
+<RenameFolderDialog
+  open={stores.ui.rename_folder_dialog.open}
+  new_path={stores.ui.rename_folder_dialog.new_path}
+  status={rename_folder_status}
+  error={rename_folder_error}
+  on_update_path={(path: string) => void action_registry.execute(ACTION_IDS.folder_update_rename_path, path)}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.folder_confirm_rename)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.folder_cancel_rename)}
+  on_retry={() => void action_registry.execute(ACTION_IDS.folder_retry_rename)}
+/>
 
 <SaveNoteDialog
-  open={save_dialog_open}
-  new_path={save_note_snapshot.context.new_path}
-  folder_path={save_note_snapshot.context.folder_path}
-  is_saving={save_note_snapshot.matches('saving')}
-  is_checking={save_note_snapshot.matches('checking_existence')}
-  show_overwrite_confirm={save_note_snapshot.matches('conflict_confirm')}
-  error={save_note_snapshot.context.error}
-  on_update_path={actions.update_save_path}
-  on_confirm={actions.confirm_save}
-  on_confirm_overwrite={actions.confirm_save_overwrite}
-  on_retry={actions.retry_save}
-  on_cancel={actions.cancel_save}
+  open={stores.ui.save_note_dialog.open}
+  new_path={stores.ui.save_note_dialog.new_path}
+  folder_path={stores.ui.save_note_dialog.folder_path}
+  is_saving={stores.op.is_pending('note.save')}
+  is_checking={stores.ui.save_note_dialog.is_checking_existence}
+  show_overwrite_confirm={stores.ui.save_note_dialog.show_overwrite_confirm}
+  error={save_note_error}
+  on_update_path={(path: string) => void action_registry.execute(ACTION_IDS.note_update_save_path, path)}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.note_confirm_save)}
+  on_confirm_overwrite={() => void action_registry.execute(ACTION_IDS.note_confirm_save_overwrite)}
+  on_retry={() => void action_registry.execute(ACTION_IDS.note_retry_save)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.note_cancel_save)}
 />
 
 <SettingsDialog
-  open={settings_dialog_open}
-  editor_settings={settings_snapshot.context.current_settings}
-  is_saving={settings_snapshot.matches('saving')}
-  has_unsaved_changes={settings_snapshot.context.has_unsaved_changes}
-  error={settings_snapshot.context.error}
-  on_update_settings={actions.update_settings}
-  on_save={actions.save_settings}
-  on_close={actions.close_settings}
+  open={stores.ui.settings_dialog.open}
+  editor_settings={stores.ui.settings_dialog.current_settings}
+  is_saving={stores.op.is_pending('settings.save')}
+  has_unsaved_changes={stores.ui.settings_dialog.has_unsaved_changes}
+  error={settings_error}
+  on_update_settings={(settings: EditorSettings) => void action_registry.execute(ACTION_IDS.settings_update, settings)}
+  on_save={() => void action_registry.execute(ACTION_IDS.settings_save)}
+  on_close={() => void action_registry.execute(ACTION_IDS.settings_close)}
 />
 
 <CreateFolderDialog
-  open={create_folder_dialog_open}
-  parent_path={create_folder_snapshot.context.parent_path}
-  folder_name={create_folder_snapshot.context.folder_name}
-  is_creating={create_folder_snapshot.matches('creating')}
-  error={create_folder_snapshot.context.error}
-  on_folder_name_change={actions.update_create_folder_name}
-  on_confirm={actions.confirm_create_folder}
-  on_cancel={actions.cancel_create_folder}
+  open={stores.ui.create_folder_dialog.open}
+  parent_path={stores.ui.create_folder_dialog.parent_path}
+  folder_name={stores.ui.create_folder_dialog.folder_name}
+  is_creating={stores.op.is_pending('folder.create')}
+  error={create_folder_error}
+  on_folder_name_change={(name: string) => void action_registry.execute(ACTION_IDS.folder_update_create_name, name)}
+  on_confirm={() => void action_registry.execute(ACTION_IDS.folder_confirm_create)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.folder_cancel_create)}
 />
 
-  <CommandPalette
-    open={palette_open}
-    query={palette_context.query}
-    selected_index={palette_context.selected_index}
-    commands={palette_context.commands}
-    settings={palette_context.settings}
-    on_open_change={(open) => {
-      if (open) {
-        command_palette.send({ type: 'OPEN' })
-      } else {
-        command_palette.send({ type: 'CLOSE' })
+<CommandPalette
+  open={stores.ui.command_palette.open}
+  query={stores.ui.command_palette.query}
+  selected_index={stores.ui.command_palette.selected_index}
+  commands={stores.ui.command_palette.commands}
+  settings={stores.ui.command_palette.settings}
+  on_open_change={(open) => {
+    if (open) {
+      void action_registry.execute(ACTION_IDS.palette_open)
+    } else {
+      void action_registry.execute(ACTION_IDS.palette_close)
     }
   }}
-  on_query_change={(q: string) => {
-    command_palette.send({ type: 'SET_QUERY', query: q })
-  }}
-  on_selected_index_change={(i: number) => {
-    command_palette.send({ type: 'SET_SELECTED_INDEX', index: i })
-  }}
-  on_select_command={(cmd) => {
-    command_palette.send({ type: 'CLOSE' })
-    switch (cmd) {
-      case 'create_new_note':
-        actions.create_new_note()
-        break
-      case 'change_vault':
-        actions.request_change_vault()
-        break
-      case 'open_settings':
-        actions.open_settings()
-        break
-      case 'open_file_search':
-        file_search.send({ type: 'OPEN' })
-        break
-    }
-  }}
-  on_select_setting={(_key) => {
-    command_palette.send({ type: 'CLOSE' })
-    actions.open_settings()
-  }}
+  on_query_change={(query: string) => void action_registry.execute(ACTION_IDS.palette_set_query, query)}
+  on_selected_index_change={(index: number) =>
+    void action_registry.execute(ACTION_IDS.palette_set_selected_index, index)}
+  on_select_command={(command: CommandId) =>
+    void action_registry.execute(ACTION_IDS.palette_select_command, command)}
+  on_select_setting={(key: string) =>
+    void action_registry.execute(ACTION_IDS.palette_select_setting, key as keyof EditorSettings)}
 />
 
 <FileSearchDialog
-  open={file_search_open}
-  query={file_search_context.query}
-  results={file_search_context.results}
+  open={stores.ui.file_search.open}
+  query={stores.ui.file_search.query}
+  results={stores.ui.file_search.results}
   recent_notes={recent_notes_for_display}
-  selected_index={file_search_context.selected_index}
-  is_searching={file_search_context.is_searching}
+  selected_index={stores.ui.file_search.selected_index}
+  is_searching={stores.ui.file_search.is_searching}
   on_open_change={(open) => {
     if (open) {
-      file_search.send({ type: 'OPEN' })
+      void action_registry.execute(ACTION_IDS.search_open)
     } else {
-      file_search.send({ type: 'CLOSE' })
+      void action_registry.execute(ACTION_IDS.search_close)
     }
   }}
-  on_query_change={(q: string) => {
-    file_search.send({ type: 'SET_QUERY', query: q })
-  }}
-  on_selected_index_change={(i: number) => {
-    file_search.send({ type: 'SET_SELECTED_INDEX', index: i })
-  }}
-  on_confirm={(id: NoteId) => {
-    file_search.send({ type: 'ADD_RECENT', note_id: id })
-    file_search.send({ type: 'CLOSE' })
-    on_open_note(id)
-  }}
+  on_query_change={(query: string) => void action_registry.execute(ACTION_IDS.search_set_query, query)}
+  on_selected_index_change={(index: number) =>
+    void action_registry.execute(ACTION_IDS.search_set_selected_index, index)}
+  on_confirm={(note_id: NoteId) => void action_registry.execute(ACTION_IDS.search_confirm_note, note_id)}
 />

@@ -54,10 +54,11 @@ src/               Frontend (Svelte/TS)
   lib/
     ports/         Interface contracts
     adapters/      Platform implementations (web, tauri, editor)
-    operations/    Business logic (pure functions)
+    use_cases/     Business IO (returns domain events)
+    commands/      Command schema + command handlers
     stores/        Global state (Svelte 5 runes)
     flows/         State machines (XState)
-    controllers/   UI intent -> flow event translation
+    runtime/       Runtime context + UI effects
     components/    Presentational UI
 src-tauri/         Backend (Rust)
   src/
@@ -99,7 +100,7 @@ Tests live in the top-level `tests/` directory, not alongside source files. Run 
 The codebase is opinionated. A few things worth knowing before jumping in:
 
 - Files are always `snake_case`.
-- Business logic goes in `operations/` as pure functions. UI components stay dumb.
+- Business IO goes in `use_cases/`. UI components read stores and dispatch commands.
 - Every user-facing flow is modeled as an XState machine in `flows/`.
 - See [UI.md](./UI.md) for the design system, tokens, and BEM naming conventions.
 - See [architecture.md](./architecture.md) for data flow and layering rules.

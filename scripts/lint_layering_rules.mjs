@@ -3,102 +3,86 @@ import path from 'node:path'
 
 const project_root = process.cwd()
 
-const source_extensions = new Set([
-  '.ts',
-  '.js',
-  '.mjs',
-  '.cjs',
-  '.svelte'
-])
+const source_extensions = new Set(['.ts', '.js', '.mjs', '.cjs', '.svelte'])
 
 const layering_roots = {
   components: path.join(project_root, 'src/lib/components'),
-  controllers: path.join(project_root, 'src/lib/controllers'),
-  flows: path.join(project_root, 'src/lib/flows'),
-  use_cases: path.join(project_root, 'src/lib/use_cases'),
   stores: path.join(project_root, 'src/lib/stores'),
-  shell: path.join(project_root, 'src/lib/shell')
+  services: path.join(project_root, 'src/lib/services'),
+  reactors: path.join(project_root, 'src/lib/reactors'),
+  actions: path.join(project_root, 'src/lib/actions'),
+  routes: path.join(project_root, 'src/routes')
 }
 
 const internal_roots = {
   ports: path.join(project_root, 'src/lib/ports'),
   adapters: path.join(project_root, 'src/lib/adapters'),
-  use_cases: path.join(project_root, 'src/lib/use_cases'),
-  components: path.join(project_root, 'src/lib/components'),
   stores: path.join(project_root, 'src/lib/stores'),
-  flows: path.join(project_root, 'src/lib/flows'),
-  shell: path.join(project_root, 'src/lib/shell')
+  services: path.join(project_root, 'src/lib/services'),
+  reactors: path.join(project_root, 'src/lib/reactors'),
+  actions: path.join(project_root, 'src/lib/actions'),
+  components: path.join(project_root, 'src/lib/components')
 }
 
 const layer_rules = [
   {
     layer: 'components',
-    disallow_import_categories: new Set(['xstate', 'ports', 'adapters', 'use_cases']),
-    disallow_patterns: []
-  },
-  {
-    layer: 'controllers',
-    disallow_import_categories: new Set(['ports', 'adapters', 'use_cases']),
-    disallow_patterns: []
-  },
-  {
-    layer: 'flows',
-    disallow_import_categories: new Set(['adapters', 'components', 'ui_lib']),
+    disallow_import_categories: new Set(['ports', 'adapters', 'services', 'reactors']),
     disallow_patterns: [
       {
-        regex: /\b(?:context\.)?ports\.[a-zA-Z_]\w*\.[a-zA-Z_]\w*\s*\(/g,
-        message: 'flows must not call ports directly; call a use case instead'
-      },
-      {
-        regex: /\bdocument\./g,
-        message: 'flows must not touch DOM APIs'
-      },
-      {
-        regex: /\bwindow\./g,
-        message: 'flows must not touch window APIs'
-      },
-      {
-        regex: /\btoast\s*\(/g,
-        message: 'flows must not call toast APIs directly'
-      }
-    ]
-  },
-  {
-    layer: 'use_cases',
-    disallow_import_categories: new Set(['components', 'adapters', 'flows', 'stores', 'shell', 'ui_lib']),
-    disallow_patterns: [
-      {
-        regex: /\bdocument\./g,
-        message: 'use cases must not touch DOM APIs'
-      },
-      {
-        regex: /\bwindow\./g,
-        message: 'use cases must not touch window APIs'
-      },
-      {
-        regex: /\btoast\s*\(/g,
-        message: 'use cases must not call toast APIs directly'
+        regex: /\bxstate\b/g,
+        message: 'components must not depend on xstate'
       }
     ]
   },
   {
     layer: 'stores',
-    disallow_import_categories: new Set(['ports', 'adapters', 'use_cases', 'flows', 'components', 'shell']),
+    disallow_import_categories: new Set(['ports', 'adapters', 'services', 'reactors', 'actions', 'components']),
     disallow_patterns: [
       {
         regex: /\bawait\b/g,
-        message: 'stores must not use async work (await found)'
+        message: 'stores must stay synchronous (await found)'
       },
       {
         regex: /\basync\b/g,
-        message: 'stores must not use async work (async found)'
+        message: 'stores must stay synchronous (async found)'
       }
     ]
   },
   {
-    layer: 'shell',
-    disallow_import_categories: new Set(['stores', 'use_cases']),
+    layer: 'services',
+    disallow_import_categories: new Set(['adapters', 'components', 'reactors']),
+    disallow_patterns: [
+      {
+        regex: /\$effect\b/g,
+        message: 'services must not subscribe to reactive effects; use reactors'
+      }
+    ]
+  },
+  {
+    layer: 'reactors',
+    disallow_import_categories: new Set(['adapters', 'components']),
+    disallow_patterns: [
+      {
+        regex: /\bawait\b/g,
+        message: 'reactors should trigger services; avoid inline async control-flow'
+      }
+    ]
+  },
+  {
+    layer: 'actions',
+    disallow_import_categories: new Set(['ports', 'adapters', 'components']),
     disallow_patterns: []
+  },
+  {
+    layer: 'routes',
+    disallow_import_categories: new Set(['ports', 'services', 'stores', 'reactors', 'actions']),
+    disallow_patterns: [
+      {
+        regex: /\bsetContext\(/g,
+        message: 'routes should use app context helpers, not raw setContext'
+      }
+    ]
   }
 ]
 
@@ -138,13 +122,6 @@ function path_in_dir(candidate, dir_path) {
 }
 
 function categorize_import(file_path, import_path) {
-  if (import_path === 'xstate' || import_path.startsWith('xstate/')) {
-    return 'xstate'
-  }
-  if (import_path === 'svelte-sonner' || import_path.startsWith('svelte-sonner/')) {
-    return 'ui_lib'
-  }
-
   const resolved = resolve_internal_import(file_path, import_path)
   if (!resolved) return null
 
@@ -165,22 +142,14 @@ function extract_imports(content) {
   const from_import_regex = /^\s*import[\s\S]*?\sfrom\s+['"]([^'"]+)['"]/gm
   let from_match = from_import_regex.exec(content)
   while (from_match) {
-    imports.push({
-      module: from_match[1],
-      index: from_match.index,
-      statement: from_match[0]
-    })
+    imports.push({ module: from_match[1], index: from_match.index })
     from_match = from_import_regex.exec(content)
   }
 
   const side_effect_import_regex = /^\s*import\s+['"]([^'"]+)['"]/gm
   let side_effect_match = side_effect_import_regex.exec(content)
   while (side_effect_match) {
-    imports.push({
-      module: side_effect_match[1],
-      index: side_effect_match.index,
-      statement: side_effect_match[0]
-    })
+    imports.push({ module: side_effect_match[1], index: side_effect_match.index })
     side_effect_match = side_effect_import_regex.exec(content)
   }
 
@@ -195,6 +164,7 @@ const violations = []
 
 for (const rule of layer_rules) {
   const files = list_source_files(layering_roots[rule.layer])
+
   for (const file_path of files) {
     const content = fs.readFileSync(file_path, 'utf8')
     const imports = extract_imports(content)

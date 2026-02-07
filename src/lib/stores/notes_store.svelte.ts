@@ -1,0 +1,116 @@
+import type { NoteId, NotePath } from '$lib/types/ids'
+import type { NoteMeta } from '$lib/types/note'
+import type { FolderContents } from '$lib/types/filetree'
+
+function normalized_note_path(path: NotePath): NotePath {
+  if (path.endsWith('.md')) return path
+  return `${path}.md` as NotePath
+}
+
+export class NotesStore {
+  notes = $state<NoteMeta[]>([])
+  folder_paths = $state<string[]>([])
+
+  set_notes(notes: NoteMeta[]) {
+    this.notes = [...notes].sort((a, b) => a.path.localeCompare(b.path))
+  }
+
+  add_note(note: NoteMeta) {
+    const existing = this.notes.find((entry) => entry.id === note.id)
+    if (existing) return
+    this.notes = [...this.notes, note].sort((a, b) => a.path.localeCompare(b.path))
+  }
+
+  remove_note(note_id: NoteId) {
+    this.notes = this.notes.filter((note) => note.id !== note_id)
+  }
+
+  rename_note(old_path: NotePath, new_path: NotePath) {
+    const normalized_new = normalized_note_path(new_path)
+    const parts = normalized_new.split('/')
+    const leaf = parts[parts.length - 1] ?? ''
+    const title = leaf.endsWith('.md') ? leaf.slice(0, -3) : leaf
+
+    this.notes = this.notes
+      .map((note) => {
+        if (note.path !== old_path) return note
+        return {
+          ...note,
+          id: normalized_new,
+          path: normalized_new,
+          title
+        }
+      })
+      .sort((a, b) => a.path.localeCompare(b.path))
+  }
+
+  set_folder_paths(folder_paths: string[]) {
+    this.folder_paths = [...folder_paths].sort((a, b) => a.localeCompare(b))
+  }
+
+  add_folder_path(path: string) {
+    if (this.folder_paths.includes(path)) return
+    this.folder_paths = [...this.folder_paths, path].sort((a, b) => a.localeCompare(b))
+  }
+
+  remove_folder(path: string) {
+    const prefix = `${path}/`
+    this.notes = this.notes.filter((note) => !note.path.startsWith(prefix))
+    this.folder_paths = this.folder_paths.filter(
+      (folder_path) => folder_path !== path && !folder_path.startsWith(prefix)
+    )
+  }
+
+  rename_folder(old_path: string, new_path: string) {
+    const old_prefix = `${old_path}/`
+    const new_prefix = `${new_path}/`
+
+    this.notes = this.notes.map((note) => {
+      if (!note.path.startsWith(old_prefix)) return note
+      const updated_path = `${new_prefix}${note.path.slice(old_prefix.length)}` as NotePath
+      return {
+        ...note,
+        id: updated_path,
+        path: updated_path
+      }
+    })
+
+    this.folder_paths = this.folder_paths.map((folder_path) => {
+      if (folder_path === old_path) return new_path
+      if (folder_path.startsWith(old_prefix)) {
+        return `${new_prefix}${folder_path.slice(old_prefix.length)}`
+      }
+      return folder_path
+    })
+  }
+
+  merge_folder_contents(folder_path: string, contents: FolderContents) {
+    const merged_notes = [...this.notes]
+    for (const note of contents.notes) {
+      const index = merged_notes.findIndex((item) => item.id === note.id)
+      if (index >= 0) {
+        merged_notes[index] = note
+      } else {
+        merged_notes.push(note)
+      }
+    }
+    this.notes = merged_notes.sort((a, b) => a.path.localeCompare(b.path))
+
+    const merged_folders = [...this.folder_paths]
+    for (const subfolder of contents.subfolders) {
+      if (!merged_folders.includes(subfolder)) {
+        merged_folders.push(subfolder)
+      }
+    }
+    if (folder_path && !merged_folders.includes(folder_path)) {
+      merged_folders.push(folder_path)
+    }
+
+    this.folder_paths = merged_folders.sort((a, b) => a.localeCompare(b))
+  }
+
+  reset() {
+    this.notes = []
+    this.folder_paths = []
+  }
+}
