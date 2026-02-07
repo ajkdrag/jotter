@@ -40,6 +40,7 @@ pub fn run() {
             notes_service::read_note,
             notes_service::write_note,
             notes_service::create_note,
+            notes_service::write_image_asset,
             notes_service::rename_note,
             notes_service::delete_note,
             notes_service::list_folder_contents,

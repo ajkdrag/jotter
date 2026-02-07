@@ -188,26 +188,26 @@ export class VaultService {
   private async finish_open_vault(vault: Vault): Promise<EditorSettings> {
     await this.vault_port.remember_last_vault(vault.id)
 
-    const [notes, folder_paths, recent_vaults] = await Promise.all([
-      this.notes_port.list_notes(vault.id),
-      this.notes_port.list_folders(vault.id),
+    const [root_contents, recent_vaults] = await Promise.all([
+      this.notes_port.list_folder_contents(vault.id, ''),
       this.vault_port.list_vaults()
     ])
 
-    await this.index_port.build_index(vault.id)
+    this.index_port.build_index(vault.id).catch((e: unknown) => {
+      logger.error(`Background index build failed: ${error_message(e)}`)
+    })
 
     this.vault_store.clear()
     this.notes_store.reset()
     this.editor_store.reset()
 
     this.vault_store.set_vault(vault)
-    this.notes_store.set_notes(notes)
-    this.notes_store.set_folder_paths(folder_paths)
+    this.notes_store.merge_folder_contents('', root_contents)
     this.vault_store.set_recent_vaults(recent_vaults)
 
     const ensured_note = ensure_open_note({
       vault,
-      notes,
+      notes: root_contents.notes,
       open_note: null,
       now_ms: this.now_ms()
     })

@@ -24,7 +24,6 @@ export function create_app_context(input: {
 
   const editor_service = new EditorService(
     input.ports.editor,
-    input.ports.assets,
     stores.vault,
     stores.editor
   )
@@ -38,6 +37,7 @@ export function create_app_context(input: {
   const note_service = new NoteService(
     input.ports.notes,
     input.ports.index,
+    input.ports.assets,
     stores.vault,
     stores.notes,
     stores.editor,
@@ -101,7 +101,8 @@ export function create_app_context(input: {
     editor_store: stores.editor,
     ui_store: stores.ui,
     op_store: stores.op,
-    editor_service
+    editor_service,
+    action_registry
   })
 
   return {

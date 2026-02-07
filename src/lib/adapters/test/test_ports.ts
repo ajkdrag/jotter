@@ -7,10 +7,12 @@ import { create_test_vault_settings_adapter } from './test_vault_settings_adapte
 import { create_test_search_adapter } from './test_search_adapter'
 import { create_theme_adapter } from '$lib/adapters/theme_adapter'
 import type { Ports } from '$lib/ports/ports'
-import { milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
+import { create_milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
 import { create_test_clipboard_adapter } from '$lib/adapters/test/test_clipboard_adapter'
 
 export function create_test_ports(): Ports {
+  const assets = create_test_assets_adapter()
+
   return {
     vault: create_test_vault_adapter(),
     notes: create_test_notes_adapter(),
@@ -18,8 +20,11 @@ export function create_test_ports(): Ports {
     search: create_test_search_adapter(),
     settings: create_test_settings_adapter(),
     vault_settings: create_test_vault_settings_adapter(),
-    assets: create_test_assets_adapter(),
-    editor: milkdown_editor_port,
+    assets,
+    editor: create_milkdown_editor_port({
+      resolve_asset_url_for_vault: (vault_id, asset_path) =>
+        assets.resolve_asset_url(vault_id, asset_path)
+    }),
     theme: create_theme_adapter(),
     clipboard: create_test_clipboard_adapter()
   }

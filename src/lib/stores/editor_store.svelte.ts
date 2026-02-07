@@ -1,4 +1,4 @@
-import type { OpenNoteState, CursorInfo } from '$lib/types/editor'
+import type { OpenNoteState, CursorInfo, ImagePasteRequest, PastedImagePayload } from '$lib/types/editor'
 import type { NoteId, NotePath } from '$lib/types/ids'
 
 function path_title(path: string): string {
@@ -10,6 +10,10 @@ function path_title(path: string): string {
 export class EditorStore {
   open_note = $state<OpenNoteState | null>(null)
   cursor = $state<CursorInfo | null>(null)
+  internal_link_click = $state<{ note_path: NotePath; event_id: number } | null>(null)
+  image_paste_request = $state<ImagePasteRequest | null>(null)
+  private internal_link_click_event_id = 0
+  private image_paste_event_id = 0
 
   set_open_note(open_note: OpenNoteState) {
     this.open_note = open_note
@@ -79,8 +83,30 @@ export class EditorStore {
     this.cursor = cursor
   }
 
+  emit_internal_link_click(note_path: NotePath) {
+    this.internal_link_click_event_id += 1
+    this.internal_link_click = {
+      note_path,
+      event_id: this.internal_link_click_event_id
+    }
+  }
+
+  emit_image_paste_request(note_id: NoteId, note_path: NotePath, image: PastedImagePayload) {
+    this.image_paste_event_id += 1
+    this.image_paste_request = {
+      note_id,
+      note_path,
+      image,
+      event_id: this.image_paste_event_id
+    }
+  }
+
   reset() {
     this.open_note = null
     this.cursor = null
+    this.internal_link_click = null
+    this.image_paste_request = null
+    this.internal_link_click_event_id = 0
+    this.image_paste_event_id = 0
   }
 }

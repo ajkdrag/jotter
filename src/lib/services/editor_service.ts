@@ -1,9 +1,8 @@
-import type { EditorHandle, EditorPort } from '$lib/ports/editor_port'
-import type { AssetsPort } from '$lib/ports/assets_port'
-import type { OpenNoteState, CursorInfo } from '$lib/types/editor'
+import type { EditorPort, EditorSession } from '$lib/ports/editor_port'
+import type { OpenNoteState, CursorInfo, PastedImagePayload } from '$lib/types/editor'
 import type { EditorSettings } from '$lib/types/editor_settings'
-import type { AssetPath, MarkdownText, NoteId } from '$lib/types/ids'
-import { as_markdown_text } from '$lib/types/ids'
+import type { MarkdownText, NoteId } from '$lib/types/ids'
+import { as_markdown_text, as_note_path } from '$lib/types/ids'
 import type { EditorStore } from '$lib/stores/editor_store.svelte'
 import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import { error_message } from '$lib/utils/error_message'
@@ -15,78 +14,66 @@ export type EditorFlushResult = {
 }
 
 export class EditorService {
-  private handle: EditorHandle | null = null
-  private root: HTMLDivElement | null = null
-  private current_note: OpenNoteState | null = null
-  private current_link_syntax: EditorSettings['link_syntax'] = 'wikilink'
-  private wiki_link_handler: ((note_path: string) => void) | null = null
+  private session: EditorSession | null = null
+  private host_root: HTMLDivElement | null = null
+  private active_note: OpenNoteState | null = null
+  private active_link_syntax: EditorSettings['link_syntax'] = 'wikilink'
+  private session_generation = 0
 
   constructor(
     private readonly editor_port: EditorPort,
-    private readonly assets_port: AssetsPort,
     private readonly vault_store: VaultStore,
     private readonly editor_store: EditorStore
   ) {}
 
   is_mounted(): boolean {
-    return this.root !== null && this.handle !== null
+    return this.host_root !== null && this.session !== null
   }
 
   async mount(args: {
     root: HTMLDivElement
     note: OpenNoteState
     link_syntax: EditorSettings['link_syntax']
-    on_wiki_link_click: (note_path: string) => void
   }): Promise<void> {
-    this.teardown_handle()
+    this.host_root = args.root
+    this.active_note = args.note
+    this.active_link_syntax = args.link_syntax
 
-    this.root = args.root
-    this.current_note = args.note
-    this.current_link_syntax = args.link_syntax
-    this.wiki_link_handler = args.on_wiki_link_click
-
-    await this.create_handle(args.root, args.note, args.link_syntax)
+    await this.recreate_session()
     this.focus()
   }
 
   unmount() {
-    this.teardown_handle()
-    this.root = null
-    this.current_note = null
-    this.wiki_link_handler = null
+    this.invalidate_session_generation()
+    this.teardown_session()
+    this.host_root = null
+    this.active_note = null
   }
 
   async open_buffer(note: OpenNoteState, link_syntax: EditorSettings['link_syntax']): Promise<void> {
-    this.current_note = note
-    this.current_link_syntax = link_syntax
+    this.active_note = note
+    this.active_link_syntax = link_syntax
 
-    if (!this.root) return
+    if (!this.host_root) return
 
-    await this.create_handle(this.root, note, link_syntax)
-    this.focus()
-  }
-
-  async apply_settings(settings: EditorSettings): Promise<void> {
-    this.current_link_syntax = settings.link_syntax
-    if (!this.current_note || !this.root) return
-    await this.create_handle(this.root, this.current_note, settings.link_syntax)
+    await this.recreate_session()
     this.focus()
   }
 
   insert_text(text: string) {
-    this.handle?.insert_text_at_cursor(text)
+    this.session?.insert_text_at_cursor(text)
   }
 
   mark_clean() {
-    this.handle?.mark_clean()
+    this.session?.mark_clean()
   }
 
   flush(): EditorFlushResult | null {
-    if (!this.handle || !this.current_note) return null
+    if (!this.session || !this.active_note) return null
 
-    const markdown = this.handle.get_markdown()
+    const markdown = this.session.get_markdown()
     const payload: EditorFlushResult = {
-      note_id: this.current_note.meta.id,
+      note_id: this.active_note.meta.id,
       markdown: as_markdown_text(markdown)
     }
 
@@ -95,59 +82,82 @@ export class EditorService {
   }
 
   focus() {
-    this.handle?.focus()
+    this.session?.focus()
   }
 
-  private async resolve_asset_url(asset_path: AssetPath): Promise<string> {
-    const vault_id = this.vault_store.vault?.id
-    if (!vault_id) {
-      throw new Error('No active vault')
-    }
-    return this.assets_port.resolve_asset_url(vault_id, asset_path)
+  private next_session_generation(): number {
+    this.session_generation += 1
+    return this.session_generation
   }
 
-  private async create_handle(
-    root: HTMLDivElement,
-    note: OpenNoteState,
-    link_syntax: EditorSettings['link_syntax']
-  ) {
-    this.teardown_handle()
+  private invalidate_session_generation() {
+    this.session_generation += 1
+  }
 
-    this.handle = await this.editor_port.create_editor(root, {
-      initial_markdown: note.markdown,
-      note_path: note.meta.path,
-      link_syntax,
-      resolve_asset_url: (asset_path) => this.resolve_asset_url(asset_path),
-      on_markdown_change: (markdown: string) => {
-        const active_note = this.current_note
-        if (!active_note) return
-        this.editor_store.set_markdown(active_note.meta.id, as_markdown_text(markdown))
-      },
-      on_dirty_state_change: (is_dirty: boolean) => {
-        const active_note = this.current_note
-        if (!active_note) return
-        this.editor_store.set_dirty(active_note.meta.id, is_dirty)
-      },
-      on_cursor_change: (cursor: CursorInfo) => {
-        const active_note = this.current_note
-        if (!active_note) return
-        this.editor_store.set_cursor(active_note.meta.id, cursor)
-      },
-      on_wiki_link_click: (note_path: string) => {
-        this.wiki_link_handler?.(note_path)
+  private is_generation_current(generation: number): boolean {
+    return generation === this.session_generation
+  }
+
+  private async recreate_session(): Promise<void> {
+    const host_root = this.host_root
+    const active_note = this.active_note
+    if (!host_root || !active_note) return
+
+    const generation = this.next_session_generation()
+    const note_id = active_note.meta.id
+
+    this.teardown_session()
+
+    const next_session = await this.editor_port.start_session({
+      root: host_root,
+      initial_markdown: active_note.markdown,
+      note_path: active_note.meta.path,
+      vault_id: this.vault_store.vault?.id ?? null,
+      link_syntax: this.active_link_syntax,
+      events: {
+        on_markdown_change: (markdown: string) => {
+          if (!this.is_generation_current(generation)) return
+          this.editor_store.set_markdown(note_id, as_markdown_text(markdown))
+        },
+        on_dirty_state_change: (is_dirty: boolean) => {
+          if (!this.is_generation_current(generation)) return
+          this.editor_store.set_dirty(note_id, is_dirty)
+        },
+        on_cursor_change: (cursor: CursorInfo) => {
+          if (!this.is_generation_current(generation)) return
+          this.editor_store.set_cursor(note_id, cursor)
+        },
+        on_internal_link_click: (note_path: string) => {
+          if (!this.is_generation_current(generation)) return
+          this.editor_store.emit_internal_link_click(as_note_path(note_path))
+        },
+        on_image_paste_requested: (image: PastedImagePayload) => {
+          if (!this.is_generation_current(generation)) return
+          this.editor_store.emit_image_paste_request(note_id, active_note.meta.path, image)
+        }
       }
     })
+
+    if (!this.is_generation_current(generation)) {
+      this.destroy_session_instance(next_session)
+      return
+    }
+
+    this.session = next_session
   }
 
-  private teardown_handle() {
-    const current = this.handle
+  private teardown_session() {
+    const current = this.session
     if (!current) return
+    this.session = null
+    this.destroy_session_instance(current)
+  }
+
+  private destroy_session_instance(session: EditorSession) {
     try {
-      current.destroy()
+      session.destroy()
     } catch (error) {
       logger.error(`Editor teardown failed: ${error_message(error)}`)
-    } finally {
-      this.handle = null
     }
   }
 }

@@ -12,10 +12,7 @@
       ACTION_IDS.app_editor_mount,
       node,
       note,
-      stores.ui.editor_settings.link_syntax,
-      (note_path: string) => {
-        void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path)
-      }
+      stores.ui.editor_settings.link_syntax
     )
 
     return {

@@ -1,11 +1,12 @@
 import type { NotesPort } from '$lib/ports/notes_port'
 import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
-import { as_markdown_text, as_note_path, type NotePath } from '$lib/types/ids'
+import { as_markdown_text, as_note_path, type NotePath, type AssetPath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import type { NotesStore } from '$lib/stores/notes_store.svelte'
 import type { EditorStore } from '$lib/stores/editor_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
+import type { AssetsPort } from '$lib/ports/assets_port'
 import type {
   NoteDeleteResult,
   NoteOpenResult,
@@ -21,6 +22,7 @@ import type { EditorService } from '$lib/services/editor_service'
 import { to_open_note_state } from '$lib/types/editor'
 import { create_write_queue } from '$lib/utils/write_queue'
 import { logger } from '$lib/utils/logger'
+import type { PastedImagePayload } from '$lib/types/editor'
 
 export class NoteService {
   private readonly enqueue_write = create_write_queue()
@@ -29,6 +31,7 @@ export class NoteService {
   constructor(
     private readonly notes_port: NotesPort,
     private readonly index_port: WorkspaceIndexPort,
+    private readonly assets_port: AssetsPort,
     private readonly vault_store: VaultStore,
     private readonly notes_store: NotesStore,
     private readonly editor_store: EditorStore,
@@ -119,6 +122,38 @@ export class NoteService {
 
   async open_wiki_link(note_path: string): Promise<NoteOpenResult> {
     return this.open_note(note_path, true)
+  }
+
+  async save_pasted_image(
+    note_path: NotePath,
+    image: PastedImagePayload
+  ): Promise<{ status: 'saved'; asset_path: AssetPath } | { status: 'skipped' } | { status: 'failed'; error: string }> {
+    const vault_id = this.vault_store.vault?.id
+    if (!vault_id) {
+      return { status: 'skipped' }
+    }
+
+    this.op_store.start('asset.write')
+
+    try {
+      const asset_path = await this.assets_port.write_image_asset(vault_id, {
+        note_path,
+        image
+      })
+      this.op_store.succeed('asset.write')
+      return {
+        status: 'saved',
+        asset_path
+      }
+    } catch (error) {
+      const message = error_message(error)
+      logger.error(`Write image asset failed: ${message}`)
+      this.op_store.fail('asset.write', message)
+      return {
+        status: 'failed',
+        error: message
+      }
+    }
   }
 
   async delete_note(note: NoteMeta): Promise<NoteDeleteResult> {

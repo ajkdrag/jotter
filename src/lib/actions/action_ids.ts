@@ -6,6 +6,7 @@ export const ACTION_IDS = {
   note_create: 'note.create',
   note_open: 'note.open',
   note_open_wiki_link: 'note.open_wiki_link',
+  note_insert_pasted_image: 'note.insert_pasted_image',
   note_copy_markdown: 'note.copy_markdown',
   note_request_delete: 'note.request_delete',
   note_confirm_delete: 'note.confirm_delete',

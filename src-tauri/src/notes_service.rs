@@ -216,6 +216,95 @@ pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, Str
 }
 
 #[derive(Debug, Deserialize)]
+pub struct WriteImageAssetArgs {
+    pub vault_id: String,
+    pub note_path: String,
+    pub mime_type: String,
+    pub file_name: Option<String>,
+    pub bytes: Vec<u8>,
+}
+
+fn image_extension(mime_type: &str, file_name: Option<&str>) -> String {
+    let from_name = file_name
+        .and_then(|name| Path::new(name).extension())
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())
+        .filter(|ext| !ext.is_empty());
+    if let Some(ext) = from_name {
+        return ext;
+    }
+
+    match mime_type.to_ascii_lowercase().as_str() {
+        "image/jpeg" => "jpg".to_string(),
+        "image/png" => "png".to_string(),
+        "image/gif" => "gif".to_string(),
+        "image/webp" => "webp".to_string(),
+        "image/bmp" => "bmp".to_string(),
+        "image/svg+xml" => "svg".to_string(),
+        _ => "png".to_string(),
+    }
+}
+
+fn sanitize_stem(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for c in value.chars() {
+        if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+            out.push(c.to_ascii_lowercase());
+            continue;
+        }
+
+        if !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+
+    let trimmed = out.trim_matches('-').to_string();
+    if trimmed.is_empty() {
+        "image".to_string()
+    } else {
+        trimmed
+    }
+}
+
+#[tauri::command]
+pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<String, String> {
+    let root = vault_path(&app, &args.vault_id)?;
+    let _ = safe_note_abs(&root, &args.note_path)?;
+
+    let note_rel = PathBuf::from(&args.note_path);
+    let note_parent = note_rel.parent().unwrap_or_else(|| Path::new(""));
+    let note_stem = note_rel
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("image");
+
+    let source_stem = args
+        .file_name
+        .as_deref()
+        .and_then(|name| Path::new(name).file_stem())
+        .and_then(|stem| stem.to_str())
+        .unwrap_or(note_stem);
+    let ext = image_extension(&args.mime_type, args.file_name.as_deref());
+    let filename = format!("{}-{}.{}", sanitize_stem(source_stem), storage::now_ms(), ext);
+
+    let rel_path = if note_parent.as_os_str().is_empty() {
+        PathBuf::from(".assets").join(filename)
+    } else {
+        note_parent.join(".assets").join(filename)
+    };
+    let rel = storage::normalize_relative_path(&rel_path);
+    let abs = safe_note_abs(&root, &rel)?;
+
+    let dir = abs.parent().ok_or("invalid asset path")?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let tmp = dir.join(format!("{}.tmp", storage::now_ms()));
+    std::fs::write(&tmp, args.bytes).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &abs).map_err(|e| e.to_string())?;
+
+    Ok(rel)
+}
+
+#[derive(Debug, Deserialize)]
 pub struct NoteRenameArgs {
     pub vault_id: String,
     pub from: String,

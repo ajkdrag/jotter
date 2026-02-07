@@ -48,17 +48,11 @@ export function register_app_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.app_editor_mount,
     label: 'Editor Mount',
-    execute: async (
-      root: unknown,
-      note: unknown,
-      link_syntax: unknown,
-      on_wiki_link_click: unknown
-    ) => {
+    execute: async (root: unknown, note: unknown, link_syntax: unknown) => {
       await services.editor.mount({
         root: root as HTMLDivElement,
         note: note as OpenNoteState,
-        link_syntax: link_syntax as EditorSettings['link_syntax'],
-        on_wiki_link_click: on_wiki_link_click as (note_path: string) => void
+        link_syntax: link_syntax as EditorSettings['link_syntax']
       })
     }
   })

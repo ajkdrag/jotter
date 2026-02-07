@@ -2,7 +2,9 @@ import { ACTION_IDS } from '$lib/actions/action_ids'
 import type { ActionRegistrationInput } from '$lib/actions/action_registration_input'
 import type { NoteMeta } from '$lib/types/note'
 import { as_note_path, type NotePath } from '$lib/types/ids'
+import type { ImagePasteRequest } from '$lib/types/editor'
 import { sanitize_note_name } from '$lib/utils/sanitize_note_name'
+import { to_markdown_asset_target } from '$lib/utils/asset_markdown_path'
 
 function close_delete_dialog(input: ActionRegistrationInput) {
   input.stores.ui.delete_note_dialog = {
@@ -39,6 +41,13 @@ function build_full_path(folder_path: string, filename: string): NotePath {
 function filename_from_path(path: string): string {
   const last_slash = path.lastIndexOf('/')
   return last_slash >= 0 ? path.slice(last_slash + 1) : path
+}
+
+function image_alt_text(file_name: string | null): string {
+  if (!file_name) return 'image'
+  const leaf = file_name.split('/').filter(Boolean).at(-1) ?? ''
+  const stem = leaf.replace(/\.[^.]+$/i, '').trim()
+  return stem !== '' ? stem : 'image'
 }
 
 export function register_note_actions(input: ActionRegistrationInput) {
@@ -88,6 +97,29 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: 'Copy Markdown',
     execute: async () => {
       await services.clipboard.copy_open_note_markdown()
+    }
+  })
+
+  registry.register({
+    id: ACTION_IDS.note_insert_pasted_image,
+    label: 'Insert Pasted Image',
+    when: () => stores.vault.vault !== null,
+    execute: async (request: unknown) => {
+      const payload = request as ImagePasteRequest
+      const open_note = stores.editor.open_note
+      if (!open_note) return
+      if (open_note.meta.id !== payload.note_id) return
+
+      const write_result = await services.note.save_pasted_image(payload.note_path, payload.image)
+      if (write_result.status !== 'saved') return
+
+      const latest_open_note = stores.editor.open_note
+      if (!latest_open_note) return
+      if (latest_open_note.meta.id !== payload.note_id) return
+
+      const target = to_markdown_asset_target(payload.note_path, write_result.asset_path)
+      const alt = image_alt_text(payload.image.file_name)
+      services.editor.insert_text(`![${alt}](${target})`)
     }
   })
 
