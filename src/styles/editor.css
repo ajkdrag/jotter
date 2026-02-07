@@ -681,11 +681,142 @@
   max-width: 100%;
   height: auto;
   border-radius: calc(var(--radius) * 0.75);
-  margin-top: calc(var(--editor-spacing) * 1);
-  margin-bottom: calc(var(--editor-spacing) * 1);
   border: 1px solid var(--border);
   box-shadow: 0 4px 6px -1px color-mix(in oklch, var(--foreground) 5%, transparent),
               0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent);
+}
+
+/* ============================================
+   MILKDOWN IMAGE BLOCK COMPONENT
+   ============================================ */
+
+.ProseMirror .milkdown-image-block {
+  outline: none;
+  margin: calc(var(--editor-spacing) * 0.75) 0;
+  display: block;
+}
+
+.ProseMirror .milkdown-image-block.selected > .image-edit,
+.ProseMirror .milkdown-image-block.selected > .image-wrapper img {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.ProseMirror .milkdown-image-block > .image-wrapper {
+  position: relative;
+  width: fit-content;
+  margin: 0 auto;
+  min-width: 100px;
+}
+
+.ProseMirror .milkdown-image-block > .image-wrapper .operation {
+  position: absolute;
+  display: flex;
+  gap: 0.5rem;
+  right: 0.5rem;
+  top: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.ProseMirror .milkdown-image-block:hover > .image-wrapper .operation {
+  opacity: 1;
+}
+
+.ProseMirror .milkdown-image-block > .image-wrapper .operation > .operation-item {
+  color: var(--primary-foreground);
+  padding: 0.5rem;
+  background: color-mix(in oklch, var(--foreground) 40%, transparent);
+  border-radius: calc(var(--radius) * 0.5);
+  height: 1.75rem;
+  width: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.ProseMirror .milkdown-image-block > .image-wrapper .image-resize-handle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 0.5rem;
+  bottom: -0.25rem;
+  width: 10rem;
+  background: var(--border);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  cursor: row-resize;
+}
+
+.ProseMirror .milkdown-image-block:hover > .image-wrapper .image-resize-handle {
+  opacity: 1;
+}
+
+.ProseMirror .milkdown-image-block > .image-wrapper img {
+  max-width: 100%;
+  min-height: 100px;
+  display: block;
+  object-fit: cover;
+  margin: 0;
+}
+
+.ProseMirror .milkdown-image-block > .caption-input {
+  display: block;
+  width: 100%;
+  margin: calc(var(--editor-spacing) * 0.5) auto;
+  padding: 0.25rem 0;
+  text-align: center;
+  font-size: var(--editor-font-size);
+  color: var(--editor-text-muted);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.ProseMirror .milkdown-image-block > .image-edit {
+  display: flex;
+  align-items: center;
+  padding: calc(var(--editor-spacing) * 0.75) calc(var(--editor-spacing) * 1);
+  gap: 0.75rem;
+  background: var(--muted);
+  border-radius: calc(var(--radius) * 0.75);
+  min-height: 3.5rem;
+  border: 1px dashed var(--border);
+}
+
+.ProseMirror .milkdown-image-block > .image-edit .image-icon {
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.ProseMirror .milkdown-image-block > .image-edit .link-importer .placeholder {
+  color: var(--muted-foreground);
+}
+
+.ProseMirror .milkdown-image-block > .image-edit .link-importer .link-input-area {
+  line-height: 1.5;
+  padding: 0.25rem 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--foreground);
+}
+
+.ProseMirror .milkdown-image-block > .image-edit .confirm {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.25rem 1rem;
+  border-radius: calc(var(--radius) * 0.5);
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+}
+
+.ProseMirror .milkdown-image-block .hidden {
+  display: none !important;
 }
 
 /* ============================================

@@ -13,6 +13,7 @@ import {
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block'
+import { imageBlockComponent, imageBlockConfig } from '@milkdown/kit/component/image-block'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { history } from '@milkdown/kit/plugin/history'
 import { clipboard } from '@milkdown/kit/plugin/clipboard'
@@ -22,6 +23,7 @@ import { replaceAll } from '@milkdown/kit/utils'
 import { Link, Pencil, Trash2, Check } from 'lucide-static'
 import type { EditorPort } from '$lib/ports/editor_port'
 import type { AssetPath, VaultId } from '$lib/types/ids'
+import { as_asset_path } from '$lib/types/ids'
 import {
   dirty_state_plugin,
   dirty_state_plugin_config_key,
@@ -29,7 +31,6 @@ import {
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
 import { markdown_paste_plugin } from './markdown_paste_plugin'
-import { create_asset_image_plugin } from './asset_image_plugin'
 import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
@@ -162,6 +163,20 @@ export function create_milkdown_editor_port(args?: {
           }))
         })
         .use(commonmark)
+        .use(imageBlockComponent)
+        .config((ctx) => {
+          if (vault_id && resolve_asset_url_for_vault) {
+            const resolve = resolve_asset_url_for_vault
+            const vid = vault_id
+            ctx.update(imageBlockConfig.key, (default_config) => ({
+              ...default_config,
+              proxyDomURL: (url: string) => {
+                if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url
+                return resolve(vid, as_asset_path(url))
+              }
+            }))
+          }
+        })
         .use(gfm)
         .use(prism)
         .use(indent)
@@ -192,12 +207,6 @@ export function create_milkdown_editor_port(args?: {
             on_markdown_change(normalized)
           })
         })
-
-      if (vault_id && resolve_asset_url_for_vault) {
-        builder = builder.use(
-          create_asset_image_plugin((asset_path) => resolve_asset_url_for_vault(vault_id, asset_path))
-        )
-      }
 
       builder = builder.use(markdown_paste_plugin).use(clipboard)
 
