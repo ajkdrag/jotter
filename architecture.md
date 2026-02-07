@@ -1,172 +1,159 @@
-# Architecture & Design Bible
+# Architecture
 
 This is the source-of-truth architecture for Jotter.
 
 ## Core model
 
-Jotter is built on:
+Jotter is built on five primary layers:
 
-- Hexagonal architecture (`ports` + `adapters`)
-- Command/Event separation
-- Event-driven reducers for persistent state
-- Flow orchestration for transient UX state
-- UI effects isolated from business logic
+- Ports + adapters for all external IO boundaries
+- `$state` store classes for app state
+- Services for async use-case orchestration
+- Reactors for persistent store observation side effects
+- A typed action registry as the single dispatch surface for user-triggerable intents
+
 
 ## Runtime loop
 
-All write paths follow this loop:
+Most user-triggered operations follow this loop:
 
-1. UI dispatches an `AppCommand` to `command_bus`
-2. Command handlers route to flows (or emit simple UI events)
-3. Flows run use cases (IO through ports) and emit `AppEvent[]`
-4. `event_bus` dispatches events to store reducers
-5. UI rerenders from store snapshots
-6. Runtime event routes coordinate flows/commands from events
-7. Runtime UI effects react to events (toasts/DOM styling)
-
-## Buses and contracts
-
-### Command bus (`src/lib/commands`)
-
-- `AppCommand` is the only mutation API for components/routes
-- Command handlers are pure routers; invariants/context resolution lives in flows/use-cases
-- Command handlers must not call ports/use cases directly
-
-### Event bus (`src/lib/events`)
-
-- Events are facts (`note_saved`, `open_note_set`, `ui_theme_set_failed`)
-- Event bus always dispatches through reducers first, then subscribers
-- Event bus subscribers are runtime routes/effects, not domain logic
-
-### Runtime routes (`src/lib/runtime/attach_event_routes.ts`)
-
-- Handles event→flow/command coordination (`vault_set`→`filetree_flow`, `note_saved`→`editor_flow`)
-- Replaces store-reader closure orchestration
-- Keeps flow coordination declarative and bus-driven
+1. UI calls `action_registry.execute(...)`
+2. Action executes a service method (or direct UI store mutation for pure UI concerns)
+3. Service performs IO through ports and updates stores
+4. Components rerender from store state
+5. Reactors observe relevant store changes and trigger side effects through services or pure runtime utilities
 
 ## State ownership
 
-### Persistent state (reducers)
+### Domain state (`src/lib/stores`)
 
-Owned by stores in `src/lib/stores`:
-
-- `vault_store`
-- `notes_store`
-- `editor_store`
-- `ui_store`
+- `vault_store.svelte.ts`
+- `notes_store.svelte.ts`
+- `editor_store.svelte.ts`
 
 Rules:
 
-- reducers are pure
-- no async in stores
-- no ports/use cases in stores
+- store methods are synchronous and deterministic
+- no async/await in stores
+- no imports from services, adapters, reactors, or UI components
 
-### Transient state (flows)
+### App UI state (`src/lib/stores/ui_store.svelte.ts`)
 
-Owned by flows in `src/lib/flows`:
+Owns ephemeral cross-screen UI state:
 
-- dialogs, loading/error states, confirmation flows
-- async orchestration and retries
+- dialogs
+- palette/search panel state
+- sidebar/filetree view state
+- editor settings values used by UI
 
 Rules:
 
-- flows orchestrate; use cases decide; reducers mutate state
-- flows must not touch DOM or UI libs
-- flows must not call ports directly (use use-cases)
+- UI-only state lives here
+- service/or action updates are explicit
 
-### UI read model
+### Operation state (`src/lib/stores/op_store.svelte.ts`)
 
-`ui_store.runtime` is a projected read model of transient flow state.
+Owns async operation status by key (`pending`, `success`, `error`) and error messages.
 
-- Components read transient UI state from stores (`ui_store.runtime`)
-- Components do not read flow snapshots directly
+Rules:
+
+- services write operation state
+- components read operation state
+
+### Component-local visual state
+
+Purely local visual concerns remain inside components (`$state`, `$derived`, local `$effect`).
 
 ## Layer responsibilities
 
-### `types/`
+### `src/lib/types`
 
-- pure domain and UI-safe types
+- shared domain and UI-safe types only
 
-### `ports/`
+### `src/lib/ports`
 
-- interfaces for external dependencies
+- interface contracts for IO boundaries only
 
-### `adapters/`
+### `src/lib/adapters`
 
-- concrete IO/platform implementations
+- concrete web/tauri/test implementations of ports
 
-### `use_cases/`
+### `src/lib/stores`
 
-- business IO via ports
-- return `AppEvent[]`
+- synchronous app state classes
 
-### `flows/`
+### `src/lib/services`
 
-- XState orchestration
-- invoke use cases
-- dispatch returned events
+- async use-case orchestration
+- IO via ports only
+- writes state via store methods
+- error classification + surfacing via `op_store`/`ui_store`
 
-### `commands/`
+### `src/lib/reactors`
 
-- command schema + command handlers
-- command -> flow/event routing
+- persistent observers (`$effect.root`) for cross-cutting side effects
+- must not directly mutate stores
+- call services or pure utilities instead
 
-### `runtime/`
+### `src/lib/actions`
 
-- app runtime context for components
-- flow-to-store runtime projection (`attach_ui_runtime_projection`)
-- event-driven flow/command routes (`attach_event_routes`)
-- event-driven UI effects (`attach_ui_effects`)
+- typed action IDs + registry + registration
+- central place for user-triggerable intents (clicks, shortcuts, palette, menu equivalents)
 
-### `shell/`
+### `src/lib/components`
 
-- runtime implementations used by flows/effects (`editor_runtime`, style application)
+- render from stores
+- trigger behavior via `action_registry.execute(...)`
+- no direct port or adapter usage
 
-### `components/`
+### `src/lib/di` + `src/lib/context`
 
-- read state via store handles/context
-- dispatch commands via command bus
-- no direct flow `.send(...)`
-- no direct `app.dispatch(...)`
+- composition root and context provision
+- wire ports, stores, services, actions, reactors
 
 ## Composition root
 
-Route entrypoints (`src/routes/+page.svelte`, `src/routes/test/+page.svelte`) must:
+Entrypoints:
 
-1. Create ports
-2. Create stores
-3. Create event bus
-4. Create editor runtime
-5. Create app flows
-6. Create command bus
-7. Attach command handlers
-8. Attach runtime UI-state projection
-9. Attach runtime event routes
-10. Attach runtime UI effects
-11. Render `AppShell` with `{ app, command_bus }`
+- `src/routes/+page.svelte`
+- `src/routes/test/+page.svelte`
 
-## Non-negotiable constraints
+Bootstrap sequence:
 
-- Components and routes must dispatch commands for mutations
-- Components/routes must not send flow events directly
-- Components/routes must not dispatch events directly
-- Use cases must not import UI/store/flow/adapter/runtime layers
-- Runtime effects must not contain business IO
-- Stores must only change through reducer event handling
+1. Create production/test ports
+2. Create app context (`create_app_context`)
+3. Register actions
+4. Mount reactors
+5. Provide context
+6. Render `AppShell`
+7. Cleanup on destroy
+
+## Invariants
+
+1. All external IO goes through ports/adapters.
+2. Stores remain sync and side-effect free.
+3. Services never self-subscribe to store changes with `$effect`.
+4. Reactors are the only persistent store observers that trigger side effects.
+5. User-triggerable behavior is exposed through the action registry.
+6. Components do not directly import services for side-effect execution.
+7. No global singleton app instances; use context + composition root.
+
+## XState policy
+
+XState is not part of the default architecture. If ever needed, it should be a local implementation detail inside a service method, not a top-level architectural layer.
 
 ## Layering lint guard
 
-`pnpm lint:layering` enforces the architecture contract.
+`pnpm lint:layering` enforces architecture constraints.
 
-Current strict checks include:
+Current rules include:
 
-- `components` cannot import flows/controllers/ports/adapters/use_cases/xstate
-- `components` cannot use `app.flows` or `app.dispatch`
-- `routes` cannot use `app.flows.*.send(...)` or `app.dispatch(...)`
-- `commands` cannot import use_cases/adapters/components/runtime/shell
-- `flows` cannot import adapters/components/UI libs and cannot call ports directly
-- `use_cases` cannot import runtime/store/flow/adapter/UI layers
-- `stores` cannot contain async work or import runtime layers
+- `components` cannot import ports/adapters/services/reactors
+- `stores` cannot import ports/adapters/services/reactors/actions/components/utils and cannot use `async`/`await`
+- `services` cannot import adapters/components/reactors and cannot use `$effect`
+- `reactors` cannot import adapters/components and should not use inline `await`
+- `actions` cannot import ports/adapters/components
+- `routes` cannot import ports/services/stores/reactors/actions and should use context helpers
 
 ## Validation
 

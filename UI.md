@@ -21,12 +21,16 @@ src/
 ├── styles/
 │   ├── design_tokens.css      # Extended design system tokens
 │   └── editor.css             # Milkdown/ProseMirror editor styles
+├── lib/utils/
+│   └── apply_editor_styles.ts # Applies editor CSS variables from settings
 └── lib/components/
     ├── ui/                    # shadcn-svelte primitives
     └── *.svelte               # Application components
 ```
 
 **Important**: Never modify `app.css` directly — it's managed by shadcn-svelte CLI. Extend tokens in `design_tokens.css`.
+
+Editor style settings are reflected at runtime by `src/lib/reactors/editor_styles.reactor.svelte.ts`, which calls `src/lib/utils/apply_editor_styles.ts`.
 
 ---
 
@@ -497,7 +501,7 @@ height: var(--size-status-bar);
 
 /* Section header */
 .header {
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
