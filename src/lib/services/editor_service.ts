@@ -1,12 +1,18 @@
 import type { EditorPort, EditorSession } from '$lib/ports/editor_port'
 import type { OpenNoteState, CursorInfo, PastedImagePayload } from '$lib/types/editor'
 import type { EditorSettings } from '$lib/types/editor_settings'
-import type { MarkdownText, NoteId } from '$lib/types/ids'
-import { as_markdown_text, as_note_path } from '$lib/types/ids'
+import type { MarkdownText, NoteId, NotePath } from '$lib/types/ids'
+import { as_markdown_text } from '$lib/types/ids'
 import type { EditorStore } from '$lib/stores/editor_store.svelte'
 import type { VaultStore } from '$lib/stores/vault_store.svelte'
+import type { OpStore } from '$lib/stores/op_store.svelte'
 import { error_message } from '$lib/utils/error_message'
 import { logger } from '$lib/utils/logger'
+
+export type EditorServiceCallbacks = {
+  on_internal_link_click: (note_path: string) => void
+  on_image_paste_requested: (note_id: NoteId, note_path: NotePath, image: PastedImagePayload) => void
+}
 
 export type EditorFlushResult = {
   note_id: NoteId
@@ -23,7 +29,9 @@ export class EditorService {
   constructor(
     private readonly editor_port: EditorPort,
     private readonly vault_store: VaultStore,
-    private readonly editor_store: EditorStore
+    private readonly editor_store: EditorStore,
+    private readonly op_store: OpStore,
+    private readonly callbacks: EditorServiceCallbacks
   ) {}
 
   is_mounted(): boolean {
@@ -39,8 +47,15 @@ export class EditorService {
     this.active_note = args.note
     this.active_link_syntax = args.link_syntax
 
-    await this.recreate_session()
-    this.focus()
+    this.op_store.start('editor.mount')
+    try {
+      await this.recreate_session()
+      this.focus()
+      this.op_store.succeed('editor.mount')
+    } catch (error) {
+      logger.error(`Editor mount failed: ${error_message(error)}`)
+      this.op_store.fail('editor.mount', error_message(error))
+    }
   }
 
   unmount() {
@@ -56,8 +71,15 @@ export class EditorService {
 
     if (!this.host_root) return
 
-    await this.recreate_session()
-    this.focus()
+    this.op_store.start('editor.open_buffer')
+    try {
+      await this.recreate_session()
+      this.focus()
+      this.op_store.succeed('editor.open_buffer')
+    } catch (error) {
+      logger.error(`Editor open_buffer failed: ${error_message(error)}`)
+      this.op_store.fail('editor.open_buffer', error_message(error))
+    }
   }
 
   insert_text(text: string) {
@@ -129,11 +151,11 @@ export class EditorService {
         },
         on_internal_link_click: (note_path: string) => {
           if (!this.is_generation_current(generation)) return
-          this.editor_store.emit_internal_link_click(as_note_path(note_path))
+          this.callbacks.on_internal_link_click(note_path)
         },
         on_image_paste_requested: (image: PastedImagePayload) => {
           if (!this.is_generation_current(generation)) return
-          this.editor_store.emit_image_paste_request(note_id, active_note.meta.path, image)
+          this.callbacks.on_image_paste_requested(note_id, active_note.meta.path, image)
         }
       }
     })

@@ -1,4 +1,4 @@
-import { is_tauri } from '$lib/adapters/detect_platform'
+import { is_tauri } from '$lib/utils/detect_platform'
 import { create_assets_tauri_adapter } from '$lib/adapters/tauri/assets_tauri_adapter'
 import { create_notes_tauri_adapter } from '$lib/adapters/tauri/notes_tauri_adapter'
 import { create_vault_tauri_adapter } from '$lib/adapters/tauri/vault_tauri_adapter'

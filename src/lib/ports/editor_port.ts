@@ -29,6 +29,6 @@ export type EditorSessionConfig = {
   events: EditorEventHandlers
 }
 
-export type EditorPort = {
+export interface EditorPort {
   start_session: (config: EditorSessionConfig) => Promise<EditorSession>
 }

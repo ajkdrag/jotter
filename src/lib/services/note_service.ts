@@ -19,10 +19,9 @@ import { parent_folder_path } from '$lib/utils/filetree'
 import { resolve_existing_note_path } from '$lib/utils/note_lookup'
 import { note_path_exists } from '$lib/utils/note_path_exists'
 import type { EditorService } from '$lib/services/editor_service'
-import { to_open_note_state } from '$lib/types/editor'
+import { to_open_note_state, type PastedImagePayload } from '$lib/types/editor'
 import { create_write_queue } from '$lib/utils/write_queue'
 import { logger } from '$lib/utils/logger'
-import type { PastedImagePayload } from '$lib/types/editor'
 
 export class NoteService {
   private readonly enqueue_write = create_write_queue()
@@ -115,8 +114,10 @@ export class NoteService {
         return { status: 'skipped' }
       }
 
-      this.op_store.fail(op_key, error_message(error))
-      throw error
+      const message = error_message(error)
+      logger.error(`Open note failed: ${message}`)
+      this.op_store.fail(op_key, message)
+      return { status: 'failed', error: message }
     }
   }
 
@@ -298,18 +299,6 @@ export class NoteService {
         status: 'failed',
         error: message
       }
-    }
-  }
-
-  async copy_open_note_markdown(write_text: (text: string) => Promise<void>): Promise<void> {
-    const markdown = this.editor_store.open_note?.markdown
-    if (!markdown) return
-
-    try {
-      await write_text(markdown)
-    } catch (error) {
-      logger.error(`Clipboard write failed: ${error_message(error)}`)
-      throw error
     }
   }
 }

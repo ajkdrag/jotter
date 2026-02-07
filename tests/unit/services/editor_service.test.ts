@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { EditorPort, EditorSession, EditorSessionConfig } from '$lib/ports/editor_port'
-import { EditorService } from '$lib/services/editor_service'
+import { EditorService, type EditorServiceCallbacks } from '$lib/services/editor_service'
 import { EditorStore } from '$lib/stores/editor_store.svelte'
 import { VaultStore } from '$lib/stores/vault_store.svelte'
+import { OpStore } from '$lib/stores/op_store.svelte'
 import type { OpenNoteState, CursorInfo } from '$lib/types/editor'
 import { as_markdown_text, as_note_path } from '$lib/types/ids'
 import { create_test_vault } from '../helpers/test_fixtures'
@@ -51,6 +52,7 @@ function create_deferred<T>() {
 function create_setup(start_session: (config: EditorSessionConfig) => Promise<EditorSession>) {
   const editor_store = new EditorStore()
   const vault_store = new VaultStore()
+  const op_store = new OpStore()
   vault_store.set_vault(create_test_vault())
 
   const session_configs: EditorSessionConfig[] = []
@@ -63,11 +65,18 @@ function create_setup(start_session: (config: EditorSessionConfig) => Promise<Ed
     start_session: start_session_mock
   }
 
-  const service = new EditorService(editor_port, vault_store, editor_store)
+  const callbacks: EditorServiceCallbacks = {
+    on_internal_link_click: vi.fn(),
+    on_image_paste_requested: vi.fn()
+  }
+
+  const service = new EditorService(editor_port, vault_store, editor_store, op_store, callbacks)
 
   return {
     service,
     editor_store,
+    op_store,
+    callbacks,
     start_session: start_session_mock,
     session_configs
   }
@@ -199,9 +208,11 @@ describe('EditorService', () => {
     expect(editor_store.cursor).toEqual(cursor)
   })
 
-  it('writes internal link events to editor store', async () => {
+  it('dispatches internal link click via callbacks', async () => {
     const session = create_session('alpha')
-    const { service, editor_store, session_configs } = create_setup(() => Promise.resolve(session))
+    const { service, editor_store, callbacks, session_configs } = create_setup(() =>
+      Promise.resolve(session)
+    )
     const root = {} as HTMLDivElement
     const note = create_open_note('docs/alpha.md', '# Alpha')
 
@@ -215,15 +226,14 @@ describe('EditorService', () => {
     const events = session_config_at(session_configs, 0).events
     events.on_internal_link_click?.('docs/next.md')
 
-    expect(editor_store.internal_link_click).toEqual({
-      note_path: as_note_path('docs/next.md'),
-      event_id: 1
-    })
+    expect(callbacks.on_internal_link_click).toHaveBeenCalledWith('docs/next.md')
   })
 
-  it('writes image paste events to editor store', async () => {
+  it('dispatches image paste via callbacks', async () => {
     const session = create_session('alpha')
-    const { service, editor_store, session_configs } = create_setup(() => Promise.resolve(session))
+    const { service, editor_store, callbacks, session_configs } = create_setup(() =>
+      Promise.resolve(session)
+    )
     const root = {} as HTMLDivElement
     const note = create_open_note('docs/alpha.md', '# Alpha')
 
@@ -234,23 +244,19 @@ describe('EditorService', () => {
       link_syntax: 'wikilink'
     })
 
-    const events = session_config_at(session_configs, 0).events
-    events.on_image_paste_requested?.({
+    const image = {
       bytes: new Uint8Array([1, 2, 3]),
       mime_type: 'image/png',
       file_name: 'pasted.png'
-    })
+    }
+    const events = session_config_at(session_configs, 0).events
+    events.on_image_paste_requested?.(image)
 
-    expect(editor_store.image_paste_request).toEqual({
-      note_id: as_note_path('docs/alpha.md'),
-      note_path: as_note_path('docs/alpha.md'),
-      image: {
-        bytes: new Uint8Array([1, 2, 3]),
-        mime_type: 'image/png',
-        file_name: 'pasted.png'
-      },
-      event_id: 1
-    })
+    expect(callbacks.on_image_paste_requested).toHaveBeenCalledWith(
+      as_note_path('docs/alpha.md'),
+      as_note_path('docs/alpha.md'),
+      image
+    )
   })
 
   it('recreates sessions on note switch and ignores stale events', async () => {
@@ -352,5 +358,35 @@ describe('EditorService', () => {
     const events = session_config_at(session_configs, 0).events
     events.on_dirty_state_change(false)
     expect(editor_store.open_note?.is_dirty).toBe(false)
+  })
+
+  it('tracks op_store status for mount and open_buffer', async () => {
+    const session = create_session('alpha')
+    const { service, editor_store, op_store } = create_setup(() => Promise.resolve(session))
+    const root = {} as HTMLDivElement
+    const note = create_open_note('docs/alpha.md', '# Alpha')
+
+    editor_store.set_open_note(note)
+    await service.mount({ root, note, link_syntax: 'wikilink' })
+    expect(op_store.get('editor.mount').status).toBe('success')
+
+    const second_note = create_open_note('docs/beta.md', '# Beta')
+    editor_store.set_open_note(second_note)
+    await service.open_buffer(second_note, 'wikilink')
+    expect(op_store.get('editor.open_buffer').status).toBe('success')
+  })
+
+  it('records op_store failure when mount throws', async () => {
+    const { service, editor_store, op_store } = create_setup(() =>
+      Promise.reject(new Error('boom'))
+    )
+    const root = {} as HTMLDivElement
+    const note = create_open_note('docs/alpha.md', '# Alpha')
+
+    editor_store.set_open_note(note)
+    await service.mount({ root, note, link_syntax: 'wikilink' })
+
+    expect(op_store.get('editor.mount').status).toBe('error')
+    expect(op_store.get('editor.mount').error).toBe('boom')
   })
 })

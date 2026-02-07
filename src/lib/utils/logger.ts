@@ -1,4 +1,4 @@
-import { is_tauri } from '$lib/adapters/detect_platform'
+import { is_tauri } from '$lib/utils/detect_platform'
 import { error_message } from './error_message'
 
 type LogFn = (msg: string) => void

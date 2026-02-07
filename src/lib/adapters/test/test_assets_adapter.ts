@@ -2,10 +2,10 @@ import type { AssetsPort } from '$lib/ports/assets_port'
 import type { AssetPath, VaultId } from '$lib/types/ids'
 import { as_asset_path } from '$lib/types/ids'
 
-const blob_url_cache = new Map<string, string>()
-let write_count = 0
-
 export function create_test_assets_adapter(): AssetsPort {
+  const blob_url_cache = new Map<string, string>()
+  let write_count = 0
+
   return {
     resolve_asset_url(vault_id: VaultId, asset_path: AssetPath): Promise<string> {
       const cache_key = `${vault_id}:${asset_path}`

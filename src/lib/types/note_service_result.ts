@@ -8,6 +8,10 @@ export type NoteOpenResult =
   | {
       status: 'skipped'
     }
+  | {
+      status: 'failed'
+      error: string
+    }
 
 export type NoteDeleteResult =
   | {

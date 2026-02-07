@@ -293,5 +293,3 @@ export function create_milkdown_editor_port(args?: {
     }
   }
 }
-
-export const milkdown_editor_port = create_milkdown_editor_port()

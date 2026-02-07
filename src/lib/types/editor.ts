@@ -22,7 +22,6 @@ export type ImagePasteRequest = {
   note_id: NoteId
   note_path: NotePath
   image: PastedImagePayload
-  event_id: number
 }
 
 export function to_open_note_state(doc: NoteDoc): OpenNoteState {

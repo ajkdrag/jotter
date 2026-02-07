@@ -26,39 +26,19 @@ export class OpStore {
   }
 
   start(key: string) {
-    const next = new SvelteMap(this.ops)
-    next.set(key, {
-      status: 'pending',
-      error: null,
-      started_at: Date.now()
-    })
-    this.ops = next
+    this.ops.set(key, { status: 'pending', error: null, started_at: Date.now() })
   }
 
   succeed(key: string) {
-    const next = new SvelteMap(this.ops)
-    next.set(key, {
-      status: 'success',
-      error: null,
-      started_at: null
-    })
-    this.ops = next
+    this.ops.set(key, { status: 'success', error: null, started_at: null })
   }
 
   fail(key: string, error: string) {
-    const next = new SvelteMap(this.ops)
-    next.set(key, {
-      status: 'error',
-      error,
-      started_at: null
-    })
-    this.ops = next
+    this.ops.set(key, { status: 'error', error, started_at: null })
   }
 
   reset(key: string) {
-    const next = new SvelteMap(this.ops)
-    next.delete(key)
-    this.ops = next
+    this.ops.delete(key)
   }
 
   reset_all() {

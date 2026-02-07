@@ -1,6 +1,7 @@
 import type { Ports } from '$lib/ports/ports'
 import { create_app_stores } from '$lib/stores/create_app_stores'
 import { ActionRegistry } from '$lib/actions/registry'
+import { ACTION_IDS } from '$lib/actions/action_ids'
 import { register_actions } from '$lib/actions/register_actions'
 import type { AppMountConfig } from '$lib/services/vault_service'
 import { VaultService } from '$lib/services/vault_service'
@@ -21,11 +22,19 @@ export function create_app_context(input: {
 }) {
   const now_ms = input.now_ms ?? (() => Date.now())
   const stores = create_app_stores()
+  const action_registry = new ActionRegistry()
 
   const editor_service = new EditorService(
     input.ports.editor,
     stores.vault,
-    stores.editor
+    stores.editor,
+    stores.op,
+    {
+      on_internal_link_click: (note_path) =>
+        void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path),
+      on_image_paste_requested: (note_id, note_path, image) =>
+        void action_registry.execute(ACTION_IDS.note_insert_pasted_image, { note_id, note_path, image })
+    }
   )
 
   const settings_service = new SettingsService(
@@ -74,8 +83,6 @@ export function create_app_context(input: {
     now_ms
   )
 
-  const action_registry = new ActionRegistry()
-
   register_actions({
     registry: action_registry,
     stores: {
@@ -102,21 +109,11 @@ export function create_app_context(input: {
     ui_store: stores.ui,
     op_store: stores.op,
     editor_service,
-    action_registry
+    note_service
   })
 
   return {
     stores,
-    ports: input.ports,
-    services: {
-      editor: editor_service,
-      settings: settings_service,
-      note: note_service,
-      folder: folder_service,
-      clipboard: clipboard_service,
-      search: search_service,
-      vault: vault_service
-    },
     action_registry,
     destroy: () => {
       cleanup_reactors()

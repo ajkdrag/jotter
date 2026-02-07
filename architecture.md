@@ -141,6 +141,14 @@ Bootstrap sequence:
 7. No global singleton app instances; use context + composition root.
 8. Services never import `UIStore`.
 
+## Accepted deviations
+
+**EditorService statefulness**: EditorService holds persistent session state (`session`, `host_root`, `active_note`, `active_link_syntax`, `session_generation`) because it manages a live DOM editor session. Exception to "services are stateless between method calls". The `session_generation` counter guards against race conditions analogous to AbortController.
+
+**Keyboard shortcuts**: Action definitions include `shortcut` metadata for UI display (e.g., command palette hints). Actual keyboard binding is imperative in `src/lib/hooks/use_keyboard_shortcuts.svelte.ts` for fine-grained control over event propagation and blocked-state checks. Intentional design choice.
+
+**op_toast reactor**: Calls `svelte-sonner` toast functions directly instead of routing through a service. Toast notifications are fire-and-forget UI feedback with no store side effects, fitting the "pure runtime utilities" exception in reactor rule 3.
+
 ## XState policy
 
 XState is not part of the default architecture. If ever needed, it should be a local implementation detail inside a service method, not a top-level architectural layer.

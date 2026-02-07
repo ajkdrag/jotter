@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { is_tauri } from '$lib/adapters/detect_platform'
+import { is_tauri } from '$lib/utils/detect_platform'
 
 export async function tauri_invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (!is_tauri) {
