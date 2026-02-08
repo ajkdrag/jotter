@@ -6,8 +6,11 @@ mod vault_service;
 mod settings_service;
 mod vault_settings_service;
 
+include!(concat!(env!("OUT_DIR"), "/icon_stamp.rs"));
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let _ = ICON_STAMP;
     tauri::Builder::default()
         .manage(watcher_service::WatcherState::default())
         .plugin(tauri_plugin_dialog::init())

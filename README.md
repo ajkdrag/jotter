@@ -1,8 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/logo_dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/logo_light.png">
-  <img src="./assets/logo_light.png" alt="Jotter" width="60">
-</picture>
+<img src="./assets/logo.png" alt="Jotter" width="150">
 
 # Jotter
 

@@ -1,5 +1,6 @@
 fn main() {
     ensure_default_icon();
+    emit_icon_rerun();
     tauri_build::build()
 }
 
@@ -20,4 +21,19 @@ fn ensure_default_icon() {
     ];
 
     let _ = std::fs::write(icon_path, ICON_PNG_1PX);
+}
+
+fn emit_icon_rerun() {
+    println!("cargo:rerun-if-changed=icons/icon.png");
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    let stamp = std::path::Path::new("icons")
+        .join("icon.png")
+        .metadata()
+        .and_then(|m| m.modified())
+        .map(|t| t.duration_since(std::time::UNIX_EPOCH).unwrap().as_millis())
+        .unwrap_or(0u128);
+    let _ = std::fs::write(
+        std::path::Path::new(&out_dir).join("icon_stamp.rs"),
+        format!("pub const ICON_STAMP: u128 = {};", stamp),
+    );
 }
