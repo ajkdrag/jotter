@@ -5,6 +5,8 @@
 - **[UI.md](./UI.md)** — Design system, tokens, BEM naming, component patterns
 - **[architecture.md](./architecture.md)** — System architecture, ports/adapters, data flow
 
+For adding/updating any feature, always refer to the decision tree in the architecture.md file FIRST and adhere to it RELIGIOUSLY.
+
 ---
 
 <!-- Source: .ruler/coding_guidelines.md -->

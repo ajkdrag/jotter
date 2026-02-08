@@ -208,6 +208,8 @@
   filename={stores.ui.image_paste_dialog.filename}
   estimated_size_bytes={stores.ui.image_paste_dialog.estimated_size_bytes}
   target_folder={stores.ui.image_paste_dialog.target_folder}
+  image_bytes={stores.ui.image_paste_dialog.image?.bytes ?? null}
+  image_mime_type={stores.ui.image_paste_dialog.image?.mime_type ?? null}
   is_saving={stores.op.is_pending('asset.write')}
   error={image_paste_error}
   on_update_filename={(filename: string) => void action_registry.execute(ACTION_IDS.note_update_image_paste_filename, filename)}

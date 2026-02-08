@@ -10,6 +10,8 @@
     filename: string
     estimated_size_bytes: number
     target_folder: string
+    image_bytes: Uint8Array | null
+    image_mime_type: string | null
     is_saving: boolean
     error: string | null
     on_update_filename: (filename: string) => void
@@ -23,6 +25,8 @@
     filename,
     estimated_size_bytes,
     target_folder,
+    image_bytes,
+    image_mime_type,
     is_saving,
     error,
     on_update_filename,
@@ -34,6 +38,19 @@
   let input_el = $state<HTMLInputElement | null>(null)
 
   const formatted_size = $derived(format_bytes(estimated_size_bytes))
+
+  let preview_url = $state<string | null>(null)
+
+  $effect(() => {
+    if (!image_bytes || !image_mime_type) {
+      preview_url = null
+      return
+    }
+    const blob = new Blob([new Uint8Array(image_bytes)], { type: image_mime_type })
+    const url = URL.createObjectURL(blob)
+    preview_url = url
+    return () => URL.revokeObjectURL(url)
+  })
 
   $effect(() => {
     if (open && !error && input_el) {
@@ -60,6 +77,15 @@
 
     {#if !error}
       <div class="space-y-4">
+        {#if preview_url}
+          <div class="flex justify-center rounded-md border border-border bg-muted/50 p-2">
+            <img
+              src={preview_url}
+              alt="Pasted content preview"
+              class="max-h-48 max-w-full rounded object-contain"
+            />
+          </div>
+        {/if}
         <div class="flex items-center justify-between text-sm">
           <span class="text-muted-foreground">Size:</span>
           <span class="font-mono">{formatted_size}</span>
