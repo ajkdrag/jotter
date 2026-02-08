@@ -10,6 +10,7 @@ export type EditorSession = {
   mark_clean: () => void
   is_dirty: () => boolean
   focus: () => void
+  set_wiki_suggestions?: (items: Array<{ title: string; path: string }>) => void
 }
 
 export type EditorEventHandlers = {
@@ -18,6 +19,7 @@ export type EditorEventHandlers = {
   on_cursor_change?: (info: CursorInfo) => void
   on_internal_link_click?: (note_path: string) => void
   on_image_paste_requested?: (payload: PastedImagePayload) => void
+  on_wiki_suggest_query?: (query: string) => void
 }
 
 export type EditorSessionConfig = {

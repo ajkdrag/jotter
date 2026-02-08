@@ -39,9 +39,6 @@ async function execute_command(input: ActionRegistrationInput, command_id: Comma
     case 'open_settings':
       await registry.execute(ACTION_IDS.settings_open)
       break
-    case 'open_file_search':
-      await registry.execute(ACTION_IDS.omnibar_open)
-      break
   }
 }
 
@@ -72,7 +69,6 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.omnibar_toggle,
     label: 'Toggle Omnibar',
-    shortcut: 'CmdOrCtrl+K',
     execute: () => {
       if (stores.ui.omnibar.open) {
         close_omnibar(input)
@@ -132,10 +128,8 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.omnibar_confirm_item,
     label: 'Confirm Omnibar Item',
-    execute: async () => {
-      const items = stores.search.omnibar_items
-      const index = stores.ui.omnibar.selected_index
-      const item = items[index]
+    execute: async (arg: unknown) => {
+      const item = arg as OmnibarItem | undefined
       if (!item) return
       await confirm_item(input, item)
     }

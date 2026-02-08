@@ -87,9 +87,10 @@ pub fn index_suggest(
     app: AppHandle,
     vault_id: String,
     query: String,
+    limit: Option<usize>,
 ) -> Result<Vec<search_db::SuggestionHit>, String> {
     with_conn(&app, &vault_id, |conn| {
-        search_db::suggest(conn, &query, 10)
+        search_db::suggest(conn, &query, limit.unwrap_or(15))
     })
 }
 
@@ -103,8 +104,6 @@ pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> R
     with_conn(&app, &vault_id, |conn| {
         search_db::upsert_note(conn, &meta, &markdown)?;
 
-        // Rebuild outlinks for this note by reading all notes from the DB
-        // to build the key map, then resolving wiki links
         let all_notes = get_all_notes_from_db(conn)?;
         let key_map = search_db::build_key_map(&all_notes);
         let mut resolved: BTreeSet<String> = BTreeSet::new();

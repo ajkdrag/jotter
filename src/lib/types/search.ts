@@ -3,7 +3,7 @@ import type { CommandDefinition } from '$lib/types/command_palette'
 import type { SettingDefinition } from '$lib/types/settings_registry'
 
 export type SearchScope = 'all' | 'path' | 'title' | 'content'
-export type SearchDomain = 'notes' | 'commands' | 'settings'
+export type SearchDomain = 'notes' | 'commands'
 
 export type SearchQuery = {
   raw: string

@@ -24,6 +24,8 @@ export function create_app_context(input: {
   const stores = create_app_stores()
   const action_registry = new ActionRegistry()
 
+  const search_service = new SearchService(input.ports.search, stores.vault, stores.op)
+
   const editor_service = new EditorService(
     input.ports.editor,
     stores.vault,
@@ -34,7 +36,8 @@ export function create_app_context(input: {
         void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path),
       on_image_paste_requested: (note_id, note_path, image) =>
         void action_registry.execute(ACTION_IDS.note_request_image_paste, { note_id, note_path, image })
-    }
+    },
+    search_service
   )
 
   const settings_service = new SettingsService(
@@ -66,8 +69,6 @@ export function create_app_context(input: {
   )
 
   const clipboard_service = new ClipboardService(input.ports.clipboard, stores.editor, stores.op)
-
-  const search_service = new SearchService(input.ports.search, stores.vault, stores.op)
 
   const vault_service = new VaultService(
     input.ports.vault,

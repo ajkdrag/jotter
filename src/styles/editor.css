@@ -996,3 +996,44 @@
   cursor: pointer;
   pointer-events: auto;
 }
+
+/* ============================================
+   WIKI SUGGEST DROPDOWN
+   ============================================ */
+
+.WikiSuggest {
+  min-width: 200px;
+  max-width: 320px;
+  max-height: 240px;
+  overflow-y: auto;
+  border-radius: calc(var(--radius) * 0.5);
+  border: 1px solid var(--border);
+  background: var(--popover);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-1) 0;
+}
+
+.WikiSuggest__item {
+  display: block;
+  width: 100%;
+  padding: var(--space-1-5) var(--space-2);
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-default);
+}
+
+.WikiSuggest__item:hover {
+  background: var(--muted);
+}
+
+.WikiSuggest__item--selected {
+  background: var(--interactive-bg);
+  color: var(--interactive);
+}

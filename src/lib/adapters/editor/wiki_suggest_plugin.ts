@@ -22,14 +22,14 @@ const EMPTY_STATE: WikiSuggestState = {
   selected_index: 0
 }
 
-function extract_wiki_query(text_before: string): { query: string; bracket_pos: number } | null {
+function extract_wiki_query(text_before: string): { query: string; offset: number } | null {
   const open_idx = text_before.lastIndexOf('[[')
   if (open_idx === -1) return null
   const after_open = text_before.slice(open_idx + 2)
   if (after_open.includes(']]') || after_open.includes('\n')) return null
   const pipe_idx = after_open.indexOf('|')
   const query = pipe_idx >= 0 ? after_open.slice(pipe_idx + 1) : after_open
-  return { query, bracket_pos: open_idx }
+  return { query, offset: open_idx }
 }
 
 function create_dropdown(): HTMLElement {
@@ -136,7 +136,6 @@ export function create_wiki_suggest_prose_plugin(input: {
       return {
         update(view) {
           const { state: editor_state } = view
-          const cursor = editor_state.selection.from
           const plugin_state = get_state(view)
 
           if (!editor_state.selection.empty) {
@@ -147,8 +146,9 @@ export function create_wiki_suggest_prose_plugin(input: {
             return
           }
 
-          const text_before = editor_state.doc.textBetween(0, cursor, '\n')
-          const result = extract_wiki_query(text_before)
+          const $from = editor_state.selection.$from
+          const text_in_block = $from.parent.textBetween(0, $from.parentOffset)
+          const result = extract_wiki_query(text_in_block)
 
           if (!result) {
             if (plugin_state.active) {
@@ -158,11 +158,13 @@ export function create_wiki_suggest_prose_plugin(input: {
             return
           }
 
+          const prose_from = $from.start() + result.offset
+
           if (result.query !== plugin_state.query || !plugin_state.active) {
             const new_state: WikiSuggestState = {
               active: true,
               query: result.query,
-              from: result.bracket_pos,
+              from: prose_from,
               items: plugin_state.active ? plugin_state.items : [],
               selected_index: 0
             }

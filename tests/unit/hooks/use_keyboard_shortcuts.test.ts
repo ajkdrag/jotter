@@ -2,63 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { use_keyboard_shortcuts } from '$lib/hooks/use_keyboard_shortcuts.svelte'
 
 describe('use_keyboard_shortcuts', () => {
-  it('toggles omnibar on mod+k when enabled', () => {
-    const on_toggle_omnibar = vi.fn()
-    const prevent_default = vi.fn()
-    const stop_propagation = vi.fn()
-
-    const shortcuts = use_keyboard_shortcuts({
-      is_enabled: () => true,
-      is_blocked: () => false,
-      is_omnibar_open: () => false,
-      on_toggle_omnibar,
-      on_open_omnibar_commands: vi.fn(),
-      on_open_omnibar_notes: vi.fn(),
-      on_toggle_sidebar: vi.fn(),
-      on_save: vi.fn()
-    })
-
-    shortcuts.handle_keydown_capture({
-      metaKey: true,
-      ctrlKey: false,
-      key: 'k',
-      preventDefault: prevent_default,
-      stopPropagation: stop_propagation
-    } as unknown as KeyboardEvent)
-
-    expect(prevent_default).toHaveBeenCalledTimes(1)
-    expect(stop_propagation).toHaveBeenCalledTimes(1)
-    expect(on_toggle_omnibar).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not toggle omnibar on mod+k when disabled', () => {
-    const on_toggle_omnibar = vi.fn()
-    const prevent_default = vi.fn()
-    const stop_propagation = vi.fn()
-
-    const shortcuts = use_keyboard_shortcuts({
-      is_enabled: () => false,
-      is_blocked: () => false,
-      is_omnibar_open: () => false,
-      on_toggle_omnibar,
-      on_open_omnibar_commands: vi.fn(),
-      on_open_omnibar_notes: vi.fn(),
-      on_toggle_sidebar: vi.fn(),
-      on_save: vi.fn()
-    })
-
-    shortcuts.handle_keydown_capture({
-      metaKey: true,
-      ctrlKey: false,
-      key: 'k',
-      preventDefault: prevent_default,
-      stopPropagation: stop_propagation
-    } as unknown as KeyboardEvent)
-
-    expect(prevent_default).toHaveBeenCalledTimes(0)
-    expect(on_toggle_omnibar).toHaveBeenCalledTimes(0)
-  })
-
   it('opens omnibar commands on mod+p when closed', () => {
     const on_open_omnibar_commands = vi.fn()
     const prevent_default = vi.fn()
@@ -204,14 +147,13 @@ describe('use_keyboard_shortcuts', () => {
     expect(on_save).toHaveBeenCalledTimes(1)
   })
 
-  it('blocks omnibar toggle on mod+k when blocked and omnibar is closed', () => {
+  it('does not handle mod+k (removed shortcut)', () => {
     const on_toggle_omnibar = vi.fn()
     const prevent_default = vi.fn()
-    const stop_propagation = vi.fn()
 
     const shortcuts = use_keyboard_shortcuts({
       is_enabled: () => true,
-      is_blocked: () => true,
+      is_blocked: () => false,
       is_omnibar_open: () => false,
       on_toggle_omnibar,
       on_open_omnibar_commands: vi.fn(),
@@ -225,41 +167,11 @@ describe('use_keyboard_shortcuts', () => {
       ctrlKey: false,
       key: 'k',
       preventDefault: prevent_default,
-      stopPropagation: stop_propagation
+      stopPropagation: vi.fn()
     } as unknown as KeyboardEvent)
 
-    expect(prevent_default).toHaveBeenCalledTimes(1)
-    expect(stop_propagation).toHaveBeenCalledTimes(1)
+    expect(prevent_default).toHaveBeenCalledTimes(0)
     expect(on_toggle_omnibar).toHaveBeenCalledTimes(0)
-  })
-
-  it('allows omnibar toggle on mod+k when blocked and omnibar is open', () => {
-    const on_toggle_omnibar = vi.fn()
-    const prevent_default = vi.fn()
-    const stop_propagation = vi.fn()
-
-    const shortcuts = use_keyboard_shortcuts({
-      is_enabled: () => true,
-      is_blocked: () => true,
-      is_omnibar_open: () => true,
-      on_toggle_omnibar,
-      on_open_omnibar_commands: vi.fn(),
-      on_open_omnibar_notes: vi.fn(),
-      on_toggle_sidebar: vi.fn(),
-      on_save: vi.fn()
-    })
-
-    shortcuts.handle_keydown_capture({
-      metaKey: true,
-      ctrlKey: false,
-      key: 'k',
-      preventDefault: prevent_default,
-      stopPropagation: stop_propagation
-    } as unknown as KeyboardEvent)
-
-    expect(prevent_default).toHaveBeenCalledTimes(1)
-    expect(stop_propagation).toHaveBeenCalledTimes(1)
-    expect(on_toggle_omnibar).toHaveBeenCalledTimes(1)
   })
 
   it('blocks sidebar toggle on mod+b when blocked', () => {

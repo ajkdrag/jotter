@@ -83,9 +83,13 @@ Run all of these before submitting changes:
 ```bash
 pnpm check           # Svelte/TypeScript type checking
 pnpm lint            # ESLint
+pnpm format:check    # Prettier (fails if files need formatting)
+pnpm format          # Prettier (writes formatting)
 pnpm test            # Vitest
 cd src-tauri && cargo check  # Rust type checking
 ```
+
+For CI: run `pnpm format:check` in a job; it exits non-zero when any file is not formatted. Optionally run `pnpm format` in a separate job and commit the result, or require branches to pass `format:check` before merge.
 
 ### Tests
 

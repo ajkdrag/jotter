@@ -229,6 +229,23 @@ fn escape_fts_query(query: &str) -> String {
         .join(" ")
 }
 
+fn escape_fts_prefix_query(query: &str) -> String {
+    query
+        .split_whitespace()
+        .filter_map(|term| {
+            let clean: String = term
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+                .collect();
+            if clean.is_empty() {
+                return None;
+            }
+            Some(format!("\"{clean}\"*"))
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 pub fn search(
     conn: &Connection,
     query: &str,
@@ -291,8 +308,8 @@ pub fn suggest(
         return Ok(Vec::new());
     }
 
-    let escaped = escape_fts_query(trimmed);
-    let match_expr = format!("title : {escaped}");
+    let escaped = escape_fts_prefix_query(trimmed);
+    let match_expr = format!("{{title path}} : {escaped}");
 
     let sql = "SELECT n.path, n.title, n.mtime_ms, n.size_bytes,
                       bm25(notes_fts, 15.0, 5.0, 0.0) as rank

@@ -34,6 +34,7 @@ import { image_input_rule_plugin } from './image_input_rule_plugin'
 import { markdown_paste_plugin } from './markdown_paste_plugin'
 import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
+import { create_wiki_suggest_plugin, set_wiki_suggestions } from './wiki_suggest_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
 function create_svg_data_uri(svg: string): string {
@@ -125,7 +126,8 @@ export function create_milkdown_editor_port(args?: {
         on_dirty_state_change,
         on_cursor_change,
         on_internal_link_click,
-        on_image_paste_requested
+        on_image_paste_requested,
+        on_wiki_suggest_query
       } = events
 
       let current_markdown = initial_markdown
@@ -319,6 +321,13 @@ export function create_milkdown_editor_port(args?: {
         builder = builder.use(create_image_paste_plugin(on_image_paste_requested))
       }
 
+      if (on_wiki_suggest_query) {
+        builder = builder.use(create_wiki_suggest_plugin({
+          on_query: on_wiki_suggest_query,
+          on_dismiss: () => {}
+        }))
+      }
+
       editor = await builder.create()
 
       if (!is_large_note) {
@@ -389,6 +398,13 @@ export function create_milkdown_editor_port(args?: {
           editor.action((ctx) => {
             const view = ctx.get(editorViewCtx)
             view.focus()
+          })
+        },
+        set_wiki_suggestions(items: Array<{ title: string; path: string }>) {
+          if (!editor) return
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx)
+            set_wiki_suggestions(view, items)
           })
         }
       }

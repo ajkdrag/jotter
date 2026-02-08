@@ -1,6 +1,6 @@
-export type CommandId = 'create_new_note' | 'change_vault' | 'open_settings' | 'open_file_search'
+export type CommandId = 'create_new_note' | 'change_vault' | 'open_settings'
 
-export type CommandIcon = 'file-plus' | 'folder-open' | 'settings' | 'search'
+export type CommandIcon = 'file-plus' | 'folder-open' | 'settings'
 
 export type CommandDefinition = {
   id: CommandId

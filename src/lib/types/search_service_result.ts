@@ -26,7 +26,6 @@ export type SearchNotesResult =
 export type WikiSuggestionsResult =
   | { status: 'success'; results: WikiSuggestion[] }
   | { status: 'empty'; results: [] }
-  | { status: 'stale'; results: [] }
   | { status: 'skipped'; results: [] }
   | { status: 'failed'; error: string; results: [] }
 

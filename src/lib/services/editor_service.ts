@@ -6,6 +6,7 @@ import { as_markdown_text } from '$lib/types/ids'
 import type { EditorStore } from '$lib/stores/editor_store.svelte'
 import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
+import type { SearchService } from '$lib/services/search_service'
 import { error_message } from '$lib/utils/error_message'
 import { logger } from '$lib/utils/logger'
 
@@ -31,7 +32,8 @@ export class EditorService {
     private readonly vault_store: VaultStore,
     private readonly editor_store: EditorStore,
     private readonly op_store: OpStore,
-    private readonly callbacks: EditorServiceCallbacks
+    private readonly callbacks: EditorServiceCallbacks,
+    private readonly search_service?: SearchService
   ) {}
 
   is_mounted(): boolean {
@@ -156,7 +158,17 @@ export class EditorService {
         on_image_paste_requested: (image: PastedImagePayload) => {
           if (!this.is_generation_current(generation)) return
           this.callbacks.on_image_paste_requested(note_id, active_note.meta.path, image)
-        }
+        },
+        ...(this.search_service ? {
+          on_wiki_suggest_query: (query: string) => {
+            if (!this.is_generation_current(generation)) return
+            void this.search_service?.suggest_wiki_links(query).then((result) => {
+              if (!this.is_generation_current(generation)) return
+              const items = result.results.map((r) => ({ title: r.note.title, path: r.note.path }))
+              this.session?.set_wiki_suggestions?.(items)
+            })
+          }
+        } : {})
       }
     })
 

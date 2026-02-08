@@ -22,11 +22,4 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     keywords: ['settings', 'preferences', 'config', 'options', 'configure'],
     icon: 'settings'
   },
-  {
-    id: 'open_file_search',
-    label: 'Search files',
-    description: 'Open omnibar (Cmd+K)',
-    keywords: ['search', 'find', 'file', 'open', 'quick', 'navigate', 'omnibar'],
-    icon: 'search'
-  }
 ]

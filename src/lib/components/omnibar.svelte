@@ -17,8 +17,7 @@
   const COMMAND_ICONS: Record<CommandIconType, Component> = {
     'file-plus': FilePlusIcon,
     'folder-open': FolderOpenIcon,
-    'settings': SettingsIcon,
-    'search': SearchIcon
+    'settings': SettingsIcon
   }
 
   type Props = {
@@ -85,7 +84,7 @@
     !has_query && !is_command_mode ? recent_notes.length : -1
   )
 
-  function get_item_id(item: OmnibarItem, index: number): string {
+  function get_item_id(item: OmnibarItem): string {
     switch (item.kind) {
       case 'note':
         return `omni-note-${item.note.id}`
@@ -96,7 +95,6 @@
       case 'setting':
         return `omni-setting-${item.setting.key}`
     }
-    return `omni-${String(index)}`
   }
 
   function handle_keydown(event: KeyboardEvent) {
@@ -159,7 +157,7 @@
       role="listbox"
       tabindex="0"
       aria-activedescendant={display_items[selected_index]
-        ? get_item_id(display_items[selected_index], selected_index)
+        ? get_item_id(display_items[selected_index])
         : undefined}
       class="Omnibar__list"
     >
@@ -177,7 +175,7 @@
         </div>
       {/if}
 
-      {#each display_items as item, index (get_item_id(item, index))}
+      {#each display_items as item, index (get_item_id(item))}
         {#if show_commands_header && index === commands_start_index && commands_start_index > 0}
           <div class="Omnibar__header Omnibar__header--bordered">
             <CommandIcon />
@@ -186,7 +184,7 @@
         {/if}
 
         <button
-          id={get_item_id(item, index)}
+          id={get_item_id(item)}
           role="option"
           aria-selected={index === selected_index}
           class="Omnibar__item"

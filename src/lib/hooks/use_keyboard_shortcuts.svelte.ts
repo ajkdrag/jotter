@@ -30,15 +30,6 @@ export function use_keyboard_shortcuts(input: {
   }
 
   const handle_keydown_capture = (event: KeyboardEvent) => {
-    if (is_mod_combo(event, 'k')) {
-      if (!is_enabled()) return
-      event.preventDefault()
-      event.stopPropagation()
-      if (is_blocked() && !is_omnibar_open()) return
-      on_toggle_omnibar()
-      return
-    }
-
     if (is_mod_combo(event, 'p')) {
       if (!is_enabled()) return
       event.preventDefault()

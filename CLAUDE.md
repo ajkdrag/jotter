@@ -105,13 +105,16 @@ Always use shadcn semantic utilities. Use custom utilities only when shadcn lack
 
 <!-- Source: .ruler/post_edit_validation_rules.md -->
 
-Once you are done making any code changes and are about to finalize. Do the following tasks:
+When you have made **code changes** (not documentation-only: e.g. README, .md, doc comments), run the following before finalizing. Skip this entire section when your changes are documentation-only.
 
 - Run all validation commands and fix any issues:
+  - `pnpm format` — Prettier (writes formatting)
   - `pnpm check` — Svelte/TypeScript type checking
   - `pnpm lint` — ESLint linting
   - `pnpm test` — Vitest unit/integration tests
   - `cd src-tauri && cargo check` — Rust type checking (run from `src-tauri/` directory)
+  - `pnpm format` — Prettier (writes formatting)
+
 - See if you can simplify your implementation WITHOUT breaking the logic or the "requirement" that user proposed. Simplification will be penalized if it breaks existing code patterns, standards or guidelines
 - Remove docstrings, comments which are redundant
 - Add tests in the right location (if we should), even if the user might have forgotten to ask you to create them
