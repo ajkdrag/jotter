@@ -47,6 +47,53 @@ async function resolve_note_path(
   throw new Error(`Invalid note path: ${note_path}`)
 }
 
+function normalize_note_path(path: NotePath): { parts: string[]; leaf: string; full_path: NotePath } {
+  const parts = path.split('/').filter(Boolean)
+  if (parts.length === 0) {
+    throw new Error(`Invalid note path: ${path}`)
+  }
+
+  const last_index = parts.length - 1
+  const last_part = parts[last_index]
+  if (!last_part) {
+    throw new Error(`Invalid note path: ${path}`)
+  }
+
+  const leaf = last_part.endsWith('.md') ? last_part : `${last_part}.md`
+  parts[last_index] = leaf
+  return { parts, leaf, full_path: as_note_path(parts.join('/')) }
+}
+
+function create_temp_note_path(path: NotePath): NotePath {
+  const normalized = normalize_note_path(path)
+  const parts = [...normalized.parts]
+  const stem = normalized.leaf.replace(/\.md$/, '')
+  const suffix = `${String(Date.now())}-${Math.random().toString(36).slice(2, 10)}`
+  parts[parts.length - 1] = `${stem}.rename.${suffix}.tmp.md`
+  return as_note_path(parts.join('/'))
+}
+
+async function move_note_between_paths(root: FileSystemDirectoryHandle, from: NotePath, to: NotePath): Promise<void> {
+  const from_resolved = await resolve_note_path(root, from)
+  const from_file_handle = from_resolved.handle as FileSystemFileHandle
+  const from_file = await from_file_handle.getFile()
+  const from_content = await from_file.text()
+
+  const to_normalized = normalize_note_path(to)
+  let to_parent = root
+  for (let i = 0; i < to_normalized.parts.length - 1; i++) {
+    const part = to_normalized.parts[i]
+    if (!part) continue
+    to_parent = await to_parent.getDirectoryHandle(part, { create: true })
+  }
+
+  const to_file_handle = await to_parent.getFileHandle(to_normalized.leaf, { create: true })
+  const writable = await to_file_handle.createWritable()
+  await writable.write(from_content)
+  await writable.close()
+  await from_resolved.parent.removeEntry(from_resolved.name)
+}
+
 async function list_markdown_files(
   dir: FileSystemDirectoryHandle,
   prefix: string = ''
@@ -198,41 +245,19 @@ export function create_notes_web_adapter(): NotesPort {
 
     async rename_note(vault_id: VaultId, from: NotePath, to: NotePath): Promise<void> {
       const root = await get_vault_handle(vault_id)
+      const from_normalized = normalize_note_path(from)
+      const to_normalized = normalize_note_path(to)
+      if (from_normalized.full_path === to_normalized.full_path) return
 
-      const normalize = (path: NotePath) => {
-        const parts = path.split('/').filter(Boolean)
-        if (parts.length === 0) throw new Error(`Invalid note path: ${path}`)
-        const last_index = parts.length - 1
-        const last_part = parts[last_index]
-        if (!last_part) throw new Error(`Invalid note path: ${path}`)
-        const leaf = last_part.endsWith('.md') ? last_part : `${last_part}.md`
-        parts[last_index] = leaf
-        return { parts, leaf }
+      const temp_path = create_temp_note_path(from_normalized.full_path)
+      await move_note_between_paths(root, from_normalized.full_path, temp_path)
+
+      try {
+        await move_note_between_paths(root, temp_path, to_normalized.full_path)
+      } catch (error) {
+        await move_note_between_paths(root, temp_path, from_normalized.full_path).catch(() => undefined)
+        throw error
       }
-
-      const from_norm = normalize(from)
-      const to_norm = normalize(to)
-      if (from_norm.parts.join('/') === to_norm.parts.join('/')) return
-
-      const from_resolved = await resolve_note_path(root, as_note_path(from_norm.parts.join('/')))
-
-      let to_parent = root
-      for (let i = 0; i < to_norm.parts.length - 1; i++) {
-        const part = to_norm.parts[i]
-        if (!part) continue
-        to_parent = await to_parent.getDirectoryHandle(part, { create: true })
-      }
-      const to_name = to_norm.leaf
-
-      const from_file_handle = from_resolved.handle as FileSystemFileHandle
-      const from_file = await from_file_handle.getFile()
-
-      const to_file_handle = await to_parent.getFileHandle(to_name, { create: true })
-      const writable = await to_file_handle.createWritable()
-      await writable.write(await from_file.text())
-      await writable.close()
-
-      await from_resolved.parent.removeEntry(from_resolved.name)
     },
 
     async delete_note(vault_id: VaultId, note_id: NoteId): Promise<void> {

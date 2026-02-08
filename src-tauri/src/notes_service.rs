@@ -30,14 +30,22 @@ pub struct NoteWriteArgs {
     pub markdown: String,
 }
 
-pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
-    let rel = PathBuf::from(note_rel);
+fn parse_safe_relative_path(path: &str) -> Result<PathBuf, String> {
+    let rel = PathBuf::from(path);
     if rel.is_absolute() {
         return Err("note path must be relative".to_string());
     }
-    if rel.components().any(|c| matches!(c, Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir)) {
+    if rel
+        .components()
+        .any(|c| matches!(c, Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir))
+    {
         return Err("note path contains invalid segments".to_string());
     }
+    Ok(rel)
+}
+
+pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+    let rel = parse_safe_relative_path(note_rel)?;
     let abs = vault_root.join(&rel);
     let abs = abs.canonicalize().unwrap_or(abs);
     let base = vault_root
@@ -47,6 +55,30 @@ pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBu
         return Err("note path escapes vault".to_string());
     }
     Ok(abs)
+}
+
+fn safe_vault_rename_target_abs(vault_root: &Path, target_rel: &str) -> Result<PathBuf, String> {
+    let rel = parse_safe_relative_path(target_rel)?;
+    let leaf = rel.file_name().ok_or("note path must include a leaf name")?;
+    let parent_rel = rel.parent().unwrap_or_else(|| Path::new(""));
+
+    let base = vault_root
+        .canonicalize()
+        .unwrap_or_else(|_| vault_root.to_path_buf());
+
+    let parent_abs = if parent_rel.as_os_str().is_empty() {
+        base.clone()
+    } else {
+        let parent_norm = storage::normalize_relative_path(parent_rel);
+        safe_vault_abs(vault_root, &parent_norm)?
+    };
+
+    let target_abs = parent_abs.join(leaf);
+    if !target_abs.starts_with(&base) {
+        return Err("note path escapes vault".to_string());
+    }
+
+    Ok(target_abs)
 }
 
 pub(crate) fn extract_title(path: &Path) -> String {
@@ -316,14 +348,53 @@ pub struct NoteRenameArgs {
     pub to: String,
 }
 
+fn rename_with_temp_path(from_abs: &Path, to_abs: &Path) -> Result<(), String> {
+    if from_abs == to_abs {
+        return Ok(());
+    }
+
+    let from_parent = from_abs.parent().ok_or("invalid source path")?;
+    let from_name = from_abs
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or("invalid source filename")?;
+
+    let mut temp_abs = from_parent.join(format!(".{}.rename.{}.tmp", from_name, storage::now_ms()));
+    let mut attempt = 0usize;
+    while temp_abs.exists() {
+        attempt += 1;
+        temp_abs = from_parent.join(format!(
+            ".{}.rename.{}.{}.tmp",
+            from_name,
+            storage::now_ms(),
+            attempt
+        ));
+    }
+
+    std::fs::rename(from_abs, &temp_abs).map_err(|e| e.to_string())?;
+
+    if let Err(step_two_error) = std::fs::rename(&temp_abs, to_abs) {
+        let rollback_error = std::fs::rename(&temp_abs, from_abs).err();
+        if let Some(rollback_error) = rollback_error {
+            return Err(format!(
+                "rename failed: {}; rollback failed: {}",
+                step_two_error, rollback_error
+            ));
+        }
+        return Err(step_two_error.to_string());
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn rename_note(args: NoteRenameArgs, app: AppHandle) -> Result<(), String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
     let from_abs = safe_vault_abs(&root, &args.from)?;
-    let to_abs = safe_vault_abs(&root, &args.to)?;
+    let to_abs = safe_vault_rename_target_abs(&root, &args.to)?;
     let dir = to_abs.parent().ok_or("invalid destination path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    std::fs::rename(&from_abs, &to_abs).map_err(|e| e.to_string())?;
+    rename_with_temp_path(&from_abs, &to_abs)?;
     Ok(())
 }
 
@@ -412,14 +483,14 @@ pub fn rename_folder(args: FolderRenameArgs, app: AppHandle) -> Result<(), Strin
         return Err("cannot rename vault root".to_string());
     }
     let from_abs = safe_vault_abs(&root, &args.from_path)?;
-    let to_abs = safe_vault_abs(&root, &args.to_path)?;
+    let to_abs = safe_vault_rename_target_abs(&root, &args.to_path)?;
     if !from_abs.is_dir() {
         return Err("source is not a directory".to_string());
     }
     if let Some(dir) = to_abs.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
-    std::fs::rename(&from_abs, &to_abs).map_err(|e| e.to_string())?;
+    rename_with_temp_path(&from_abs, &to_abs)?;
     Ok(())
 }
 
@@ -540,9 +611,13 @@ pub fn list_folder_contents(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn mk_temp_dir() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("jotter-test-{}", storage::now_ms()));
+        let counter = TEST_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("jotter-test-{}-{}", storage::now_ms(), counter));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -554,6 +629,58 @@ mod tests {
         assert!(safe_vault_abs(&root, "a/../x.md").is_err());
         assert!(safe_vault_abs(&root, "/abs/x.md").is_err());
         assert!(safe_vault_abs(&root, "a/b.md").is_ok());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn rename_with_temp_path_renames_file() {
+        let root = mk_temp_dir();
+        let from = root.join("x.md");
+        let to = root.join("y.md");
+        std::fs::write(&from, "# test").unwrap();
+
+        rename_with_temp_path(&from, &to).unwrap();
+
+        assert!(!from.exists());
+        assert!(to.exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn rename_with_temp_path_supports_case_only_rename() {
+        let root = mk_temp_dir();
+        std::fs::write(root.join("x.md"), "# test").unwrap();
+        let from = safe_vault_abs(&root, "x.md").unwrap();
+        let to = safe_vault_rename_target_abs(&root, "X.md").unwrap();
+
+        rename_with_temp_path(&from, &to).unwrap();
+
+        assert!(to.exists());
+        let names: Vec<String> = std::fs::read_dir(&root)
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .collect();
+        assert!(names.iter().any(|name| name == "X.md"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn rename_with_temp_path_supports_case_only_folder_rename() {
+        let root = mk_temp_dir();
+        std::fs::create_dir(root.join("docs")).unwrap();
+        let from = safe_vault_abs(&root, "docs").unwrap();
+        let to = safe_vault_rename_target_abs(&root, "Docs").unwrap();
+
+        rename_with_temp_path(&from, &to).unwrap();
+
+        assert!(to.exists());
+        let names: Vec<String> = std::fs::read_dir(&root)
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .collect();
+        assert!(names.iter().any(|name| name == "Docs"));
         let _ = std::fs::remove_dir_all(&root);
     }
 }
