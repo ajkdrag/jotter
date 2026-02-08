@@ -18,6 +18,8 @@
     on_request_create_note?: ((folder_path: string) => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
+    on_load_more: (folder_path: string) => void;
+    on_retry_load_more: (folder_path: string) => void;
   };
 
   let {
@@ -33,7 +35,9 @@
     on_request_rename_folder,
     on_request_create_note,
     on_request_create_folder,
-    on_retry_load
+    on_retry_load,
+    on_load_more,
+    on_retry_load_more
   }: Props = $props();
 
   const ROW_HEIGHT = 30;
@@ -66,6 +70,22 @@
     if (!v) return nodes.length * ROW_HEIGHT
     return v.getTotalSize()
   });
+
+  $effect(() => {
+    if (!virtualizer) return
+    const v = $virtualizer
+    if (!v) return
+
+    const items = v.getVirtualItems()
+    for (const item of items) {
+      const node = nodes[item.index]
+      if (!node?.is_load_more || node.is_loading || node.has_error) {
+        continue
+      }
+      on_load_more(node.parent_path ?? '')
+      break
+    }
+  })
 </script>
 
 <div
@@ -95,6 +115,7 @@
             {on_request_create_note}
             {on_request_create_folder}
             {on_retry_load}
+            {on_retry_load_more}
           />
         </div>
       {/if}

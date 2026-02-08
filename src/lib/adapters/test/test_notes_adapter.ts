@@ -174,7 +174,12 @@ export function create_test_notes_adapter(): NotesPort {
     async delete_note(_vault_id: VaultId, _note_id: NoteId): Promise<void> {
     },
 
-    async list_folder_contents(_vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+    async list_folder_contents(
+      _vault_id: VaultId,
+      folder_path: string,
+      offset: number,
+      limit: number
+    ): Promise<FolderContents> {
       const notes = await load_base_files()
       for (const [note_path, data] of user_notes.entries()) {
         notes.set(note_path, data)
@@ -219,9 +224,33 @@ export function create_test_notes_adapter(): NotesPort {
         }
       }
 
+      const sorted_notes = result_notes.sort((a, b) => a.path.localeCompare(b.path))
+      const sorted_subfolders = Array.from(subfolders).sort((a, b) => a.localeCompare(b))
+      const combined = [
+        ...sorted_subfolders.map((path) => ({ kind: 'folder' as const, path })),
+        ...sorted_notes.map((note) => ({ kind: 'note' as const, note }))
+      ]
+
+      const total_count = combined.length
+      const start = Math.min(offset, total_count)
+      const end = Math.min(start + Math.max(limit, 0), total_count)
+      const page = combined.slice(start, end)
+
+      const paged_notes: NoteMeta[] = []
+      const paged_subfolders: string[] = []
+      for (const entry of page) {
+        if (entry.kind === 'folder') {
+          paged_subfolders.push(entry.path)
+        } else {
+          paged_notes.push(entry.note)
+        }
+      }
+
       return {
-        notes: result_notes.sort((a, b) => a.path.localeCompare(b.path)),
-        subfolders: Array.from(subfolders).sort((a, b) => a.localeCompare(b))
+        notes: paged_notes,
+        subfolders: paged_subfolders,
+        total_count,
+        has_more: end < total_count
       }
     },
 

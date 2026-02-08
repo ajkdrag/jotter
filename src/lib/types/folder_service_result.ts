@@ -26,13 +26,15 @@ export type FolderDeleteStatsResult =
 
 export type FolderLoadResult =
   | {
-      status: 'loaded'
-    }
-  | {
       status: 'stale'
     }
   | {
       status: 'skipped'
+    }
+  | {
+      status: 'loaded'
+      total_count: number
+      has_more: boolean
     }
   | {
       status: 'failed'

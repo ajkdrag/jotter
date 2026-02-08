@@ -129,7 +129,12 @@ export function create_mock_notes_port(): NotesPort & {
       }
       return Promise.resolve()
     },
-    list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+    list_folder_contents(
+      vault_id: VaultId,
+      folder_path: string,
+      offset: number,
+      limit: number
+    ): Promise<FolderContents> {
       const all_notes = mock._mock_notes.get(vault_id) || []
       const all_folders = mock._mock_folders.get(vault_id) || []
       const prefix = folder_path ? folder_path + '/' : ''
@@ -146,7 +151,34 @@ export function create_mock_notes_port(): NotesPort & {
         return !remaining.includes('/')
       })
 
-      return Promise.resolve({ notes, subfolders })
+      const sorted_notes = [...notes].sort((a, b) => a.path.localeCompare(b.path))
+      const sorted_folders = [...subfolders].sort((a, b) => a.localeCompare(b))
+      const combined = [
+        ...sorted_folders.map((path) => ({ kind: 'folder' as const, path })),
+        ...sorted_notes.map((note) => ({ kind: 'note' as const, note }))
+      ]
+
+      const total_count = combined.length
+      const start = Math.min(offset, total_count)
+      const end = Math.min(start + Math.max(limit, 0), total_count)
+      const page = combined.slice(start, end)
+
+      const paged_notes: NoteMeta[] = []
+      const paged_subfolders: string[] = []
+      for (const entry of page) {
+        if (entry.kind === 'folder') {
+          paged_subfolders.push(entry.path)
+        } else {
+          paged_notes.push(entry.note)
+        }
+      }
+
+      return Promise.resolve({
+        notes: paged_notes,
+        subfolders: paged_subfolders,
+        total_count,
+        has_more: end < total_count
+      })
     },
     rename_folder(vault_id: VaultId, from_path: string, to_path: string) {
       mock._calls.rename_folder.push({ vault_id, from_path, to_path })

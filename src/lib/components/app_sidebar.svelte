@@ -26,7 +26,8 @@
       expanded_paths: stores.ui.filetree.expanded_paths,
       load_states: stores.ui.filetree.load_states,
       error_messages: stores.ui.filetree.error_messages,
-      show_hidden_files: stores.ui.editor_settings.show_hidden_files
+      show_hidden_files: stores.ui.editor_settings.show_hidden_files,
+      pagination: stores.ui.filetree.pagination
     })
   )
 
@@ -166,6 +167,10 @@
                           void action_registry.execute(ACTION_IDS.folder_request_create, folder_path)}
                         on_retry_load={(path: string) =>
                           void action_registry.execute(ACTION_IDS.folder_retry_load, path)}
+                        on_load_more={(path: string) =>
+                          void action_registry.execute(ACTION_IDS.folder_load_more, path)}
+                        on_retry_load_more={(path: string) =>
+                          void action_registry.execute(ACTION_IDS.folder_load_more, path)}
                       />
                     </Sidebar.GroupContent>
                   </Sidebar.Group>

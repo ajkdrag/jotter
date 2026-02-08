@@ -38,6 +38,7 @@ export const ACTION_IDS = {
   folder_confirm_create: 'folder.confirm_create',
   folder_cancel_create: 'folder.cancel_create',
   folder_toggle: 'folder.toggle',
+  folder_load_more: 'folder.load_more',
   folder_retry_load: 'folder.retry_load',
   folder_collapse_all: 'folder.collapse_all',
   folder_refresh_tree: 'folder.refresh_tree',

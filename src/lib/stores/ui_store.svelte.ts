@@ -3,7 +3,7 @@ import type { EditorSettings } from '$lib/types/editor_settings'
 import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 import type { NoteMeta } from '$lib/types/note'
 import type { NoteId, NotePath } from '$lib/types/ids'
-import type { FolderLoadState } from '$lib/types/filetree'
+import type { FolderLoadState, FolderPaginationState } from '$lib/types/filetree'
 import type { NoteSearchHit } from '$lib/types/search'
 import type { CommandDefinition } from '$lib/types/command_palette'
 import type { SettingDefinition } from '$lib/types/settings_registry'
@@ -143,10 +143,12 @@ export class UIStore {
     expanded_paths: SvelteSet<string>
     load_states: SvelteMap<string, FolderLoadState>
     error_messages: SvelteMap<string, string>
+    pagination: SvelteMap<string, FolderPaginationState>
   }>({
     expanded_paths: new SvelteSet<string>(),
     load_states: new SvelteMap<string, FolderLoadState>(),
-    error_messages: new SvelteMap<string, string>()
+    error_messages: new SvelteMap<string, string>(),
+    pagination: new SvelteMap<string, FolderPaginationState>()
   })
 
   image_paste_dialog = $state<{
@@ -246,7 +248,8 @@ export class UIStore {
     this.filetree = {
       expanded_paths: new SvelteSet<string>(),
       load_states: new SvelteMap<string, FolderLoadState>(),
-      error_messages: new SvelteMap<string, string>()
+      error_messages: new SvelteMap<string, string>(),
+      pagination: new SvelteMap<string, FolderPaginationState>()
     }
     this.image_paste_dialog = {
       open: false,

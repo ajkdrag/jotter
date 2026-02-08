@@ -29,6 +29,7 @@
     on_request_create_note?: ((folder_path: string) => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
+    on_retry_load_more: (folder_path: string) => void;
   };
 
   let {
@@ -43,7 +44,8 @@
     on_request_rename_folder,
     on_request_create_note,
     on_request_create_folder,
-    on_retry_load
+    on_retry_load,
+    on_retry_load_more
   }: Props = $props();
 
 
@@ -65,6 +67,10 @@
   function handle_retry(e: MouseEvent) {
     e.stopPropagation();
     on_retry_load(node.path);
+  }
+
+  function handle_retry_load_more() {
+    on_retry_load_more(node.parent_path ?? '');
   }
 
   function handle_keydown(e: KeyboardEvent) {
@@ -143,7 +149,27 @@
   </div>
 {/snippet}
 
-{#if node.is_folder}
+{#if node.is_load_more}
+  <div class="TreeRow TreeRow--load-more" style="--tree-depth: {node.depth}" role="presentation">
+    {#if node.has_error}
+      <button
+        type="button"
+        class="TreeRow__toggle"
+        onclick={handle_retry_load_more}
+        aria-label="Retry loading more"
+      >
+        <RefreshCw class="TreeRow__icon TreeRow__icon--error" />
+      </button>
+      <span class="TreeRow__label TreeRow__label--muted">
+        {node.error_message ?? 'Failed to load more. Retry.'}
+      </span>
+    {:else}
+      <span class="TreeRow__spacer"></span>
+      <LoaderCircle class="TreeRow__icon TreeRow__icon--spin" />
+      <span class="TreeRow__label TreeRow__label--muted">Loading more...</span>
+    {/if}
+  </div>
+{:else if node.is_folder}
   <ContextMenu.Root>
     <ContextMenu.Trigger class="w-full">
       {@render row_content()}
@@ -250,6 +276,15 @@
     background-color: var(--interactive-bg-hover);
   }
 
+  .TreeRow--load-more {
+    cursor: default;
+    color: var(--muted-foreground);
+  }
+
+  .TreeRow--load-more:hover {
+    background-color: transparent;
+  }
+
   .TreeRow__toggle {
     display: flex;
     align-items: center;
@@ -282,6 +317,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .TreeRow__label--muted {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
   }
 
   .TreeRow__action {

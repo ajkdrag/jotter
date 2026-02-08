@@ -27,4 +27,14 @@ describe('VaultStore', () => {
 
     expect(store.recent_vaults).toEqual([vault])
   })
+
+  it('bumps generation without changing vault selection', () => {
+    const store = new VaultStore()
+    const initial_generation = store.generation
+
+    store.bump_generation()
+
+    expect(store.generation).toBe(initial_generation + 1)
+    expect(store.vault).toBeNull()
+  })
 })

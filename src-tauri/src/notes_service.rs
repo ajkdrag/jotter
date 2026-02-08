@@ -1,10 +1,13 @@
 use crate::constants;
 use crate::storage;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::path::Component;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Instant;
 use tauri::AppHandle;
 use walkdir::WalkDir;
 
@@ -233,13 +236,15 @@ pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, Str
     atomic_write(&abs, &args.initial_markdown)?;
     let title = extract_title(&abs);
     let (mtime_ms, size_bytes) = file_meta(&abs)?;
-    Ok(NoteMeta {
+    let note = NoteMeta {
         id: args.note_path.clone(),
         path: args.note_path,
         title,
         mtime_ms,
         size_bytes,
-    })
+    };
+    invalidate_note_parent_folder_cache(&args.vault_id, &note.path);
+    Ok(note)
 }
 
 #[derive(Debug, Deserialize)]
@@ -395,6 +400,12 @@ pub fn rename_note(args: NoteRenameArgs, app: AppHandle) -> Result<(), String> {
     let dir = to_abs.parent().ok_or("invalid destination path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     rename_with_temp_path(&from_abs, &to_abs)?;
+    invalidate_note_parent_folder_cache(&args.vault_id, &args.from);
+    let from_parent = parent_folder_path(&args.from);
+    let to_parent = parent_folder_path(&args.to);
+    if to_parent != from_parent {
+        invalidate_folder_cache(&args.vault_id, &to_parent);
+    }
     Ok(())
 }
 
@@ -404,10 +415,146 @@ pub struct NoteDeleteArgs {
     pub note_id: String,
 }
 
+#[derive(Debug, Clone)]
+struct FolderEntry {
+    name: String,
+    is_dir: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FolderCacheEntry {
+    items: Arc<[FolderEntry]>,
+    cached_at: Instant,
+    last_accessed: Instant,
+}
+
+const FOLDER_CACHE_TTL_SECS: u64 = 30;
+const FOLDER_CACHE_MAX_ENTRIES: usize = 64;
+
+static FOLDER_CACHE: OnceLock<Mutex<HashMap<String, FolderCacheEntry>>> = OnceLock::new();
+
+fn folder_cache() -> &'static Mutex<HashMap<String, FolderCacheEntry>> {
+    FOLDER_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn folder_cache_key(vault_id: &str, folder_path: &str) -> String {
+    format!("{}:{}", vault_id, folder_path)
+}
+
+fn purge_expired_folder_cache(cache: &mut HashMap<String, FolderCacheEntry>) {
+    cache.retain(|_, entry| entry.cached_at.elapsed().as_secs() < FOLDER_CACHE_TTL_SECS);
+}
+
+fn evict_folder_cache_if_needed(cache: &mut HashMap<String, FolderCacheEntry>) {
+    while cache.len() > FOLDER_CACHE_MAX_ENTRIES {
+        let oldest = cache
+            .iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(key, _)| key.clone());
+        if let Some(key) = oldest {
+            cache.remove(&key);
+        } else {
+            break;
+        }
+    }
+}
+
+fn invalidate_folder_cache(vault_id: &str, folder_path: &str) {
+    let key = folder_cache_key(vault_id, folder_path);
+    if let Ok(mut cache) = folder_cache().lock() {
+        cache.remove(&key);
+    }
+}
+
+fn parent_folder_path(path: &str) -> String {
+    path.rsplit_once('/')
+        .map(|(parent, _)| parent.to_string())
+        .unwrap_or_default()
+}
+
+fn invalidate_note_parent_folder_cache(vault_id: &str, note_path: &str) {
+    let parent = parent_folder_path(note_path);
+    invalidate_folder_cache(vault_id, &parent);
+}
+
+fn invalidate_folder_parent_cache(vault_id: &str, folder_path: &str) {
+    let parent = parent_folder_path(folder_path);
+    invalidate_folder_cache(vault_id, &parent);
+}
+
+fn scan_folder_entries(target: &Path) -> Result<Vec<FolderEntry>, String> {
+    let mut items = Vec::new();
+
+    for entry in std::fs::read_dir(target).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let name = entry.file_name().to_string_lossy().to_string();
+        if constants::is_excluded_folder(&name) {
+            continue;
+        }
+
+        let file_type = entry.file_type().map_err(|e| e.to_string())?;
+        let is_dir = file_type.is_dir();
+        if !is_dir && !name.ends_with(".md") {
+            continue;
+        }
+
+        items.push(FolderEntry { name, is_dir });
+    }
+
+    items.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a
+            .name
+            .to_ascii_lowercase()
+            .cmp(&b.name.to_ascii_lowercase())
+            .then_with(|| a.name.cmp(&b.name)),
+    });
+
+    Ok(items)
+}
+
+fn get_or_scan_folder_entries(cache_key: &str, target: &Path) -> Result<Arc<[FolderEntry]>, String> {
+    {
+        let mut cache = folder_cache().lock().map_err(|e| e.to_string())?;
+        purge_expired_folder_cache(&mut cache);
+        if let Some(entry) = cache.get_mut(cache_key) {
+            entry.last_accessed = Instant::now();
+            return Ok(Arc::clone(&entry.items));
+        }
+    }
+
+    let items = scan_folder_entries(target)?;
+    let items = Arc::<[FolderEntry]>::from(items);
+    let now = Instant::now();
+
+    let mut cache = folder_cache().lock().map_err(|e| e.to_string())?;
+    purge_expired_folder_cache(&mut cache);
+    cache.insert(
+        cache_key.to_string(),
+        FolderCacheEntry {
+            items: Arc::clone(&items),
+            cached_at: now,
+            last_accessed: now,
+        },
+    );
+    evict_folder_cache_if_needed(&mut cache);
+
+    Ok(items)
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct FolderContents {
     pub notes: Vec<NoteMeta>,
     pub subfolders: Vec<String>,
+    pub total_count: usize,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FolderStats {
+    pub note_count: usize,
+    pub folder_count: usize,
 }
 
 #[tauri::command]
@@ -415,6 +562,7 @@ pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs(&root, &args.note_id)?;
     std::fs::remove_file(&abs).map_err(|e| e.to_string())?;
+    invalidate_note_parent_folder_cache(&args.vault_id, &args.note_id);
     Ok(())
 }
 
@@ -466,6 +614,7 @@ pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), Strin
     }
     let target = parent.join(&args.folder_name);
     std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    invalidate_folder_cache(&args.vault_id, &args.parent_path);
     Ok(())
 }
 
@@ -491,6 +640,12 @@ pub fn rename_folder(args: FolderRenameArgs, app: AppHandle) -> Result<(), Strin
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
     rename_with_temp_path(&from_abs, &to_abs)?;
+    invalidate_folder_parent_cache(&args.vault_id, &args.from_path);
+    let from_parent = parent_folder_path(&args.from_path);
+    let to_parent = parent_folder_path(&args.to_path);
+    if to_parent != from_parent {
+        invalidate_folder_cache(&args.vault_id, &to_parent);
+    }
     Ok(())
 }
 
@@ -539,6 +694,7 @@ pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<FolderDel
     }
 
     std::fs::remove_dir_all(&abs).map_err(|e| e.to_string())?;
+    invalidate_folder_parent_cache(&args.vault_id, &args.folder_path);
     Ok(FolderDeleteResult { deleted_notes, deleted_folders })
 }
 
@@ -547,6 +703,8 @@ pub fn list_folder_contents(
     app: AppHandle,
     vault_id: String,
     folder_path: String,
+    offset: usize,
+    limit: usize,
 ) -> Result<FolderContents, String> {
     let root = storage::vault_path(&app, &vault_id)?;
     let target = if folder_path.is_empty() {
@@ -559,53 +717,95 @@ pub fn list_folder_contents(
         return Err("not a directory".to_string());
     }
 
+    let key = folder_cache_key(&vault_id, &folder_path);
+    let items = get_or_scan_folder_entries(&key, &target)?;
+    let total_count = items.len();
+    let start = offset.min(total_count);
+    let end = start.saturating_add(limit).min(total_count);
+
     let mut notes = Vec::new();
     let mut subfolders = Vec::new();
 
-    let entries = std::fs::read_dir(&target).map_err(|e| e.to_string())?;
+    for entry in &items[start..end] {
+        let rel = if folder_path.is_empty() {
+            entry.name.clone()
+        } else {
+            format!("{}/{}", folder_path, entry.name)
+        };
 
-    for entry in entries {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let file_name = entry.file_name().to_string_lossy().to_string();
-
-        if constants::is_excluded_folder(&file_name) {
-            continue;
-        }
-
-        let file_type = entry.file_type().map_err(|e| e.to_string())?;
-        let entry_path = entry.path();
-
-        if file_type.is_file() && file_name.ends_with(".md") {
-            let rel = if folder_path.is_empty() {
-                file_name.clone()
-            } else {
-                format!("{}/{}", folder_path, file_name)
-            };
-
-            let title = extract_title(&entry_path);
-            let (mtime_ms, size_bytes) = file_meta(&entry_path)?;
-
+        if entry.is_dir {
+            subfolders.push(rel);
+        } else {
+            let title = entry
+                .name
+                .strip_suffix(".md")
+                .unwrap_or(&entry.name)
+                .to_string();
             notes.push(NoteMeta {
                 id: rel.clone(),
                 path: rel,
                 title,
-                mtime_ms,
-                size_bytes,
+                mtime_ms: 0,
+                size_bytes: 0,
             });
-        } else if file_type.is_dir() {
-            let rel = if folder_path.is_empty() {
-                file_name
-            } else {
-                format!("{}/{}", folder_path, file_name)
-            };
-            subfolders.push(rel);
         }
     }
 
-    notes.sort_by(|a, b| a.path.cmp(&b.path));
-    subfolders.sort();
+    Ok(FolderContents {
+        notes,
+        subfolders,
+        total_count,
+        has_more: end < total_count,
+    })
+}
 
-    Ok(FolderContents { notes, subfolders })
+#[tauri::command]
+pub fn get_folder_stats(
+    app: AppHandle,
+    vault_id: String,
+    folder_path: String,
+) -> Result<FolderStats, String> {
+    let root = storage::vault_path(&app, &vault_id)?;
+    let target = if folder_path.is_empty() {
+        root.clone()
+    } else {
+        safe_vault_abs(&root, &folder_path)?
+    };
+
+    if !target.is_dir() {
+        return Err("not a directory".to_string());
+    }
+
+    let mut note_count = 0usize;
+    let mut folder_count = 0usize;
+
+    for entry in WalkDir::new(&target)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !constants::is_excluded_folder(&name)
+        })
+        .filter_map(|e| e.ok())
+    {
+        if entry.path() == target.as_path() {
+            continue;
+        }
+
+        if entry.file_type().is_file() && entry.path().extension().and_then(|e| e.to_str()) == Some("md") {
+            note_count += 1;
+            continue;
+        }
+
+        if entry.file_type().is_dir() {
+            folder_count += 1;
+        }
+    }
+
+    Ok(FolderStats {
+        note_count,
+        folder_count,
+    })
 }
 
 #[cfg(test)]
@@ -620,6 +820,12 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("jotter-test-{}-{}", storage::now_ms(), counter));
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn clear_folder_cache() {
+        if let Ok(mut cache) = folder_cache().lock() {
+            cache.clear();
+        }
     }
 
     #[test]
@@ -681,6 +887,60 @@ mod tests {
             .map(|entry| entry.file_name().to_string_lossy().to_string())
             .collect();
         assert!(names.iter().any(|name| name == "Docs"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn scan_folder_entries_filters_and_sorts() {
+        let root = mk_temp_dir();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("zeta")).unwrap();
+        std::fs::create_dir_all(root.join("alpha")).unwrap();
+        std::fs::write(root.join("b.md"), "b").unwrap();
+        std::fs::write(root.join("a.md"), "a").unwrap();
+        std::fs::write(root.join("readme.txt"), "ignored").unwrap();
+
+        let entries = scan_folder_entries(&root).unwrap();
+        let names: Vec<String> = entries.iter().map(|entry| entry.name.clone()).collect();
+        let dirs_first = entries
+            .iter()
+            .map(|entry| (entry.name.clone(), entry.is_dir))
+            .collect::<Vec<(String, bool)>>();
+
+        assert_eq!(names, vec!["alpha", "zeta", "a.md", "b.md"]);
+        assert_eq!(
+            dirs_first,
+            vec![
+                ("alpha".to_string(), true),
+                ("zeta".to_string(), true),
+                ("a.md".to_string(), false),
+                ("b.md".to_string(), false)
+            ]
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn folder_entries_cache_hit_and_invalidation() {
+        clear_folder_cache();
+        let root = mk_temp_dir();
+        std::fs::write(root.join("a.md"), "a").unwrap();
+
+        let vault_id = "v1";
+        let folder_path = "";
+        let key = folder_cache_key(vault_id, folder_path);
+        let first = get_or_scan_folder_entries(&key, &root).unwrap();
+        assert_eq!(first.len(), 1);
+
+        std::fs::write(root.join("b.md"), "b").unwrap();
+        let second = get_or_scan_folder_entries(&key, &root).unwrap();
+        assert_eq!(second.len(), 1);
+
+        invalidate_folder_cache(vault_id, folder_path);
+        let third = get_or_scan_folder_entries(&key, &root).unwrap();
+        assert_eq!(third.len(), 2);
+
+        clear_folder_cache();
         let _ = std::fs::remove_dir_all(&root);
     }
 }

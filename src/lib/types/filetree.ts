@@ -14,9 +14,19 @@ export type FlatTreeNode = {
   error_message: string | null
   note: NoteMeta | null
   parent_path: string | null
+  is_load_more: boolean
 }
 
 export type FolderContents = {
   notes: NoteMeta[]
   subfolders: string[]
+  total_count: number
+  has_more: boolean
+}
+
+export type FolderPaginationState = {
+  loaded_count: number
+  total_count: number
+  load_state: 'idle' | 'loading' | 'error'
+  error_message: string | null
 }

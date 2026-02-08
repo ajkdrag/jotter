@@ -52,6 +52,7 @@ pub fn run() {
             notes_service::rename_folder,
             notes_service::delete_folder,
             notes_service::list_folder_contents,
+            notes_service::get_folder_stats,
             settings_service::get_setting,
             settings_service::set_setting,
             vault_settings_service::get_vault_setting,

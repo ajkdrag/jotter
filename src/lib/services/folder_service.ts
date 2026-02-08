@@ -9,6 +9,7 @@ import type {
   FolderLoadResult,
   FolderMutationResult
 } from '$lib/types/folder_service_result'
+import { PAGE_SIZE } from '$lib/constants/pagination'
 import { error_message } from '$lib/utils/error_message'
 import { ensure_open_note } from '$lib/utils/ensure_open_note'
 import { logger } from '$lib/utils/logger'
@@ -168,14 +169,18 @@ export class FolderService {
     }
 
     try {
-      const contents = await this.notes_port.list_folder_contents(vault_id, path)
+      const contents = await this.notes_port.list_folder_contents(vault_id, path, 0, PAGE_SIZE)
 
       if (expected_generation !== this.vault_store.generation) {
         return { status: 'stale' }
       }
 
       this.notes_store.merge_folder_contents(path, contents)
-      return { status: 'loaded' }
+      return {
+        status: 'loaded',
+        total_count: contents.total_count,
+        has_more: contents.has_more
+      }
     } catch (error) {
       if (expected_generation !== this.vault_store.generation) {
         return { status: 'stale' }
@@ -183,6 +188,47 @@ export class FolderService {
 
       const message = error_message(error)
       logger.error(`Load folder failed (${path}): ${message}`)
+      return {
+        status: 'failed',
+        error: message
+      }
+    }
+  }
+
+  async load_folder_page(
+    path: string,
+    offset: number,
+    expected_generation: number
+  ): Promise<FolderLoadResult> {
+    const vault_id = this.vault_store.vault?.id
+    if (!vault_id) {
+      return { status: 'skipped' }
+    }
+
+    if (expected_generation !== this.vault_store.generation) {
+      return { status: 'stale' }
+    }
+
+    try {
+      const contents = await this.notes_port.list_folder_contents(vault_id, path, offset, PAGE_SIZE)
+
+      if (expected_generation !== this.vault_store.generation) {
+        return { status: 'stale' }
+      }
+
+      this.notes_store.append_folder_page(path, contents)
+      return {
+        status: 'loaded',
+        total_count: contents.total_count,
+        has_more: contents.has_more
+      }
+    } catch (error) {
+      if (expected_generation !== this.vault_store.generation) {
+        return { status: 'stale' }
+      }
+
+      const message = error_message(error)
+      logger.error(`Load folder page failed (${path}): ${message}`)
       return {
         status: 'failed',
         error: message

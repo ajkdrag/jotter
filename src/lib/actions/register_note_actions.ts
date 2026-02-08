@@ -1,5 +1,6 @@
 import { ACTION_IDS } from '$lib/actions/action_ids'
 import type { ActionRegistrationInput } from '$lib/actions/action_registration_input'
+import { clear_folder_filetree_state } from '$lib/actions/filetree_state'
 import type { NoteMeta } from '$lib/types/note'
 import { as_note_path, type NotePath } from '$lib/types/ids'
 import type { ImagePasteRequest } from '$lib/types/editor'
@@ -284,6 +285,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
 
       const result = await services.note.delete_note(note)
       if (result.status === 'deleted') {
+        clear_folder_filetree_state(input, parent_folder_path(note.path))
         close_delete_dialog(input)
       }
     }
@@ -344,6 +346,11 @@ export function register_note_actions(input: ActionRegistrationInput) {
       }
 
       if (result.status === 'renamed') {
+        clear_folder_filetree_state(input, parent)
+        const new_parent = parent_folder_path(new_path)
+        if (new_parent !== parent) {
+          clear_folder_filetree_state(input, new_parent)
+        }
         close_rename_dialog(input)
       }
     }
@@ -359,6 +366,11 @@ export function register_note_actions(input: ActionRegistrationInput) {
 
     const result = await services.note.rename_note(note, new_path, true)
     if (result.status === 'renamed') {
+      clear_folder_filetree_state(input, parent)
+      const new_parent = parent_folder_path(new_path)
+      if (new_parent !== parent) {
+        clear_folder_filetree_state(input, new_parent)
+      }
       close_rename_dialog(input)
     }
   }
@@ -444,6 +456,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       }
 
       if (result.status === 'saved') {
+        clear_folder_filetree_state(input, parent_folder_path(result.saved_path))
         close_save_dialog(input)
       }
     }
@@ -458,6 +471,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
 
       const result = await services.note.save_note(path, true)
       if (result.status === 'saved') {
+        clear_folder_filetree_state(input, parent_folder_path(result.saved_path))
         close_save_dialog(input)
       }
     }
@@ -470,6 +484,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       const path = stores.ui.save_note_dialog.open ? stores.ui.save_note_dialog.new_path : null
       const result = await services.note.save_note(path, true)
       if (result.status === 'saved' && stores.ui.save_note_dialog.open) {
+        clear_folder_filetree_state(input, parent_folder_path(result.saved_path))
         close_save_dialog(input)
       }
     }

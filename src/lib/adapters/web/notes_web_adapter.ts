@@ -266,7 +266,12 @@ export function create_notes_web_adapter(): NotesPort {
       await parent.removeEntry(name)
     },
 
-    async list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+    async list_folder_contents(
+      vault_id: VaultId,
+      folder_path: string,
+      offset: number,
+      limit: number
+    ): Promise<FolderContents> {
       const root = await get_vault_handle(vault_id)
       let target = root
 
@@ -277,37 +282,61 @@ export function create_notes_web_adapter(): NotesPort {
         }
       }
 
-      const notes: NoteMeta[] = []
-      const subfolders: string[] = []
-
+      const entries: Array<{ name: string; is_dir: boolean }> = []
       for await (const handle of target.values()) {
-        if (handle.name === '.jotter' || handle.name === '.git') {
+        if (is_excluded_folder(handle.name)) {
           continue
         }
 
-        if (handle.kind === 'file' && handle.name.endsWith('.md')) {
-          const file_handle = handle as FileSystemFileHandle
-          const file = await file_handle.getFile()
-          const full_path = folder_path ? `${folder_path}/${handle.name}` : handle.name
-          const note_path = as_note_path(full_path)
+        if (handle.kind === 'directory') {
+          entries.push({ name: handle.name, is_dir: true })
+          continue
+        }
 
-          notes.push({
-            id: note_path,
-            path: note_path,
-            title: handle.name.replace(/\.md$/, ''),
-            mtime_ms: file.lastModified,
-            size_bytes: file.size
-          })
-        } else if (handle.kind === 'directory') {
-          const subfolder_path = folder_path ? `${folder_path}/${handle.name}` : handle.name
-          subfolders.push(subfolder_path)
+        if (handle.name.endsWith('.md')) {
+          entries.push({ name: handle.name, is_dir: false })
         }
       }
 
-      notes.sort((a, b) => a.path.localeCompare(b.path))
-      subfolders.sort((a, b) => a.localeCompare(b))
+      entries.sort((a, b) => {
+        if (a.is_dir !== b.is_dir) {
+          return a.is_dir ? -1 : 1
+        }
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      })
 
-      return { notes, subfolders }
+      const total_count = entries.length
+      const start = Math.min(offset, total_count)
+      const end = Math.min(start + Math.max(limit, 0), total_count)
+      const page = entries.slice(start, end)
+
+      const notes: NoteMeta[] = []
+      const subfolders: string[] = []
+
+      for (const entry of page) {
+        if (entry.is_dir) {
+          const subfolder_path = folder_path ? `${folder_path}/${entry.name}` : entry.name
+          subfolders.push(subfolder_path)
+          continue
+        }
+
+        const full_path = folder_path ? `${folder_path}/${entry.name}` : entry.name
+        const note_path = as_note_path(full_path)
+        notes.push({
+          id: note_path,
+          path: note_path,
+          title: entry.name.replace(/\.md$/, ''),
+          mtime_ms: 0,
+          size_bytes: 0
+        })
+      }
+
+      return {
+        notes,
+        subfolders,
+        total_count,
+        has_more: end < total_count
+      }
     },
 
     async rename_folder(vault_id: VaultId, from_path: string, to_path: string): Promise<void> {
@@ -407,6 +436,10 @@ export function create_notes_web_adapter(): NotesPort {
 
       async function count_items(dir: FileSystemDirectoryHandle) {
         for await (const entry of dir.values()) {
+          if (is_excluded_folder(entry.name)) {
+            continue
+          }
+
           if (entry.kind === 'file' && entry.name.endsWith('.md')) {
             note_count++
           } else if (entry.kind === 'directory') {

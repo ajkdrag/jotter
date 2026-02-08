@@ -1,5 +1,5 @@
 import type { NoteMeta } from '$lib/types/note'
-import type { FlatTreeNode, FolderLoadState } from '$lib/types/filetree'
+import type { FlatTreeNode, FolderLoadState, FolderPaginationState } from '$lib/types/filetree'
 import { build_filetree, sort_tree, type FileTreeNode } from '$lib/utils/filetree'
 
 export type FlattenInput = {
@@ -9,10 +9,19 @@ export type FlattenInput = {
   load_states: Map<string, FolderLoadState>
   error_messages: Map<string, string>
   show_hidden_files: boolean
+  pagination: Map<string, FolderPaginationState>
 }
 
 export function flatten_filetree(input: FlattenInput): FlatTreeNode[] {
-  const { notes, folder_paths, expanded_paths, load_states, error_messages, show_hidden_files } = input
+  const {
+    notes,
+    folder_paths,
+    expanded_paths,
+    load_states,
+    error_messages,
+    show_hidden_files,
+    pagination
+  } = input
   const tree = sort_tree(build_filetree(notes, folder_paths))
   const result: FlatTreeNode[] = []
 
@@ -37,7 +46,8 @@ export function flatten_filetree(input: FlattenInput): FlatTreeNode[] {
         has_error: load_state === 'error',
         error_message: error_messages.get(child.path) ?? null,
         note: child.note,
-        parent_path
+        parent_path,
+        is_load_more: false
       }
 
       result.push(flat_node)
@@ -45,6 +55,25 @@ export function flatten_filetree(input: FlattenInput): FlatTreeNode[] {
       if (is_folder && is_expanded) {
         visit(child, depth + 1, child.path)
       }
+    }
+
+    const pagination_state = pagination.get(node.path)
+    if (pagination_state && pagination_state.loaded_count < pagination_state.total_count) {
+      const key_suffix = node.path === '' ? 'root' : node.path
+      result.push({
+        id: `__load_more__${key_suffix}`,
+        path: `__load_more__${key_suffix}`,
+        name: '',
+        depth,
+        is_folder: false,
+        is_expanded: false,
+        is_loading: pagination_state.load_state === 'loading',
+        has_error: pagination_state.load_state === 'error',
+        error_message: pagination_state.error_message,
+        note: null,
+        parent_path: node.path,
+        is_load_more: true
+      })
     }
   }
 

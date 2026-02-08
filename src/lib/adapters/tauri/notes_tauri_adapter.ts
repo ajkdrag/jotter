@@ -34,10 +34,17 @@ export function create_notes_tauri_adapter(): NotesPort {
     async delete_note(vault_id: VaultId, note_id: NoteId) {
       await tauri_invoke<undefined>('delete_note', { args: { vault_id, note_id } })
     },
-    async list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents> {
+    async list_folder_contents(
+      vault_id: VaultId,
+      folder_path: string,
+      offset: number,
+      limit: number
+    ): Promise<FolderContents> {
       return await tauri_invoke<FolderContents>('list_folder_contents', {
         vaultId: vault_id,
-        folderPath: folder_path
+        folderPath: folder_path,
+        offset,
+        limit
       })
     },
     async rename_folder(vault_id: VaultId, from_path: string, to_path: string) {
@@ -49,24 +56,10 @@ export function create_notes_tauri_adapter(): NotesPort {
       })
     },
     async get_folder_stats(vault_id: VaultId, folder_path: string): Promise<FolderStats> {
-      let note_count = 0
-      let folder_count = 0
-
-      const count_recursive = async (path: string) => {
-        const contents = await tauri_invoke<FolderContents>('list_folder_contents', {
-          vaultId: vault_id,
-          folderPath: path
-        })
-        note_count += contents.notes.length
-        folder_count += contents.subfolders.length
-        for (const subfolder of contents.subfolders) {
-          await count_recursive(subfolder)
-        }
-      }
-
-      await count_recursive(folder_path)
-      return { note_count, folder_count }
+      return await tauri_invoke<FolderStats>('get_folder_stats', {
+        vaultId: vault_id,
+        folderPath: folder_path
+      })
     }
   }
 }
-

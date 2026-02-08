@@ -18,7 +18,11 @@ export interface NotesPort {
   delete_note(vault_id: VaultId, note_id: NoteId): Promise<void>
   rename_folder(vault_id: VaultId, from_path: string, to_path: string): Promise<void>
   delete_folder(vault_id: VaultId, folder_path: string): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }>
-  list_folder_contents(vault_id: VaultId, folder_path: string): Promise<FolderContents>
+  list_folder_contents(
+    vault_id: VaultId,
+    folder_path: string,
+    offset: number,
+    limit: number
+  ): Promise<FolderContents>
   get_folder_stats(vault_id: VaultId, folder_path: string): Promise<FolderStats>
 }
-

@@ -1,19 +1,13 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { ACTION_IDS } from '$lib/actions/action_ids'
 import type { ActionRegistrationInput } from '$lib/actions/action_registration_input'
-import type { FolderLoadState } from '$lib/types/filetree'
+import { clear_folder_filetree_state } from '$lib/actions/filetree_state'
+import { PAGE_SIZE } from '$lib/constants/pagination'
+import type { FolderLoadState, FolderPaginationState } from '$lib/types/filetree'
 import { parent_folder_path } from '$lib/utils/filetree'
 
 function should_load_folder(state: FolderLoadState | undefined): boolean {
   return !state || state === 'unloaded' || state === 'error'
-}
-
-function reset_filetree(input: ActionRegistrationInput) {
-  input.stores.ui.filetree = {
-    expanded_paths: new SvelteSet<string>(),
-    load_states: new SvelteMap<string, FolderLoadState>(),
-    error_messages: new SvelteMap<string, string>()
-  }
 }
 
 function set_load_state(
@@ -36,6 +30,28 @@ function set_load_state(
     ...input.stores.ui.filetree,
     load_states,
     error_messages
+  }
+}
+
+function set_pagination(
+  input: ActionRegistrationInput,
+  path: string,
+  state: FolderPaginationState
+) {
+  const pagination = new SvelteMap(input.stores.ui.filetree.pagination)
+  pagination.set(path, state)
+  input.stores.ui.filetree = {
+    ...input.stores.ui.filetree,
+    pagination
+  }
+}
+
+function clear_folder_pagination(input: ActionRegistrationInput, path: string) {
+  const pagination = new SvelteMap(input.stores.ui.filetree.pagination)
+  pagination.delete(path)
+  input.stores.ui.filetree = {
+    ...input.stores.ui.filetree,
+    pagination
   }
 }
 
@@ -76,8 +92,8 @@ function build_folder_path_from_name(parent: string, name: string): string {
 
 function remove_expanded_paths(input: ActionRegistrationInput, folder_path: string) {
   const prefix = `${folder_path}/`
-  const expanded_paths = new SvelteSet<string>()
 
+  const expanded_paths = new SvelteSet<string>()
   for (const path of input.stores.ui.filetree.expanded_paths) {
     if (path === folder_path || path.startsWith(prefix)) {
       continue
@@ -85,32 +101,79 @@ function remove_expanded_paths(input: ActionRegistrationInput, folder_path: stri
     expanded_paths.add(path)
   }
 
+  const load_states = new SvelteMap<string, FolderLoadState>()
+  for (const [path, state] of input.stores.ui.filetree.load_states) {
+    if (path === folder_path || path.startsWith(prefix)) {
+      continue
+    }
+    load_states.set(path, state)
+  }
+
+  const error_messages = new SvelteMap<string, string>()
+  for (const [path, message] of input.stores.ui.filetree.error_messages) {
+    if (path === folder_path || path.startsWith(prefix)) {
+      continue
+    }
+    error_messages.set(path, message)
+  }
+
+  const pagination = new SvelteMap<string, FolderPaginationState>()
+  for (const [path, state] of input.stores.ui.filetree.pagination) {
+    if (path === folder_path || path.startsWith(prefix)) {
+      continue
+    }
+    pagination.set(path, state)
+  }
+
   input.stores.ui.filetree = {
-    ...input.stores.ui.filetree,
-    expanded_paths
+    expanded_paths,
+    load_states,
+    error_messages,
+    pagination
   }
 }
 
-function remap_expanded_paths(input: ActionRegistrationInput, old_path: string, new_path: string) {
+function remap_path(path: string, old_path: string, new_path: string): string {
   const old_prefix = `${old_path}/`
   const new_prefix = `${new_path}/`
-  const expanded_paths = new SvelteSet<string>()
 
+  if (path === old_path) {
+    return new_path
+  }
+
+  if (path.startsWith(old_prefix)) {
+    return `${new_prefix}${path.slice(old_prefix.length)}`
+  }
+
+  return path
+}
+
+function remap_expanded_paths(input: ActionRegistrationInput, old_path: string, new_path: string) {
+  const expanded_paths = new SvelteSet<string>()
   for (const path of input.stores.ui.filetree.expanded_paths) {
-    if (path === old_path) {
-      expanded_paths.add(new_path)
-      continue
-    }
-    if (path.startsWith(old_prefix)) {
-      expanded_paths.add(`${new_prefix}${path.slice(old_prefix.length)}`)
-      continue
-    }
-    expanded_paths.add(path)
+    expanded_paths.add(remap_path(path, old_path, new_path))
+  }
+
+  const load_states = new SvelteMap<string, FolderLoadState>()
+  for (const [path, state] of input.stores.ui.filetree.load_states) {
+    load_states.set(remap_path(path, old_path, new_path), state)
+  }
+
+  const error_messages = new SvelteMap<string, string>()
+  for (const [path, message] of input.stores.ui.filetree.error_messages) {
+    error_messages.set(remap_path(path, old_path, new_path), message)
+  }
+
+  const pagination = new SvelteMap<string, FolderPaginationState>()
+  for (const [path, state] of input.stores.ui.filetree.pagination) {
+    pagination.set(remap_path(path, old_path, new_path), state)
   }
 
   input.stores.ui.filetree = {
-    ...input.stores.ui.filetree,
-    expanded_paths
+    expanded_paths,
+    load_states,
+    error_messages,
+    pagination
   }
 }
 
@@ -126,16 +189,24 @@ async function load_folder(input: ActionRegistrationInput, path: string): Promis
 
   if (result.status === 'loaded') {
     set_load_state(input, path, 'loaded', null)
+    set_pagination(input, path, {
+      loaded_count: Math.min(PAGE_SIZE, result.total_count),
+      total_count: result.total_count,
+      load_state: 'idle',
+      error_message: null
+    })
     return
   }
 
   if (result.status === 'failed') {
     set_load_state(input, path, 'error', result.error)
+    clear_folder_pagination(input, path)
   }
 }
 
 export function register_folder_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input
+  const loading_more = new Set<string>()
 
   registry.register({
     id: ACTION_IDS.folder_request_create,
@@ -165,6 +236,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       const { parent_path, folder_name } = stores.ui.create_folder_dialog
       const result = await services.folder.create_folder(parent_path, folder_name)
       if (result.status === 'success') {
+        clear_folder_filetree_state(input, parent_path)
         close_create_dialog(input)
       }
     }
@@ -206,6 +278,60 @@ export function register_folder_actions(input: ActionRegistrationInput) {
   })
 
   registry.register({
+    id: ACTION_IDS.folder_load_more,
+    label: 'Load More Folder Contents',
+    execute: async (path: unknown) => {
+      const folder_path = String(path)
+      if (loading_more.has(folder_path)) {
+        return
+      }
+
+      const pagination = stores.ui.filetree.pagination.get(folder_path)
+      if (!pagination || pagination.loaded_count >= pagination.total_count) {
+        return
+      }
+
+      set_pagination(input, folder_path, {
+        ...pagination,
+        load_state: 'loading',
+        error_message: null
+      })
+
+      loading_more.add(folder_path)
+      try {
+        const generation = stores.vault.generation
+        const result = await services.folder.load_folder_page(
+          folder_path,
+          pagination.loaded_count,
+          generation
+        )
+        if (result.status === 'loaded') {
+          set_pagination(input, folder_path, {
+            loaded_count: Math.min(pagination.loaded_count + PAGE_SIZE, result.total_count),
+            total_count: result.total_count,
+            load_state: 'idle',
+            error_message: null
+          })
+        } else if (result.status === 'failed') {
+          set_pagination(input, folder_path, {
+            ...pagination,
+            load_state: 'error',
+            error_message: result.error
+          })
+        } else {
+          set_pagination(input, folder_path, {
+            ...pagination,
+            load_state: 'idle',
+            error_message: null
+          })
+        }
+      } finally {
+        loading_more.delete(folder_path)
+      }
+    }
+  })
+
+  registry.register({
     id: ACTION_IDS.folder_retry_load,
     label: 'Retry Folder Load',
     execute: async (path: unknown) => {
@@ -228,8 +354,65 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.folder_refresh_tree,
     label: 'Refresh File Tree',
     execute: async () => {
-      reset_filetree(input)
+      stores.vault.bump_generation()
+
+      const current_filetree = stores.ui.filetree
+      const loaded_paths = new Set<string>([''])
+      for (const [path, state] of current_filetree.load_states) {
+        if (state === 'loaded' || state === 'error') {
+          loaded_paths.add(path)
+        }
+      }
+
+      stores.ui.filetree = {
+        expanded_paths: new SvelteSet(current_filetree.expanded_paths),
+        load_states: new SvelteMap<string, FolderLoadState>(),
+        error_messages: new SvelteMap<string, string>(),
+        pagination: new SvelteMap<string, FolderPaginationState>()
+      }
+
+      stores.notes.reset()
+
       await load_folder(input, '')
+      const non_root = Array.from(loaded_paths).filter((path) => path !== '')
+      await Promise.all(non_root.map((path) => load_folder(input, path)))
+
+      const fresh_folder_paths = new Set(stores.notes.folder_paths)
+
+      const expanded_paths = new SvelteSet<string>()
+      for (const path of stores.ui.filetree.expanded_paths) {
+        if (path === '' || fresh_folder_paths.has(path)) {
+          expanded_paths.add(path)
+        }
+      }
+
+      const load_states = new SvelteMap<string, FolderLoadState>()
+      for (const [path, state] of stores.ui.filetree.load_states) {
+        if (path === '' || fresh_folder_paths.has(path)) {
+          load_states.set(path, state)
+        }
+      }
+
+      const error_messages = new SvelteMap<string, string>()
+      for (const [path, message] of stores.ui.filetree.error_messages) {
+        if (path === '' || fresh_folder_paths.has(path)) {
+          error_messages.set(path, message)
+        }
+      }
+
+      const pagination = new SvelteMap<string, FolderPaginationState>()
+      for (const [path, state] of stores.ui.filetree.pagination) {
+        if (path === '' || fresh_folder_paths.has(path)) {
+          pagination.set(path, state)
+        }
+      }
+
+      stores.ui.filetree = {
+        expanded_paths,
+        load_states,
+        error_messages,
+        pagination
+      }
     }
   })
 
@@ -267,6 +450,8 @@ export function register_folder_actions(input: ActionRegistrationInput) {
 
     const result = await services.folder.delete_folder(folder_path)
     if (result.status === 'success') {
+      const parent_path = parent_folder_path(folder_path)
+      clear_folder_filetree_state(input, parent_path)
       remove_expanded_paths(input, folder_path)
       close_delete_dialog(input)
     }
@@ -325,6 +510,11 @@ export function register_folder_actions(input: ActionRegistrationInput) {
 
     const result = await services.folder.rename_folder(folder_path, new_path)
     if (result.status === 'success') {
+      const new_parent = parent_folder_path(new_path)
+      clear_folder_filetree_state(input, parent)
+      if (new_parent !== parent) {
+        clear_folder_filetree_state(input, new_parent)
+      }
       remap_expanded_paths(input, folder_path, new_path)
       close_rename_dialog(input)
     }

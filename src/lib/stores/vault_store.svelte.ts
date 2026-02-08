@@ -19,6 +19,10 @@ export class VaultStore {
     this.recent_vaults = vaults
   }
 
+  bump_generation() {
+    this.generation += 1
+  }
+
   reset() {
     this.vault = null
     this.recent_vaults = []

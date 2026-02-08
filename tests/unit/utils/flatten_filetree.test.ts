@@ -22,7 +22,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
     expect(result).toEqual([])
   })
@@ -35,7 +36,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(2)
@@ -53,7 +55,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(1)
@@ -71,7 +74,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(['folder']),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(2)
@@ -89,7 +93,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(['folder']),
       load_states: new Map<string, FolderLoadState>([['folder', 'loading']]),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(1)
@@ -104,7 +109,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(['folder']),
       load_states: new Map<string, FolderLoadState>([['folder', 'error']]),
       error_messages: new Map([['folder', 'not a directory']]),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(1)
@@ -121,7 +127,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(['a', 'a/b', 'a/b/c']),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(4)
@@ -143,7 +150,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(2)
@@ -161,7 +169,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(0)
@@ -175,7 +184,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(['.hidden']),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: true
+      show_hidden_files: true,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(2)
@@ -193,7 +203,8 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: false
+      show_hidden_files: false,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(0)
@@ -207,11 +218,103 @@ describe('flatten_filetree', () => {
       expanded_paths: new Set(),
       load_states: new Map(),
       error_messages: new Map(),
-      show_hidden_files: true
+      show_hidden_files: true,
+      pagination: new Map()
     })
 
     expect(result).toHaveLength(1)
     expect(result[0]?.name).toBe('.hidden.md')
     expect(result[0]?.is_folder).toBe(false)
+  })
+
+  it('adds root load-more sentinel when pagination has more items', () => {
+    const result = flatten_filetree({
+      notes: [make_note('a.md')],
+      folder_paths: [],
+      expanded_paths: new Set(),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: false,
+      pagination: new Map([
+        [
+          '',
+          { loaded_count: 1, total_count: 2, load_state: 'idle', error_message: null }
+        ]
+      ])
+    })
+
+    expect(result).toHaveLength(2)
+    expect(result[1]?.is_load_more).toBe(true)
+    expect(result[1]?.depth).toBe(0)
+    expect(result[1]?.parent_path).toBe('')
+  })
+
+  it('adds nested load-more sentinel with child depth', () => {
+    const result = flatten_filetree({
+      notes: [make_note('docs/a.md')],
+      folder_paths: ['docs'],
+      expanded_paths: new Set(['docs']),
+      load_states: new Map([['docs', 'loaded']]),
+      error_messages: new Map(),
+      show_hidden_files: false,
+      pagination: new Map([
+        [
+          'docs',
+          { loaded_count: 1, total_count: 3, load_state: 'idle', error_message: null }
+        ]
+      ])
+    })
+
+    expect(result).toHaveLength(3)
+    expect(result[2]?.is_load_more).toBe(true)
+    expect(result[2]?.depth).toBe(1)
+    expect(result[2]?.parent_path).toBe('docs')
+  })
+
+  it('does not add sentinel when folder is fully loaded', () => {
+    const result = flatten_filetree({
+      notes: [make_note('a.md')],
+      folder_paths: [],
+      expanded_paths: new Set(),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: false,
+      pagination: new Map([
+        [
+          '',
+          { loaded_count: 2, total_count: 2, load_state: 'idle', error_message: null }
+        ]
+      ])
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result.some((node) => node.is_load_more)).toBe(false)
+  })
+
+  it('marks sentinel as error when load-more fails', () => {
+    const result = flatten_filetree({
+      notes: [make_note('a.md')],
+      folder_paths: [],
+      expanded_paths: new Set(),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: false,
+      pagination: new Map([
+        [
+          '',
+          {
+            loaded_count: 1,
+            total_count: 2,
+            load_state: 'error',
+            error_message: 'network failed'
+          }
+        ]
+      ])
+    })
+
+    expect(result).toHaveLength(2)
+    expect(result[1]?.is_load_more).toBe(true)
+    expect(result[1]?.has_error).toBe(true)
+    expect(result[1]?.error_message).toBe('network failed')
   })
 })

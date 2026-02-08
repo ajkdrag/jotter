@@ -126,6 +126,30 @@ export class NotesStore {
     this.folder_paths = retained_folders.sort((a, b) => a.localeCompare(b))
   }
 
+  append_folder_page(_folder_path: string, contents: FolderContents) {
+    const retained_notes = [...this.notes]
+    const note_ids = new Set(retained_notes.map((note) => note.id))
+    for (const note of contents.notes) {
+      if (note_ids.has(note.id)) {
+        continue
+      }
+      retained_notes.push(note)
+      note_ids.add(note.id)
+    }
+    this.notes = retained_notes
+
+    const retained_folders = [...this.folder_paths]
+    const folder_set = new Set(retained_folders)
+    for (const folder_path of contents.subfolders) {
+      if (folder_set.has(folder_path)) {
+        continue
+      }
+      retained_folders.push(folder_path)
+      folder_set.add(folder_path)
+    }
+    this.folder_paths = retained_folders
+  }
+
   reset() {
     this.notes = []
     this.folder_paths = []

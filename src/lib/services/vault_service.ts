@@ -25,6 +25,7 @@ import { ensure_open_note } from '$lib/utils/ensure_open_note'
 import { error_message } from '$lib/utils/error_message'
 import { logger } from '$lib/utils/logger'
 import type { ThemeMode } from '$lib/types/theme'
+import { PAGE_SIZE } from '$lib/constants/pagination'
 
 export type AppMountConfig = {
   reset_app_state: boolean
@@ -189,7 +190,7 @@ export class VaultService {
     await this.vault_port.remember_last_vault(vault.id)
 
     const [root_contents, recent_vaults] = await Promise.all([
-      this.notes_port.list_folder_contents(vault.id, ''),
+      this.notes_port.list_folder_contents(vault.id, '', 0, PAGE_SIZE),
       this.vault_port.list_vaults()
     ])
 
