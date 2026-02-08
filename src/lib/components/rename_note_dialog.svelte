@@ -90,7 +90,7 @@
     </Dialog.Header>
 
     {#if !error && !show_overwrite_confirm}
-      <div class="space-y-3">
+      <div class="space-y-3 overflow-hidden">
         {#if parent_path}
           <div class="flex items-center gap-2 text-sm min-w-0">
             <span class="shrink-0 text-muted-foreground">Location:</span>
