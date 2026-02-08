@@ -36,7 +36,17 @@ import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
 
-const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+function create_svg_data_uri(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+const IMAGE_LOADING_PLACEHOLDER = create_svg_data_uri(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280"><rect width="480" height="280" fill="#f4f4f5"/><rect x="40" y="40" width="400" height="200" fill="#e4e4e7" rx="8"/><text x="240" y="145" fill="#71717a" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="16" text-anchor="middle">Loading image...</text></svg>'
+)
+
+const IMAGE_LOAD_ERROR_PLACEHOLDER = create_svg_data_uri(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280"><rect width="480" height="280" fill="#fef2f2"/><rect x="40" y="40" width="400" height="200" fill="#fee2e2" rx="8"/><text x="240" y="145" fill="#b91c1c" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="16" text-anchor="middle">Image failed to load</text></svg>'
+)
 
 function resize_icon(svg: string, size: number): string {
   return svg
@@ -174,6 +184,22 @@ export function create_milkdown_editor_port(args?: {
             const vid = vault_id
             const resolved_url_cache = new Map<string, string>()
             const pending_resolutions = new Set<string>()
+            const apply_resolved_url_to_rendered_nodes = (src: string, resolved_url: string) => {
+              try {
+                const view = ctx.get(editorViewCtx)
+                view.state.doc.descendants((node, pos) => {
+                  if (node.type.name === 'image-block' && node.attrs.src === src) {
+                    const node_dom = view.nodeDOM(pos)
+                    if (!(node_dom instanceof HTMLElement)) return
+                    const img = node_dom.querySelector('img')
+                    if (!(img instanceof HTMLImageElement)) return
+                    img.src = resolved_url
+                  }
+                })
+              } catch {
+                return
+              }
+            }
 
             ctx.update(imageBlockConfig.key, (default_config) => ({
               ...default_config,
@@ -194,22 +220,16 @@ export function create_milkdown_editor_port(args?: {
                   void result.then((resolved_url) => {
                     resolved_url_cache.set(url, resolved_url)
                     pending_resolutions.delete(url)
-                    try {
-                      const view = ctx.get(editorViewCtx)
-                      const tr = view.state.tr
-                      view.state.doc.descendants((node, pos) => {
-                        if (node.type.name === 'image-block' && node.attrs.src === url) {
-                          tr.setNodeMarkup(pos, undefined, { ...node.attrs })
-                        }
-                      })
-                      if (tr.steps.length > 0) view.dispatch(tr)
-                    } catch { /* editor may be destroyed */ }
-                  }).catch(() => {
+                    apply_resolved_url_to_rendered_nodes(url, resolved_url)
+                  }).catch((error: unknown) => {
+                    console.error('Failed to resolve asset URL for image block:', error)
+                    resolved_url_cache.set(url, IMAGE_LOAD_ERROR_PLACEHOLDER)
                     pending_resolutions.delete(url)
+                    apply_resolved_url_to_rendered_nodes(url, IMAGE_LOAD_ERROR_PLACEHOLDER)
                   })
                 }
 
-                return TRANSPARENT_PIXEL
+                return IMAGE_LOADING_PLACEHOLDER
               }
             }))
           }
