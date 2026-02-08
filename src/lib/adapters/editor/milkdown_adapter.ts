@@ -20,7 +20,7 @@ import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { prism } from '@milkdown/plugin-prism'
 import { indent } from '@milkdown/plugin-indent'
 import { replaceAll } from '@milkdown/kit/utils'
-import { Link, Pencil, Trash2, Check } from 'lucide-static'
+import { Check, ImageOff, Link, LoaderCircle, Pencil, Trash2 } from 'lucide-static'
 import type { EditorPort } from '$lib/ports/editor_port'
 import type { AssetPath, VaultId } from '$lib/types/ids'
 import { as_asset_path } from '$lib/types/ids'
@@ -40,13 +40,19 @@ function create_svg_data_uri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 
-const IMAGE_LOADING_PLACEHOLDER = create_svg_data_uri(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280"><rect width="480" height="280" fill="#f4f4f5"/><rect x="40" y="40" width="400" height="200" fill="#e4e4e7" rx="8"/><text x="240" y="145" fill="#71717a" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="16" text-anchor="middle">Loading image...</text></svg>'
-)
+const PLACEHOLDER_IMAGE_WIDTH = 1200
+const PLACEHOLDER_IMAGE_HEIGHT = 675
 
-const IMAGE_LOAD_ERROR_PLACEHOLDER = create_svg_data_uri(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280"><rect width="480" height="280" fill="#fef2f2"/><rect x="40" y="40" width="400" height="200" fill="#fee2e2" rx="8"/><text x="240" y="145" fill="#b91c1c" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="16" text-anchor="middle">Image failed to load</text></svg>'
-)
+function create_icon_placeholder_data_uri(icon_svg: string, color: string): string {
+  const svg = icon_svg
+    .replace(/width="24"/, `width="${String(PLACEHOLDER_IMAGE_WIDTH)}"`)
+    .replace(/height="24"/, `height="${String(PLACEHOLDER_IMAGE_HEIGHT)}"`)
+    .replace(/stroke="currentColor"/g, `stroke="${color}"`)
+  return create_svg_data_uri(svg)
+}
+
+const IMAGE_LOADING_PLACEHOLDER = create_icon_placeholder_data_uri(LoaderCircle, '#71717a')
+const IMAGE_LOAD_ERROR_PLACEHOLDER = create_icon_placeholder_data_uri(ImageOff, '#b91c1c')
 
 function resize_icon(svg: string, size: number): string {
   return svg
@@ -184,6 +190,26 @@ export function create_milkdown_editor_port(args?: {
             const vid = vault_id
             const resolved_url_cache = new Map<string, string>()
             const pending_resolutions = new Set<string>()
+            const update_image_height = (img: HTMLImageElement, ratio: number) => {
+              const host = img.closest('.milkdown-image-block')
+              if (!(host instanceof HTMLElement)) return
+
+              const max_width = host.getBoundingClientRect().width
+              if (!max_width) return
+
+              const natural_width = img.naturalWidth
+              const natural_height = img.naturalHeight
+              if (!natural_width || !natural_height) return
+
+              const transformed_height = natural_width < max_width
+                ? natural_height
+                : max_width * (natural_height / natural_width)
+              const base_height = transformed_height.toFixed(2)
+              const rendered_height = (transformed_height * ratio).toFixed(2)
+              img.dataset.origin = base_height
+              img.dataset.height = rendered_height
+              img.style.height = `${rendered_height}px`
+            }
             const apply_resolved_url_to_rendered_nodes = (src: string, resolved_url: string) => {
               try {
                 const view = ctx.get(editorViewCtx)
@@ -193,12 +219,29 @@ export function create_milkdown_editor_port(args?: {
                     if (!(node_dom instanceof HTMLElement)) return
                     const img = node_dom.querySelector('img')
                     if (!(img instanceof HTMLImageElement)) return
+                    const ratio = typeof node.attrs.ratio === 'number' ? node.attrs.ratio : 1
+                    const finalize_size = () => {
+                      update_image_height(img, ratio)
+                    }
+                    if (img.src === resolved_url) {
+                      if (img.complete && img.naturalWidth > 0) finalize_size()
+                      return
+                    }
+                    img.style.removeProperty('height')
+                    delete img.dataset.origin
+                    delete img.dataset.height
+                    img.addEventListener('load', finalize_size, { once: true })
                     img.src = resolved_url
                   }
                 })
               } catch {
                 return
               }
+            }
+            const finalize_resolution = (src: string, resolved_url: string) => {
+              resolved_url_cache.set(src, resolved_url)
+              pending_resolutions.delete(src)
+              apply_resolved_url_to_rendered_nodes(src, resolved_url)
             }
 
             ctx.update(imageBlockConfig.key, (default_config) => ({
@@ -218,14 +261,10 @@ export function create_milkdown_editor_port(args?: {
                 if (!pending_resolutions.has(url)) {
                   pending_resolutions.add(url)
                   void result.then((resolved_url) => {
-                    resolved_url_cache.set(url, resolved_url)
-                    pending_resolutions.delete(url)
-                    apply_resolved_url_to_rendered_nodes(url, resolved_url)
+                    finalize_resolution(url, resolved_url)
                   }).catch((error: unknown) => {
                     console.error('Failed to resolve asset URL for image block:', error)
-                    resolved_url_cache.set(url, IMAGE_LOAD_ERROR_PLACEHOLDER)
-                    pending_resolutions.delete(url)
-                    apply_resolved_url_to_rendered_nodes(url, IMAGE_LOAD_ERROR_PLACEHOLDER)
+                    finalize_resolution(url, IMAGE_LOAD_ERROR_PLACEHOLDER)
                   })
                 }
 
