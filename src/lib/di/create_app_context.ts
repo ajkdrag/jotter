@@ -90,7 +90,8 @@ export function create_app_context(input: {
       vault: stores.vault,
       notes: stores.notes,
       editor: stores.editor,
-      op: stores.op
+      op: stores.op,
+      search: stores.search
     },
     services: {
       vault: vault_service,

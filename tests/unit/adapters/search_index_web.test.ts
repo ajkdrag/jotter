@@ -30,21 +30,21 @@ describe('search_index_web', () => {
 
     const content_results = index.search(
       vault_id,
-      { raw: 'content: fox', text: 'fox', scope: 'content' },
+      { raw: 'content: fox', text: 'fox', scope: 'content', domain: 'notes' },
       10
     )
     expect(content_results[0]?.note.path).toBe(as_note_path('alpha.md'))
 
     const path_results = index.search(
       vault_id,
-      { raw: 'path: beta', text: 'beta', scope: 'path' },
+      { raw: 'path: beta', text: 'beta', scope: 'path', domain: 'notes' },
       10
     )
     expect(path_results[0]?.note.path).toBe(as_note_path('beta.md'))
 
     const title_results = index.search(
       vault_id,
-      { raw: 'title: alpha', text: 'alpha', scope: 'title' },
+      { raw: 'title: alpha', text: 'alpha', scope: 'title', domain: 'notes' },
       10
     )
     expect(title_results[0]?.note.title).toBe('Alpha Note')
@@ -59,7 +59,7 @@ describe('search_index_web', () => {
 
     const results = index.search(
       vault_id,
-      { raw: 'content: match', text: 'match', scope: 'content' },
+      { raw: 'content: match', text: 'match', scope: 'content', domain: 'notes' },
       10
     )
     expect(results[0]?.snippet).toBeDefined()

@@ -7,14 +7,13 @@
   import SaveNoteDialog from '$lib/components/save_note_dialog.svelte'
   import SettingsDialog from '$lib/components/settings_dialog.svelte'
   import CreateFolderDialog from '$lib/components/create_folder_dialog.svelte'
-  import CommandPalette from '$lib/components/command_palette.svelte'
-  import FileSearchDialog from '$lib/components/file_search_dialog.svelte'
+  import Omnibar from '$lib/components/omnibar.svelte'
   import ImagePasteDialog from '$lib/components/image_paste_dialog.svelte'
   import { use_app_context } from '$lib/context/app_context.svelte'
   import { ACTION_IDS } from '$lib/actions/action_ids'
-  import type { CommandId } from '$lib/types/command_palette'
+  import type { OmnibarItem } from '$lib/types/search'
   import type { EditorSettings } from '$lib/types/editor_settings'
-  import type { NoteId, VaultId } from '$lib/types/ids'
+  import type { VaultId } from '$lib/types/ids'
 
   type Props = {
     hide_choose_vault_button?: boolean
@@ -27,7 +26,7 @@
   const has_vault = $derived(stores.vault.vault !== null)
 
   const recent_notes_for_display = $derived(
-    stores.ui.file_search.recent_note_ids
+    stores.search.recent_note_ids
       .map((id) => stores.notes.notes.find((note) => note.id === id))
       .filter((note): note is NonNullable<typeof note> => note != null)
   )
@@ -162,46 +161,24 @@
   on_cancel={() => void action_registry.execute(ACTION_IDS.folder_cancel_create)}
 />
 
-<CommandPalette
-  open={stores.ui.command_palette.open}
-  query={stores.ui.command_palette.query}
-  selected_index={stores.ui.command_palette.selected_index}
-  commands={stores.ui.command_palette.commands}
-  settings={stores.ui.command_palette.settings}
-  on_open_change={(open) => {
-    if (open) {
-      void action_registry.execute(ACTION_IDS.palette_open)
-    } else {
-      void action_registry.execute(ACTION_IDS.palette_close)
-    }
-  }}
-  on_query_change={(query: string) => void action_registry.execute(ACTION_IDS.palette_set_query, query)}
-  on_selected_index_change={(index: number) =>
-    void action_registry.execute(ACTION_IDS.palette_set_selected_index, index)}
-  on_select_command={(command: CommandId) =>
-    void action_registry.execute(ACTION_IDS.palette_select_command, command)}
-  on_select_setting={(key: string) =>
-    void action_registry.execute(ACTION_IDS.palette_select_setting, key as keyof EditorSettings)}
-/>
-
-<FileSearchDialog
-  open={stores.ui.file_search.open}
-  query={stores.ui.file_search.query}
-  results={stores.ui.file_search.results}
+<Omnibar
+  open={stores.ui.omnibar.open}
+  query={stores.ui.omnibar.query}
+  selected_index={stores.ui.omnibar.selected_index}
+  is_searching={stores.ui.omnibar.is_searching}
+  items={stores.search.omnibar_items}
   recent_notes={recent_notes_for_display}
-  selected_index={stores.ui.file_search.selected_index}
-  is_searching={stores.ui.file_search.is_searching}
   on_open_change={(open) => {
     if (open) {
-      void action_registry.execute(ACTION_IDS.search_open)
+      void action_registry.execute(ACTION_IDS.omnibar_open)
     } else {
-      void action_registry.execute(ACTION_IDS.search_close)
+      void action_registry.execute(ACTION_IDS.omnibar_close)
     }
   }}
-  on_query_change={(query: string) => void action_registry.execute(ACTION_IDS.search_set_query, query)}
+  on_query_change={(query: string) => void action_registry.execute(ACTION_IDS.omnibar_set_query, query)}
   on_selected_index_change={(index: number) =>
-    void action_registry.execute(ACTION_IDS.search_set_selected_index, index)}
-  on_confirm={(note_id: NoteId) => void action_registry.execute(ACTION_IDS.search_confirm_note, note_id)}
+    void action_registry.execute(ACTION_IDS.omnibar_set_selected_index, index)}
+  on_confirm={(item: OmnibarItem) => void action_registry.execute(ACTION_IDS.omnibar_confirm_item, item)}
 />
 
 <ImagePasteDialog

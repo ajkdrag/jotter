@@ -8,6 +8,7 @@ import { create_test_vault } from '../helpers/test_fixtures'
 describe('SearchService', () => {
   it('searches notes and returns results', async () => {
     const search_port = {
+      suggest_wiki_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([
         {
           note: {
@@ -42,6 +43,7 @@ describe('SearchService', () => {
 
   it('returns empty result and resets op for empty query', async () => {
     const search_port = {
+      suggest_wiki_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([])
     }
 

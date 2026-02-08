@@ -61,20 +61,19 @@ export const ACTION_IDS = {
   settings_update: 'settings.update',
   settings_save: 'settings.save',
 
-  palette_toggle: 'palette.toggle',
-  palette_open: 'palette.open',
-  palette_close: 'palette.close',
-  palette_set_query: 'palette.set_query',
-  palette_set_selected_index: 'palette.set_selected_index',
-  palette_select_command: 'palette.select_command',
-  palette_select_setting: 'palette.select_setting',
+  omnibar_toggle: 'omnibar.toggle',
+  omnibar_open: 'omnibar.open',
+  omnibar_close: 'omnibar.close',
+  omnibar_set_query: 'omnibar.set_query',
+  omnibar_set_selected_index: 'omnibar.set_selected_index',
+  omnibar_confirm_item: 'omnibar.confirm_item',
 
-  search_toggle: 'search.toggle',
-  search_open: 'search.open',
-  search_close: 'search.close',
-  search_set_query: 'search.set_query',
-  search_set_selected_index: 'search.set_selected_index',
-  search_confirm_note: 'search.confirm_note'
+  find_in_file_toggle: 'find_in_file.toggle',
+  find_in_file_open: 'find_in_file.open',
+  find_in_file_close: 'find_in_file.close',
+  find_in_file_set_query: 'find_in_file.set_query',
+  find_in_file_next: 'find_in_file.next',
+  find_in_file_prev: 'find_in_file.prev'
 } as const
 
 export type ActionId = (typeof ACTION_IDS)[keyof typeof ACTION_IDS]

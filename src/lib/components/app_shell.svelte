@@ -17,8 +17,7 @@
   const { stores, action_registry } = use_app_context()
 
   const has_vault = $derived(stores.vault.vault !== null)
-  const palette_open = $derived(stores.ui.command_palette.open)
-  const file_search_open = $derived(stores.ui.file_search.open)
+  const omnibar_open = $derived(stores.ui.omnibar.open)
 
   const any_blocking_dialog_open = $derived(
     stores.ui.system_dialog_open ||
@@ -38,14 +37,17 @@
 
   const keyboard = use_keyboard_shortcuts({
     is_enabled: () => has_vault,
-    is_blocked: () => any_blocking_dialog_open || palette_open || file_search_open,
-    is_palette_open: () => palette_open,
-    is_file_search_open: () => file_search_open,
-    on_toggle_palette: () => {
-      void action_registry.execute(ACTION_IDS.palette_toggle)
+    is_blocked: () => any_blocking_dialog_open || omnibar_open,
+    is_omnibar_open: () => omnibar_open,
+    on_toggle_omnibar: () => {
+      void action_registry.execute(ACTION_IDS.omnibar_toggle)
     },
-    on_toggle_file_search: () => {
-      void action_registry.execute(ACTION_IDS.search_toggle)
+    on_open_omnibar_commands: () => {
+      void action_registry.execute(ACTION_IDS.omnibar_open)
+      void action_registry.execute(ACTION_IDS.omnibar_set_query, '>')
+    },
+    on_open_omnibar_notes: () => {
+      void action_registry.execute(ACTION_IDS.omnibar_open)
     },
     on_toggle_sidebar: () => {
       void action_registry.execute(ACTION_IDS.ui_toggle_sidebar)

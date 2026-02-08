@@ -25,8 +25,8 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
   {
     id: 'open_file_search',
     label: 'Search files',
-    description: 'Open file search (Cmd+O)',
-    keywords: ['search', 'find', 'file', 'open', 'quick', 'navigate'],
+    description: 'Open omnibar (Cmd+K)',
+    keywords: ['search', 'find', 'file', 'open', 'quick', 'navigate', 'omnibar'],
     icon: 'search'
   }
 ]

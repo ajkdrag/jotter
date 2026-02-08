@@ -4,9 +4,6 @@ import { DEFAULT_EDITOR_SETTINGS } from '$lib/types/editor_settings'
 import type { NoteMeta } from '$lib/types/note'
 import type { NoteId, NotePath } from '$lib/types/ids'
 import type { FolderLoadState, FolderPaginationState } from '$lib/types/filetree'
-import type { NoteSearchHit } from '$lib/types/search'
-import type { CommandDefinition } from '$lib/types/command_palette'
-import type { SettingDefinition } from '$lib/types/settings_registry'
 import type { PastedImagePayload } from '$lib/types/editor'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
@@ -109,34 +106,26 @@ export class UIStore {
     has_unsaved_changes: false
   })
 
-  command_palette = $state<{
+  omnibar = $state<{
     open: boolean
     query: string
-    selected_index: number
-    commands: CommandDefinition[]
-    settings: SettingDefinition[]
-  }>({
-    open: false,
-    query: '',
-    selected_index: 0,
-    commands: [],
-    settings: []
-  })
-
-  file_search = $state<{
-    open: boolean
-    query: string
-    results: NoteSearchHit[]
-    recent_note_ids: NoteId[]
     selected_index: number
     is_searching: boolean
   }>({
     open: false,
     query: '',
-    results: [],
-    recent_note_ids: [],
     selected_index: 0,
     is_searching: false
+  })
+
+  find_in_file = $state<{
+    open: boolean
+    query: string
+    selected_match_index: number
+  }>({
+    open: false,
+    query: '',
+    selected_match_index: 0
   })
 
   filetree = $state<{
@@ -230,20 +219,16 @@ export class UIStore {
       persisted_settings: { ...this.editor_settings },
       has_unsaved_changes: false
     }
-    this.command_palette = {
+    this.omnibar = {
       open: false,
       query: '',
-      selected_index: 0,
-      commands: [],
-      settings: []
-    }
-    this.file_search = {
-      open: false,
-      query: '',
-      results: [],
-      recent_note_ids: [],
       selected_index: 0,
       is_searching: false
+    }
+    this.find_in_file = {
+      open: false,
+      query: '',
+      selected_match_index: 0
     }
     this.filetree = {
       expanded_paths: new SvelteSet<string>(),

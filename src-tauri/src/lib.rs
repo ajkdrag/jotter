@@ -1,6 +1,7 @@
 mod constants;
 mod notes_service;
 mod index_service;
+mod search_db;
 mod watcher_service;
 mod storage;
 mod vault_service;
@@ -14,6 +15,7 @@ pub fn run() {
     let _ = ICON_STAMP;
     tauri::Builder::default()
         .manage(watcher_service::WatcherState::default())
+        .manage(index_service::SearchDbState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -36,6 +38,7 @@ pub fn run() {
             watcher_service::unwatch_vault,
             index_service::index_build,
             index_service::index_search,
+            index_service::index_suggest,
             index_service::index_upsert_note,
             index_service::index_remove_note,
             index_service::index_backlinks,

@@ -12,6 +12,7 @@ import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import type { NotesStore } from '$lib/stores/notes_store.svelte'
 import type { EditorStore } from '$lib/stores/editor_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
+import type { SearchStore } from '$lib/stores/search_store.svelte'
 
 export type ActionRegistrationInput = {
   registry: ActionRegistry
@@ -21,6 +22,7 @@ export type ActionRegistrationInput = {
     notes: NotesStore
     editor: EditorStore
     op: OpStore
+    search: SearchStore
   }
   services: {
     vault: VaultService
