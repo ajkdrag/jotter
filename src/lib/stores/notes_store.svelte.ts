@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity'
 import type { NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { FolderContents } from '$lib/types/filetree'
@@ -85,28 +86,45 @@ export class NotesStore {
   }
 
   merge_folder_contents(folder_path: string, contents: FolderContents) {
-    const merged_notes = [...this.notes]
-    for (const note of contents.notes) {
-      const index = merged_notes.findIndex((item) => item.id === note.id)
-      if (index >= 0) {
-        merged_notes[index] = note
-      } else {
-        merged_notes.push(note)
-      }
-    }
-    this.notes = merged_notes.sort((a, b) => a.path.localeCompare(b.path))
+    const prefix = folder_path ? `${folder_path}/` : ''
 
-    const merged_folders = [...this.folder_paths]
+    const fresh_child_names = new SvelteSet<string>()
     for (const subfolder of contents.subfolders) {
-      if (!merged_folders.includes(subfolder)) {
-        merged_folders.push(subfolder)
-      }
+      const name = subfolder.slice(prefix.length).split('/')[0] ?? ''
+      fresh_child_names.add(name)
     }
-    if (folder_path && !merged_folders.includes(folder_path)) {
-      merged_folders.push(folder_path)
+    for (const note of contents.notes) {
+      const name = note.path.slice(prefix.length).split('/')[0] ?? ''
+      fresh_child_names.add(name)
     }
 
-    this.folder_paths = merged_folders.sort((a, b) => a.localeCompare(b))
+    const is_stale = (path: string): boolean => {
+      if (folder_path !== '' && !path.startsWith(prefix)) return false
+      const top = path.slice(prefix.length).split('/')[0] ?? ''
+      return !fresh_child_names.has(top)
+    }
+
+    const retained_notes = this.notes.filter((note) => !is_stale(note.path))
+    for (const note of contents.notes) {
+      const index = retained_notes.findIndex((item) => item.id === note.id)
+      if (index >= 0) {
+        retained_notes[index] = note
+      } else {
+        retained_notes.push(note)
+      }
+    }
+    this.notes = retained_notes.sort((a, b) => a.path.localeCompare(b.path))
+
+    const retained_folders = this.folder_paths.filter((path) => !is_stale(path))
+    for (const subfolder of contents.subfolders) {
+      if (!retained_folders.includes(subfolder)) {
+        retained_folders.push(subfolder)
+      }
+    }
+    if (folder_path && !retained_folders.includes(folder_path)) {
+      retained_folders.push(folder_path)
+    }
+    this.folder_paths = retained_folders.sort((a, b) => a.localeCompare(b))
   }
 
   reset() {
