@@ -14,7 +14,7 @@ export type EditorServiceCallbacks = {
   on_image_paste_requested: (note_id: NoteId, note_path: NotePath, image: PastedImagePayload) => void
 }
 
-export type EditorFlushResult = {
+type EditorFlushResult = {
   note_id: NoteId
   markdown: MarkdownText
 }

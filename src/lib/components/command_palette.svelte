@@ -53,16 +53,13 @@
 
   let input_ref: HTMLInputElement | null = $state(null)
 
-  const filtered_commands = $derived(commands)
-  const filtered_settings = $derived(settings)
-
   const items: PaletteItem[] = $derived([
-    ...filtered_commands.map((cmd): PaletteItem => ({ type: 'command', item: cmd })),
-    ...filtered_settings.map((setting): PaletteItem => ({ type: 'setting', item: setting }))
+    ...commands.map((cmd): PaletteItem => ({ type: 'command', item: cmd })),
+    ...settings.map((setting): PaletteItem => ({ type: 'setting', item: setting }))
   ])
 
-  const show_commands_header = $derived(filtered_commands.length > 0)
-  const show_settings_header = $derived(filtered_settings.length > 0 && query.trim().length > 0)
+  const show_commands_header = $derived(commands.length > 0)
+  const show_settings_header = $derived(settings.length > 0 && query.trim().length > 0)
 
   function get_item_id(item: PaletteItem): string {
     return item.type === 'command' ? `cmd-${item.item.id}` : `setting-${item.item.key}`
@@ -112,12 +109,8 @@
     setTimeout(() => { ref.focus() }, 0)
   })
 
-  function commands_start_index(): number {
-    return 0
-  }
-
   function settings_start_index(): number {
-    return filtered_commands.length
+    return commands.length
   }
 </script>
 
@@ -148,8 +141,8 @@
         </div>
       {/if}
 
-      {#each filtered_commands as command, index (command.id)}
-        {@const global_index = commands_start_index() + index}
+      {#each commands as command, index (command.id)}
+        {@const global_index = index}
         {@const IconComponent = COMMAND_ICONS[command.icon]}
         <button
           id={`cmd-${command.id}`}
@@ -175,7 +168,7 @@
         </div>
       {/if}
 
-      {#each filtered_settings as setting, index (setting.key)}
+      {#each settings as setting, index (setting.key)}
         {@const global_index = settings_start_index() + index}
         <button
           id={`setting-${setting.key}`}

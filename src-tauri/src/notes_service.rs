@@ -29,13 +29,7 @@ pub struct NoteWriteArgs {
     pub markdown: String,
 }
 
-fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
-    let store = storage::load_store(app)?;
-    let vault_path = storage::vault_path_by_id(&store, vault_id).ok_or("vault not found")?;
-    Ok(PathBuf::from(vault_path))
-}
-
-fn safe_note_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
     let rel = PathBuf::from(note_rel);
     if rel.is_absolute() {
         return Err("note path must be relative".to_string());
@@ -99,7 +93,7 @@ pub(crate) fn file_meta(path: &Path) -> Result<(i64, i64), String> {
 
 #[tauri::command]
 pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, String> {
-    let root = vault_path(&app, &vault_id).map_err(|e| {
+    let root = storage::vault_path(&app, &vault_id).map_err(|e| {
         log::error!("Failed to resolve vault path for {}: {}", vault_id, e);
         e
     })?;
@@ -110,7 +104,7 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            !name.starts_with('.') || name == ".." || name == "."
+            !name.starts_with('.')
         })
         .filter_map(|e| e.ok())
     {
@@ -124,7 +118,7 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
 
         let rel = p.strip_prefix(&root).map_err(|e| e.to_string())?;
         let rel = storage::normalize_relative_path(rel);
-        let abs = safe_note_abs(&root, &rel)?;
+        let abs = safe_vault_abs(&root, &rel)?;
         let title = extract_title(&abs);
         let (mtime_ms, size_bytes) = file_meta(&abs)?;
         out.push(NoteMeta {
@@ -142,8 +136,8 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
 
 #[tauri::command]
 pub fn read_note(app: AppHandle, vault_id: String, note_id: String) -> Result<NoteDoc, String> {
-    let root = vault_path(&app, &vault_id)?;
-    let abs = safe_note_abs(&root, &note_id)?;
+    let root = storage::vault_path(&app, &vault_id)?;
+    let abs = safe_vault_abs(&root, &note_id)?;
     let markdown = std::fs::read_to_string(&abs).map_err(|e| {
         log::error!("Failed to read note {}: {}", note_id, e);
         e.to_string()
@@ -183,8 +177,8 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
 
 #[tauri::command]
 pub fn write_note(args: NoteWriteArgs, app: AppHandle) -> Result<(), String> {
-    let root = vault_path(&app, &args.vault_id)?;
-    let abs = safe_note_abs(&root, &args.note_id)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
+    let abs = safe_vault_abs(&root, &args.note_id)?;
     atomic_write(&abs, &args.markdown)?;
     Ok(())
 }
@@ -198,8 +192,8 @@ pub struct NoteCreateArgs {
 
 #[tauri::command]
 pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, String> {
-    let root = vault_path(&app, &args.vault_id)?;
-    let abs = safe_note_abs(&root, &args.note_path)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
+    let abs = safe_vault_abs(&root, &args.note_path)?;
     if abs.exists() {
         return Err("note already exists".to_string());
     }
@@ -272,8 +266,8 @@ fn sanitize_stem(value: &str) -> String {
 
 #[tauri::command]
 pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<String, String> {
-    let root = vault_path(&app, &args.vault_id)?;
-    let _ = safe_note_abs(&root, &args.note_path)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
+    let _ = safe_vault_abs(&root, &args.note_path)?;
 
     let note_rel = PathBuf::from(&args.note_path);
     let note_parent = note_rel.parent().unwrap_or_else(|| Path::new(""));
@@ -303,7 +297,7 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         note_parent.join(attachment_folder).join(filename)
     };
     let rel = storage::normalize_relative_path(&rel_path);
-    let abs = safe_note_abs(&root, &rel)?;
+    let abs = safe_vault_abs(&root, &rel)?;
 
     let dir = abs.parent().ok_or("invalid asset path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -323,9 +317,9 @@ pub struct NoteRenameArgs {
 
 #[tauri::command]
 pub fn rename_note(args: NoteRenameArgs, app: AppHandle) -> Result<(), String> {
-    let root = vault_path(&app, &args.vault_id)?;
-    let from_abs = safe_note_abs(&root, &args.from)?;
-    let to_abs = safe_note_abs(&root, &args.to)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
+    let from_abs = safe_vault_abs(&root, &args.from)?;
+    let to_abs = safe_vault_abs(&root, &args.to)?;
     let dir = to_abs.parent().ok_or("invalid destination path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     std::fs::rename(&from_abs, &to_abs).map_err(|e| e.to_string())?;
@@ -346,15 +340,15 @@ pub struct FolderContents {
 
 #[tauri::command]
 pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
-    let root = vault_path(&app, &args.vault_id)?;
-    let abs = safe_note_abs(&root, &args.note_id)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
+    let abs = safe_vault_abs(&root, &args.note_id)?;
     std::fs::remove_file(&abs).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn list_folders(app: AppHandle, vault_id: String) -> Result<Vec<String>, String> {
-    let root = vault_path(&app, &vault_id)?;
+    let root = storage::vault_path(&app, &vault_id)?;
     let mut out = Vec::new();
 
     for entry in WalkDir::new(&root)
@@ -386,11 +380,11 @@ pub struct FolderCreateArgs {
 
 #[tauri::command]
 pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), String> {
-    let root = vault_path(&app, &args.vault_id)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
     let parent = if args.parent_path.is_empty() {
         root.clone()
     } else {
-        safe_note_abs(&root, &args.parent_path)?
+        safe_vault_abs(&root, &args.parent_path)?
     };
     if !parent.is_dir() {
         return Err("parent path is not a directory".to_string());
@@ -412,12 +406,12 @@ pub struct FolderRenameArgs {
 
 #[tauri::command]
 pub fn rename_folder(args: FolderRenameArgs, app: AppHandle) -> Result<(), String> {
-    let root = vault_path(&app, &args.vault_id)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
     if args.from_path.is_empty() || args.to_path.is_empty() {
         return Err("cannot rename vault root".to_string());
     }
-    let from_abs = safe_note_abs(&root, &args.from_path)?;
-    let to_abs = safe_note_abs(&root, &args.to_path)?;
+    let from_abs = safe_vault_abs(&root, &args.from_path)?;
+    let to_abs = safe_vault_abs(&root, &args.to_path)?;
     if !from_abs.is_dir() {
         return Err("source is not a directory".to_string());
     }
@@ -442,11 +436,11 @@ pub struct FolderDeleteResult {
 
 #[tauri::command]
 pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<FolderDeleteResult, String> {
-    let root = vault_path(&app, &args.vault_id)?;
+    let root = storage::vault_path(&app, &args.vault_id)?;
     if args.folder_path.is_empty() {
         return Err("cannot delete vault root".to_string());
     }
-    let abs = safe_note_abs(&root, &args.folder_path)?;
+    let abs = safe_vault_abs(&root, &args.folder_path)?;
     if !abs.is_dir() {
         return Err("path is not a directory".to_string());
     }
@@ -482,29 +476,11 @@ pub fn list_folder_contents(
     vault_id: String,
     folder_path: String,
 ) -> Result<FolderContents, String> {
-    let root = vault_path(&app, &vault_id)?;
+    let root = storage::vault_path(&app, &vault_id)?;
     let target = if folder_path.is_empty() {
         root.clone()
     } else {
-        let rel = PathBuf::from(&folder_path);
-        if rel.is_absolute() {
-            return Err("folder path must be relative".to_string());
-        }
-        if rel.components().any(|c| {
-            matches!(
-                c,
-                Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir
-            )
-        }) {
-            return Err("folder path contains invalid segments".to_string());
-        }
-        let abs = root.join(&rel);
-        let abs = abs.canonicalize().unwrap_or(abs);
-        let base = root.canonicalize().unwrap_or_else(|_| root.clone());
-        if !abs.starts_with(&base) {
-            return Err("folder path escapes vault".to_string());
-        }
-        abs
+        safe_vault_abs(&root, &folder_path)?
     };
 
     if !target.is_dir() {
@@ -571,12 +547,12 @@ mod tests {
     }
 
     #[test]
-    fn safe_note_abs_rejects_traversal() {
+    fn safe_vault_abs_rejects_traversal() {
         let root = mk_temp_dir();
-        assert!(safe_note_abs(&root, "../x.md").is_err());
-        assert!(safe_note_abs(&root, "a/../x.md").is_err());
-        assert!(safe_note_abs(&root, "/abs/x.md").is_err());
-        assert!(safe_note_abs(&root, "a/b.md").is_ok());
+        assert!(safe_vault_abs(&root, "../x.md").is_err());
+        assert!(safe_vault_abs(&root, "a/../x.md").is_err());
+        assert!(safe_vault_abs(&root, "/abs/x.md").is_err());
+        assert!(safe_vault_abs(&root, "a/b.md").is_ok());
         let _ = std::fs::remove_dir_all(&root);
     }
 }

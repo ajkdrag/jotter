@@ -2,7 +2,7 @@ import type { Vault } from '$lib/types/vault'
 import type { NoteMeta } from '$lib/types/note'
 import type { OpenNoteState } from '$lib/types/editor'
 import type { VaultId, VaultPath, NoteId, NotePath } from '$lib/types/ids'
-import { as_markdown_text, as_note_path } from '$lib/types/ids'
+import { as_markdown_text } from '$lib/types/ids'
 
 export function create_test_vault(overrides?: Partial<Vault>): Vault {
   return {
@@ -33,17 +33,3 @@ export function create_open_note_state(note: NoteMeta, markdown = 'content'): Op
   }
 }
 
-export function create_untitled_note_state(title: string): OpenNoteState {
-  return {
-    meta: {
-      id: as_note_path(title),
-      path: as_note_path(title),
-      title,
-      mtime_ms: 0,
-      size_bytes: 0
-    },
-    markdown: as_markdown_text('untitled content'),
-    buffer_id: `untitled-test:${title}`,
-    is_dirty: false
-  }
-}

@@ -1,7 +1,7 @@
 use crate::storage;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -23,12 +23,6 @@ enum VaultFsEvent {
     NoteAdded { vault_id: String, note_path: String },
     NoteRemoved { vault_id: String, note_path: String },
     AssetChanged { vault_id: String, asset_path: String },
-}
-
-fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
-    let store = storage::load_store(app)?;
-    let vault_path = storage::vault_path_by_id(&store, vault_id).ok_or("vault not found")?;
-    Ok(PathBuf::from(vault_path))
 }
 
 fn rel_path(root: &Path, abs: &Path) -> Option<String> {
@@ -56,7 +50,7 @@ pub fn watch_vault(app: AppHandle, state: State<WatcherState>, vault_id: String)
         }
     }
 
-    let root = vault_path(&app, &vault_id)?;
+    let root = storage::vault_path(&app, &vault_id)?;
     let root_canon = root.canonicalize().map_err(|e| e.to_string())?;
     let (stop_tx, stop_rx) = mpsc::channel::<()>();
 
@@ -100,7 +94,7 @@ pub fn watch_vault(app: AppHandle, state: State<WatcherState>, vault_id: String)
                 Err(_) => continue,
             };
 
-            let kind = event.kind.clone();
+            let kind = event.kind;
             for p in event.paths.iter() {
                 let abs = match p.canonicalize() {
                     Ok(p) => p,

@@ -349,22 +349,24 @@ export function register_note_actions(input: ActionRegistrationInput) {
     }
   })
 
+  async function force_rename_note() {
+    const note = stores.ui.rename_note_dialog.note
+    const new_name = stores.ui.rename_note_dialog.new_name.trim()
+    if (!note || !new_name) return
+
+    const parent = parent_folder_path(note.path)
+    const new_path = build_note_path_from_name(parent, new_name)
+
+    const result = await services.note.rename_note(note, new_path, true)
+    if (result.status === 'renamed') {
+      close_rename_dialog(input)
+    }
+  }
+
   registry.register({
     id: ACTION_IDS.note_confirm_rename_overwrite,
     label: 'Confirm Rename Note Overwrite',
-    execute: async () => {
-      const note = stores.ui.rename_note_dialog.note
-      const new_name = stores.ui.rename_note_dialog.new_name.trim()
-      if (!note || !new_name) return
-
-      const parent = parent_folder_path(note.path)
-      const new_path = build_note_path_from_name(parent, new_name)
-
-      const result = await services.note.rename_note(note, new_path, true)
-      if (result.status === 'renamed') {
-        close_rename_dialog(input)
-      }
-    }
+    execute: force_rename_note
   })
 
   registry.register({
@@ -379,19 +381,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.note_retry_rename,
     label: 'Retry Rename Note',
-    execute: async () => {
-      const note = stores.ui.rename_note_dialog.note
-      const new_name = stores.ui.rename_note_dialog.new_name.trim()
-      if (!note || !new_name) return
-
-      const parent = parent_folder_path(note.path)
-      const new_path = build_note_path_from_name(parent, new_name)
-
-      const result = await services.note.rename_note(note, new_path, true)
-      if (result.status === 'renamed') {
-        close_rename_dialog(input)
-      }
-    }
+    execute: force_rename_note
   })
 
   registry.register({

@@ -3,6 +3,7 @@ import type { VaultStore } from '$lib/stores/vault_store.svelte'
 import type { OpStore } from '$lib/stores/op_store.svelte'
 import type { SearchNotesResult } from '$lib/types/search_service_result'
 import { parse_search_query } from '$lib/utils/search_query_parser'
+import { error_message } from '$lib/utils/error_message'
 import { logger } from '$lib/utils/logger'
 
 export class SearchService {
@@ -57,8 +58,8 @@ export class SearchService {
         }
       }
 
-      const message = 'Search failed'
-      logger.error(`Search failed: ${String(error)}`)
+      const message = error_message(error)
+      logger.error(`Search failed: ${message}`)
       this.op_store.fail('search.notes', message)
       return {
         status: 'failed',

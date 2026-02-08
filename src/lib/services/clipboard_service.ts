@@ -25,17 +25,4 @@ export class ClipboardService {
     }
   }
 
-  async copy_text(text: string): Promise<void> {
-    if (!text) return
-
-    this.op_store.start('clipboard.write')
-
-    try {
-      await this.clipboard_port.write_text(text)
-      this.op_store.succeed('clipboard.write')
-    } catch (error) {
-      this.op_store.fail('clipboard.write', error_message(error))
-      throw error
-    }
-  }
 }

@@ -1,8 +1,8 @@
 import { SvelteMap } from 'svelte/reactivity'
 
-export type OpStatus = 'idle' | 'pending' | 'success' | 'error'
+type OpStatus = 'idle' | 'pending' | 'success' | 'error'
 
-export type OpState = {
+type OpState = {
   status: OpStatus
   error: string | null
   started_at: number | null

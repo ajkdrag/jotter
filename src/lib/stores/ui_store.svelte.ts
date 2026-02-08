@@ -10,7 +10,7 @@ import type { SettingDefinition } from '$lib/types/settings_registry'
 import type { PastedImagePayload } from '$lib/types/editor'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
-export type AsyncStatus = 'idle' | 'loading' | 'error'
+type AsyncStatus = 'idle' | 'loading' | 'error'
 
 export class UIStore {
   theme = $state<ThemeMode>('system')

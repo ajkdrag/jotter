@@ -1,4 +1,3 @@
-import { SvelteSet } from 'svelte/reactivity'
 import type { NoteId, NotePath } from '$lib/types/ids'
 import type { NoteMeta } from '$lib/types/note'
 import type { FolderContents } from '$lib/types/filetree'
@@ -30,7 +29,7 @@ export class NotesStore {
     const normalized_new = normalized_note_path(new_path)
     const parts = normalized_new.split('/')
     const leaf = parts[parts.length - 1] ?? ''
-    const title = leaf.endsWith('.md') ? leaf.slice(0, -3) : leaf
+    const title = leaf.slice(0, -3)
 
     this.notes = this.notes
       .map((note) => {
@@ -88,7 +87,7 @@ export class NotesStore {
   merge_folder_contents(folder_path: string, contents: FolderContents) {
     const prefix = folder_path ? `${folder_path}/` : ''
 
-    const fresh_child_names = new SvelteSet<string>()
+    const fresh_child_names = new Set<string>()
     for (const subfolder of contents.subfolders) {
       const name = subfolder.slice(prefix.length).split('/')[0] ?? ''
       fresh_child_names.add(name)

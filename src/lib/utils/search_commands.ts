@@ -1,11 +1,5 @@
 import type { CommandDefinition } from '$lib/types/command_palette'
 
-export type {
-  CommandId,
-  CommandIcon,
-  CommandDefinition
-} from '$lib/types/command_palette'
-
 export const COMMANDS_REGISTRY: CommandDefinition[] = [
   {
     id: 'create_new_note',
@@ -36,13 +30,3 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     icon: 'search'
   }
 ]
-
-export function search_commands(query: string): CommandDefinition[] {
-  const q = query.toLowerCase().trim()
-  if (!q) return COMMANDS_REGISTRY
-
-  return COMMANDS_REGISTRY.filter((cmd) => {
-    const searchable = [cmd.label, cmd.description, ...cmd.keywords].join(' ').toLowerCase()
-    return searchable.includes(q)
-  })
-}

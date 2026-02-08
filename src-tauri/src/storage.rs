@@ -88,6 +88,12 @@ pub fn normalize_relative_path(path: &Path) -> String {
         .join("/")
 }
 
+pub fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
+    let store = load_store(app)?;
+    let path = vault_path_by_id(&store, vault_id).ok_or("vault not found")?;
+    Ok(PathBuf::from(path))
+}
+
 pub fn handle_asset_request(app: &AppHandle, req: Request<Vec<u8>>) -> Response<Vec<u8>> {
     let uri = req.uri().to_string();
     let rel = uri

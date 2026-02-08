@@ -28,39 +28,33 @@ let font_size_value = $derived(editor_settings.font_size)
 let line_height_value = $derived(editor_settings.line_height)
 
 function handle_font_size_change(value: number) {
-  editor_settings.font_size = value
-  on_update_settings(editor_settings)
+  on_update_settings({ ...editor_settings, font_size: value })
 }
 
 function handle_line_height_change(value: number) {
-  editor_settings.line_height = value
-  on_update_settings(editor_settings)
+  on_update_settings({ ...editor_settings, line_height: value })
 }
 
 function handle_heading_color_change(value: string | undefined) {
   if (value) {
-    editor_settings.heading_color = value as EditorSettings['heading_color']
-    on_update_settings(editor_settings)
+    on_update_settings({ ...editor_settings, heading_color: value as EditorSettings['heading_color'] })
   }
 }
 
 	function handle_spacing_change(value: string | undefined) {
 		if (value) {
-			editor_settings.spacing = value as EditorSettings['spacing']
-			on_update_settings(editor_settings)
+			on_update_settings({ ...editor_settings, spacing: value as EditorSettings['spacing'] })
 		}
 	}
 
 	function handle_link_syntax_change(value: string | undefined) {
 		if (value) {
-			editor_settings.link_syntax = value as EditorSettings['link_syntax']
-			on_update_settings(editor_settings)
+			on_update_settings({ ...editor_settings, link_syntax: value as EditorSettings['link_syntax'] })
 		}
 	}
 
 	function handle_attachment_folder_change(value: string) {
-		editor_settings.attachment_folder = value
-		on_update_settings(editor_settings)
+		on_update_settings({ ...editor_settings, attachment_folder: value })
 	}
 
 	const heading_color_options = [

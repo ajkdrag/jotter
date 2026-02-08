@@ -89,24 +89,34 @@
     onkeydown={handle_keydown}
   >
     {#if node.is_folder}
-      <button
-        type="button"
-        class="TreeRow__toggle"
-        onclick={handle_toggle}
-        onkeydown={handle_toggle_keydown}
-        aria-label={node.is_expanded ? "Collapse" : "Expand"}
-        disabled={node.is_loading}
-      >
-        {#if node.is_loading}
-          <LoaderCircle class="TreeRow__icon TreeRow__icon--spin" />
-        {:else if node.has_error}
+      {#if node.has_error}
+        <button
+          type="button"
+          class="TreeRow__toggle"
+          onclick={handle_retry}
+          title={node.error_message ?? "Failed to load folder"}
+          aria-label="Retry loading"
+        >
           <CircleAlert class="TreeRow__icon TreeRow__icon--error" />
-        {:else if node.is_expanded}
-          <ChevronDown class="TreeRow__icon" />
-        {:else}
-          <ChevronRight class="TreeRow__icon" />
-        {/if}
-      </button>
+        </button>
+      {:else}
+        <button
+          type="button"
+          class="TreeRow__toggle"
+          onclick={handle_toggle}
+          onkeydown={handle_toggle_keydown}
+          aria-label={node.is_expanded ? "Collapse" : "Expand"}
+          disabled={node.is_loading}
+        >
+          {#if node.is_loading}
+            <LoaderCircle class="TreeRow__icon TreeRow__icon--spin" />
+          {:else if node.is_expanded}
+            <ChevronDown class="TreeRow__icon" />
+          {:else}
+            <ChevronRight class="TreeRow__icon" />
+          {/if}
+        </button>
+      {/if}
       <Folder class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
       {#if node.has_error}

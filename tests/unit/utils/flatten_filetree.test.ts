@@ -20,7 +20,8 @@ describe('flatten_filetree', () => {
       notes: [],
       folder_paths: [],
       expanded_paths: new Set(),
-      load_states: new Map()
+      load_states: new Map(),
+      error_messages: new Map()
     })
     expect(result).toEqual([])
   })
@@ -31,7 +32,8 @@ describe('flatten_filetree', () => {
       notes,
       folder_paths: [],
       expanded_paths: new Set(),
-      load_states: new Map()
+      load_states: new Map(),
+      error_messages: new Map()
     })
 
     expect(result).toHaveLength(2)
@@ -47,7 +49,8 @@ describe('flatten_filetree', () => {
       notes,
       folder_paths: ['folder'],
       expanded_paths: new Set(),
-      load_states: new Map()
+      load_states: new Map(),
+      error_messages: new Map()
     })
 
     expect(result).toHaveLength(1)
@@ -63,7 +66,8 @@ describe('flatten_filetree', () => {
       notes,
       folder_paths: ['folder'],
       expanded_paths: new Set(['folder']),
-      load_states: new Map()
+      load_states: new Map(),
+      error_messages: new Map()
     })
 
     expect(result).toHaveLength(2)
@@ -79,7 +83,8 @@ describe('flatten_filetree', () => {
       notes: [],
       folder_paths: ['folder'],
       expanded_paths: new Set(['folder']),
-      load_states: new Map<string, FolderLoadState>([['folder', 'loading']])
+      load_states: new Map<string, FolderLoadState>([['folder', 'loading']]),
+      error_messages: new Map()
     })
 
     expect(result).toHaveLength(1)
@@ -92,12 +97,14 @@ describe('flatten_filetree', () => {
       notes: [],
       folder_paths: ['folder'],
       expanded_paths: new Set(['folder']),
-      load_states: new Map<string, FolderLoadState>([['folder', 'error']])
+      load_states: new Map<string, FolderLoadState>([['folder', 'error']]),
+      error_messages: new Map([['folder', 'not a directory']])
     })
 
     expect(result).toHaveLength(1)
     expect(result[0]?.is_loading).toBe(false)
     expect(result[0]?.has_error).toBe(true)
+    expect(result[0]?.error_message).toBe('not a directory')
   })
 
   it('handles deeply nested structure', () => {
@@ -106,7 +113,8 @@ describe('flatten_filetree', () => {
       notes,
       folder_paths: ['a', 'a/b', 'a/b/c'],
       expanded_paths: new Set(['a', 'a/b', 'a/b/c']),
-      load_states: new Map()
+      load_states: new Map(),
+      error_messages: new Map()
     })
 
     expect(result).toHaveLength(4)
@@ -126,7 +134,8 @@ describe('flatten_filetree', () => {
       notes,
       folder_paths: ['folder'],
       expanded_paths: new Set(),
-      load_states: new Map()
+      load_states: new Map(),
+      error_messages: new Map()
     })
 
     expect(result).toHaveLength(2)

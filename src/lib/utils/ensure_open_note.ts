@@ -18,7 +18,7 @@ function next_untitled_name_in_folder(notes: NoteMeta[], folder_prefix: string):
   return `Untitled-${String(max + 1)}`
 }
 
-export function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: number }): OpenNoteState {
+function create_untitled_open_note(args: { notes: NoteMeta[]; now_ms: number }): OpenNoteState {
   return create_untitled_open_note_in_folder({ ...args, folder_prefix: '' })
 }
 

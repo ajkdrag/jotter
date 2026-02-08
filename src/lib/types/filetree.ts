@@ -11,6 +11,7 @@ export type FlatTreeNode = {
   is_expanded: boolean
   is_loading: boolean
   has_error: boolean
+  error_message: string | null
   note: NoteMeta | null
   parent_path: string | null
 }

@@ -261,19 +261,21 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     }
   })
 
+  async function execute_delete_folder() {
+    const folder_path = stores.ui.delete_folder_dialog.folder_path
+    if (!folder_path) return
+
+    const result = await services.folder.delete_folder(folder_path)
+    if (result.status === 'success') {
+      remove_expanded_paths(input, folder_path)
+      close_delete_dialog(input)
+    }
+  }
+
   registry.register({
     id: ACTION_IDS.folder_confirm_delete,
     label: 'Confirm Delete Folder',
-    execute: async () => {
-      const folder_path = stores.ui.delete_folder_dialog.folder_path
-      if (!folder_path) return
-
-      const result = await services.folder.delete_folder(folder_path)
-      if (result.status === 'success') {
-        remove_expanded_paths(input, folder_path)
-        close_delete_dialog(input)
-      }
-    }
+    execute: execute_delete_folder
   })
 
   registry.register({
@@ -288,16 +290,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.folder_retry_delete,
     label: 'Retry Delete Folder',
-    execute: async () => {
-      const folder_path = stores.ui.delete_folder_dialog.folder_path
-      if (!folder_path) return
-
-      const result = await services.folder.delete_folder(folder_path)
-      if (result.status === 'success') {
-        remove_expanded_paths(input, folder_path)
-        close_delete_dialog(input)
-      }
-    }
+    execute: execute_delete_folder
   })
 
   registry.register({
@@ -322,23 +315,25 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     }
   })
 
+  async function execute_rename_folder() {
+    const folder_path = stores.ui.rename_folder_dialog.folder_path
+    const new_name = stores.ui.rename_folder_dialog.new_name.trim()
+    if (!folder_path || !new_name) return
+
+    const parent = parent_folder_path(folder_path)
+    const new_path = build_folder_path_from_name(parent, new_name)
+
+    const result = await services.folder.rename_folder(folder_path, new_path)
+    if (result.status === 'success') {
+      remap_expanded_paths(input, folder_path, new_path)
+      close_rename_dialog(input)
+    }
+  }
+
   registry.register({
     id: ACTION_IDS.folder_confirm_rename,
     label: 'Confirm Rename Folder',
-    execute: async () => {
-      const folder_path = stores.ui.rename_folder_dialog.folder_path
-      const new_name = stores.ui.rename_folder_dialog.new_name.trim()
-      if (!folder_path || !new_name) return
-
-      const parent = parent_folder_path(folder_path)
-      const new_path = build_folder_path_from_name(parent, new_name)
-
-      const result = await services.folder.rename_folder(folder_path, new_path)
-      if (result.status === 'success') {
-        remap_expanded_paths(input, folder_path, new_path)
-        close_rename_dialog(input)
-      }
-    }
+    execute: execute_rename_folder
   })
 
   registry.register({
@@ -353,19 +348,6 @@ export function register_folder_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.folder_retry_rename,
     label: 'Retry Rename Folder',
-    execute: async () => {
-      const folder_path = stores.ui.rename_folder_dialog.folder_path
-      const new_name = stores.ui.rename_folder_dialog.new_name.trim()
-      if (!folder_path || !new_name) return
-
-      const parent = parent_folder_path(folder_path)
-      const new_path = build_folder_path_from_name(parent, new_name)
-
-      const result = await services.folder.rename_folder(folder_path, new_path)
-      if (result.status === 'success') {
-        remap_expanded_paths(input, folder_path, new_path)
-        close_rename_dialog(input)
-      }
-    }
+    execute: execute_rename_folder
   })
 }

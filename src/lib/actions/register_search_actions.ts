@@ -1,7 +1,6 @@
 import { ACTION_IDS } from '$lib/actions/action_ids'
 import type { ActionRegistrationInput } from '$lib/actions/action_registration_input'
 import type { CommandId } from '$lib/types/command_palette'
-import type { EditorSettings } from '$lib/types/editor_settings'
 import type { NoteId } from '$lib/types/ids'
 import { parse_search_query } from '$lib/utils/search_query_parser'
 import { search_palette } from '$lib/utils/search_palette'
@@ -141,8 +140,7 @@ export function register_search_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.palette_select_setting,
     label: 'Select Command Palette Setting',
-    execute: async (key: unknown) => {
-      void (key as keyof EditorSettings)
+    execute: async () => {
       close_command_palette(input)
       await registry.execute(ACTION_IDS.settings_open)
     }

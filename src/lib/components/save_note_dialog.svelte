@@ -37,7 +37,7 @@
 
   let input_el = $state<HTMLInputElement | null>(null)
 
-  const display_filename = $derived(() => {
+  const display_filename = $derived.by(() => {
     if (!new_path) return ''
     const path = String(new_path)
     const last_slash = path.lastIndexOf('/')
@@ -69,7 +69,7 @@
   }
 
   function is_valid(): boolean {
-    return display_filename().trim().length > 0
+    return display_filename.trim().length > 0
   }
 
   const is_busy = $derived(is_saving || is_checking)
@@ -92,7 +92,7 @@
         <Input
           bind:ref={input_el}
           type="text"
-          value={display_filename()}
+          value={display_filename}
           onchange={(e: Event & { currentTarget: HTMLInputElement }) => { update_filename(e.currentTarget.value); }}
           oninput={(e: Event & { currentTarget: HTMLInputElement }) => { update_filename(e.currentTarget.value); }}
           placeholder="e.g., my-note.md"

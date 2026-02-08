@@ -72,6 +72,9 @@ export default [
 					runes: true
 				}
 			}
+		},
+		rules: {
+			'svelte/prefer-svelte-reactivity': 'off'
 		}
 	},
 	{

@@ -7,10 +7,11 @@ export type FlattenInput = {
   folder_paths: string[]
   expanded_paths: Set<string>
   load_states: Map<string, FolderLoadState>
+  error_messages: Map<string, string>
 }
 
 export function flatten_filetree(input: FlattenInput): FlatTreeNode[] {
-  const { notes, folder_paths, expanded_paths, load_states } = input
+  const { notes, folder_paths, expanded_paths, load_states, error_messages } = input
   const tree = sort_tree(build_filetree(notes, folder_paths))
   const result: FlatTreeNode[] = []
 
@@ -29,6 +30,7 @@ export function flatten_filetree(input: FlattenInput): FlatTreeNode[] {
         is_expanded,
         is_loading: load_state === 'loading',
         has_error: load_state === 'error',
+        error_message: error_messages.get(child.path) ?? null,
         note: child.note,
         parent_path
       }
