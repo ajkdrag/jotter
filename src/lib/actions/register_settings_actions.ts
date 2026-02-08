@@ -9,9 +9,11 @@ export function register_settings_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.settings_open,
     label: 'Open Settings',
     execute: async () => {
+      const snapshot = { ...stores.ui.editor_settings }
       stores.ui.settings_dialog = {
         open: true,
-        current_settings: { ...stores.ui.editor_settings },
+        current_settings: snapshot,
+        persisted_settings: snapshot,
         has_unsaved_changes: false
       }
 
@@ -20,6 +22,7 @@ export function register_settings_actions(input: ActionRegistrationInput) {
         stores.ui.settings_dialog = {
           ...stores.ui.settings_dialog,
           current_settings: result.settings,
+          persisted_settings: result.settings,
           has_unsaved_changes: false
         }
         stores.ui.set_editor_settings(result.settings)
@@ -31,9 +34,12 @@ export function register_settings_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.settings_close,
     label: 'Close Settings',
     execute: () => {
+      const persisted = stores.ui.settings_dialog.persisted_settings
+      stores.ui.set_editor_settings(persisted)
       stores.ui.settings_dialog = {
         ...stores.ui.settings_dialog,
         open: false,
+        current_settings: persisted,
         has_unsaved_changes: false
       }
       stores.op.reset('settings.load')
@@ -66,6 +72,7 @@ export function register_settings_actions(input: ActionRegistrationInput) {
         stores.ui.set_editor_settings(settings)
         stores.ui.settings_dialog = {
           ...stores.ui.settings_dialog,
+          persisted_settings: settings,
           has_unsaved_changes: false
         }
       }

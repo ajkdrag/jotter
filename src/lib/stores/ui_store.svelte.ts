@@ -100,10 +100,12 @@ export class UIStore {
   settings_dialog = $state<{
     open: boolean
     current_settings: EditorSettings
+    persisted_settings: EditorSettings
     has_unsaved_changes: boolean
   }>({
     open: false,
     current_settings: { ...DEFAULT_EDITOR_SETTINGS },
+    persisted_settings: { ...DEFAULT_EDITOR_SETTINGS },
     has_unsaved_changes: false
   })
 
@@ -223,6 +225,7 @@ export class UIStore {
     this.settings_dialog = {
       open: false,
       current_settings: { ...this.editor_settings },
+      persisted_settings: { ...this.editor_settings },
       has_unsaved_changes: false
     }
     this.command_palette = {
