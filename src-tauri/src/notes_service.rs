@@ -353,6 +353,130 @@ pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn list_folders(app: AppHandle, vault_id: String) -> Result<Vec<String>, String> {
+    let root = vault_path(&app, &vault_id)?;
+    let mut out = Vec::new();
+
+    for entry in WalkDir::new(&root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.')
+        })
+        .filter_map(|e| e.ok())
+    {
+        if !entry.file_type().is_dir() || entry.path() == root.as_path() {
+            continue;
+        }
+        let rel = entry.path().strip_prefix(&root).map_err(|e| e.to_string())?;
+        out.push(storage::normalize_relative_path(rel));
+    }
+
+    out.sort();
+    Ok(out)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FolderCreateArgs {
+    pub vault_id: String,
+    pub parent_path: String,
+    pub folder_name: String,
+}
+
+#[tauri::command]
+pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), String> {
+    let root = vault_path(&app, &args.vault_id)?;
+    let parent = if args.parent_path.is_empty() {
+        root.clone()
+    } else {
+        safe_note_abs(&root, &args.parent_path)?
+    };
+    if !parent.is_dir() {
+        return Err("parent path is not a directory".to_string());
+    }
+    if args.folder_name.contains('/') || args.folder_name.contains('\\') || args.folder_name.starts_with('.') {
+        return Err("invalid folder name".to_string());
+    }
+    let target = parent.join(&args.folder_name);
+    std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FolderRenameArgs {
+    pub vault_id: String,
+    pub from_path: String,
+    pub to_path: String,
+}
+
+#[tauri::command]
+pub fn rename_folder(args: FolderRenameArgs, app: AppHandle) -> Result<(), String> {
+    let root = vault_path(&app, &args.vault_id)?;
+    if args.from_path.is_empty() || args.to_path.is_empty() {
+        return Err("cannot rename vault root".to_string());
+    }
+    let from_abs = safe_note_abs(&root, &args.from_path)?;
+    let to_abs = safe_note_abs(&root, &args.to_path)?;
+    if !from_abs.is_dir() {
+        return Err("source is not a directory".to_string());
+    }
+    if let Some(dir) = to_abs.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    std::fs::rename(&from_abs, &to_abs).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FolderDeleteArgs {
+    pub vault_id: String,
+    pub folder_path: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FolderDeleteResult {
+    pub deleted_notes: Vec<String>,
+    pub deleted_folders: Vec<String>,
+}
+
+#[tauri::command]
+pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<FolderDeleteResult, String> {
+    let root = vault_path(&app, &args.vault_id)?;
+    if args.folder_path.is_empty() {
+        return Err("cannot delete vault root".to_string());
+    }
+    let abs = safe_note_abs(&root, &args.folder_path)?;
+    if !abs.is_dir() {
+        return Err("path is not a directory".to_string());
+    }
+
+    let mut deleted_notes = Vec::new();
+    let mut deleted_folders = Vec::new();
+
+    for entry in WalkDir::new(&abs)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let p = entry.path();
+        if p == abs {
+            continue;
+        }
+        let rel = p.strip_prefix(&root).map_err(|e| e.to_string())?;
+        let rel_str = storage::normalize_relative_path(rel);
+        if entry.file_type().is_file() && p.extension().and_then(|e| e.to_str()) == Some("md") {
+            deleted_notes.push(rel_str);
+        } else if entry.file_type().is_dir() {
+            deleted_folders.push(rel_str);
+        }
+    }
+
+    std::fs::remove_dir_all(&abs).map_err(|e| e.to_string())?;
+    Ok(FolderDeleteResult { deleted_notes, deleted_folders })
+}
+
+#[tauri::command]
 pub fn list_folder_contents(
     app: AppHandle,
     vault_id: String,
