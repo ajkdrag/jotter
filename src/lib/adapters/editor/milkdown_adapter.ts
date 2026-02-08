@@ -30,6 +30,7 @@ import {
   dirty_state_plugin_key
 } from './dirty_state_plugin'
 import { markdown_link_input_rule_plugin } from './markdown_link_input_rule'
+import { image_input_rule_plugin } from './image_input_rule_plugin'
 import { markdown_paste_plugin } from './markdown_paste_plugin'
 import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
@@ -183,6 +184,7 @@ export function create_milkdown_editor_port(args?: {
         .use(linkTooltipPlugin)
         .use(listItemBlockComponent)
         .use(markdown_link_input_rule_plugin)
+        .use(image_input_rule_plugin)
         .use(create_wiki_link_converter_plugin(note_path))
         .use(listener)
         .use(history)

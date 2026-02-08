@@ -100,6 +100,8 @@ export const markdown_link_input_rule_plugin = $prose((ctx) => {
       if (!link_text || !href) return null
 
       const match_start_index = window_start + match.index
+      if (match_start_index > 0 && combined[match_start_index - 1] === '!') return null
+
       const match_end_index = match_start_index + full_match.length
       if (contains_link_mark(segments, match_start_index, match_end_index)) return null
 
