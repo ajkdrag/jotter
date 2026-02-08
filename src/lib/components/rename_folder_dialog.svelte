@@ -1,15 +1,19 @@
 <script lang="ts">
   import * as Dialog from '$lib/components/ui/dialog'
   import { Button } from '$lib/components/ui/button'
+  import { Input } from '$lib/components/ui/input'
+  import { parent_folder_path } from '$lib/utils/filetree'
+  import { tick } from 'svelte'
 
   type RenameFolderDialogState = 'idle' | 'confirming' | 'renaming' | 'error'
 
   type Props = {
     open: boolean
-    new_path: string | null
+    folder_path: string | null
+    new_name: string
     status: string
     error: string | null
-    on_update_path: (path: string) => void
+    on_update_name: (name: string) => void
     on_confirm: () => void
     on_cancel: () => void
     on_retry: () => void
@@ -17,33 +21,42 @@
 
   let {
     open,
-    new_path,
+    folder_path,
+    new_name,
     status,
     error,
-    on_update_path,
+    on_update_name,
     on_confirm,
     on_cancel,
     on_retry
   }: Props = $props()
+
+  let input_el = $state<HTMLInputElement | null>(null)
 
   const normalized_state = $derived((status as RenameFolderDialogState) ?? 'idle')
   const is_confirming = $derived(normalized_state === 'confirming')
   const is_renaming = $derived(normalized_state === 'renaming')
   const is_error = $derived(normalized_state === 'error')
 
-  let input_ref: HTMLInputElement | undefined = $state()
-  let new_path_value = $state('')
-
-  $effect(() => {
-    if (is_confirming && new_path) {
-      new_path_value = new_path
-    }
+  const parent_path = $derived.by(() => {
+    if (!folder_path) return ''
+    return parent_folder_path(folder_path)
   })
+
+  const current_name = $derived.by(() => {
+    if (!folder_path) return ''
+    const i = folder_path.lastIndexOf('/')
+    return i >= 0 ? folder_path.slice(i + 1) : folder_path
+  })
+
+  function is_input_valid(): boolean {
+    const trimmed = new_name.trim()
+    return trimmed.length > 0 && !trimmed.includes('/') && trimmed !== current_name
+  }
 
   function handle_input(event: Event) {
     const target = event.target as HTMLInputElement
-    new_path_value = target.value
-    on_update_path(target.value)
+    on_update_name(target.value)
   }
 
   function handle_open_change(next_open: boolean) {
@@ -52,43 +65,41 @@
     }
   }
 
-  function handle_open_auto_focus(event: Event) {
-    event.preventDefault()
-    const ref = input_ref
-    if (!ref) return
-    const parts = new_path_value.split('/')
-    const folder_name = parts[parts.length - 1] || ''
-    const parent_path = parts.slice(0, -1).join('/')
-    const start_pos = parent_path ? parent_path.length + 1 : 0
-    setTimeout(() => {
-      ref.focus()
-      ref.setSelectionRange(start_pos, start_pos + folder_name.length)
-    }, 0)
-  }
+  $effect(() => {
+    if (open && !is_error && input_el) {
+      const el = input_el
+      void tick().then(() => { el.focus(); el.select(); })
+    }
+  })
 </script>
 
 <Dialog.Root open={open} onOpenChange={handle_open_change}>
-  <Dialog.Content class="max-w-md" onOpenAutoFocus={handle_open_auto_focus}>
+  <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>{is_error ? 'Rename Failed' : 'Rename Folder'}</Dialog.Title>
       <Dialog.Description>
         {#if is_error}
           {error || 'An unknown error occurred'}
         {:else}
-          Enter a new path for the folder
+          Enter a new name for the folder.
         {/if}
       </Dialog.Description>
     </Dialog.Header>
     {#if !is_error}
-      <div class="grid gap-4 py-4">
-        <input
-          bind:this={input_ref}
+      <div class="space-y-3">
+        {#if parent_path}
+          <div class="flex items-center gap-2 text-sm min-w-0">
+            <span class="shrink-0 text-muted-foreground">Location:</span>
+            <span class="truncate font-mono text-muted-foreground" title={parent_path}>{parent_path}/</span>
+          </div>
+        {/if}
+        <Input
+          bind:ref={input_el}
           type="text"
-          class="bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border border-input px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-          value={new_path_value}
+          value={new_name}
           oninput={handle_input}
           disabled={is_renaming}
-          placeholder="folder/path"
+          placeholder="folder-name"
         />
       </div>
     {/if}
@@ -101,7 +112,7 @@
           Retry
         </Button>
       {:else}
-        <Button onclick={on_confirm} disabled={is_renaming}>
+        <Button onclick={on_confirm} disabled={!is_input_valid() || is_renaming}>
           {is_renaming ? 'Renaming...' : 'Rename'}
         </Button>
       {/if}

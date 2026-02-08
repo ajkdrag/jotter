@@ -5,6 +5,7 @@ import { as_note_path, type NotePath } from '$lib/types/ids'
 import type { ImagePasteRequest } from '$lib/types/editor'
 import { sanitize_note_name } from '$lib/utils/sanitize_note_name'
 import { to_markdown_asset_target } from '$lib/utils/asset_markdown_path'
+import { parent_folder_path } from '$lib/utils/filetree'
 
 function close_delete_dialog(input: ActionRegistrationInput) {
   input.stores.ui.delete_note_dialog = {
@@ -17,7 +18,7 @@ function close_rename_dialog(input: ActionRegistrationInput) {
   input.stores.ui.rename_note_dialog = {
     open: false,
     note: null,
-    new_path: null,
+    new_name: '',
     show_overwrite_confirm: false,
     is_checking_conflict: false
   }
@@ -41,6 +42,16 @@ function build_full_path(folder_path: string, filename: string): NotePath {
 function filename_from_path(path: string): string {
   const last_slash = path.lastIndexOf('/')
   return last_slash >= 0 ? path.slice(last_slash + 1) : path
+}
+
+function note_name_from_path(path: string): string {
+  const filename = filename_from_path(path)
+  return filename.endsWith('.md') ? filename.slice(0, -3) : filename
+}
+
+function build_note_path_from_name(parent: string, name: string): NotePath {
+  const filename = `${name}.md`
+  return as_note_path(parent ? `${parent}/${filename}` : filename)
 }
 
 function image_alt_text(file_name: string | null): string {
@@ -295,7 +306,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       stores.ui.rename_note_dialog = {
         open: true,
         note: note_meta,
-        new_path: note_meta.path,
+        new_name: note_name_from_path(note_meta.path),
         show_overwrite_confirm: false,
         is_checking_conflict: false
       }
@@ -304,10 +315,10 @@ export function register_note_actions(input: ActionRegistrationInput) {
   })
 
   registry.register({
-    id: ACTION_IDS.note_update_rename_path,
-    label: 'Update Rename Note Path',
-    execute: (path: unknown) => {
-      stores.ui.rename_note_dialog.new_path = as_note_path(String(path))
+    id: ACTION_IDS.note_rename,
+    label: 'Update Rename Note Name',
+    execute: (name: unknown) => {
+      stores.ui.rename_note_dialog.new_name = String(name)
       stores.ui.rename_note_dialog.show_overwrite_confirm = false
     }
   })
@@ -317,8 +328,11 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: 'Confirm Rename Note',
     execute: async () => {
       const note = stores.ui.rename_note_dialog.note
-      const new_path = stores.ui.rename_note_dialog.new_path
-      if (!note || !new_path) return
+      const new_name = stores.ui.rename_note_dialog.new_name.trim()
+      if (!note || !new_name) return
+
+      const parent = parent_folder_path(note.path)
+      const new_path = build_note_path_from_name(parent, new_name)
 
       stores.ui.rename_note_dialog.is_checking_conflict = true
       const result = await services.note.rename_note(note, new_path, false)
@@ -340,8 +354,11 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: 'Confirm Rename Note Overwrite',
     execute: async () => {
       const note = stores.ui.rename_note_dialog.note
-      const new_path = stores.ui.rename_note_dialog.new_path
-      if (!note || !new_path) return
+      const new_name = stores.ui.rename_note_dialog.new_name.trim()
+      if (!note || !new_name) return
+
+      const parent = parent_folder_path(note.path)
+      const new_path = build_note_path_from_name(parent, new_name)
 
       const result = await services.note.rename_note(note, new_path, true)
       if (result.status === 'renamed') {
@@ -364,8 +381,11 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: 'Retry Rename Note',
     execute: async () => {
       const note = stores.ui.rename_note_dialog.note
-      const new_path = stores.ui.rename_note_dialog.new_path
-      if (!note || !new_path) return
+      const new_name = stores.ui.rename_note_dialog.new_name.trim()
+      if (!note || !new_name) return
+
+      const parent = parent_folder_path(note.path)
+      const new_path = build_note_path_from_name(parent, new_name)
 
       const result = await services.note.rename_note(note, new_path, true)
       if (result.status === 'renamed') {

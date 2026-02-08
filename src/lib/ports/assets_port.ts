@@ -9,6 +9,6 @@ export type WriteImageAssetInput = {
 }
 
 export interface AssetsPort {
-  resolve_asset_url(vault_id: VaultId, asset_path: AssetPath): Promise<string>
+  resolve_asset_url(vault_id: VaultId, asset_path: AssetPath): string | Promise<string>
   write_image_asset(vault_id: VaultId, input: WriteImageAssetInput): Promise<AssetPath>
 }

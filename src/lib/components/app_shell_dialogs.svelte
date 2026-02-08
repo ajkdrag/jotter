@@ -88,12 +88,12 @@
 <RenameNoteDialog
   open={stores.ui.rename_note_dialog.open}
   note={stores.ui.rename_note_dialog.note}
-  new_path={stores.ui.rename_note_dialog.new_path}
+  new_name={stores.ui.rename_note_dialog.new_name}
   is_renaming={stores.op.is_pending('note.rename')}
   is_checking_conflict={stores.ui.rename_note_dialog.is_checking_conflict}
   error={rename_note_error}
   show_overwrite_confirm={stores.ui.rename_note_dialog.show_overwrite_confirm}
-  on_update_path={(path: string) => void action_registry.execute(ACTION_IDS.note_update_rename_path, path)}
+  on_update_name={(name: string) => void action_registry.execute(ACTION_IDS.note_rename, name)}
   on_confirm={() => void action_registry.execute(ACTION_IDS.note_confirm_rename)}
   on_confirm_overwrite={() =>
     void action_registry.execute(ACTION_IDS.note_confirm_rename_overwrite)}
@@ -115,10 +115,11 @@
 
 <RenameFolderDialog
   open={stores.ui.rename_folder_dialog.open}
-  new_path={stores.ui.rename_folder_dialog.new_path}
+  folder_path={stores.ui.rename_folder_dialog.folder_path}
+  new_name={stores.ui.rename_folder_dialog.new_name}
   status={rename_folder_status}
   error={rename_folder_error}
-  on_update_path={(path: string) => void action_registry.execute(ACTION_IDS.folder_update_rename_path, path)}
+  on_update_name={(name: string) => void action_registry.execute(ACTION_IDS.folder_rename, name)}
   on_confirm={() => void action_registry.execute(ACTION_IDS.folder_confirm_rename)}
   on_cancel={() => void action_registry.execute(ACTION_IDS.folder_cancel_rename)}
   on_retry={() => void action_registry.execute(ACTION_IDS.folder_retry_rename)}

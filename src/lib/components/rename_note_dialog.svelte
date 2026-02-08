@@ -3,17 +3,18 @@
   import { Button } from "$lib/components/ui/button"
   import { Input } from "$lib/components/ui/input"
   import type { NoteMeta } from "$lib/types/note"
-  import type { NotePath } from "$lib/types/ids"
+  import { parent_folder_path } from "$lib/utils/filetree"
+  import { tick } from 'svelte'
 
   interface Props {
     open: boolean
     note: NoteMeta | null
-    new_path: NotePath | null
+    new_name: string
     is_renaming: boolean
     is_checking_conflict: boolean
     error: string | null
     show_overwrite_confirm: boolean
-    on_update_path: (path: NotePath) => void
+    on_update_name: (name: string) => void
     on_confirm: () => void
     on_confirm_overwrite: () => void
     on_cancel: () => void
@@ -23,22 +24,36 @@
   let {
     open,
     note,
-    new_path,
+    new_name,
     is_renaming,
     is_checking_conflict,
     error,
     show_overwrite_confirm,
-    on_update_path,
+    on_update_name,
     on_confirm,
     on_confirm_overwrite,
     on_cancel,
     on_retry
   }: Props = $props()
 
-  let input_value = $derived(new_path ?? '')
+  let input_el = $state<HTMLInputElement | null>(null)
 
-  function update_input(value: string) {
-    on_update_path(value as NotePath)
+  const parent_path = $derived.by(() => {
+    if (!note) return ''
+    return parent_folder_path(note.path)
+  })
+
+  const current_name = $derived.by(() => {
+    if (!note) return ''
+    const filename = note.path.split('/').pop() ?? ''
+    return filename.endsWith('.md') ? filename.slice(0, -3) : filename
+  })
+
+  const is_busy = $derived(is_renaming || is_checking_conflict)
+
+  function is_input_valid(): boolean {
+    const trimmed = new_name.trim()
+    return trimmed.length > 0 && !trimmed.includes('/') && trimmed !== current_name
   }
 
   function get_display_title() {
@@ -52,14 +67,17 @@
       return `Failed to rename ${note?.title ?? 'this note'}: ${error}`
     }
     if (show_overwrite_confirm) {
-      return `A note already exists at ${new_path ?? ''}. Do you want to overwrite it?`
+      return `A note named "${new_name.trim()}" already exists in this folder. Do you want to overwrite it?`
     }
-    return `Enter the new path for ${note?.title ?? 'this note'}.`
+    return `Enter a new name for ${note?.title ?? 'this note'}.`
   }
 
-  function is_input_valid(): boolean {
-    return input_value.trim().length > 0 && input_value !== note?.path
-  }
+  $effect(() => {
+    if (open && !error && !show_overwrite_confirm && input_el) {
+      const el = input_el
+      void tick().then(() => { el.focus(); el.select(); })
+    }
+  })
 </script>
 
 <Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_cancel() }}>
@@ -72,14 +90,21 @@
     </Dialog.Header>
 
     {#if !error && !show_overwrite_confirm}
-      <div class="space-y-4">
+      <div class="space-y-3">
+        {#if parent_path}
+          <div class="flex items-center gap-2 text-sm min-w-0">
+            <span class="shrink-0 text-muted-foreground">Location:</span>
+            <span class="truncate font-mono text-muted-foreground" title={parent_path}>{parent_path}/</span>
+          </div>
+        {/if}
         <Input
+          bind:ref={input_el}
           type="text"
-          value={input_value}
-          onchange={(e: Event & { currentTarget: HTMLInputElement }) => { update_input(e.currentTarget.value); }}
-          oninput={(e: Event & { currentTarget: HTMLInputElement }) => { update_input(e.currentTarget.value); }}
-          placeholder="e.g., folder/new-title.md"
-          disabled={is_renaming || is_checking_conflict}
+          value={new_name}
+          onchange={(e: Event & { currentTarget: HTMLInputElement }) => { on_update_name(e.currentTarget.value); }}
+          oninput={(e: Event & { currentTarget: HTMLInputElement }) => { on_update_name(e.currentTarget.value); }}
+          placeholder="new-title"
+          disabled={is_busy}
         />
       </div>
     {/if}
@@ -90,33 +115,25 @@
           Cancel
         </Button>
         <Button variant="destructive" onclick={on_confirm_overwrite} disabled={is_renaming}>
-          {#if is_renaming}
-            Renaming...
-          {:else}
-            Overwrite
-          {/if}
+          {is_renaming ? 'Renaming...' : 'Overwrite'}
         </Button>
       {:else if error}
-        <Button variant="outline" onclick={on_cancel} disabled={is_renaming}>
+        <Button variant="outline" onclick={on_cancel}>
           Cancel
         </Button>
-        <Button variant="default" onclick={on_retry} disabled={is_renaming}>
+        <Button variant="default" onclick={on_retry}>
           Retry
         </Button>
       {:else}
-        <Button variant="outline" onclick={on_cancel} disabled={is_renaming || is_checking_conflict}>
+        <Button variant="outline" onclick={on_cancel} disabled={is_busy}>
           Cancel
         </Button>
         <Button
           variant="default"
           onclick={on_confirm}
-          disabled={!is_input_valid() || is_renaming || is_checking_conflict}
+          disabled={!is_input_valid() || is_busy}
         >
-          {#if is_renaming || is_checking_conflict}
-            Renaming...
-          {:else}
-            Rename
-          {/if}
+          {is_busy ? 'Renaming...' : 'Rename'}
         </Button>
       {/if}
     </Dialog.Footer>

@@ -2,6 +2,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { ACTION_IDS } from '$lib/actions/action_ids'
 import type { ActionRegistrationInput } from '$lib/actions/action_registration_input'
 import type { FolderLoadState } from '$lib/types/filetree'
+import { parent_folder_path } from '$lib/utils/filetree'
 
 function should_load_folder(state: FolderLoadState | undefined): boolean {
   return !state || state === 'unloaded' || state === 'error'
@@ -60,8 +61,17 @@ function close_rename_dialog(input: ActionRegistrationInput) {
   input.stores.ui.rename_folder_dialog = {
     open: false,
     folder_path: null,
-    new_path: null
+    new_name: ''
   }
+}
+
+function folder_name_from_path(path: string): string {
+  const i = path.lastIndexOf('/')
+  return i >= 0 ? path.slice(i + 1) : path
+}
+
+function build_folder_path_from_name(parent: string, name: string): string {
+  return parent ? `${parent}/${name}` : name
 }
 
 function remove_expanded_paths(input: ActionRegistrationInput, folder_path: string) {
@@ -298,17 +308,17 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       stores.ui.rename_folder_dialog = {
         open: true,
         folder_path: path,
-        new_path: path
+        new_name: folder_name_from_path(path)
       }
       stores.op.reset('folder.rename')
     }
   })
 
   registry.register({
-    id: ACTION_IDS.folder_update_rename_path,
-    label: 'Update Rename Folder Path',
-    execute: (path: unknown) => {
-      stores.ui.rename_folder_dialog.new_path = String(path)
+    id: ACTION_IDS.folder_rename,
+    label: 'Update Rename Folder Name',
+    execute: (name: unknown) => {
+      stores.ui.rename_folder_dialog.new_name = String(name)
     }
   })
 
@@ -317,8 +327,11 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     label: 'Confirm Rename Folder',
     execute: async () => {
       const folder_path = stores.ui.rename_folder_dialog.folder_path
-      const new_path = stores.ui.rename_folder_dialog.new_path
-      if (!folder_path || !new_path) return
+      const new_name = stores.ui.rename_folder_dialog.new_name.trim()
+      if (!folder_path || !new_name) return
+
+      const parent = parent_folder_path(folder_path)
+      const new_path = build_folder_path_from_name(parent, new_name)
 
       const result = await services.folder.rename_folder(folder_path, new_path)
       if (result.status === 'success') {
@@ -342,8 +355,11 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     label: 'Retry Rename Folder',
     execute: async () => {
       const folder_path = stores.ui.rename_folder_dialog.folder_path
-      const new_path = stores.ui.rename_folder_dialog.new_path
-      if (!folder_path || !new_path) return
+      const new_name = stores.ui.rename_folder_dialog.new_name.trim()
+      if (!folder_path || !new_name) return
+
+      const parent = parent_folder_path(folder_path)
+      const new_path = build_folder_path_from_name(parent, new_name)
 
       const result = await services.folder.rename_folder(folder_path, new_path)
       if (result.status === 'success') {

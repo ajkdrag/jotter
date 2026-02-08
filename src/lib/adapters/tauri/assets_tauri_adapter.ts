@@ -7,7 +7,7 @@ import { as_asset_path } from '$lib/types/ids'
 export function create_assets_tauri_adapter(): AssetsPort {
   return {
     resolve_asset_url(vault_id: VaultId, asset_path: AssetPath) {
-      return Promise.resolve(jotter_asset_url(vault_id, asset_path))
+      return jotter_asset_url(vault_id, asset_path)
     },
     async write_image_asset(vault_id, input) {
       const asset_path = await tauri_invoke<string>('write_image_asset', {

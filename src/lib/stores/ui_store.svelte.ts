@@ -38,13 +38,13 @@ export class UIStore {
   rename_note_dialog = $state<{
     open: boolean
     note: NoteMeta | null
-    new_path: NotePath | null
+    new_name: string
     show_overwrite_confirm: boolean
     is_checking_conflict: boolean
   }>({
     open: false,
     note: null,
-    new_path: null,
+    new_name: '',
     show_overwrite_confirm: false,
     is_checking_conflict: false
   })
@@ -90,11 +90,11 @@ export class UIStore {
   rename_folder_dialog = $state<{
     open: boolean
     folder_path: string | null
-    new_path: string | null
+    new_name: string
   }>({
     open: false,
     folder_path: null,
-    new_path: null
+    new_name: ''
   })
 
   settings_dialog = $state<{
@@ -194,7 +194,7 @@ export class UIStore {
     this.rename_note_dialog = {
       open: false,
       note: null,
-      new_path: null,
+      new_name: '',
       show_overwrite_confirm: false,
       is_checking_conflict: false
     }
@@ -220,7 +220,7 @@ export class UIStore {
     this.rename_folder_dialog = {
       open: false,
       folder_path: null,
-      new_path: null
+      new_name: ''
     }
     this.settings_dialog = {
       open: false,

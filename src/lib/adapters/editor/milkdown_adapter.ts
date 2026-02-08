@@ -35,6 +35,9 @@ import { markdown_paste_plugin } from './markdown_paste_plugin'
 import { create_image_paste_plugin } from './image_paste_plugin'
 import { create_wiki_link_click_plugin, create_wiki_link_converter_plugin, wiki_link_plugin_key } from './wiki_link_plugin'
 import { format_wiki_target_for_markdown, format_wiki_target_for_markdown_link, try_decode_wiki_link_href } from '$lib/utils/wiki_link'
+
+const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
 function resize_icon(svg: string, size: number): string {
   return svg
     .replace(/width="24"/, `width="${String(size)}"`)
@@ -91,7 +94,7 @@ function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
   }))
 }
 
-type ResolveAssetUrlForVault = (vault_id: VaultId, asset_path: AssetPath) => Promise<string>
+type ResolveAssetUrlForVault = (vault_id: VaultId, asset_path: AssetPath) => string | Promise<string>
 
 export function create_milkdown_editor_port(args?: {
   resolve_asset_url_for_vault?: ResolveAssetUrlForVault
@@ -169,11 +172,44 @@ export function create_milkdown_editor_port(args?: {
           if (vault_id && resolve_asset_url_for_vault) {
             const resolve = resolve_asset_url_for_vault
             const vid = vault_id
+            const resolved_url_cache = new Map<string, string>()
+            const pending_resolutions = new Set<string>()
+
             ctx.update(imageBlockConfig.key, (default_config) => ({
               ...default_config,
               proxyDomURL: (url: string) => {
                 if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url
-                return resolve(vid, as_asset_path(url))
+
+                const cached = resolved_url_cache.get(url)
+                if (cached) return cached
+
+                const result = resolve(vid, as_asset_path(url))
+                if (typeof result === 'string') {
+                  resolved_url_cache.set(url, result)
+                  return result
+                }
+
+                if (!pending_resolutions.has(url)) {
+                  pending_resolutions.add(url)
+                  void result.then((resolved_url) => {
+                    resolved_url_cache.set(url, resolved_url)
+                    pending_resolutions.delete(url)
+                    try {
+                      const view = ctx.get(editorViewCtx)
+                      const tr = view.state.tr
+                      view.state.doc.descendants((node, pos) => {
+                        if (node.type.name === 'image-block' && node.attrs.src === url) {
+                          tr.setNodeMarkup(pos, undefined, { ...node.attrs })
+                        }
+                      })
+                      if (tr.steps.length > 0) view.dispatch(tr)
+                    } catch { /* editor may be destroyed */ }
+                  }).catch(() => {
+                    pending_resolutions.delete(url)
+                  })
+                }
+
+                return TRANSPARENT_PIXEL
               }
             }))
           }
