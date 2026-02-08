@@ -21,7 +21,8 @@ describe('flatten_filetree', () => {
       folder_paths: [],
       expanded_paths: new Set(),
       load_states: new Map(),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
     expect(result).toEqual([])
   })
@@ -33,7 +34,8 @@ describe('flatten_filetree', () => {
       folder_paths: [],
       expanded_paths: new Set(),
       load_states: new Map(),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(2)
@@ -50,7 +52,8 @@ describe('flatten_filetree', () => {
       folder_paths: ['folder'],
       expanded_paths: new Set(),
       load_states: new Map(),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(1)
@@ -67,7 +70,8 @@ describe('flatten_filetree', () => {
       folder_paths: ['folder'],
       expanded_paths: new Set(['folder']),
       load_states: new Map(),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(2)
@@ -84,7 +88,8 @@ describe('flatten_filetree', () => {
       folder_paths: ['folder'],
       expanded_paths: new Set(['folder']),
       load_states: new Map<string, FolderLoadState>([['folder', 'loading']]),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(1)
@@ -98,7 +103,8 @@ describe('flatten_filetree', () => {
       folder_paths: ['folder'],
       expanded_paths: new Set(['folder']),
       load_states: new Map<string, FolderLoadState>([['folder', 'error']]),
-      error_messages: new Map([['folder', 'not a directory']])
+      error_messages: new Map([['folder', 'not a directory']]),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(1)
@@ -114,7 +120,8 @@ describe('flatten_filetree', () => {
       folder_paths: ['a', 'a/b', 'a/b/c'],
       expanded_paths: new Set(['a', 'a/b', 'a/b/c']),
       load_states: new Map(),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(4)
@@ -135,7 +142,8 @@ describe('flatten_filetree', () => {
       folder_paths: ['folder'],
       expanded_paths: new Set(),
       load_states: new Map(),
-      error_messages: new Map()
+      error_messages: new Map(),
+      show_hidden_files: false
     })
 
     expect(result).toHaveLength(2)
@@ -143,5 +151,67 @@ describe('flatten_filetree', () => {
     expect(result[0]?.is_folder).toBe(true)
     expect(result[1]?.name).toBe('z.md')
     expect(result[1]?.is_folder).toBe(false)
+  })
+
+  it('excludes hidden folder when show_hidden_files is false', () => {
+    const notes = [make_note('.hidden/note.md')]
+    const result = flatten_filetree({
+      notes,
+      folder_paths: ['.hidden'],
+      expanded_paths: new Set(),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: false
+    })
+
+    expect(result).toHaveLength(0)
+  })
+
+  it('includes hidden folder when show_hidden_files is true', () => {
+    const notes = [make_note('.hidden/note.md')]
+    const result = flatten_filetree({
+      notes,
+      folder_paths: ['.hidden'],
+      expanded_paths: new Set(['.hidden']),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: true
+    })
+
+    expect(result).toHaveLength(2)
+    expect(result[0]?.name).toBe('.hidden')
+    expect(result[0]?.is_folder).toBe(true)
+    expect(result[1]?.name).toBe('note.md')
+    expect(result[1]?.depth).toBe(1)
+  })
+
+  it('excludes hidden file when show_hidden_files is false', () => {
+    const notes = [make_note('.hidden.md')]
+    const result = flatten_filetree({
+      notes,
+      folder_paths: [],
+      expanded_paths: new Set(),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: false
+    })
+
+    expect(result).toHaveLength(0)
+  })
+
+  it('includes hidden file when show_hidden_files is true', () => {
+    const notes = [make_note('.hidden.md')]
+    const result = flatten_filetree({
+      notes,
+      folder_paths: [],
+      expanded_paths: new Set(),
+      load_states: new Map(),
+      error_messages: new Map(),
+      show_hidden_files: true
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.name).toBe('.hidden.md')
+    expect(result[0]?.is_folder).toBe(false)
   })
 })

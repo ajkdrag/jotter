@@ -5,6 +5,7 @@ export type EditorSettings = {
   spacing: "compact" | "normal" | "spacious";
   link_syntax: "wikilink" | "markdown";
   attachment_folder: string;
+  show_hidden_files: boolean;
 };
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
@@ -14,6 +15,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   spacing: "normal",
   link_syntax: "wikilink",
   attachment_folder: ".assets",
+  show_hidden_files: false,
 };
 
 export const SETTINGS_KEY = "editor" as const;

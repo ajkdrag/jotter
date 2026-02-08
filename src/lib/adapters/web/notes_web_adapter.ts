@@ -2,6 +2,7 @@ import type { NotesPort, FolderStats } from '$lib/ports/notes_port'
 import { as_markdown_text, as_note_path, type MarkdownText, type NoteId, type NotePath, type VaultId } from '$lib/types/ids'
 import type { NoteDoc, NoteMeta } from '$lib/types/note'
 import type { FolderContents } from '$lib/types/filetree'
+import { is_excluded_folder } from '$lib/constants/special_folders'
 import { get_vault } from './storage'
 
 async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryHandle> {
@@ -53,6 +54,10 @@ async function list_markdown_files(
   const notes: NoteMeta[] = []
 
   for await (const handle of dir.values()) {
+    if (is_excluded_folder(handle.name)) {
+      continue
+    }
+
     if (handle.kind === 'file' && handle.name.endsWith('.md')) {
       const file_handle = handle as FileSystemFileHandle
       const file = await file_handle.getFile()
@@ -83,6 +88,10 @@ async function list_directory_paths(
   const paths: string[] = []
 
   for await (const handle of dir.values()) {
+    if (is_excluded_folder(handle.name)) {
+      continue
+    }
+
     if (handle.kind === 'directory') {
       const rel_path = prefix ? `${prefix}/${handle.name}` : handle.name
       paths.push(rel_path)
@@ -247,6 +256,10 @@ export function create_notes_web_adapter(): NotesPort {
       const subfolders: string[] = []
 
       for await (const handle of target.values()) {
+        if (handle.name === '.jotter' || handle.name === '.git') {
+          continue
+        }
+
         if (handle.kind === 'file' && handle.name.endsWith('.md')) {
           const file_handle = handle as FileSystemFileHandle
           const file = await file_handle.getFile()

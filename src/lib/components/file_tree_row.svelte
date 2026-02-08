@@ -11,7 +11,9 @@
     Pencil,
     LoaderCircle,
     CircleAlert,
-    RefreshCw
+    RefreshCw,
+    FilePlus,
+    FolderPlus
   } from "@lucide/svelte";
 
   type Props = {
@@ -24,6 +26,8 @@
     on_request_rename?: ((note: NoteMeta) => void) | undefined;
     on_request_delete_folder?: ((folder_path: string) => void) | undefined;
     on_request_rename_folder?: ((folder_path: string) => void) | undefined;
+    on_request_create_note?: ((folder_path: string) => void) | undefined;
+    on_request_create_folder?: ((folder_path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
   };
 
@@ -37,6 +41,8 @@
     on_request_rename,
     on_request_delete_folder,
     on_request_rename_folder,
+    on_request_create_note,
+    on_request_create_folder,
     on_retry_load
   }: Props = $props();
 
@@ -144,6 +150,23 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
+        <ContextMenu.Item onclick={() => {
+          if (on_request_create_note) {
+            on_request_create_note(node.path)
+          }
+        }}>
+          <FilePlus class="mr-2 h-4 w-4" />
+          <span>New Note</span>
+        </ContextMenu.Item>
+        <ContextMenu.Item onclick={() => {
+          if (on_request_create_folder) {
+            on_request_create_folder(node.path)
+          }
+        }}>
+          <FolderPlus class="mr-2 h-4 w-4" />
+          <span>New Folder</span>
+        </ContextMenu.Item>
+        <ContextMenu.Separator />
         <ContextMenu.Item onclick={() => {
           if (on_request_rename_folder) {
             on_request_rename_folder(node.path)

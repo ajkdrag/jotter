@@ -8,15 +8,20 @@ export type FlattenInput = {
   expanded_paths: Set<string>
   load_states: Map<string, FolderLoadState>
   error_messages: Map<string, string>
+  show_hidden_files: boolean
 }
 
 export function flatten_filetree(input: FlattenInput): FlatTreeNode[] {
-  const { notes, folder_paths, expanded_paths, load_states, error_messages } = input
+  const { notes, folder_paths, expanded_paths, load_states, error_messages, show_hidden_files } = input
   const tree = sort_tree(build_filetree(notes, folder_paths))
   const result: FlatTreeNode[] = []
 
   function visit(node: FileTreeNode, depth: number, parent_path: string | null) {
     for (const [, child] of node.children) {
+      if (!show_hidden_files && child.name.startsWith('.')) {
+        continue
+      }
+
       const is_folder = child.is_folder
       const is_expanded = expanded_paths.has(child.path)
       const load_state = load_states.get(child.path) ?? 'unloaded'

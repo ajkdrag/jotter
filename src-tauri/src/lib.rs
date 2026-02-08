@@ -1,3 +1,4 @@
+mod constants;
 mod notes_service;
 mod index_service;
 mod watcher_service;

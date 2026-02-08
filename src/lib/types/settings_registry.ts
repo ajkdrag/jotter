@@ -50,5 +50,12 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: 'Folder name for storing pasted images and attachments',
     category: 'Files',
     keywords: ['assets', 'images', 'attachments', 'folder', 'path', 'upload', 'paste']
+  },
+  {
+    key: 'show_hidden_files',
+    label: 'Show Hidden Files',
+    description: 'Show dot-prefixed files and folders in the file tree',
+    category: 'Files',
+    keywords: ['hidden', 'dot', 'dotfiles', 'dotfolders', 'invisible', 'show', 'hide']
   }
 ]

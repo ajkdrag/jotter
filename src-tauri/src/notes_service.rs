@@ -1,3 +1,4 @@
+use crate::constants;
 use crate::storage;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -104,7 +105,7 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            !name.starts_with('.')
+            !constants::is_excluded_folder(&name)
         })
         .filter_map(|e| e.ok())
     {
@@ -356,7 +357,7 @@ pub fn list_folders(app: AppHandle, vault_id: String) -> Result<Vec<String>, Str
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            !name.starts_with('.')
+            !constants::is_excluded_folder(&name)
         })
         .filter_map(|e| e.ok())
     {
@@ -496,7 +497,7 @@ pub fn list_folder_contents(
         let entry = entry.map_err(|e| e.to_string())?;
         let file_name = entry.file_name().to_string_lossy().to_string();
 
-        if file_name.starts_with('.') {
+        if constants::is_excluded_folder(&file_name) {
             continue;
         }
 

@@ -13,7 +13,8 @@ describe('apply_editor_styles (no document)', () => {
       heading_color: 'inherit',
       spacing: 'normal',
       link_syntax: 'wikilink',
-      attachment_folder: '.assets'
+      attachment_folder: '.assets',
+      show_hidden_files: false
     }
 
     expect(() => {

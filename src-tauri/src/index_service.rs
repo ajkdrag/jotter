@@ -1,3 +1,4 @@
+use crate::constants;
 use crate::notes_service;
 use crate::storage;
 use regex::Regex;
@@ -60,7 +61,7 @@ static WIKI_LINK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[\[([^\]]+)\]\]").unwrap());
 
 fn index_dir(vault_root: &Path) -> PathBuf {
-    vault_root.join(".jotter").join("index")
+    vault_root.join(constants::APP_DIR).join("index")
 }
 
 fn index_data_path(vault_root: &Path) -> PathBuf {
@@ -129,7 +130,7 @@ fn list_markdown_files(root: &Path) -> Vec<PathBuf> {
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            name != ".jotter" && name != ".git"
+            !constants::is_excluded_folder(&name)
         })
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())

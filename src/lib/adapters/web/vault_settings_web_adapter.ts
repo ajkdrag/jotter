@@ -1,9 +1,10 @@
 import type { VaultSettingsPort } from '$lib/ports/vault_settings_port'
 import type { VaultId } from '$lib/types/ids'
 import { logger } from '$lib/utils/logger'
+import { APP_DIR } from '$lib/constants/special_folders'
 import { get_vault } from './storage'
 
-const SETTINGS_DIR = '.jotter'
+const SETTINGS_DIR = APP_DIR
 const SETTINGS_FILE = 'settings.json'
 
 async function get_vault_handle(vault_id: VaultId): Promise<FileSystemDirectoryHandle> {

@@ -1,3 +1,4 @@
+use crate::constants;
 use crate::storage;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
@@ -28,12 +29,13 @@ enum VaultFsEvent {
 fn rel_path(root: &Path, abs: &Path) -> Option<String> {
     let rel = abs.strip_prefix(root).ok()?;
     let rel = storage::normalize_relative_path(rel);
-    if rel.starts_with(".jotter/") || rel == ".jotter" {
-        return None;
+    
+    for excluded in constants::EXCLUDED_FOLDERS {
+        if rel == *excluded || rel.starts_with(&format!("{}/", excluded)) {
+            return None;
+        }
     }
-    if rel.starts_with(".git/") || rel == ".git" {
-        return None;
-    }
+    
     Some(rel)
 }
 

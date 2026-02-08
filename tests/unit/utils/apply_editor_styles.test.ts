@@ -9,7 +9,8 @@ describe('apply_editor_styles', () => {
     heading_color: 'accent',
     spacing: 'spacious',
     link_syntax: 'wikilink',
-    attachment_folder: '.assets'
+    attachment_folder: '.assets',
+    show_hidden_files: false
   }
 
   const original_document = globalThis.document

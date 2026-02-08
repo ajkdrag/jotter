@@ -25,7 +25,8 @@
       folder_paths: stores.notes.folder_paths,
       expanded_paths: stores.ui.filetree.expanded_paths,
       load_states: stores.ui.filetree.load_states,
-      error_messages: stores.ui.filetree.error_messages
+      error_messages: stores.ui.filetree.error_messages,
+      show_hidden_files: stores.ui.editor_settings.show_hidden_files
     })
   )
 
@@ -159,6 +160,10 @@
                           void action_registry.execute(ACTION_IDS.folder_request_delete, folder_path)}
                         on_request_rename_folder={(folder_path: string) =>
                           void action_registry.execute(ACTION_IDS.folder_request_rename, folder_path)}
+                        on_request_create_note={(folder_path: string) =>
+                          void action_registry.execute(ACTION_IDS.note_create, folder_path)}
+                        on_request_create_folder={(folder_path: string) =>
+                          void action_registry.execute(ACTION_IDS.folder_request_create, folder_path)}
                         on_retry_load={(path: string) =>
                           void action_registry.execute(ACTION_IDS.folder_retry_load, path)}
                       />

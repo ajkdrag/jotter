@@ -1,16 +1,16 @@
+use crate::constants;
 use crate::storage::{load_store, vault_path_by_id};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-const SETTINGS_DIR: &str = ".jotter";
 const SETTINGS_FILE: &str = "settings.json";
 
 fn vault_settings_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
     let store = load_store(app)?;
     let vault_path = vault_path_by_id(&store, vault_id).ok_or("Vault not found")?;
-    let settings_dir = PathBuf::from(&vault_path).join(SETTINGS_DIR);
+    let settings_dir = PathBuf::from(&vault_path).join(constants::APP_DIR);
     std::fs::create_dir_all(&settings_dir).map_err(|e| e.to_string())?;
     Ok(settings_dir.join(SETTINGS_FILE))
 }

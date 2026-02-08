@@ -2,6 +2,7 @@
 import * as Dialog from '$lib/components/ui/dialog/index.js'
 import * as Select from '$lib/components/ui/select/index.js'
 import * as Slider from '$lib/components/ui/slider/index.js'
+import * as Switch from '$lib/components/ui/switch/index.js'
 import { Button } from '$lib/components/ui/button'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
@@ -55,6 +56,10 @@ function handle_heading_color_change(value: string | undefined) {
 
 	function handle_attachment_folder_change(value: string) {
 		on_update_settings({ ...editor_settings, attachment_folder: value })
+	}
+
+	function handle_show_hidden_files_change(checked: boolean) {
+		on_update_settings({ ...editor_settings, show_hidden_files: checked })
 	}
 
 	const heading_color_options = [
@@ -218,6 +223,16 @@ function handle_heading_color_change(value: string | undefined) {
               oninput={(e: Event & { currentTarget: HTMLInputElement }) => { handle_attachment_folder_change(e.currentTarget.value); }}
               class="w-48"
               placeholder=".assets"
+            />
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-1">
+              <span class="text-sm font-medium">Show Hidden Files</span>
+              <span class="text-xs text-muted-foreground">Show dot-prefixed files and folders in the file tree</span>
+            </div>
+            <Switch.Root
+              checked={editor_settings.show_hidden_files}
+              onCheckedChange={handle_show_hidden_files_change}
             />
           </div>
         </div>
