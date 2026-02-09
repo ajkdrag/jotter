@@ -366,6 +366,64 @@ describe("NoteService", () => {
     expect(op_store.get("note.open:docs/has spaces.md").status).toBe("success");
   });
 
+  it("opens existing note via read before create when store is stale", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/already-there.md"),
+      path: as_note_path("docs/already-there.md"),
+      name: "already-there",
+      title: "already-there",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+
+    const notes_port = create_mock_notes_port();
+    const read_note = vi.fn().mockResolvedValue({
+      meta: note_meta,
+      markdown: as_markdown_text("# Existing"),
+    });
+    const create_note = vi.fn().mockResolvedValue(note_meta);
+    notes_port.read_note = read_note;
+    notes_port.create_note = create_note;
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.open_note("docs/already-there.md", true);
+
+    expect(read_note).toHaveBeenCalledTimes(1);
+    expect(create_note).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: "opened",
+      selected_folder_path: "docs",
+    });
+  });
+
   it("saves untitled note to a new path", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();

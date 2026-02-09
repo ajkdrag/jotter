@@ -27,31 +27,23 @@ type SearchWorkerRequestWithoutId = SearchWorkerRequest extends infer Request
 
 type ProgressListener = (event: IndexProgressEvent) => void;
 
+type SearchDbWebOptions = {
+  request_timeout_ms?: number;
+};
+
 export class SearchDbWeb {
-  private readonly worker: Worker;
+  private worker: Worker | null = null;
   private readonly pending = new Map<number, PendingRequest>();
   private readonly init_inflight = new Map<string, Promise<void>>();
   private readonly initialized_vaults = new Set<string>();
   private readonly progress_listeners = new Set<ProgressListener>();
+  private readonly request_timeout_ms: number;
+  private worker_fatal_error: string | null = null;
   private next_request_id = 1;
   private closed = false;
 
-  constructor() {
-    this.worker = new Worker(new URL("./search_worker.ts", import.meta.url), {
-      type: "module",
-    });
-
-    this.worker.onmessage = (event: MessageEvent<SearchWorkerMessage>) => {
-      this.handle_message(event.data);
-    };
-
-    this.worker.onerror = (event: ErrorEvent) => {
-      this.reject_all(event.message || "Search worker error");
-    };
-
-    this.worker.onmessageerror = () => {
-      this.reject_all("Search worker message error");
-    };
+  constructor(options: SearchDbWebOptions = {}) {
+    this.request_timeout_ms = options.request_timeout_ms ?? 60000;
   }
 
   subscribe_progress(listener: ProgressListener): () => void {
@@ -206,12 +198,15 @@ export class SearchDbWeb {
   async close(): Promise<void> {
     if (this.closed) return;
 
-    await this.request<null>({
-      type: "close",
-    }).catch(() => null);
+    if (this.worker) {
+      await this.request<null>({
+        type: "close",
+      }).catch(() => null);
+    }
 
     this.closed = true;
-    this.worker.terminate();
+    this.worker?.terminate();
+    this.worker = null;
     this.reject_all("Search worker closed");
   }
 
@@ -219,6 +214,54 @@ export class SearchDbWeb {
     if (this.closed) {
       throw new Error("Search worker is closed");
     }
+    if (this.worker_fatal_error) {
+      throw new Error(this.worker_fatal_error);
+    }
+  }
+
+  private ensure_worker(): Worker {
+    if (this.worker) return this.worker;
+
+    try {
+      const worker = new Worker(
+        new URL("./search_worker.ts", import.meta.url),
+        {
+          type: "module",
+        },
+      );
+
+      worker.onmessage = (event: MessageEvent<SearchWorkerMessage>) => {
+        this.handle_message(event.data);
+      };
+
+      worker.onerror = (event: ErrorEvent) => {
+        const message = event.message || "Search worker error";
+        this.fail_worker(message);
+      };
+
+      worker.onmessageerror = () => {
+        this.fail_worker("Search worker message error");
+      };
+
+      this.worker = worker;
+      return worker;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? `Search worker initialization failed: ${error.message}`
+          : `Search worker initialization failed: ${String(error)}`;
+      this.worker_fatal_error = message;
+      throw new Error(message);
+    }
+  }
+
+  private fail_worker(message: string): void {
+    if (this.closed) return;
+    this.worker_fatal_error = message;
+    this.initialized_vaults.clear();
+    this.worker?.terminate();
+    this.worker = null;
+    this.reject_all(message);
   }
 
   private to_note_meta(note: WorkerNoteMeta): NoteMeta {
@@ -272,7 +315,7 @@ export class SearchDbWeb {
     }
 
     if (message.id === undefined) {
-      this.reject_all(message.message);
+      this.fail_worker(message.message);
       return;
     }
 
@@ -291,16 +334,42 @@ export class SearchDbWeb {
 
   private request<T>(payload: SearchWorkerRequestWithoutId): Promise<T> {
     this.assert_open();
+    const worker = this.ensure_worker();
     const id = this.next_request_id++;
     return new Promise<T>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const pending = this.pending.get(id);
+        if (!pending) return;
+        this.pending.delete(id);
+        pending.reject(
+          new Error(
+            `Search worker request timed out after ${String(this.request_timeout_ms)}ms`,
+          ),
+        );
+      }, this.request_timeout_ms);
+
       this.pending.set(id, {
         resolve: (value) => {
+          clearTimeout(timeout);
           resolve(value as T);
         },
-        reject,
+        reject: (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        },
       });
       const request = { ...payload, id } as SearchWorkerRequest;
-      this.worker.postMessage(request);
+      try {
+        worker.postMessage(request);
+      } catch (error) {
+        clearTimeout(timeout);
+        this.pending.delete(id);
+        reject(
+          error instanceof Error
+            ? error
+            : new Error(`Search worker postMessage failed: ${String(error)}`),
+        );
+      }
     });
   }
 }

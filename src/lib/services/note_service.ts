@@ -95,21 +95,25 @@ export class NoteService {
       let doc;
       if (create_if_missing && resolved_existing === null) {
         try {
-          const meta = await this.notes_port.create_note(
-            vault_id,
-            resolved_path,
-            as_markdown_text(""),
-          );
-          doc = {
-            meta,
-            markdown: as_markdown_text(""),
-          };
-        } catch (create_error) {
-          const create_message = error_message(create_error);
-          if (create_message.includes("note already exists")) {
-            doc = await this.notes_port.read_note(vault_id, resolved_path);
-          } else {
-            throw create_error;
+          doc = await this.notes_port.read_note(vault_id, resolved_path);
+        } catch {
+          try {
+            const meta = await this.notes_port.create_note(
+              vault_id,
+              resolved_path,
+              as_markdown_text(""),
+            );
+            doc = {
+              meta,
+              markdown: as_markdown_text(""),
+            };
+          } catch (create_error) {
+            const create_message = error_message(create_error);
+            if (create_message.includes("note already exists")) {
+              doc = await this.notes_port.read_note(vault_id, resolved_path);
+            } else {
+              throw create_error;
+            }
           }
         }
       } else {

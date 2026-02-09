@@ -43,6 +43,43 @@ function read_vault_metadata(handle: FileSystemDirectoryHandle): {
   return { name, path };
 }
 
+async function is_same_entry(
+  left: FileSystemDirectoryHandle,
+  right: FileSystemDirectoryHandle,
+): Promise<boolean> {
+  if ("isSameEntry" in left && typeof left.isSameEntry === "function") {
+    try {
+      return await left.isSameEntry(right);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+async function find_existing_vault_record(
+  handle: FileSystemDirectoryHandle,
+  path: string,
+): Promise<{ id: VaultId; created_at: number } | null> {
+  const records = await list_stored_vaults();
+  for (const record of records) {
+    const same = await is_same_entry(handle, record.handle);
+    if (same) {
+      return {
+        id: as_vault_id(record.id),
+        created_at: record.created_at,
+      };
+    }
+  }
+
+  const by_path = records.find((record) => record.path === path);
+  if (!by_path) return null;
+  return {
+    id: as_vault_id(by_path.id),
+    created_at: by_path.created_at,
+  };
+}
+
 export function create_vault_web_adapter(): VaultPort {
   return {
     async choose_vault(): Promise<VaultPath | null> {
@@ -86,10 +123,11 @@ export function create_vault_web_adapter(): VaultPort {
       }
 
       const { name, path } = read_vault_metadata(handle);
-      const vault_id = generate_vault_id();
-      const created_at = Date.now();
+      const existing = await find_existing_vault_record(handle, path);
+      const vault_id = existing?.id ?? generate_vault_id();
+      const created_at = existing?.created_at ?? Date.now();
 
-      await store_vault(vault_id, name, path, handle);
+      await store_vault(vault_id, name, path, handle, { created_at });
 
       return {
         id: vault_id,

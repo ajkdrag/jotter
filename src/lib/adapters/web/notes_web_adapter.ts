@@ -10,7 +10,24 @@ import {
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
 import type { FolderContents } from "$lib/types/filetree";
 import { is_excluded_folder } from "$lib/constants/special_folders";
+import { extract_note_title } from "$lib/utils/extract_note_title";
 import { get_vault } from "./storage";
+
+function is_not_found_error(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.name === "NotFoundError") return true;
+  return error.message.toLowerCase().includes("not found");
+}
+
+function compare_names_case_insensitive(a: string, b: string): number {
+  const lower_a = a.toLowerCase();
+  const lower_b = b.toLowerCase();
+  if (lower_a < lower_b) return -1;
+  if (lower_a > lower_b) return 1;
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
 
 async function get_vault_handle(
   vault_id: VaultId,
@@ -109,7 +126,7 @@ async function move_note_between_paths(
   const from_resolved = await resolve_note_path(root, from);
   const from_file_handle = from_resolved.handle as FileSystemFileHandle;
   const from_file = await from_file_handle.getFile();
-  const from_content = await from_file.text();
+  const from_content = new Uint8Array(await from_file.arrayBuffer());
 
   const to_normalized = normalize_note_path(to);
   let to_parent = root;
@@ -144,12 +161,13 @@ async function list_markdown_files(
       const file = await file_handle.getFile();
       const full_path = prefix ? `${prefix}/${handle.name}` : handle.name;
       const note_path = as_note_path(full_path);
+      const title_probe = await file.slice(0, 8192).text();
 
       notes.push({
         id: note_path,
         path: note_path,
         name: handle.name.replace(/\.md$/, ""),
-        title: handle.name.replace(/\.md$/, ""),
+        title: extract_note_title(title_probe, note_path),
         mtime_ms: file.lastModified,
         size_bytes: file.size,
       });
@@ -163,6 +181,7 @@ async function list_markdown_files(
     }
   }
 
+  notes.sort((a, b) => compare_names_case_insensitive(a.path, b.path));
   return notes;
 }
 
@@ -222,7 +241,7 @@ export function create_notes_web_adapter(): NotesPort {
         id: note_path,
         path: note_path,
         name: name.replace(/\.md$/, ""),
-        title: name.replace(/\.md$/, ""),
+        title: extract_note_title(markdown, note_path),
         mtime_ms: file.lastModified,
         size_bytes: file.size,
       };
@@ -261,6 +280,14 @@ export function create_notes_web_adapter(): NotesPort {
 
         if (is_last) {
           file_name = part.endsWith(".md") ? part : `${part}.md`;
+          try {
+            await current.getFileHandle(file_name, { create: false });
+            throw new Error("note already exists");
+          } catch (error) {
+            if (!is_not_found_error(error)) {
+              throw error;
+            }
+          }
           const file_handle = await current.getFileHandle(file_name, {
             create: true,
           });
@@ -276,7 +303,7 @@ export function create_notes_web_adapter(): NotesPort {
             id: full_path,
             path: full_path,
             name: file_name.replace(/\.md$/, ""),
-            title: file_name.replace(/\.md$/, ""),
+            title: extract_note_title(String(initial_markdown), full_path),
             mtime_ms: file.lastModified,
             size_bytes: file.size,
           };
@@ -293,6 +320,13 @@ export function create_notes_web_adapter(): NotesPort {
       parent_path: string,
       folder_name: string,
     ): Promise<void> {
+      if (
+        folder_name.includes("/") ||
+        folder_name.includes("\\") ||
+        folder_name.startsWith(".")
+      ) {
+        throw new Error("invalid folder name");
+      }
       const root = await get_vault_handle(vault_id);
       let current = root;
       const parts = parent_path ? parent_path.split("/").filter(Boolean) : [];
@@ -369,7 +403,7 @@ export function create_notes_web_adapter(): NotesPort {
         if (a.is_dir !== b.is_dir) {
           return a.is_dir ? -1 : 1;
         }
-        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        return compare_names_case_insensitive(a.name, b.name);
       });
 
       const total_count = entries.length;
@@ -416,6 +450,11 @@ export function create_notes_web_adapter(): NotesPort {
       from_path: string,
       to_path: string,
     ): Promise<void> {
+      if (from_path === to_path) return;
+      if (!from_path || !to_path) {
+        throw new Error("cannot rename vault root");
+      }
+
       const root = await get_vault_handle(vault_id);
 
       const from_parts = from_path.split("/").filter(Boolean);
@@ -445,6 +484,31 @@ export function create_notes_web_adapter(): NotesPort {
       }
       const to_name = to_parts[to_parts.length - 1];
       if (!to_name) throw new Error("Invalid to path: missing name");
+      try {
+        const existing_dir = await to_parent.getDirectoryHandle(to_name, {
+          create: false,
+        });
+        if (
+          "isSameEntry" in from_handle &&
+          typeof from_handle.isSameEntry === "function"
+        ) {
+          const same_entry = await from_handle.isSameEntry(existing_dir);
+          if (same_entry) return;
+        }
+        throw new Error("destination already exists");
+      } catch (error) {
+        if (!is_not_found_error(error)) {
+          throw error;
+        }
+      }
+      try {
+        await to_parent.getFileHandle(to_name, { create: false });
+        throw new Error("destination already exists");
+      } catch (error) {
+        if (!is_not_found_error(error)) {
+          throw error;
+        }
+      }
       const to_handle = await to_parent.getDirectoryHandle(to_name, {
         create: true,
       });
@@ -461,7 +525,7 @@ export function create_notes_web_adapter(): NotesPort {
               create: true,
             });
             const writable = await target_file.createWritable();
-            await writable.write(await file.text());
+            await writable.write(new Uint8Array(await file.arrayBuffer()));
             await writable.close();
           } else {
             const sub_target = await target.getDirectoryHandle(entry.name, {

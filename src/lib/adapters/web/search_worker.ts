@@ -1,9 +1,6 @@
 import SQLiteAsyncESMFactory from "@journeyapps/wa-sqlite/dist/wa-sqlite-async.mjs";
 import wa_sqlite_async_wasm_url from "@journeyapps/wa-sqlite/dist/wa-sqlite-async.wasm?url";
 import * as SQLite from "@journeyapps/wa-sqlite";
-import { IDBBatchAtomicVFS } from "@journeyapps/wa-sqlite/src/examples/IDBBatchAtomicVFS.js";
-import { MemoryAsyncVFS } from "@journeyapps/wa-sqlite/src/examples/MemoryAsyncVFS.js";
-import { OPFSAdaptiveVFS } from "@journeyapps/wa-sqlite/src/examples/OPFSAdaptiveVFS.js";
 import type { NoteDoc } from "$lib/types/note";
 import type {
   SearchWorkerMessage,
@@ -184,6 +181,8 @@ async function create_runtime(): Promise<RuntimeState> {
       storage: "opfs",
       create: async () => {
         if (!is_opfs_supported()) return null;
+        const { OPFSAdaptiveVFS } =
+          await import("@journeyapps/wa-sqlite/src/examples/OPFSAdaptiveVFS.js");
         return OPFSAdaptiveVFS.create("jotter-search-opfs", module as never);
       },
     },
@@ -191,18 +190,30 @@ async function create_runtime(): Promise<RuntimeState> {
       storage: "idb",
       create: async () => {
         if (typeof indexedDB === "undefined") return null;
+        const { IDBBatchAtomicVFS } =
+          await import("@journeyapps/wa-sqlite/src/examples/IDBBatchAtomicVFS.js");
         return IDBBatchAtomicVFS.create("jotter-search", module as never);
       },
     },
     {
       storage: "memory",
       create: async () =>
-        MemoryAsyncVFS.create("jotter-search-memory", module as never),
+        (
+          await import("@journeyapps/wa-sqlite/src/examples/MemoryAsyncVFS.js")
+        ).MemoryAsyncVFS.create("jotter-search-memory", module as never),
     },
   ];
 
   for (const candidate of candidates) {
-    const vfs = await candidate.create();
+    let vfs: VfsWithLifecycle | null = null;
+    try {
+      vfs = await candidate.create();
+    } catch (error) {
+      if (candidate.storage === "memory") {
+        throw error;
+      }
+      continue;
+    }
     if (!vfs) continue;
 
     try {
@@ -224,6 +235,26 @@ async function create_runtime(): Promise<RuntimeState> {
   throw new Error("No SQLite storage backend is available");
 }
 
+async function fts_schema_needs_migration(db: number): Promise<boolean> {
+  const rows = await sql_rows(
+    db,
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='notes_fts'",
+  );
+  if (rows.length === 0) return false;
+  const ddl = to_string(rows[0]?.[0]).toLowerCase();
+  return !ddl.includes("name,");
+}
+
+async function migrate_schema_if_needed(db: number): Promise<void> {
+  if (!(await fts_schema_needs_migration(db))) {
+    return;
+  }
+
+  await sql_run(db, "DROP TABLE IF EXISTS notes_fts");
+  await sql_run(db, DELETE_ALL_NOTES_SQL);
+  await sql_run(db, DELETE_ALL_OUTLINKS_SQL);
+}
+
 async function ensure_runtime(): Promise<RuntimeState> {
   if (runtime_state) return runtime_state;
   runtime_state = await create_runtime();
@@ -242,6 +273,7 @@ async function ensure_db(vault_id: string): Promise<number> {
   );
 
   await runtime.sqlite3.exec(db, connection_pragmas(runtime.storage));
+  await migrate_schema_if_needed(db);
   await runtime.sqlite3.exec(db, SEARCH_SCHEMA_SQL);
   db_by_vault.set(vault_id, db);
   return db;

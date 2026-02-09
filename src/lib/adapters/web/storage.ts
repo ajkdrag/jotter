@@ -2,13 +2,18 @@ const DB_NAME = "jotter_vaults";
 const DB_VERSION = 1;
 const STORE_NAME = "vaults";
 
-type VaultRecord = {
+export type VaultRecord = {
   id: string;
   name: string;
   path: string;
   handle: FileSystemDirectoryHandle;
   created_at: number;
   last_accessed: number;
+};
+
+type StoreVaultOptions = {
+  created_at?: number;
+  last_accessed?: number;
 };
 
 async function open_db(): Promise<IDBDatabase> {
@@ -40,6 +45,7 @@ export async function store_vault(
   name: string,
   path: string,
   handle: FileSystemDirectoryHandle,
+  options: StoreVaultOptions = {},
 ): Promise<void> {
   const db = await open_db();
   const tx = db.transaction(STORE_NAME, "readwrite");
@@ -50,8 +56,8 @@ export async function store_vault(
     name,
     path,
     handle,
-    created_at: Date.now(),
-    last_accessed: Date.now(),
+    created_at: options.created_at ?? Date.now(),
+    last_accessed: options.last_accessed ?? Date.now(),
   };
 
   return new Promise<void>((resolve, reject) => {
@@ -62,9 +68,6 @@ export async function store_vault(
           ? new Error(String(request.error))
           : new Error("IndexedDB put failed"),
       );
-    };
-    request.onsuccess = () => {
-      resolve();
     };
     tx.onerror = () => {
       reject(
@@ -96,8 +99,10 @@ export async function get_vault(id: string): Promise<VaultRecord | null> {
     request.onsuccess = () => {
       const result = request.result as VaultRecord | undefined;
       if (result) {
-        result.last_accessed = Date.now();
-        void store_vault(result.id, result.name, result.path, result.handle);
+        void store_vault(result.id, result.name, result.path, result.handle, {
+          created_at: result.created_at,
+          last_accessed: Date.now(),
+        });
       }
       resolve(result ?? null);
     };
