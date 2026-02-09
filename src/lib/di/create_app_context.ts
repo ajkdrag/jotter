@@ -123,8 +123,11 @@ export function create_app_context(input: {
     editor_store: stores.editor,
     ui_store: stores.ui,
     op_store: stores.op,
+    notes_store: stores.notes,
+    vault_store: stores.vault,
     editor_service,
     note_service,
+    vault_service,
   });
 
   return {

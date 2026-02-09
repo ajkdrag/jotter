@@ -51,7 +51,6 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
   switch (item.kind) {
     case "note":
     case "recent_note":
-      input.stores.search.add_recent_note(item.note.id);
       close_omnibar(input);
       await registry.execute(ACTION_IDS.note_open, item.note.id);
       break;

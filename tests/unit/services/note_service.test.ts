@@ -67,11 +67,228 @@ describe("NoteService", () => {
       as_note_path("docs/alpha.md"),
     );
     expect(editor_store.open_note?.markdown).toBe(as_markdown_text("# Alpha"));
+    expect(notes_store.recent_notes).toEqual([note_meta]);
     expect(result).toEqual({
       status: "opened",
       selected_folder_path: "docs",
     });
     expect(op_store.get("note.open:docs/alpha.md").status).toBe("success");
+  });
+
+  it("adds opened note to notes store when missing", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/missing.md"),
+      path: as_note_path("docs/missing.md"),
+      name: "missing",
+      title: "missing",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+
+    const notes_port = create_mock_notes_port();
+    notes_port.read_note = vi.fn().mockResolvedValue({
+      meta: note_meta,
+      markdown: as_markdown_text("# Missing"),
+    });
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    await service.open_note("docs/missing.md", false);
+
+    expect(notes_store.notes).toEqual([note_meta]);
+    expect(notes_store.recent_notes).toEqual([note_meta]);
+  });
+
+  it("bumps recent note when reopening the active note", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/alpha.md"),
+      path: as_note_path("docs/alpha.md"),
+      name: "alpha",
+      title: "alpha",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    editor_store.set_open_note({
+      meta: note_meta,
+      markdown: as_markdown_text("# Alpha"),
+      buffer_id: "alpha",
+      is_dirty: false,
+    });
+    notes_store.add_recent_note({
+      id: as_note_path("docs/other.md"),
+      path: as_note_path("docs/other.md"),
+      name: "other",
+      title: "other",
+      mtime_ms: 0,
+      size_bytes: 0,
+    });
+
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    await service.open_note("docs/alpha.md", false);
+
+    expect(notes_store.recent_notes[0]).toEqual(note_meta);
+  });
+
+  it("removes deleted notes from recent list", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/remove-me.md"),
+      path: as_note_path("docs/remove-me.md"),
+      name: "remove-me",
+      title: "remove-me",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    notes_store.set_notes([note_meta]);
+    notes_store.add_recent_note(note_meta);
+
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    await service.delete_note(note_meta);
+
+    expect(notes_store.recent_notes).toEqual([]);
+  });
+
+  it("updates recent notes when a note is renamed", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/alpha.md"),
+      path: as_note_path("docs/alpha.md"),
+      name: "alpha",
+      title: "alpha",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    notes_store.set_notes([note_meta]);
+    notes_store.add_recent_note(note_meta);
+
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    await service.rename_note(note_meta, as_note_path("docs/beta.md"), false);
+
+    expect(notes_store.recent_notes).toEqual([
+      {
+        ...note_meta,
+        id: as_note_path("docs/beta.md"),
+        path: as_note_path("docs/beta.md"),
+        name: "beta",
+        title: "beta",
+      },
+    ]);
   });
 
   it("retries read when create_if_missing races with existing note", async () => {
@@ -141,6 +358,7 @@ describe("NoteService", () => {
       as_note_path("docs/has spaces.md"),
     );
     expect(editor_store.open_note?.markdown).toBe(as_markdown_text("# Ok"));
+    expect(notes_store.recent_notes).toEqual([note_meta]);
     expect(result).toEqual({
       status: "opened",
       selected_folder_path: "docs",
@@ -219,6 +437,9 @@ describe("NoteService", () => {
       saved_path: as_note_path("docs/my-note.md"),
     });
     expect(op_store.get("note.save").status).toBe("success");
+    expect(notes_store.recent_notes[0]?.id).toBe(
+      as_note_path("docs/my-note.md"),
+    );
   });
 
   it("writes pasted image asset for active vault", async () => {

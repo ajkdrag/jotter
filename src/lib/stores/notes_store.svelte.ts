@@ -7,9 +7,24 @@ function normalized_note_path(path: NotePath): NotePath {
   return `${path}.md` as NotePath;
 }
 
+const RECENT_NOTES_LIMIT = 10;
+
+function normalize_recent_notes(notes: NoteMeta[]): NoteMeta[] {
+  const seen = new Set<NoteId>();
+  const normalized: NoteMeta[] = [];
+  for (const note of notes) {
+    if (seen.has(note.id)) continue;
+    seen.add(note.id);
+    normalized.push(note);
+    if (normalized.length >= RECENT_NOTES_LIMIT) break;
+  }
+  return normalized;
+}
+
 export class NotesStore {
   notes = $state<NoteMeta[]>([]);
   folder_paths = $state<string[]>([]);
+  recent_notes = $state<NoteMeta[]>([]);
 
   set_notes(notes: NoteMeta[]) {
     this.notes = [...notes].sort((a, b) => a.path.localeCompare(b.path));
@@ -45,6 +60,45 @@ export class NotesStore {
         };
       })
       .sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  set_recent_notes(notes: NoteMeta[]) {
+    this.recent_notes = normalize_recent_notes(notes);
+  }
+
+  add_recent_note(note: NoteMeta) {
+    const filtered = this.recent_notes.filter((item) => item.id !== note.id);
+    this.recent_notes = normalize_recent_notes([note, ...filtered]);
+  }
+
+  remove_recent_note(note_id: NoteId) {
+    this.recent_notes = this.recent_notes.filter((note) => note.id !== note_id);
+  }
+
+  rename_recent_note(old_id: NoteId, next_note: NoteMeta) {
+    const index = this.recent_notes.findIndex((note) => note.id === old_id);
+    if (index < 0) return;
+    const filtered = this.recent_notes.filter(
+      (note) => note.id !== old_id && note.id !== next_note.id,
+    );
+    filtered.splice(index, 0, next_note);
+    this.recent_notes = normalize_recent_notes(filtered);
+  }
+
+  update_recent_note_path_prefix(old_prefix: string, new_prefix: string) {
+    const updated = this.recent_notes.map((note) => {
+      if (!note.path.startsWith(old_prefix)) {
+        return note;
+      }
+      const next_path =
+        `${new_prefix}${note.path.slice(old_prefix.length)}` as NotePath;
+      return {
+        ...note,
+        id: next_path,
+        path: next_path,
+      };
+    });
+    this.recent_notes = normalize_recent_notes(updated);
   }
 
   set_folder_paths(folder_paths: string[]) {
@@ -161,5 +215,6 @@ export class NotesStore {
   reset() {
     this.notes = [];
     this.folder_paths = [];
+    this.recent_notes = [];
   }
 }

@@ -25,11 +25,7 @@
 
   const has_vault = $derived(stores.vault.vault !== null);
 
-  const recent_notes_for_display = $derived(
-    stores.search.recent_note_ids
-      .map((id) => stores.notes.notes.find((note) => note.id === id))
-      .filter((note): note is NonNullable<typeof note> => note != null),
-  );
+  const recent_notes_for_display = $derived(stores.notes.recent_notes);
 
   const delete_note_error = $derived(stores.op.get("note.delete").error);
   const rename_note_error = $derived(stores.op.get("note.rename").error);

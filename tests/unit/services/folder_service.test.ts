@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FolderService } from "$lib/services/folder_service";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { NotesStore } from "$lib/stores/notes_store.svelte";
@@ -138,5 +138,74 @@ describe("FolderService", () => {
 
     expect(result).toEqual({ status: "stale" });
     expect(notes_store.notes).toEqual([]);
+  });
+
+  it("removes recent notes when deleting a folder", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const note_meta = create_note(1);
+    notes_store.set_notes([note_meta]);
+    notes_store.add_recent_note(note_meta);
+
+    notes_port.delete_folder = vi.fn().mockResolvedValue({
+      deleted_notes: [note_meta.id],
+      deleted_folders: [],
+    });
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      () => 1,
+    );
+
+    await service.delete_folder("docs");
+
+    expect(notes_store.recent_notes).toEqual([]);
+  });
+
+  it("updates recent notes when renaming a folder", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const note_meta = {
+      ...create_note(1),
+      path: as_note_path("docs/note-001.md"),
+      id: as_note_path("docs/note-001.md"),
+    };
+    notes_store.set_notes([note_meta]);
+    notes_store.add_recent_note(note_meta);
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      () => 1,
+    );
+
+    await service.rename_folder("docs", "archive");
+
+    expect(notes_store.recent_notes[0]?.path).toBe("archive/note-001.md");
   });
 });

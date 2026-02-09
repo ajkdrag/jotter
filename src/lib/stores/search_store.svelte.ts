@@ -1,4 +1,3 @@
-import type { NoteId } from "$lib/types/ids";
 import type { OmnibarItem, InFileMatch } from "$lib/types/search";
 import type { IndexProgressEvent } from "$lib/types/search";
 
@@ -11,7 +10,6 @@ export type IndexProgress = {
 
 export class SearchStore {
   omnibar_items = $state<OmnibarItem[]>([]);
-  recent_note_ids = $state<NoteId[]>([]);
   in_file_matches = $state<InFileMatch[]>([]);
   index_progress = $state<IndexProgress>({
     status: "idle",
@@ -61,11 +59,6 @@ export class SearchStore {
     this.omnibar_items = items;
   }
 
-  add_recent_note(note_id: NoteId) {
-    const filtered = this.recent_note_ids.filter((id) => id !== note_id);
-    this.recent_note_ids = [note_id, ...filtered].slice(0, 10);
-  }
-
   set_in_file_matches(matches: InFileMatch[]) {
     this.in_file_matches = matches;
   }
@@ -80,7 +73,6 @@ export class SearchStore {
 
   reset() {
     this.omnibar_items = [];
-    this.recent_note_ids = [];
     this.in_file_matches = [];
     this.index_progress = { status: "idle", indexed: 0, total: 0, error: null };
   }

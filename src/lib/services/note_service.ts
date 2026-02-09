@@ -81,6 +81,10 @@ export class NoteService {
 
       const current_open_id = this.editor_store.open_note?.meta.id ?? null;
       if (current_open_id && current_open_id === resolved_path) {
+        const open_meta = this.editor_store.open_note?.meta;
+        if (open_meta && open_meta.path.endsWith(".md")) {
+          this.notes_store.add_recent_note(open_meta);
+        }
         this.op_store.succeed(op_key);
         return {
           status: "opened",
@@ -88,7 +92,6 @@ export class NoteService {
         };
       }
 
-      let created = false;
       let doc;
       if (create_if_missing && resolved_existing === null) {
         try {
@@ -101,7 +104,6 @@ export class NoteService {
             meta,
             markdown: as_markdown_text(""),
           };
-          created = true;
         } catch (create_error) {
           const create_message = error_message(create_error);
           if (create_message.includes("note already exists")) {
@@ -128,7 +130,6 @@ export class NoteService {
               meta,
               markdown: as_markdown_text(""),
             };
-            created = true;
           } catch (create_error) {
             const create_message = error_message(create_error);
             if (create_message.includes("note already exists")) {
@@ -144,8 +145,9 @@ export class NoteService {
         return { status: "skipped" };
       }
 
-      if (created) {
-        this.notes_store.add_note(doc.meta);
+      this.notes_store.add_note(doc.meta);
+      if (doc.meta.path.endsWith(".md")) {
+        this.notes_store.add_recent_note(doc.meta);
       }
 
       this.editor_store.set_open_note(to_open_note_state(doc));
@@ -232,6 +234,7 @@ export class NoteService {
 
       const is_open_note = this.editor_store.open_note?.meta.id === note.id;
       this.notes_store.remove_note(note.id);
+      this.notes_store.remove_recent_note(note.id);
 
       const ensured = ensure_open_note({
         vault: this.vault_store.vault,
@@ -284,6 +287,14 @@ export class NoteService {
       await this.index_port.upsert_note(vault_id, new_path);
 
       this.notes_store.rename_note(note.path, new_path);
+      const updated_note = this.notes_store.notes.find(
+        (entry) => entry.id === new_path,
+      );
+      if (updated_note) {
+        this.notes_store.rename_recent_note(note.id, updated_note);
+      } else {
+        this.notes_store.remove_recent_note(note.id);
+      }
 
       if (this.editor_store.open_note?.meta.id === note.id) {
         this.editor_store.update_open_note_path(new_path);
@@ -353,6 +364,7 @@ export class NoteService {
             this.notes_store.add_note(created_meta);
             this.editor_store.update_open_note_path(target_path);
             this.editor_store.mark_clean(target_path);
+            this.notes_store.add_recent_note(created_meta);
           },
         );
       } else {

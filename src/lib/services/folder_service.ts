@@ -110,6 +110,9 @@ export class FolderService {
       }
 
       this.notes_store.remove_folder(folder_path);
+      for (const note_id of result.deleted_notes) {
+        this.notes_store.remove_recent_note(note_id);
+      }
 
       const ensured = ensure_open_note({
         vault: this.vault_store.vault,
@@ -162,6 +165,7 @@ export class FolderService {
 
       this.notes_store.rename_folder(folder_path, new_path);
       this.editor_store.update_open_note_path_prefix(old_prefix, new_prefix);
+      this.notes_store.update_recent_note_path_prefix(old_prefix, new_prefix);
       this.op_store.succeed("folder.rename");
       return { status: "success" };
     } catch (error) {

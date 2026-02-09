@@ -194,3 +194,67 @@ describe("NotesStore.append_folder_page", () => {
     expect(store.folder_paths).toEqual(["alpha"]);
   });
 });
+
+describe("NotesStore recent notes", () => {
+  it("adds recent notes with deduplication and cap", () => {
+    const store = new NotesStore();
+
+    store.add_recent_note(note("a.md"));
+    store.add_recent_note(note("b.md"));
+    store.add_recent_note(note("a.md"));
+
+    expect(store.recent_notes.map((entry) => entry.id)).toEqual([
+      "a.md",
+      "b.md",
+    ]);
+
+    for (let i = 0; i < 12; i++) {
+      store.add_recent_note(note(`note-${String(i)}.md`));
+    }
+
+    expect(store.recent_notes).toHaveLength(10);
+    expect(store.recent_notes[0]?.id).toBe("note-11.md");
+  });
+
+  it("removes recent notes by id", () => {
+    const store = new NotesStore();
+
+    store.add_recent_note(note("a.md"));
+    store.add_recent_note(note("b.md"));
+    store.remove_recent_note("a.md" as NoteId);
+
+    expect(store.recent_notes.map((entry) => entry.id)).toEqual(["b.md"]);
+  });
+
+  it("renames recent notes without reordering", () => {
+    const store = new NotesStore();
+
+    store.add_recent_note(note("a.md"));
+    store.add_recent_note(note("b.md"));
+    store.add_recent_note(note("c.md"));
+
+    store.rename_recent_note("b.md" as NoteId, note("renamed.md"));
+
+    expect(store.recent_notes.map((entry) => entry.id)).toEqual([
+      "c.md",
+      "renamed.md",
+      "a.md",
+    ]);
+  });
+
+  it("updates recent notes when a folder path prefix changes", () => {
+    const store = new NotesStore();
+
+    store.add_recent_note(note("docs/a.md"));
+    store.add_recent_note(note("docs/b.md"));
+    store.add_recent_note(note("misc/c.md"));
+
+    store.update_recent_note_path_prefix("docs/", "archive/");
+
+    expect(store.recent_notes.map((entry) => entry.path)).toEqual([
+      "misc/c.md",
+      "archive/b.md",
+      "archive/a.md",
+    ]);
+  });
+});
