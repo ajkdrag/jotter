@@ -17,6 +17,24 @@ export type SearchWorkerRequest =
       params?: unknown[];
     }
   | {
+      type: "rebuild_begin";
+      id: number;
+      vault_id: string;
+      notes: WorkerNoteMeta[];
+      total: number;
+    }
+  | {
+      type: "rebuild_batch";
+      id: number;
+      vault_id: string;
+      docs: NoteDoc[];
+    }
+  | {
+      type: "rebuild_finish";
+      id: number;
+      vault_id: string;
+    }
+  | {
       type: "rebuild_index";
       id: number;
       vault_id: string;

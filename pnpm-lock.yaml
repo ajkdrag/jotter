@@ -20,6 +20,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.11
         version: 6.39.11
+      '@journeyapps/wa-sqlite':
+        specifier: 1.4.1
+        version: 1.4.1
       '@milkdown/kit':
         specifier: ^7.18.0
         version: 7.18.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.4)(@codemirror/view@6.39.11)(typescript@5.9.3)
@@ -62,9 +65,6 @@ importers:
       svelte-themes:
         specifier: ^2.0.10
         version: 2.0.10(svelte@5.47.0)
-      wa-sqlite:
-        specifier: 1.0.0
-        version: 1.0.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.2
@@ -539,6 +539,9 @@ packages:
 
   '@internationalized/date@3.10.1':
     resolution: {integrity: sha512-oJrXtQiAXLvT9clCf1K4kxp3eKsQhIaZqxEyowkBcsvZDdZkbWrVmnGknxs5flTD0VGsxrxKgBCZty1EzoiMzA==, tarball: https://artifactory.corp.ebay.com/artifactory/api/npm/npm-corp/@internationalized/date/-/date-3.10.1.tgz}
+
+  '@journeyapps/wa-sqlite@1.4.1':
+    resolution: {integrity: sha512-xAWys6opteBpWaKmHG1pZvBmQViEKFK/46YVEkYlWxa4F9VAG0gIjCpfIdcQvXdqZf7X3ByADGmNBcR/cJ1DqQ==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2849,9 +2852,6 @@ packages:
   w3c-keyname@2.2.8:
     resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
 
-  wa-sqlite@1.0.0:
-    resolution: {integrity: sha512-Kyybo5/BaJp76z7gDWGk2J6Hthl4NIPsE+swgraEjy3IY6r5zIR02wAs1OJH4XtJp1y3puj3Onp5eMGS0z7nUA==}
-
   which@1.3.1:
     resolution: {integrity: sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==}
     hasBin: true
@@ -3370,6 +3370,8 @@ snapshots:
   '@internationalized/date@3.10.1':
     dependencies:
       '@swc/helpers': 0.5.18
+
+  '@journeyapps/wa-sqlite@1.4.1': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -6137,8 +6139,6 @@ snapshots:
       typescript: 5.9.3
 
   w3c-keyname@2.2.8: {}
-
-  wa-sqlite@1.0.0: {}
 
   which@1.3.1:
     dependencies:

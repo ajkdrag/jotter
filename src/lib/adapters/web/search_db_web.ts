@@ -158,10 +158,48 @@ export class SearchDbWeb {
 
   async rebuild_index(vault_id: VaultId, docs: NoteDoc[]): Promise<void> {
     await this.init(vault_id);
+    const notes = docs.map((doc) => this.to_worker_note_meta(doc.meta));
     await this.request<null>({
-      type: "rebuild_index",
+      type: "rebuild_begin",
+      vault_id: String(vault_id),
+      notes,
+      total: docs.length,
+    });
+    await this.request<null>({
+      type: "rebuild_batch",
       vault_id: String(vault_id),
       docs,
+    });
+    await this.request<null>({
+      type: "rebuild_finish",
+      vault_id: String(vault_id),
+    });
+  }
+
+  async rebuild_begin(vault_id: VaultId, notes: NoteMeta[]): Promise<void> {
+    await this.init(vault_id);
+    await this.request<null>({
+      type: "rebuild_begin",
+      vault_id: String(vault_id),
+      notes: notes.map((note) => this.to_worker_note_meta(note)),
+      total: notes.length,
+    });
+  }
+
+  async rebuild_batch(vault_id: VaultId, docs: NoteDoc[]): Promise<void> {
+    await this.init(vault_id);
+    await this.request<null>({
+      type: "rebuild_batch",
+      vault_id: String(vault_id),
+      docs,
+    });
+  }
+
+  async rebuild_finish(vault_id: VaultId): Promise<void> {
+    await this.init(vault_id);
+    await this.request<null>({
+      type: "rebuild_finish",
+      vault_id: String(vault_id),
     });
   }
 
@@ -188,6 +226,16 @@ export class SearchDbWeb {
     return {
       id: path,
       path,
+      title: note.title,
+      mtime_ms: note.mtime_ms,
+      size_bytes: note.size_bytes,
+    };
+  }
+
+  private to_worker_note_meta(note: NoteMeta): WorkerNoteMeta {
+    return {
+      id: String(note.id),
+      path: String(note.path),
       title: note.title,
       mtime_ms: note.mtime_ms,
       size_bytes: note.size_bytes,

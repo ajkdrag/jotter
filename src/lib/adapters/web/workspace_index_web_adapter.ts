@@ -4,6 +4,8 @@ import type { NotesPort } from "$lib/ports/notes_port";
 import type { SearchDbWeb } from "$lib/adapters/web/search_db_web";
 import type { IndexProgressEvent } from "$lib/types/search";
 
+const INDEX_BATCH_SIZE = 100;
+
 export function create_workspace_index_web_adapter(
   notes: NotesPort,
   search_db: SearchDbWeb,
@@ -28,24 +30,48 @@ export function create_workspace_index_web_adapter(
     async build_index(vault_id: VaultId): Promise<void> {
       ensure_worker_progress_subscription();
       const metas = await notes.list_notes(vault_id);
-      const docs = await Promise.all(
-        metas.map((meta) => notes.read_note(vault_id, meta.id)),
-      );
       const started_at = Date.now();
       emit({
         status: "started",
         vault_id,
-        total: docs.length,
+        total: metas.length,
       });
+      let rebuild_started = false;
       try {
-        await search_db.rebuild_index(vault_id, docs);
+        await search_db.rebuild_begin(vault_id, metas);
+        rebuild_started = true;
+        let indexed = 0;
+
+        for (
+          let offset = 0;
+          offset < metas.length;
+          offset += INDEX_BATCH_SIZE
+        ) {
+          const batch = metas.slice(offset, offset + INDEX_BATCH_SIZE);
+          const settled = await Promise.allSettled(
+            batch.map((meta) => notes.read_note(vault_id, meta.id)),
+          );
+          const docs = settled.flatMap((result) =>
+            result.status === "fulfilled" ? [result.value] : [],
+          );
+          if (docs.length > 0) {
+            await search_db.rebuild_batch(vault_id, docs);
+            indexed += docs.length;
+          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+
+        await search_db.rebuild_finish(vault_id);
         emit({
           status: "completed",
           vault_id,
-          indexed: docs.length,
+          indexed,
           elapsed_ms: Date.now() - started_at,
         });
       } catch (error) {
+        if (rebuild_started) {
+          await search_db.rebuild_finish(vault_id).catch(() => undefined);
+        }
         emit({
           status: "failed",
           vault_id,
