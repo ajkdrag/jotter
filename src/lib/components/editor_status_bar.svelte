@@ -1,36 +1,78 @@
 <script lang="ts">
-  import { Info, GitBranch } from "@lucide/svelte"
-  import type { CursorInfo } from "$lib/types/editor"
+  import { Info, GitBranch, RefreshCw } from "@lucide/svelte";
+  import type { CursorInfo } from "$lib/types/editor";
+  import type { IndexProgress } from "$lib/stores/search_store.svelte";
 
   interface Props {
-    cursor_info: CursorInfo | null
-    word_count: number
-    has_note: boolean
-    on_info_click: () => void
+    cursor_info: CursorInfo | null;
+    word_count: number;
+    has_note: boolean;
+    index_progress: IndexProgress;
+    on_info_click: () => void;
   }
 
-  let { cursor_info, word_count, has_note, on_info_click }: Props = $props()
+  let {
+    cursor_info,
+    word_count,
+    has_note,
+    index_progress,
+    on_info_click,
+  }: Props = $props();
 
-  const line = $derived(cursor_info?.line ?? null)
-  const column = $derived(cursor_info?.column ?? null)
-  const total_lines = $derived(cursor_info?.total_lines ?? null)
+  const line = $derived(cursor_info?.line ?? null);
+  const column = $derived(cursor_info?.column ?? null);
+  const total_lines = $derived(cursor_info?.total_lines ?? null);
+
+  let show_completed = $state(false);
+  let completed_timer: ReturnType<typeof setTimeout> | null = null;
+
+  $effect(() => {
+    if (index_progress.status === "completed") {
+      show_completed = true;
+      completed_timer = setTimeout(() => {
+        show_completed = false;
+      }, 3000);
+    }
+    return () => {
+      if (completed_timer) {
+        clearTimeout(completed_timer);
+      }
+    };
+  });
 </script>
 
 <div class="StatusBar">
   <div class="StatusBar__section">
     <span class="StatusBar__item">
-      Ln {line ?? '--'}, Col {column ?? '--'}
+      Ln {line ?? "--"}, Col {column ?? "--"}
     </span>
     <span class="StatusBar__separator" aria-hidden="true"></span>
     <span class="StatusBar__item">
-      {has_note ? word_count : '--'} words
+      {has_note ? word_count : "--"} words
     </span>
     <span class="StatusBar__separator" aria-hidden="true"></span>
     <span class="StatusBar__item">
-      {total_lines ?? '--'} lines
+      {total_lines ?? "--"} lines
     </span>
   </div>
   <div class="StatusBar__section">
+    {#if index_progress.status === "indexing"}
+      <span class="StatusBar__item StatusBar__item--indexing">
+        <RefreshCw class="StatusBar__spinner" />
+        <span>Indexing {index_progress.indexed}/{index_progress.total}</span>
+      </span>
+      <span class="StatusBar__separator" aria-hidden="true"></span>
+    {:else if index_progress.status === "failed"}
+      <span class="StatusBar__item StatusBar__item--failed">
+        <span>Index failed</span>
+      </span>
+      <span class="StatusBar__separator" aria-hidden="true"></span>
+    {:else if show_completed}
+      <span class="StatusBar__item StatusBar__item--completed">
+        <span>Indexed</span>
+      </span>
+      <span class="StatusBar__separator" aria-hidden="true"></span>
+    {/if}
     <span class="StatusBar__item StatusBar__item--muted">
       <GitBranch />
       <span>--</span>
@@ -55,7 +97,7 @@
     height: var(--size-status-bar);
     padding-inline: var(--space-3);
     font-size: var(--text-xs);
-    font-feature-settings: 'tnum' 1;
+    font-feature-settings: "tnum" 1;
     flex-shrink: 0;
     border-top: 1px solid var(--border);
     background-color: color-mix(in oklch, var(--muted) 30%, transparent);
@@ -76,6 +118,18 @@
 
   .StatusBar__item--muted {
     opacity: 0.5;
+  }
+
+  .StatusBar__item--indexing {
+    color: var(--primary);
+  }
+
+  .StatusBar__item--failed {
+    color: var(--destructive);
+  }
+
+  .StatusBar__item--completed {
+    color: var(--muted-foreground);
   }
 
   .StatusBar__separator {
@@ -117,5 +171,18 @@
   :global(.StatusBar__action svg) {
     width: var(--size-icon-xs);
     height: var(--size-icon-xs);
+  }
+
+  :global(.StatusBar__spinner) {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

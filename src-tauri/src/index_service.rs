@@ -3,9 +3,11 @@ use crate::search_db;
 use crate::storage;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::sync::Mutex;
-use tauri::{AppHandle, Manager};
+use std::collections::{BTreeSet, HashMap};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
+use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexNoteMeta {
@@ -45,6 +47,20 @@ pub struct SearchDbState {
     connections: Mutex<HashMap<String, Connection>>,
 }
 
+#[derive(Default)]
+pub struct IndexingState {
+    active: Mutex<HashMap<String, Arc<AtomicBool>>>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum IndexProgressEvent {
+    Started { vault_id: String, total: usize },
+    Progress { vault_id: String, indexed: usize, total: usize },
+    Completed { vault_id: String, indexed: usize, elapsed_ms: u64 },
+    Failed { vault_id: String, error: String },
+}
+
 fn with_conn<F, T>(app: &AppHandle, vault_id: &str, f: F) -> Result<T, String>
 where
     F: FnOnce(&Connection) -> Result<T, String>,
@@ -61,14 +77,91 @@ where
 }
 
 #[tauri::command]
-pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
-    let vault_root = storage::vault_path(&app, &vault_id).map_err(|e| {
-        log::error!("index_build: failed to resolve vault {}: {}", vault_id, e);
-        e
-    })?;
-    with_conn(&app, &vault_id, |conn| {
-        search_db::rebuild_index(conn, &vault_root)
-    })
+pub fn index_build(
+    app: AppHandle,
+    vault_id: String,
+    indexing_state: tauri::State<'_, IndexingState>,
+) -> Result<(), String> {
+    let vault_root = storage::vault_path(&app, &vault_id)?;
+
+    {
+        let map = indexing_state.active.lock().map_err(|e| e.to_string())?;
+        if let Some(flag) = map.get(&vault_id) {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
+
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let mut map = indexing_state.active.lock().map_err(|e| e.to_string())?;
+        map.insert(vault_id.clone(), Arc::clone(&cancel));
+    }
+
+    let app_handle = app.clone();
+    let vid = vault_id.clone();
+
+    std::thread::spawn(move || {
+        let conn = match search_db::open_search_db(&vault_root) {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("index_build: open db failed: {}", e);
+                let _ = app_handle.emit(
+                    "index_progress",
+                    IndexProgressEvent::Failed { vault_id: vid.clone(), error: e },
+                );
+                return;
+            }
+        };
+
+        let start = Instant::now();
+        let vid2 = vid.clone();
+        let app2 = app_handle.clone();
+
+        let result = search_db::rebuild_index(&conn, &vault_root, &cancel, &|indexed, total| {
+            if indexed == 0 {
+                let _ = app2.emit(
+                    "index_progress",
+                    IndexProgressEvent::Started { vault_id: vid2.clone(), total },
+                );
+            } else {
+                let _ = app2.emit(
+                    "index_progress",
+                    IndexProgressEvent::Progress {
+                        vault_id: vid2.clone(),
+                        indexed,
+                        total,
+                    },
+                );
+            }
+        });
+
+        match result {
+            Ok(res) => {
+                let elapsed_ms = start.elapsed().as_millis() as u64;
+                let _ = app_handle.emit(
+                    "index_progress",
+                    IndexProgressEvent::Completed {
+                        vault_id: vid.clone(),
+                        indexed: res.indexed,
+                        elapsed_ms,
+                    },
+                );
+            }
+            Err(e) => {
+                log::error!("index_build failed: {}", e);
+                let _ = app_handle.emit(
+                    "index_progress",
+                    IndexProgressEvent::Failed { vault_id: vid.clone(), error: e },
+                );
+            }
+        }
+
+        if let Ok(mut map) = app.state::<IndexingState>().active.lock() {
+            map.remove(&vid);
+        }
+    });
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -104,7 +197,7 @@ pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> R
     with_conn(&app, &vault_id, |conn| {
         search_db::upsert_note(conn, &meta, &markdown)?;
 
-        let all_notes = get_all_notes_from_db(conn)?;
+        let all_notes = search_db::get_all_notes_from_db(conn)?;
         let key_map = search_db::build_key_map(&all_notes);
         let mut resolved: BTreeSet<String> = BTreeSet::new();
         for token in search_db::wiki_link_targets(&markdown) {
@@ -116,30 +209,6 @@ pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> R
         }
         search_db::set_outlinks(conn, &meta.path, &resolved.into_iter().collect::<Vec<_>>())
     })
-}
-
-fn get_all_notes_from_db(conn: &Connection) -> Result<BTreeMap<String, IndexNoteMeta>, String> {
-    let mut stmt = conn
-        .prepare("SELECT path, title, mtime_ms, size_bytes FROM notes")
-        .map_err(|e| e.to_string())?;
-    let rows = stmt
-        .query_map([], |row| {
-            let path: String = row.get(0)?;
-            Ok(IndexNoteMeta {
-                id: path.clone(),
-                path,
-                title: row.get(1)?,
-                mtime_ms: row.get(2)?,
-                size_bytes: row.get(3)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-    let mut map = BTreeMap::new();
-    for row in rows {
-        let meta = row.map_err(|e| e.to_string())?;
-        map.insert(meta.path.clone(), meta);
-    }
-    Ok(map)
 }
 
 #[tauri::command]

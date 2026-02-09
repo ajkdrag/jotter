@@ -7,6 +7,7 @@ use rusqlite::{params, Connection};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::LazyLock;
 use walkdir::WalkDir;
 
@@ -147,6 +148,8 @@ pub fn open_search_db(vault_root: &Path) -> Result<Connection, String> {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let conn = Connection::open(&path).map_err(|e| e.to_string())?;
+    conn.busy_timeout(std::time::Duration::from_millis(5000))
+        .map_err(|e| e.to_string())?;
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")
         .map_err(|e| e.to_string())?;
     init_schema(&conn)?;
@@ -183,7 +186,20 @@ pub fn remove_note(conn: &Connection, path: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn rebuild_index(conn: &Connection, vault_root: &Path) -> Result<(), String> {
+#[derive(Debug, Serialize)]
+pub struct IndexResult {
+    pub total: usize,
+    pub indexed: usize,
+}
+
+const BATCH_SIZE: usize = 100;
+
+pub fn rebuild_index(
+    conn: &Connection,
+    vault_root: &Path,
+    cancel: &AtomicBool,
+    on_progress: &dyn Fn(usize, usize),
+) -> Result<IndexResult, String> {
     conn.execute("DELETE FROM notes", [])
         .map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM notes_fts", [])
@@ -191,34 +207,88 @@ pub fn rebuild_index(conn: &Connection, vault_root: &Path) -> Result<(), String>
     conn.execute("DELETE FROM outlinks", [])
         .map_err(|e| e.to_string())?;
 
-    let mut notes: BTreeMap<String, IndexNoteMeta> = BTreeMap::new();
-    let mut bodies: BTreeMap<String, String> = BTreeMap::new();
+    let paths = list_markdown_files(vault_root);
+    let total = paths.len();
+    on_progress(0, total);
 
-    for abs in list_markdown_files(vault_root) {
-        let markdown = std::fs::read_to_string(&abs).map_err(|e| e.to_string())?;
-        let meta = extract_meta(&abs, vault_root)?;
-        bodies.insert(meta.path.clone(), markdown);
-        notes.insert(meta.path.clone(), meta);
+    let mut indexed: usize = 0;
+    let mut pending_links: Vec<(String, Vec<String>)> = Vec::new();
+
+    for batch in paths.chunks(BATCH_SIZE) {
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
+
+        conn.execute_batch("BEGIN IMMEDIATE")
+            .map_err(|e| e.to_string())?;
+
+        for abs in batch {
+            let markdown = match std::fs::read_to_string(abs) {
+                Ok(s) => s,
+                Err(e) => {
+                    log::warn!("skip {}: {}", abs.display(), e);
+                    continue;
+                }
+            };
+            let meta = match extract_meta(abs, vault_root) {
+                Ok(m) => m,
+                Err(e) => {
+                    log::warn!("skip {}: {}", abs.display(), e);
+                    continue;
+                }
+            };
+            upsert_note(conn, &meta, &markdown)?;
+            let targets = wiki_link_targets(&markdown);
+            if !targets.is_empty() {
+                pending_links.push((meta.path.clone(), targets));
+            }
+            indexed += 1;
+        }
+
+        conn.execute_batch("COMMIT")
+            .map_err(|e| e.to_string())?;
+        on_progress(indexed, total);
     }
 
-    let key_map = build_key_map(&notes);
-
-    for (path, meta) in notes.iter() {
-        let markdown = bodies.get(path).map(|s| s.as_str()).unwrap_or_default();
-        upsert_note(conn, meta, markdown)?;
-
+    let all_notes = get_all_notes_from_db(conn)?;
+    let key_map = build_key_map(&all_notes);
+    for (source, targets) in &pending_links {
         let mut resolved: BTreeSet<String> = BTreeSet::new();
-        for token in wiki_link_targets(markdown) {
-            if let Some(target) = resolve_wiki_target(&token, &key_map) {
-                if target != *path {
+        for token in targets {
+            if let Some(target) = resolve_wiki_target(token, &key_map) {
+                if target != *source {
                     resolved.insert(target);
                 }
             }
         }
-        set_outlinks(conn, path, &resolved.into_iter().collect::<Vec<_>>())?;
+        set_outlinks(conn, source, &resolved.into_iter().collect::<Vec<_>>())?;
     }
 
-    Ok(())
+    Ok(IndexResult { total, indexed })
+}
+
+pub fn get_all_notes_from_db(conn: &Connection) -> Result<BTreeMap<String, IndexNoteMeta>, String> {
+    let mut stmt = conn
+        .prepare("SELECT path, title, mtime_ms, size_bytes FROM notes")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            let path: String = row.get(0)?;
+            Ok(IndexNoteMeta {
+                id: path.clone(),
+                path,
+                title: row.get(1)?,
+                mtime_ms: row.get(2)?,
+                size_bytes: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    let mut map = BTreeMap::new();
+    for row in rows {
+        let meta = row.map_err(|e| e.to_string())?;
+        map.insert(meta.path.clone(), meta);
+    }
+    Ok(map)
 }
 
 fn escape_fts_query(query: &str) -> String {
