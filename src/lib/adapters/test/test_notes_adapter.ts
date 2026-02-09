@@ -121,6 +121,7 @@ export function create_test_notes_adapter(): NotesPort {
         result.push({
           id: note_path,
           path: note_path,
+          name: title,
           title,
           mtime_ms: data.mtime_ms,
           size_bytes: new Blob([data.markdown]).size,
@@ -164,6 +165,7 @@ export function create_test_notes_adapter(): NotesPort {
       const meta: NoteMeta = {
         id: note_path,
         path: note_path,
+        name: title,
         title,
         mtime_ms: note_data.mtime_ms,
         size_bytes: new Blob([note_data.markdown]).size,
@@ -201,6 +203,7 @@ export function create_test_notes_adapter(): NotesPort {
       return Promise.resolve({
         id: full_path,
         path: full_path,
+        name: title,
         title,
         mtime_ms: Date.now(),
         size_bytes: new Blob([initial_markdown]).size,
@@ -256,6 +259,7 @@ export function create_test_notes_adapter(): NotesPort {
           result_notes.push({
             id: note_path,
             path: note_path,
+            name: title,
             title,
             mtime_ms: data.mtime_ms,
             size_bytes: new Blob([data.markdown]).size,

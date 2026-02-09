@@ -17,6 +17,7 @@ function create_note(index: number) {
   return {
     id: path,
     path,
+    name: file.replace(".md", ""),
     title: file.replace(".md", ""),
     mtime_ms: 0,
     size_bytes: 0,

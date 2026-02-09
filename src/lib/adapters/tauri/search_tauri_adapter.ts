@@ -7,26 +7,23 @@ import type {
 } from "$lib/types/search";
 import { tauri_invoke } from "$lib/adapters/tauri/tauri_invoke";
 
+type TauriNoteMeta = {
+  id: string;
+  path: string;
+  title: string;
+  name: string;
+  mtime_ms: number;
+  size_bytes: number;
+};
+
 type TauriSearchHit = {
-  note: {
-    id: string;
-    path: string;
-    title: string;
-    mtime_ms: number;
-    size_bytes: number;
-  };
+  note: TauriNoteMeta;
   score: number;
   snippet: string | null;
 };
 
 type TauriSuggestionHit = {
-  note: {
-    id: string;
-    path: string;
-    title: string;
-    mtime_ms: number;
-    size_bytes: number;
-  };
+  note: TauriNoteMeta;
   score: number;
 };
 
@@ -46,6 +43,7 @@ export function create_search_tauri_adapter(): SearchPort {
           id: hit.note.id as NoteId,
           path: hit.note.path as NoteId,
           title: hit.note.title,
+          name: hit.note.name,
           mtime_ms: hit.note.mtime_ms,
           size_bytes: hit.note.size_bytes,
         },
@@ -69,6 +67,7 @@ export function create_search_tauri_adapter(): SearchPort {
           id: hit.note.id as NoteId,
           path: hit.note.path as NoteId,
           title: hit.note.title,
+          name: hit.note.name,
           mtime_ms: hit.note.mtime_ms,
           size_bytes: hit.note.size_bytes,
         },

@@ -217,7 +217,7 @@
             <div class="Omnibar__item-row">
               <ClockIcon />
               <div class="Omnibar__item-content">
-                <span class="Omnibar__item-title">{item.note.title}</span>
+                <span class="Omnibar__item-title">{item.note.name}</span>
                 <span class="Omnibar__item-path">{item.note.path}</span>
               </div>
             </div>

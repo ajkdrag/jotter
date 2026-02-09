@@ -8,6 +8,7 @@ function make_note(path: string, title?: string): NoteMeta {
   return {
     id: as_note_path(path),
     path: as_note_path(path),
+    name: path.split("/").at(-1)?.replace(/\.md$/, "") ?? "",
     title: title ?? path.replace(/\.md$/, "").split("/").pop() ?? "",
     mtime_ms: Date.now(),
     size_bytes: 100,

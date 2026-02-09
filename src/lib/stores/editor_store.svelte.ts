@@ -45,13 +45,15 @@ export class EditorStore {
 
   update_open_note_path(new_path: NotePath) {
     if (!this.open_note) return;
+    const name = path_title(new_path);
     this.open_note = {
       ...this.open_note,
       meta: {
         ...this.open_note.meta,
         id: new_path,
         path: new_path,
-        title: path_title(new_path),
+        name,
+        title: name,
       },
     };
   }
@@ -63,13 +65,15 @@ export class EditorStore {
 
     const new_path =
       `${new_prefix}${current_path.slice(old_prefix.length)}` as NotePath;
+    const name = path_title(new_path);
     this.open_note = {
       ...this.open_note,
       meta: {
         ...this.open_note.meta,
         id: new_path,
         path: new_path,
-        title: path_title(new_path),
+        name,
+        title: name,
       },
     };
   }

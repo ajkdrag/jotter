@@ -16,7 +16,6 @@ pub fn run() {
     tauri::Builder::default()
         .manage(watcher_service::WatcherState::default())
         .manage(index_service::SearchDbState::default())
-        .manage(index_service::IndexingState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -42,6 +41,7 @@ pub fn run() {
             index_service::index_suggest,
             index_service::index_upsert_note,
             index_service::index_remove_note,
+            index_service::index_remove_notes,
             index_service::index_backlinks,
             index_service::index_outlinks,
             notes_service::list_notes,

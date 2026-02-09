@@ -226,6 +226,7 @@ export class SearchDbWeb {
     return {
       id: path,
       path,
+      name: note.name,
       title: note.title,
       mtime_ms: note.mtime_ms,
       size_bytes: note.size_bytes,
@@ -236,6 +237,7 @@ export class SearchDbWeb {
     return {
       id: String(note.id),
       path: String(note.path),
+      name: note.name,
       title: note.title,
       mtime_ms: note.mtime_ms,
       size_bytes: note.size_bytes,

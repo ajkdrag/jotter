@@ -23,6 +23,12 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
         noteId: note_id,
       });
     },
+    async remove_notes(vault_id: VaultId, note_ids: NoteId[]) {
+      await tauri_invoke<undefined>("index_remove_notes", {
+        vaultId: vault_id,
+        noteIds: note_ids,
+      });
+    },
     subscribe_index_progress(
       callback: (event: IndexProgressEvent) => void,
     ): () => void {

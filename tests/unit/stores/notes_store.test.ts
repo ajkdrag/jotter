@@ -8,6 +8,7 @@ function note(path: string): NoteMeta {
   return {
     id: path as NoteId,
     path: path as NotePath,
+    name: path.split("/").pop()?.replace(".md", "") ?? "",
     title: path.split("/").pop()?.replace(".md", "") ?? "",
     mtime_ms: 0,
     size_bytes: 0,

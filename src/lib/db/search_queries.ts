@@ -2,18 +2,20 @@ import type { SearchScope } from "$lib/types/search";
 
 export const SEARCH_BM25_WEIGHTS = {
   title: 10.0,
+  name: 12.0,
   path: 5.0,
   body: 1.0,
 } as const;
 
 export const SUGGEST_BM25_WEIGHTS = {
   title: 15.0,
+  name: 20.0,
   path: 5.0,
   body: 0.0,
 } as const;
 
 export const SEARCH_SNIPPET_SQL =
-  "snippet(notes_fts, 2, '<b>', '</b>', '...', 30)";
+  "snippet(notes_fts, 3, '<b>', '</b>', '...', 30)";
 
 export const SEARCH_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS notes (
@@ -25,6 +27,7 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
   title,
+  name,
   path,
   body,
   tokenize='unicode61 remove_diacritics 2'
@@ -44,7 +47,7 @@ export const UPSERT_NOTE_SQL =
 export const DELETE_NOTE_SQL = "DELETE FROM notes WHERE path = ?1";
 export const DELETE_NOTE_FTS_SQL = "DELETE FROM notes_fts WHERE path = ?1";
 export const INSERT_NOTE_FTS_SQL =
-  "INSERT INTO notes_fts (title, path, body) VALUES (?1, ?2, ?3)";
+  "INSERT INTO notes_fts (title, name, path, body) VALUES (?1, ?2, ?3, ?4)";
 export const DELETE_ALL_NOTES_SQL = "DELETE FROM notes";
 export const DELETE_ALL_NOTES_FTS_SQL = "DELETE FROM notes_fts";
 export const DELETE_ALL_OUTLINKS_SQL = "DELETE FROM outlinks";
@@ -57,7 +60,7 @@ export const INSERT_OUTLINK_SQL =
 
 export const SEARCH_SQL = `SELECT n.path, n.title, n.mtime_ms, n.size_bytes,
   ${SEARCH_SNIPPET_SQL} as snippet,
-  bm25(notes_fts, 10.0, 5.0, 1.0) as rank
+  bm25(notes_fts, 10.0, 12.0, 5.0, 1.0) as rank
 FROM notes_fts
 JOIN notes n ON n.path = notes_fts.path
 WHERE notes_fts MATCH ?1
@@ -65,7 +68,7 @@ ORDER BY rank
 LIMIT ?2`;
 
 export const SUGGEST_SQL = `SELECT n.path, n.title, n.mtime_ms, n.size_bytes,
-  bm25(notes_fts, 15.0, 5.0, 0.0) as rank
+  bm25(notes_fts, 15.0, 20.0, 5.0, 0.0) as rank
 FROM notes_fts
 JOIN notes n ON n.path = notes_fts.path
 WHERE notes_fts MATCH ?1
@@ -108,5 +111,5 @@ export function search_match_expression(
 
 export function suggest_match_expression(query: string): string {
   const escaped = escape_fts_prefix_query(query.trim());
-  return `{title path} : ${escaped}`;
+  return `{title name path} : ${escaped}`;
 }

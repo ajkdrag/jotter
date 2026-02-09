@@ -31,7 +31,7 @@ export class NotesStore {
     const normalized_new = normalized_note_path(new_path);
     const parts = normalized_new.split("/");
     const leaf = parts[parts.length - 1] ?? "";
-    const title = leaf.slice(0, -3);
+    const name = leaf.slice(0, -3);
 
     this.notes = this.notes
       .map((note) => {
@@ -40,7 +40,8 @@ export class NotesStore {
           ...note,
           id: normalized_new,
           path: normalized_new,
-          title,
+          name,
+          title: name,
         };
       })
       .sort((a, b) => a.path.localeCompare(b.path));

@@ -10,6 +10,7 @@ function build_meta(path: string, title: string): NoteMeta {
   return {
     id: note_path,
     path: note_path,
+    name: path.split("/").at(-1)?.replace(/\.md$/, "") ?? "",
     title,
     mtime_ms: 0,
     size_bytes: title.length,

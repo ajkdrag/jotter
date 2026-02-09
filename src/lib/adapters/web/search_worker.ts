@@ -104,11 +104,17 @@ function to_nullable_string(value: unknown): string | null {
   return to_string(value);
 }
 
+function file_stem(path: string): string {
+  const leaf = path.split("/").at(-1) ?? path;
+  return leaf.endsWith(".md") ? leaf.slice(0, -3) : leaf;
+}
+
 function to_note_meta(row: unknown[]): WorkerNoteMeta {
   const path = to_string(row[0]);
   return {
     id: path,
     path,
+    name: file_stem(path),
     title: to_string(row[1]),
     mtime_ms: to_number(row[2]),
     size_bytes: to_number(row[3]),
@@ -280,6 +286,7 @@ async function upsert_note_record(db: number, doc: NoteDoc): Promise<void> {
   await sql_run(db, DELETE_NOTE_FTS_SQL, [doc.meta.path]);
   await sql_run(db, INSERT_NOTE_FTS_SQL, [
     doc.meta.title,
+    file_stem(doc.meta.path),
     doc.meta.path,
     doc.markdown,
   ]);

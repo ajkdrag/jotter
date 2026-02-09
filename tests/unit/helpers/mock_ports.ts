@@ -124,6 +124,7 @@ export function create_mock_notes_port(): NotesPort & {
         meta: {
           id: _note_id,
           path: _note_id,
+          name: String(_note_id).split("/").at(-1)?.replace(/\.md$/, "") ?? "",
           title: "",
           mtime_ms: 0,
           size_bytes: 0,
@@ -141,9 +142,12 @@ export function create_mock_notes_port(): NotesPort & {
       markdown: MarkdownText,
     ) {
       mock._calls.create_note.push({ vault_id, note_path, markdown });
+      const stem =
+        String(note_path).split("/").at(-1)?.replace(/\.md$/, "") ?? "";
       const new_note = {
         id: note_path,
         path: note_path,
+        name: stem,
         title: note_path.replace(".md", ""),
         mtime_ms: Date.now(),
         size_bytes: markdown.length,
@@ -282,6 +286,7 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
     build_index: VaultId[];
     upsert_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_note: { vault_id: VaultId; note_id: NoteId }[];
+    remove_notes: { vault_id: VaultId; note_ids: NoteId[] }[];
   };
 } {
   const mock = {
@@ -289,6 +294,7 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
       build_index: [] as VaultId[],
       upsert_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_note: [] as { vault_id: VaultId; note_id: NoteId }[],
+      remove_notes: [] as { vault_id: VaultId; note_ids: NoteId[] }[],
     },
     build_index(vault_id: VaultId) {
       mock._calls.build_index.push(vault_id);
@@ -300,6 +306,10 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
     },
     remove_note(vault_id: VaultId, note_id: NoteId) {
       mock._calls.remove_note.push({ vault_id, note_id });
+      return Promise.resolve();
+    },
+    remove_notes(vault_id: VaultId, note_ids: NoteId[]) {
+      mock._calls.remove_notes.push({ vault_id, note_ids });
       return Promise.resolve();
     },
     subscribe_index_progress() {

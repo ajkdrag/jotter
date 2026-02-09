@@ -148,6 +148,7 @@ async function list_markdown_files(
       notes.push({
         id: note_path,
         path: note_path,
+        name: handle.name.replace(/\.md$/, ""),
         title: handle.name.replace(/\.md$/, ""),
         mtime_ms: file.lastModified,
         size_bytes: file.size,
@@ -220,6 +221,7 @@ export function create_notes_web_adapter(): NotesPort {
       const meta: NoteMeta = {
         id: note_path,
         path: note_path,
+        name: name.replace(/\.md$/, ""),
         title: name.replace(/\.md$/, ""),
         mtime_ms: file.lastModified,
         size_bytes: file.size,
@@ -273,6 +275,7 @@ export function create_notes_web_adapter(): NotesPort {
           return {
             id: full_path,
             path: full_path,
+            name: file_name.replace(/\.md$/, ""),
             title: file_name.replace(/\.md$/, ""),
             mtime_ms: file.lastModified,
             size_bytes: file.size,
@@ -393,6 +396,7 @@ export function create_notes_web_adapter(): NotesPort {
         notes.push({
           id: note_path,
           path: note_path,
+          name: entry.name.replace(/\.md$/, ""),
           title: entry.name.replace(/\.md$/, ""),
           mtime_ms: 0,
           size_bytes: 0,

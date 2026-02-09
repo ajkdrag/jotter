@@ -66,11 +66,7 @@ pub(crate) fn resolve_wiki_target(
 pub(crate) fn build_key_map(notes: &BTreeMap<String, IndexNoteMeta>) -> BTreeMap<String, String> {
     let mut map: BTreeMap<String, String> = BTreeMap::new();
     for (path, meta) in notes.iter() {
-        let stem = Path::new(path)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or(path);
-        map.entry(normalize_key(stem))
+        map.entry(normalize_key(&meta.name))
             .or_insert_with(|| path.clone());
         map.entry(normalize_key(&meta.title))
             .or_insert_with(|| path.clone());
@@ -97,15 +93,24 @@ pub(crate) fn list_markdown_files(root: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
+fn file_stem_string(abs: &Path) -> String {
+    abs.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
 pub(crate) fn extract_meta(abs: &Path, vault_root: &Path) -> Result<IndexNoteMeta, String> {
     let rel = abs.strip_prefix(vault_root).map_err(|e| e.to_string())?;
     let rel = storage::normalize_relative_path(rel);
     let title = notes_service::extract_title(abs);
+    let name = file_stem_string(abs);
     let (mtime_ms, size_bytes) = notes_service::file_meta(abs)?;
     Ok(IndexNoteMeta {
         id: rel.clone(),
         path: rel,
         title,
+        name,
         mtime_ms,
         size_bytes,
     })
@@ -115,8 +120,27 @@ fn db_path(vault_root: &Path) -> PathBuf {
     vault_root.join(constants::APP_DIR).join("search.db")
 }
 
+const EXPECTED_FTS_COLUMNS: &str = "title, name, path, body";
+
+fn fts_schema_needs_migration(conn: &Connection) -> bool {
+    let sql = "SELECT sql FROM sqlite_master WHERE type='table' AND name='notes_fts'";
+    match conn.query_row(sql, [], |row| row.get::<_, String>(0)) {
+        Ok(ddl) => !ddl.contains("name,"),
+        Err(_) => false,
+    }
+}
+
 fn init_schema(conn: &Connection) -> Result<(), String> {
-    conn.execute_batch(
+    if fts_schema_needs_migration(conn) {
+        conn.execute_batch(
+            "DROP TABLE IF EXISTS notes_fts;
+             DELETE FROM notes;
+             DELETE FROM outlinks;",
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    conn.execute_batch(&format!(
         "CREATE TABLE IF NOT EXISTS notes (
             path TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -125,9 +149,7 @@ fn init_schema(conn: &Connection) -> Result<(), String> {
         );
 
         CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
-            title,
-            path,
-            body,
+            {EXPECTED_FTS_COLUMNS},
             tokenize='unicode61 remove_diacritics 2'
         );
 
@@ -137,8 +159,8 @@ fn init_schema(conn: &Connection) -> Result<(), String> {
             PRIMARY KEY (source_path, target_path)
         );
 
-        CREATE INDEX IF NOT EXISTS idx_outlinks_target ON outlinks(target_path);",
-    )
+        CREATE INDEX IF NOT EXISTS idx_outlinks_target ON outlinks(target_path);"
+    ))
     .map_err(|e| e.to_string())
 }
 
@@ -170,8 +192,8 @@ pub fn upsert_note(conn: &Connection, meta: &IndexNoteMeta, body: &str) -> Resul
     .map_err(|e| e.to_string())?;
 
     conn.execute(
-        "INSERT INTO notes_fts (title, path, body) VALUES (?1, ?2, ?3)",
-        params![meta.title, meta.path, body],
+        "INSERT INTO notes_fts (title, name, path, body) VALUES (?1, ?2, ?3, ?4)",
+        params![meta.title, meta.name, meta.path, body],
     )
     .map_err(|e| e.to_string())?;
 
@@ -183,6 +205,13 @@ pub fn remove_note(conn: &Connection, path: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM notes_fts WHERE path = ?1", params![path])
         .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn remove_notes(conn: &Connection, paths: &[String]) -> Result<(), String> {
+    for path in paths {
+        remove_note(conn, path)?;
+    }
     Ok(())
 }
 
@@ -199,6 +228,7 @@ pub fn rebuild_index(
     vault_root: &Path,
     cancel: &AtomicBool,
     on_progress: &dyn Fn(usize, usize),
+    yield_fn: &mut dyn FnMut(),
 ) -> Result<IndexResult, String> {
     conn.execute("DELETE FROM notes", [])
         .map_err(|e| e.to_string())?;
@@ -248,6 +278,7 @@ pub fn rebuild_index(
         conn.execute_batch("COMMIT")
             .map_err(|e| e.to_string())?;
         on_progress(indexed, total);
+        yield_fn();
     }
 
     let all_notes = get_all_notes_from_db(conn)?;
@@ -272,16 +303,7 @@ pub fn get_all_notes_from_db(conn: &Connection) -> Result<BTreeMap<String, Index
         .prepare("SELECT path, title, mtime_ms, size_bytes FROM notes")
         .map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map([], |row| {
-            let path: String = row.get(0)?;
-            Ok(IndexNoteMeta {
-                id: path.clone(),
-                path,
-                title: row.get(1)?,
-                mtime_ms: row.get(2)?,
-                size_bytes: row.get(3)?,
-            })
-        })
+        .query_map([], |row| note_meta_from_row(row))
         .map_err(|e| e.to_string())?;
     let mut map = BTreeMap::new();
     for row in rows {
@@ -316,6 +338,20 @@ fn escape_fts_prefix_query(query: &str) -> String {
         .join(" ")
 }
 
+fn note_meta_from_row(row: &rusqlite::Row) -> rusqlite::Result<IndexNoteMeta> {
+    let path: String = row.get(0)?;
+    let title: String = row.get(1)?;
+    let name = file_stem_string(Path::new(&path));
+    Ok(IndexNoteMeta {
+        id: path.clone(),
+        path,
+        title,
+        name,
+        mtime_ms: row.get(2)?,
+        size_bytes: row.get(3)?,
+    })
+}
+
 pub fn search(
     conn: &Connection,
     query: &str,
@@ -336,8 +372,8 @@ pub fn search(
     };
 
     let sql = "SELECT n.path, n.title, n.mtime_ms, n.size_bytes,
-                      snippet(notes_fts, 2, '<b>', '</b>', '...', 30) as snippet,
-                      bm25(notes_fts, 10.0, 5.0, 1.0) as rank
+                      snippet(notes_fts, 3, '<b>', '</b>', '...', 30) as snippet,
+                      bm25(notes_fts, 10.0, 12.0, 5.0, 1.0) as rank
                FROM notes_fts
                JOIN notes n ON n.path = notes_fts.path
                WHERE notes_fts MATCH ?1
@@ -348,24 +384,15 @@ pub fn search(
     let rows = stmt
         .query_map(params![match_expr, limit], |row| {
             Ok(crate::index_service::SearchHit {
-                note: IndexNoteMeta {
-                    id: row.get::<_, String>(0)?,
-                    path: row.get(0)?,
-                    title: row.get(1)?,
-                    mtime_ms: row.get(2)?,
-                    size_bytes: row.get(3)?,
-                },
+                note: note_meta_from_row(row)?,
                 score: row.get(5)?,
                 snippet: row.get(4)?,
             })
         })
         .map_err(|e| e.to_string())?;
 
-    let mut hits = Vec::new();
-    for row in rows {
-        hits.push(row.map_err(|e| e.to_string())?);
-    }
-    Ok(hits)
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 pub fn suggest(
@@ -379,10 +406,10 @@ pub fn suggest(
     }
 
     let escaped = escape_fts_prefix_query(trimmed);
-    let match_expr = format!("{{title path}} : {escaped}");
+    let match_expr = format!("{{title name path}} : {escaped}");
 
     let sql = "SELECT n.path, n.title, n.mtime_ms, n.size_bytes,
-                      bm25(notes_fts, 15.0, 5.0, 0.0) as rank
+                      bm25(notes_fts, 15.0, 20.0, 5.0, 0.0) as rank
                FROM notes_fts
                JOIN notes n ON n.path = notes_fts.path
                WHERE notes_fts MATCH ?1
@@ -393,23 +420,14 @@ pub fn suggest(
     let rows = stmt
         .query_map(params![match_expr, limit], |row| {
             Ok(SuggestionHit {
-                note: IndexNoteMeta {
-                    id: row.get::<_, String>(0)?,
-                    path: row.get(0)?,
-                    title: row.get(1)?,
-                    mtime_ms: row.get(2)?,
-                    size_bytes: row.get(3)?,
-                },
+                note: note_meta_from_row(row)?,
                 score: row.get(4)?,
             })
         })
         .map_err(|e| e.to_string())?;
 
-    let mut hits = Vec::new();
-    for row in rows {
-        hits.push(row.map_err(|e| e.to_string())?);
-    }
-    Ok(hits)
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 pub fn set_outlinks(conn: &Connection, source: &str, targets: &[String]) -> Result<(), String> {
@@ -439,22 +457,11 @@ pub fn get_outlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>,
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(params![path], |row| {
-            Ok(IndexNoteMeta {
-                id: row.get::<_, String>(0)?,
-                path: row.get(0)?,
-                title: row.get(1)?,
-                mtime_ms: row.get(2)?,
-                size_bytes: row.get(3)?,
-            })
-        })
+        .query_map(params![path], |row| note_meta_from_row(row))
         .map_err(|e| e.to_string())?;
 
-    let mut results = Vec::new();
-    for row in rows {
-        results.push(row.map_err(|e| e.to_string())?);
-    }
-    Ok(results)
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>, String> {
@@ -466,20 +473,9 @@ pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(params![path], |row| {
-            Ok(IndexNoteMeta {
-                id: row.get::<_, String>(0)?,
-                path: row.get(0)?,
-                title: row.get(1)?,
-                mtime_ms: row.get(2)?,
-                size_bytes: row.get(3)?,
-            })
-        })
+        .query_map(params![path], |row| note_meta_from_row(row))
         .map_err(|e| e.to_string())?;
 
-    let mut results = Vec::new();
-    for row in rows {
-        results.push(row.map_err(|e| e.to_string())?);
-    }
-    Ok(results)
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }

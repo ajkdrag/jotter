@@ -190,7 +190,7 @@ export class EditorService {
                     }
 
                     const items = result.results.map((r) => ({
-                      title: r.note.title,
+                      title: r.note.name,
                       path: r.note.path,
                     }));
                     this.session?.set_wiki_suggestions?.(items);

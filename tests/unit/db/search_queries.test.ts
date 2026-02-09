@@ -30,17 +30,27 @@ describe("search_queries", () => {
     expect(search_match_expression("alpha", "content")).toBe('body : "alpha"');
   });
 
-  it("builds wiki suggest expression on title/path columns", () => {
+  it("builds wiki suggest expression on title/name/path columns", () => {
     expect(suggest_match_expression("wiki link")).toBe(
-      '{title path} : "wiki"* "link"*',
+      '{title name path} : "wiki"* "link"*',
     );
   });
 
   it("keeps SQL constants aligned with FTS parity settings", () => {
-    expect(SEARCH_BM25_WEIGHTS).toEqual({ title: 10, path: 5, body: 1 });
-    expect(SUGGEST_BM25_WEIGHTS).toEqual({ title: 15, path: 5, body: 0 });
-    expect(SEARCH_SNIPPET_SQL).toContain("snippet(notes_fts, 2");
-    expect(SEARCH_SQL).toContain("bm25(notes_fts, 10.0, 5.0, 1.0)");
-    expect(SUGGEST_SQL).toContain("bm25(notes_fts, 15.0, 5.0, 0.0)");
+    expect(SEARCH_BM25_WEIGHTS).toEqual({
+      title: 10,
+      name: 12,
+      path: 5,
+      body: 1,
+    });
+    expect(SUGGEST_BM25_WEIGHTS).toEqual({
+      title: 15,
+      name: 20,
+      path: 5,
+      body: 0,
+    });
+    expect(SEARCH_SNIPPET_SQL).toContain("snippet(notes_fts, 3");
+    expect(SEARCH_SQL).toContain("bm25(notes_fts, 10.0, 12.0, 5.0, 1.0)");
+    expect(SUGGEST_SQL).toContain("bm25(notes_fts, 15.0, 20.0, 5.0, 0.0)");
   });
 });

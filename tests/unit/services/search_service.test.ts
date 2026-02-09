@@ -25,6 +25,7 @@ describe("SearchService", () => {
           note: {
             id: as_note_path("docs/a.md"),
             path: as_note_path("docs/a.md"),
+            name: "a",
             title: "a",
             mtime_ms: 0,
             size_bytes: 0,
@@ -100,6 +101,7 @@ describe("SearchService", () => {
         note: {
           id: as_note_path("docs/beta.md"),
           path: as_note_path("docs/beta.md"),
+          name: "beta",
           title: "beta",
           mtime_ms: 0,
           size_bytes: 0,
@@ -112,6 +114,7 @@ describe("SearchService", () => {
         note: {
           id: as_note_path("docs/alpha.md"),
           path: as_note_path("docs/alpha.md"),
+          name: "alpha",
           title: "alpha",
           mtime_ms: 0,
           size_bytes: 0,
@@ -148,6 +151,7 @@ describe("SearchService", () => {
         note: {
           id: as_note_path("docs/alpha.md"),
           path: as_note_path("docs/alpha.md"),
+          name: "alpha",
           title: "alpha",
           mtime_ms: 0,
           size_bytes: 0,

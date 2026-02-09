@@ -25,6 +25,7 @@ describe("NoteService", () => {
     const note_meta = {
       id: as_note_path("docs/alpha.md"),
       path: as_note_path("docs/alpha.md"),
+      name: "alpha",
       title: "alpha",
       mtime_ms: 0,
       size_bytes: 0,
@@ -84,6 +85,7 @@ describe("NoteService", () => {
     const note_meta = {
       id: as_note_path("docs/has spaces.md"),
       path: as_note_path("docs/has spaces.md"),
+      name: "has spaces",
       title: "has spaces",
       mtime_ms: 0,
       size_bytes: 0,
@@ -158,6 +160,7 @@ describe("NoteService", () => {
       meta: {
         id: as_note_path("Untitled-1"),
         path: as_note_path("Untitled-1"),
+        name: "Untitled-1",
         title: "Untitled-1",
         mtime_ms: 0,
         size_bytes: 0,

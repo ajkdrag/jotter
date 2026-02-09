@@ -44,6 +44,7 @@ export function create_untitled_open_note_in_folder(args: {
     meta: {
       id: as_note_path(path_with_folder),
       path: as_note_path(path_with_folder),
+      name,
       title: name,
       mtime_ms: args.now_ms,
       size_bytes: 0,

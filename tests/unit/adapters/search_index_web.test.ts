@@ -10,6 +10,7 @@ function build_doc(path: string, title: string, markdown: string): NoteDoc {
     meta: {
       id: note_path,
       path: note_path,
+      name: path.split("/").at(-1)?.replace(/\.md$/, "") ?? "",
       title,
       mtime_ms: 0,
       size_bytes: markdown.length,

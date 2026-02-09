@@ -105,8 +105,8 @@ export class FolderService {
 
       const result = await this.notes_port.delete_folder(vault_id, folder_path);
 
-      for (const note_id of result.deleted_notes) {
-        await this.index_port.remove_note(vault_id, note_id);
+      if (result.deleted_notes.length > 0) {
+        await this.index_port.remove_notes(vault_id, result.deleted_notes);
       }
 
       this.notes_store.remove_folder(folder_path);

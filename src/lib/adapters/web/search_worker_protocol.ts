@@ -74,6 +74,7 @@ export type SearchWorkerRequest =
 export type WorkerNoteMeta = {
   id: string;
   path: string;
+  name: string;
   title: string;
   mtime_ms: number;
   size_bytes: number;

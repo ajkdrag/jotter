@@ -8,6 +8,7 @@ describe("note_path_exists", () => {
     {
       id: as_note_path("docs/alpha.md"),
       path: as_note_path("docs/alpha.md"),
+      name: "alpha",
       title: "alpha",
       mtime_ms: 0,
       size_bytes: 0,

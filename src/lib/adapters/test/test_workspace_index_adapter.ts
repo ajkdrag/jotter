@@ -6,6 +6,10 @@ export function create_test_workspace_index_adapter(): WorkspaceIndexPort {
     async build_index(_vault_id: VaultId): Promise<void> {},
     async upsert_note(_vault_id: VaultId, _note_id: NoteId): Promise<void> {},
     async remove_note(_vault_id: VaultId, _note_id: NoteId): Promise<void> {},
+    async remove_notes(
+      _vault_id: VaultId,
+      _note_ids: NoteId[],
+    ): Promise<void> {},
     subscribe_index_progress() {
       return () => {};
     },

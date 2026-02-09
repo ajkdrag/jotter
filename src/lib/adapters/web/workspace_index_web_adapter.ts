@@ -87,6 +87,11 @@ export function create_workspace_index_web_adapter(
     async remove_note(vault_id: VaultId, note_id: NoteId): Promise<void> {
       await search_db.remove_note(vault_id, note_id);
     },
+    async remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void> {
+      for (const note_id of note_ids) {
+        await search_db.remove_note(vault_id, note_id);
+      }
+    },
     subscribe_index_progress(callback: (event: IndexProgressEvent) => void) {
       ensure_worker_progress_subscription();
       listeners.add(callback);

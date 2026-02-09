@@ -7,6 +7,7 @@ export interface WorkspaceIndexPort {
   build_index(vault_id: VaultId): Promise<void>;
   upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
+  remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void>;
   subscribe_index_progress(
     callback: (event: IndexProgressEvent) => void,
   ): () => void;

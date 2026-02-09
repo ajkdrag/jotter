@@ -52,6 +52,7 @@ describe("ensure_open_note", () => {
       {
         id: as_note_path("Untitled-2.md"),
         path: as_note_path("Untitled-2.md"),
+        name: "Untitled-2",
         title: "Untitled-2",
         mtime_ms: 0,
         size_bytes: 0,
@@ -59,6 +60,7 @@ describe("ensure_open_note", () => {
       {
         id: as_note_path("welcome.md"),
         path: as_note_path("welcome.md"),
+        name: "welcome",
         title: "Welcome",
         mtime_ms: 0,
         size_bytes: 0,
@@ -87,6 +89,7 @@ describe("ensure_open_note", () => {
       meta: {
         id: as_note_path("welcome.md"),
         path: as_note_path("welcome.md"),
+        name: "welcome",
         title: "Welcome",
         mtime_ms: 0,
         size_bytes: 0,
@@ -125,6 +128,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("Untitled-1.md"),
         path: as_note_path("Untitled-1.md"),
+        name: "Untitled-1",
         title: "Untitled-1",
         mtime_ms: 0,
         size_bytes: 0,
@@ -132,6 +136,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("foo/Untitled-1.md"),
         path: as_note_path("foo/Untitled-1.md"),
+        name: "Untitled-1",
         title: "Untitled-1",
         mtime_ms: 0,
         size_bytes: 0,
@@ -139,6 +144,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("foo/Untitled-5.md"),
         path: as_note_path("foo/Untitled-5.md"),
+        name: "Untitled-5",
         title: "Untitled-5",
         mtime_ms: 0,
         size_bytes: 0,
@@ -159,6 +165,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("Untitled-1.md"),
         path: as_note_path("Untitled-1.md"),
+        name: "Untitled-1",
         title: "Untitled-1",
         mtime_ms: 0,
         size_bytes: 0,
@@ -166,6 +173,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("foo/bar/note.md"),
         path: as_note_path("foo/bar/note.md"),
+        name: "note",
         title: "Note",
         mtime_ms: 0,
         size_bytes: 0,
@@ -187,6 +195,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("Untitled-1.md"),
         path: as_note_path("Untitled-1.md"),
+        name: "Untitled-1",
         title: "Untitled-1",
         mtime_ms: 0,
         size_bytes: 0,
@@ -194,6 +203,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("foo/Untitled-1.md"),
         path: as_note_path("foo/Untitled-1.md"),
+        name: "Untitled-1",
         title: "Untitled-1",
         mtime_ms: 0,
         size_bytes: 0,
@@ -201,6 +211,7 @@ describe("create_untitled_open_note_in_folder", () => {
       {
         id: as_note_path("foo/Untitled-3.md"),
         path: as_note_path("foo/Untitled-3.md"),
+        name: "Untitled-3",
         title: "Untitled-3",
         mtime_ms: 0,
         size_bytes: 0,
