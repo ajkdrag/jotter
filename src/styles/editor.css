@@ -35,22 +35,22 @@
   --syntax-comment: oklch(0.55 0.02 240);
   --syntax-punctuation: oklch(0.45 0.03 240);
   --syntax-property: oklch(0.45 0.08 240);
-  --syntax-selector: oklch(0.40 0.12 160);
+  --syntax-selector: oklch(0.4 0.12 160);
   --syntax-operator: oklch(0.45 0.08 240);
-  --syntax-keyword: oklch(0.45 0.10 280);
+  --syntax-keyword: oklch(0.45 0.1 280);
   --syntax-function: oklch(0.45 0.12 240);
-  --syntax-variable: oklch(0.40 0.08 20);
-  --syntax-string: oklch(0.45 0.10 140);
-  --syntax-number: oklch(0.50 0.12 140);
+  --syntax-variable: oklch(0.4 0.08 20);
+  --syntax-string: oklch(0.45 0.1 140);
+  --syntax-number: oklch(0.5 0.12 140);
   --syntax-boolean: oklch(0.45 0.12 280);
-  --syntax-constant: oklch(0.40 0.10 20);
-  --syntax-class: oklch(0.45 0.10 60);
+  --syntax-constant: oklch(0.4 0.1 20);
+  --syntax-class: oklch(0.45 0.1 60);
   --syntax-tag: oklch(0.45 0.12 340);
-  --syntax-attr-name: oklch(0.45 0.10 60);
-  --syntax-attr-value: oklch(0.45 0.10 140);
+  --syntax-attr-name: oklch(0.45 0.1 60);
+  --syntax-attr-value: oklch(0.45 0.1 140);
   --syntax-namespace: oklch(0.45 0.08 60);
-  --syntax-regex: oklch(0.40 0.12 340);
-  --syntax-important: oklch(0.40 0.12 20);
+  --syntax-regex: oklch(0.4 0.12 340);
+  --syntax-important: oklch(0.4 0.12 20);
   --syntax-deleted: oklch(0.45 0.12 20);
   --syntax-inserted: oklch(0.45 0.12 140);
 }
@@ -67,20 +67,20 @@
   --syntax-property: oklch(0.75 0.08 200);
   --syntax-selector: oklch(0.75 0.12 160);
   --syntax-operator: oklch(0.75 0.08 240);
-  --syntax-keyword: oklch(0.75 0.10 280);
-  --syntax-function: oklch(0.80 0.12 220);
-  --syntax-variable: oklch(0.80 0.08 40);
-  --syntax-string: oklch(0.75 0.10 140);
+  --syntax-keyword: oklch(0.75 0.1 280);
+  --syntax-function: oklch(0.8 0.12 220);
+  --syntax-variable: oklch(0.8 0.08 40);
+  --syntax-string: oklch(0.75 0.1 140);
   --syntax-number: oklch(0.75 0.12 140);
   --syntax-boolean: oklch(0.75 0.12 280);
-  --syntax-constant: oklch(0.80 0.10 40);
-  --syntax-class: oklch(0.80 0.10 80);
+  --syntax-constant: oklch(0.8 0.1 40);
+  --syntax-class: oklch(0.8 0.1 80);
   --syntax-tag: oklch(0.75 0.12 340);
-  --syntax-attr-name: oklch(0.80 0.10 80);
-  --syntax-attr-value: oklch(0.75 0.10 140);
-  --syntax-namespace: oklch(0.80 0.08 80);
+  --syntax-attr-name: oklch(0.8 0.1 80);
+  --syntax-attr-value: oklch(0.75 0.1 140);
+  --syntax-namespace: oklch(0.8 0.08 80);
   --syntax-regex: oklch(0.75 0.12 340);
-  --syntax-important: oklch(0.80 0.12 20);
+  --syntax-important: oklch(0.8 0.12 20);
   --syntax-deleted: oklch(0.75 0.12 20);
   --syntax-inserted: oklch(0.75 0.12 140);
 }
@@ -104,7 +104,10 @@
   outline: none;
   max-width: var(--editor-max-width);
   padding: calc(var(--editor-spacing) * 2) var(--editor-spacing);
-  font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1,
+    "kern" 1;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -122,7 +125,9 @@
   margin-bottom: calc(var(--editor-spacing) * 0.75);
   color: var(--editor-heading-color);
   letter-spacing: -0.02em;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
 }
 
 .ProseMirror h1:first-child {
@@ -137,7 +142,9 @@
   margin-bottom: calc(var(--editor-spacing) * 0.65);
   color: var(--editor-heading-color);
   letter-spacing: -0.015em;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   border-bottom: 1px solid var(--border-subtle);
   padding-bottom: calc(var(--editor-spacing) * 0.35);
 }
@@ -211,7 +218,9 @@
   padding: 0.15rem 0.45rem;
   border-radius: calc(var(--radius) * 0.4);
   font-size: 0.9em;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   border: 1px solid var(--editor-code-inline-border);
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -304,7 +313,7 @@
 }
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.bullet::before {
-  content: '';
+  content: "";
   width: var(--editor-bullet-size);
   height: var(--editor-bullet-size);
   border-radius: 50%;
@@ -315,7 +324,7 @@
   font-size: 0.9em;
   font-weight: 600;
   color: var(--editor-text-muted);
-  font-feature-settings: 'tnum' 1;
+  font-feature-settings: "tnum" 1;
 }
 
 .milkdown-list-item-block > .list-item > .children {
@@ -328,14 +337,27 @@
 }
 
 /* Nested list bullets */
-.ProseMirror ul ul > .milkdown-list-item-block > .list-item > .label-wrapper .label.bullet::before {
+.ProseMirror
+  ul
+  ul
+  > .milkdown-list-item-block
+  > .list-item
+  > .label-wrapper
+  .label.bullet::before {
   width: var(--editor-bullet-nested-size);
   height: var(--editor-bullet-nested-size);
   background-color: transparent;
   border: 1.5px solid var(--editor-text-muted);
 }
 
-.ProseMirror ul ul ul > .milkdown-list-item-block > .list-item > .label-wrapper .label.bullet::before {
+.ProseMirror
+  ul
+  ul
+  ul
+  > .milkdown-list-item-block
+  > .list-item
+  > .label-wrapper
+  .label.bullet::before {
   width: var(--editor-bullet-nested-size);
   height: var(--editor-bullet-nested-size);
   border-radius: 1px;
@@ -353,8 +375,11 @@
   position: relative;
 }
 
-.milkdown-list-item-block > .list-item > .label-wrapper .label.unchecked::before {
-  content: '';
+.milkdown-list-item-block
+  > .list-item
+  > .label-wrapper
+  .label.unchecked::before {
+  content: "";
   width: var(--editor-checkbox-size);
   height: var(--editor-checkbox-size);
   border-radius: 3px;
@@ -363,13 +388,16 @@
   transition: all 0.15s ease;
 }
 
-.milkdown-list-item-block > .list-item > .label-wrapper .label.unchecked:hover::before {
+.milkdown-list-item-block
+  > .list-item
+  > .label-wrapper
+  .label.unchecked:hover::before {
   border-color: var(--primary);
   background-color: color-mix(in oklch, var(--primary) 10%, transparent);
 }
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.checked::before {
-  content: '';
+  content: "";
   width: var(--editor-checkbox-size);
   height: var(--editor-checkbox-size);
   border-radius: 3px;
@@ -379,7 +407,7 @@
 }
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.checked::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 4px;
   height: 7px;
@@ -389,10 +417,16 @@
   margin-top: -1px;
 }
 
-.milkdown-list-item-block > .list-item:has(> .label-wrapper .label.checked) > .children {
+.milkdown-list-item-block
+  > .list-item:has(> .label-wrapper .label.checked)
+  > .children {
   color: var(--editor-text-muted);
   text-decoration: line-through;
-  text-decoration-color: color-mix(in oklch, var(--editor-text-muted) 50%, transparent);
+  text-decoration-color: color-mix(
+    in oklch,
+    var(--editor-text-muted) 50%,
+    transparent
+  );
 }
 
 /* ============================================
@@ -432,19 +466,22 @@
   margin-top: calc(var(--editor-spacing) * 0.75);
   margin-bottom: calc(var(--editor-spacing) * 1.25);
   overflow-x: auto;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   font-size: 0.9em;
   line-height: 1.65;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px 0 color-mix(in oklch, var(--foreground) 5%, transparent),
-              0 1px 2px -1px color-mix(in oklch, var(--foreground) 5%, transparent);
+  box-shadow:
+    0 1px 3px 0 color-mix(in oklch, var(--foreground) 5%, transparent),
+    0 1px 2px -1px color-mix(in oklch, var(--foreground) 5%, transparent);
   font-weight: 450;
   letter-spacing: -0.01em;
   position: relative;
 }
 
 .ProseMirror pre::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -657,7 +694,7 @@
   font-size: 0.875em;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-feature-settings: 'tnum' 1;
+  font-feature-settings: "tnum" 1;
 }
 
 .ProseMirror tbody tr:last-child td {
@@ -682,8 +719,9 @@
   height: auto;
   border-radius: calc(var(--radius) * 0.75);
   border: 1px solid var(--border);
-  box-shadow: 0 4px 6px -1px color-mix(in oklch, var(--foreground) 5%, transparent),
-              0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent);
+  box-shadow:
+    0 4px 6px -1px color-mix(in oklch, var(--foreground) 5%, transparent),
+    0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent);
 }
 
 /* ============================================
@@ -723,7 +761,11 @@
   opacity: 1;
 }
 
-.ProseMirror .milkdown-image-block > .image-wrapper .operation > .operation-item {
+.ProseMirror
+  .milkdown-image-block
+  > .image-wrapper
+  .operation
+  > .operation-item {
   color: var(--primary-foreground);
   padding: 0.5rem;
   background: color-mix(in oklch, var(--foreground) 40%, transparent);
@@ -795,7 +837,11 @@
   color: var(--muted-foreground);
 }
 
-.ProseMirror .milkdown-image-block > .image-edit .link-importer .link-input-area {
+.ProseMirror
+  .milkdown-image-block
+  > .image-edit
+  .link-importer
+  .link-input-area {
   line-height: 1.5;
   padding: 0.25rem 0;
   width: 100%;
@@ -859,13 +905,14 @@
   z-index: 50;
   overflow: hidden;
   border-radius: calc(var(--radius) * 0.5);
-  box-shadow: 0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
-              0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
+  box-shadow:
+    0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
+    0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
   border: 1px solid var(--border);
   background: var(--popover);
 }
 
-.milkdown-link-preview[data-show='false'] {
+.milkdown-link-preview[data-show="false"] {
   display: none;
 }
 
@@ -934,13 +981,14 @@
   z-index: 50;
   overflow: hidden;
   border-radius: calc(var(--radius) * 0.5);
-  box-shadow: 0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
-              0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
+  box-shadow:
+    0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
+    0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
   border: 1px solid var(--border);
   background: var(--popover);
 }
 
-.milkdown-link-edit[data-show='false'] {
+.milkdown-link-edit[data-show="false"] {
   display: none;
 }
 
@@ -1002,6 +1050,8 @@
    ============================================ */
 
 .WikiSuggest {
+  position: absolute;
+  z-index: 50;
   min-width: 200px;
   max-width: 320px;
   max-height: 240px;
@@ -1011,6 +1061,10 @@
   background: var(--popover);
   box-shadow: var(--shadow-md);
   padding: var(--space-1) 0;
+}
+
+.WikiSuggest[data-show="false"] {
+  display: none;
 }
 
 .WikiSuggest__item {

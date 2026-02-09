@@ -238,6 +238,7 @@ Bootstrap sequence:
 7. No global singleton app instances; use context + composition root.
 8. Services never import `UIStore`.
 9. One truth per concern: ProseMirror owns live doc, stores own persisted state, OpStore owns operation state, UIStore owns layout state.
+
 ## Accepted deviations
 
 **EditorService statefulness**: EditorService holds persistent session state (`session`, `host_root`, `active_note`, `active_link_syntax`, `session_generation`) because it manages a live DOM editor session. Exception to "services are stateless between method calls". The `session_generation` counter guards against race conditions analogous to AbortController.

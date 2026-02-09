@@ -1,44 +1,57 @@
 <script lang="ts">
-  import type { InFileMatch } from '$lib/types/search'
-  import ChevronUpIcon from '@lucide/svelte/icons/chevron-up'
-  import ChevronDownIcon from '@lucide/svelte/icons/chevron-down'
-  import XIcon from '@lucide/svelte/icons/x'
+  import type { InFileMatch } from "$lib/types/search";
+  import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import XIcon from "@lucide/svelte/icons/x";
 
   type Props = {
-    open: boolean
-    query: string
-    matches: InFileMatch[]
-    selected_match_index: number
-    on_query_change: (query: string) => void
-    on_next: () => void
-    on_prev: () => void
-    on_close: () => void
-  }
+    open: boolean;
+    query: string;
+    matches: InFileMatch[];
+    selected_match_index: number;
+    on_query_change: (query: string) => void;
+    on_next: () => void;
+    on_prev: () => void;
+    on_close: () => void;
+  };
 
-  let { open, query, matches, selected_match_index, on_query_change, on_next, on_prev, on_close }: Props = $props()
-  let input_ref: HTMLInputElement | null = $state(null)
+  let {
+    open,
+    query,
+    matches,
+    selected_match_index,
+    on_query_change,
+    on_next,
+    on_prev,
+    on_close,
+  }: Props = $props();
+  let input_ref: HTMLInputElement | null = $state(null);
 
   const count_display = $derived(
     matches.length > 0
       ? `${String(selected_match_index + 1)} of ${String(matches.length)}`
-      : query.trim() ? 'No results' : ''
-  )
+      : query.trim()
+        ? "No results"
+        : "",
+  );
 
   $effect(() => {
-    if (!open) return
-    const ref = input_ref
-    if (!ref) return
-    setTimeout(() => { ref.focus() }, 0)
-  })
+    if (!open) return;
+    const ref = input_ref;
+    if (!ref) return;
+    setTimeout(() => {
+      ref.focus();
+    }, 0);
+  });
 
   function handle_keydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      on_close()
-    } else if (event.key === 'Enter') {
-      event.preventDefault()
-      if (event.shiftKey) on_prev()
-      else on_next()
+    if (event.key === "Escape") {
+      event.preventDefault();
+      on_close();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      if (event.shiftKey) on_prev();
+      else on_next();
     }
   }
 </script>
@@ -51,16 +64,26 @@
       type="text"
       placeholder="Find in file..."
       value={query}
-      oninput={(e) => { on_query_change(e.currentTarget.value) }}
+      oninput={(e) => {
+        on_query_change(e.currentTarget.value);
+      }}
       onkeydown={handle_keydown}
     />
     {#if count_display}
       <span class="FindInFileBar__count">{count_display}</span>
     {/if}
-    <button class="FindInFileBar__nav" onclick={on_prev} disabled={matches.length === 0}>
+    <button
+      class="FindInFileBar__nav"
+      onclick={on_prev}
+      disabled={matches.length === 0}
+    >
       <ChevronUpIcon />
     </button>
-    <button class="FindInFileBar__nav" onclick={on_next} disabled={matches.length === 0}>
+    <button
+      class="FindInFileBar__nav"
+      onclick={on_next}
+      disabled={matches.length === 0}
+    >
       <ChevronDownIcon />
     </button>
     <button class="FindInFileBar__close" onclick={on_close}>

@@ -13,7 +13,7 @@
     CircleAlert,
     RefreshCw,
     FilePlus,
-    FolderPlus
+    FolderPlus,
   } from "@lucide/svelte";
 
   type Props = {
@@ -45,9 +45,8 @@
     on_request_create_note,
     on_request_create_folder,
     on_retry_load,
-    on_retry_load_more
+    on_retry_load_more,
   }: Props = $props();
-
 
   function handle_click() {
     if (node.is_folder) {
@@ -70,7 +69,7 @@
   }
 
   function handle_retry_load_more() {
-    on_retry_load_more(node.parent_path ?? '');
+    on_retry_load_more(node.parent_path ?? "");
   }
 
   function handle_keydown(e: KeyboardEvent) {
@@ -150,7 +149,11 @@
 {/snippet}
 
 {#if node.is_load_more}
-  <div class="TreeRow TreeRow--load-more" style="--tree-depth: {node.depth}" role="presentation">
+  <div
+    class="TreeRow TreeRow--load-more"
+    style="--tree-depth: {node.depth}"
+    role="presentation"
+  >
     {#if node.has_error}
       <button
         type="button"
@@ -161,7 +164,7 @@
         <RefreshCw class="TreeRow__icon TreeRow__icon--error" />
       </button>
       <span class="TreeRow__label TreeRow__label--muted">
-        {node.error_message ?? 'Failed to load more. Retry.'}
+        {node.error_message ?? "Failed to load more. Retry."}
       </span>
     {:else}
       <span class="TreeRow__spacer"></span>
@@ -176,36 +179,44 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
-        <ContextMenu.Item onclick={() => {
-          if (on_request_create_note) {
-            on_request_create_note(node.path)
-          }
-        }}>
+        <ContextMenu.Item
+          onclick={() => {
+            if (on_request_create_note) {
+              on_request_create_note(node.path);
+            }
+          }}
+        >
           <FilePlus class="mr-2 h-4 w-4" />
           <span>New Note</span>
         </ContextMenu.Item>
-        <ContextMenu.Item onclick={() => {
-          if (on_request_create_folder) {
-            on_request_create_folder(node.path)
-          }
-        }}>
+        <ContextMenu.Item
+          onclick={() => {
+            if (on_request_create_folder) {
+              on_request_create_folder(node.path);
+            }
+          }}
+        >
           <FolderPlus class="mr-2 h-4 w-4" />
           <span>New Folder</span>
         </ContextMenu.Item>
         <ContextMenu.Separator />
-        <ContextMenu.Item onclick={() => {
-          if (on_request_rename_folder) {
-            on_request_rename_folder(node.path)
-          }
-        }}>
+        <ContextMenu.Item
+          onclick={() => {
+            if (on_request_rename_folder) {
+              on_request_rename_folder(node.path);
+            }
+          }}
+        >
           <Pencil class="mr-2 h-4 w-4" />
           <span>Rename</span>
         </ContextMenu.Item>
-        <ContextMenu.Item onclick={() => {
-          if (on_request_delete_folder) {
-            on_request_delete_folder(node.path)
-          }
-        }}>
+        <ContextMenu.Item
+          onclick={() => {
+            if (on_request_delete_folder) {
+              on_request_delete_folder(node.path);
+            }
+          }}
+        >
           <Trash2 class="mr-2 h-4 w-4" />
           <span>Delete</span>
         </ContextMenu.Item>
@@ -219,19 +230,23 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
-        <ContextMenu.Item onclick={() => {
-          if (node.note && on_request_rename) {
-            on_request_rename(node.note)
-          }
-        }}>
+        <ContextMenu.Item
+          onclick={() => {
+            if (node.note && on_request_rename) {
+              on_request_rename(node.note);
+            }
+          }}
+        >
           <Pencil class="mr-2 h-4 w-4" />
           <span>Rename</span>
         </ContextMenu.Item>
-        <ContextMenu.Item onclick={() => {
-          if (node.note && on_request_delete) {
-            on_request_delete(node.note)
-          }
-        }}>
+        <ContextMenu.Item
+          onclick={() => {
+            if (node.note && on_request_delete) {
+              on_request_delete(node.note);
+            }
+          }}
+        >
           <Trash2 class="mr-2 h-4 w-4" />
           <span>Delete</span>
         </ContextMenu.Item>
@@ -247,7 +262,10 @@
     gap: var(--space-1);
     width: 100%;
     height: var(--size-tree-row);
-    padding-inline-start: calc(var(--size-tree-base-padding) + var(--tree-depth) * var(--size-tree-indent));
+    padding-inline-start: calc(
+      var(--size-tree-base-padding) + var(--tree-depth) *
+        var(--size-tree-indent)
+    );
     padding-inline-end: var(--space-2);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
@@ -298,7 +316,11 @@
   }
 
   .TreeRow__toggle:hover:not(:disabled) {
-    background-color: color-mix(in oklch, var(--sidebar-accent-foreground) 10%, transparent);
+    background-color: color-mix(
+      in oklch,
+      var(--sidebar-accent-foreground) 10%,
+      transparent
+    );
   }
 
   .TreeRow__toggle:focus-visible {
@@ -366,7 +388,11 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

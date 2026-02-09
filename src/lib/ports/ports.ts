@@ -1,23 +1,23 @@
-import type { AssetsPort } from '$lib/ports/assets_port'
-import type { ClipboardPort } from '$lib/ports/clipboard_port'
-import type { EditorPort } from '$lib/ports/editor_port'
-import type { NotesPort } from '$lib/ports/notes_port'
-import type { SearchPort } from '$lib/ports/search_port'
-import type { SettingsPort } from '$lib/ports/settings_port'
-import type { ThemePort } from '$lib/ports/theme_port'
-import type { VaultPort } from '$lib/ports/vault_port'
-import type { VaultSettingsPort } from '$lib/ports/vault_settings_port'
-import type { WorkspaceIndexPort } from '$lib/ports/workspace_index_port'
+import type { AssetsPort } from "$lib/ports/assets_port";
+import type { ClipboardPort } from "$lib/ports/clipboard_port";
+import type { EditorPort } from "$lib/ports/editor_port";
+import type { NotesPort } from "$lib/ports/notes_port";
+import type { SearchPort } from "$lib/ports/search_port";
+import type { SettingsPort } from "$lib/ports/settings_port";
+import type { ThemePort } from "$lib/ports/theme_port";
+import type { VaultPort } from "$lib/ports/vault_port";
+import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
+import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
 
 export type Ports = {
-  vault: VaultPort
-  notes: NotesPort
-  index: WorkspaceIndexPort
-  search: SearchPort
-  settings: SettingsPort
-  vault_settings: VaultSettingsPort
-  assets: AssetsPort
-  editor: EditorPort
-  theme: ThemePort
-  clipboard: ClipboardPort
-}
+  vault: VaultPort;
+  notes: NotesPort;
+  index: WorkspaceIndexPort;
+  search: SearchPort;
+  settings: SettingsPort;
+  vault_settings: VaultSettingsPort;
+  assets: AssetsPort;
+  editor: EditorPort;
+  theme: ThemePort;
+  clipboard: ClipboardPort;
+};

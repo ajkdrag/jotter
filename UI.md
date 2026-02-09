@@ -40,28 +40,28 @@ Editor style settings are reflected at runtime by `src/lib/reactors/editor_style
 
 Use these for general UI:
 
-| Token | Usage |
-|-------|-------|
-| `--background` | Page/app background |
-| `--foreground` | Primary text |
-| `--card` | Card/panel backgrounds |
-| `--muted` | Subtle backgrounds, disabled states |
-| `--muted-foreground` | Secondary/tertiary text |
-| `--border` | Default borders |
-| `--destructive` | Error states, delete actions |
+| Token                | Usage                               |
+| -------------------- | ----------------------------------- |
+| `--background`       | Page/app background                 |
+| `--foreground`       | Primary text                        |
+| `--card`             | Card/panel backgrounds              |
+| `--muted`            | Subtle backgrounds, disabled states |
+| `--muted-foreground` | Secondary/tertiary text             |
+| `--border`           | Default borders                     |
+| `--destructive`      | Error states, delete actions        |
 
 ### Interactive Colors (from design_tokens.css)
 
 Use these for selection, focus, and active states:
 
-| Token | Usage |
-|-------|-------|
-| `--interactive` | Active/selected text, icons |
-| `--interactive-hover` | Hover state for interactive elements |
-| `--interactive-bg` | Background for selected items |
-| `--interactive-bg-hover` | Hover on selected items |
-| `--focus-ring` | Focus outline color |
-| `--selection-bg` | Text selection background |
+| Token                    | Usage                                |
+| ------------------------ | ------------------------------------ |
+| `--interactive`          | Active/selected text, icons          |
+| `--interactive-hover`    | Hover state for interactive elements |
+| `--interactive-bg`       | Background for selected items        |
+| `--interactive-bg-hover` | Hover on selected items              |
+| `--focus-ring`           | Focus outline color                  |
+| `--selection-bg`         | Text selection background            |
 
 ### Color Usage Rules
 
@@ -79,12 +79,12 @@ Use these for selection, focus, and active states:
 
 /* BAD: Don't use raw colors */
 .item--selected {
-  background-color: #0d9488;  /* NO! Use tokens */
+  background-color: #0d9488; /* NO! Use tokens */
 }
 
 /* BAD: Don't use opacity hacks for selection */
 .item--selected {
-  background-color: var(--accent)/20;  /* NO! Use --interactive-bg */
+  background-color: var(--accent) / 20; /* NO! Use --interactive-bg */
 }
 ```
 
@@ -94,17 +94,17 @@ Use these for selection, focus, and active states:
 
 Base unit: **4px** (`0.25rem`)
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-0` | 0 | Reset |
-| `--space-0-5` | 2px | Micro gaps |
-| `--space-1` | 4px | Icon gaps, tight padding |
-| `--space-1-5` | 6px | Small padding |
-| `--space-2` | 8px | Standard gap between elements |
-| `--space-3` | 12px | Section padding |
-| `--space-4` | 16px | Card padding, larger gaps |
-| `--space-6` | 24px | Section margins |
-| `--space-8` | 32px | Large section spacing |
+| Token         | Value | Usage                         |
+| ------------- | ----- | ----------------------------- |
+| `--space-0`   | 0     | Reset                         |
+| `--space-0-5` | 2px   | Micro gaps                    |
+| `--space-1`   | 4px   | Icon gaps, tight padding      |
+| `--space-1-5` | 6px   | Small padding                 |
+| `--space-2`   | 8px   | Standard gap between elements |
+| `--space-3`   | 12px  | Section padding               |
+| `--space-4`   | 16px  | Card padding, larger gaps     |
+| `--space-6`   | 24px  | Section margins               |
+| `--space-8`   | 32px  | Large section spacing         |
 
 ### Usage Rules
 
@@ -117,8 +117,8 @@ Base unit: **4px** (`0.25rem`)
 
 /* BAD: Arbitrary values */
 .component {
-  padding: 13px;  /* NO! Use nearest token */
-  gap: 7px;       /* NO! Use --space-1-5 or --space-2 */
+  padding: 13px; /* NO! Use nearest token */
+  gap: 7px; /* NO! Use --space-1-5 or --space-2 */
 }
 ```
 
@@ -128,31 +128,31 @@ Base unit: **4px** (`0.25rem`)
 
 ### Touch Targets
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--size-touch-xs` | 24px | Minimum touch (status bar buttons) |
-| `--size-touch-sm` | 28px | Small buttons (theme toggle) |
-| `--size-touch` | 32px | Default interactive elements |
-| `--size-touch-md` | 36px | Medium buttons |
-| `--size-touch-lg` | 40px | Large buttons |
+| Token             | Value | Usage                              |
+| ----------------- | ----- | ---------------------------------- |
+| `--size-touch-xs` | 24px  | Minimum touch (status bar buttons) |
+| `--size-touch-sm` | 28px  | Small buttons (theme toggle)       |
+| `--size-touch`    | 32px  | Default interactive elements       |
+| `--size-touch-md` | 36px  | Medium buttons                     |
+| `--size-touch-lg` | 40px  | Large buttons                      |
 
 ### Icons
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--size-icon-xs` | 12px | Status bar, badges |
-| `--size-icon-sm` | 14px | Tree chevrons, small indicators |
-| `--size-icon` | 16px | Default icon size |
-| `--size-icon-md` | 20px | Activity bar, prominent icons |
-| `--size-icon-lg` | 24px | Hero icons (rarely used) |
+| Token            | Value | Usage                           |
+| ---------------- | ----- | ------------------------------- |
+| `--size-icon-xs` | 12px  | Status bar, badges              |
+| `--size-icon-sm` | 14px  | Tree chevrons, small indicators |
+| `--size-icon`    | 16px  | Default icon size               |
+| `--size-icon-md` | 20px  | Activity bar, prominent icons   |
+| `--size-icon-lg` | 24px  | Hero icons (rarely used)        |
 
 ### Specific Components
 
-| Token | Value | Component |
-|-------|-------|-----------|
-| `--size-activity-bar` | 44px | Activity bar width and button size |
-| `--size-status-bar` | 22px | Status bar height |
-| `--size-tree-row` | 30px | File tree row height |
+| Token                 | Value | Component                          |
+| --------------------- | ----- | ---------------------------------- |
+| `--size-activity-bar` | 44px  | Activity bar width and button size |
+| `--size-status-bar`   | 22px  | Status bar height                  |
+| `--size-tree-row`     | 30px  | File tree row height               |
 
 ---
 
@@ -160,13 +160,13 @@ Base unit: **4px** (`0.25rem`)
 
 ### Font Size Tokens
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--text-xs` | 0.6875rem (11px) | Status bar, badges, section headers |
-| `--text-sm` | 0.8125rem (13px) | Secondary text, descriptions |
-| `--text-base` | 0.875rem (14px) | Body text, list items |
-| `--text-md` | 0.9375rem (15px) | Emphasized body |
-| `--text-lg` | 1rem (16px) | Primary content |
+| Token         | Value            | Usage                               |
+| ------------- | ---------------- | ----------------------------------- |
+| `--text-xs`   | 0.6875rem (11px) | Status bar, badges, section headers |
+| `--text-sm`   | 0.8125rem (13px) | Secondary text, descriptions        |
+| `--text-base` | 0.875rem (14px)  | Body text, list items               |
+| `--text-md`   | 0.9375rem (15px) | Emphasized body                     |
+| `--text-lg`   | 1rem (16px)      | Primary content                     |
 
 ### Usage Rules
 
@@ -178,7 +178,7 @@ Base unit: **4px** (`0.25rem`)
 
 /* BAD: Hardcoded values */
 .item-title {
-  font-size: 0.875rem;  /* NO! Use --text-base */
+  font-size: 0.875rem; /* NO! Use --text-base */
 }
 ```
 
@@ -198,7 +198,7 @@ Base unit: **4px** (`0.25rem`)
 
 ## Naming Convention: BEM
 
-Use BEM (Block__Element--Modifier) for scoped component styles.
+Use BEM (Block\_\_Element--Modifier) for scoped component styles.
 
 ### Pattern
 
@@ -220,11 +220,21 @@ Use BEM (Block__Element--Modifier) for scoped component styles.
 </div>
 
 <style>
-  .TreeRow { /* base styles */ }
-  .TreeRow--selected { /* selected state */ }
-  .TreeRow__toggle { /* toggle button */ }
-  .TreeRow__icon { /* icon inside toggle */ }
-  .TreeRow__label { /* text label */ }
+  .TreeRow {
+    /* base styles */
+  }
+  .TreeRow--selected {
+    /* selected state */
+  }
+  .TreeRow__toggle {
+    /* toggle button */
+  }
+  .TreeRow__icon {
+    /* icon inside toggle */
+  }
+  .TreeRow__label {
+    /* text label */
+  }
 </style>
 ```
 
@@ -243,7 +253,7 @@ Use BEM (Block__Element--Modifier) for scoped component styles.
 
 ```css
 .item:hover {
-  background-color: var(--sidebar-accent);  /* or var(--muted) */
+  background-color: var(--sidebar-accent); /* or var(--muted) */
 }
 ```
 
@@ -252,7 +262,7 @@ Use BEM (Block__Element--Modifier) for scoped component styles.
 ```css
 .item:focus-visible {
   outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;  /* or -2px for inset */
+  outline-offset: 2px; /* or -2px for inset */
 }
 ```
 
@@ -283,7 +293,7 @@ Use BEM (Block__Element--Modifier) for scoped component styles.
 
 ```css
 .item--active::before {
-  content: '';
+  content: "";
   position: absolute;
   inset-block: var(--space-2);
   inset-inline-start: 0;
@@ -297,12 +307,12 @@ Use BEM (Block__Element--Modifier) for scoped component styles.
 
 ## Transitions
 
-| Token | Duration | Usage |
-|-------|----------|-------|
-| `--duration-fast` | 100ms | Hover states, small elements |
-| `--duration-normal` | 150ms | Most interactions |
-| `--duration-slow` | 200ms | Larger elements, panels |
-| `--duration-slower` | 300ms | Page transitions, modals |
+| Token               | Duration | Usage                        |
+| ------------------- | -------- | ---------------------------- |
+| `--duration-fast`   | 100ms    | Hover states, small elements |
+| `--duration-normal` | 150ms    | Most interactions            |
+| `--duration-slow`   | 200ms    | Larger elements, panels      |
+| `--duration-slower` | 300ms    | Page transitions, modals     |
 
 ```css
 .item {
@@ -318,12 +328,12 @@ Use BEM (Block__Element--Modifier) for scoped component styles.
 
 Use sparingly. Prefer borders for separation.
 
-| Token | Usage |
-|-------|-------|
+| Token         | Usage                       |
+| ------------- | --------------------------- |
 | `--shadow-xs` | Subtle lift (active toggle) |
-| `--shadow-sm` | Cards, dropdowns |
-| `--shadow-md` | Popovers, floating panels |
-| `--shadow-lg` | Modals, dialogs |
+| `--shadow-sm` | Cards, dropdowns            |
+| `--shadow-md` | Popovers, floating panels   |
+| `--shadow-lg` | Modals, dialogs             |
 
 ---
 
@@ -332,7 +342,7 @@ Use sparingly. Prefer borders for separation.
 ### Import Pattern
 
 ```typescript
-import { Files, Settings, ChevronRight } from '@lucide/svelte'
+import { Files, Settings, ChevronRight } from "@lucide/svelte";
 ```
 
 ### Sizing with :global()
@@ -417,6 +427,7 @@ All design tokens have dark mode variants in `design_tokens.css`. The system aut
 ### Testing
 
 Always verify both modes:
+
 1. Light backgrounds should have sufficient contrast
 2. Interactive teal should be visible in both modes
 3. Shadows are more subtle in dark mode
@@ -453,10 +464,10 @@ padding: 13px;
 margin-top: 7px;
 
 /* Tailwind in scoped styles */
-@apply flex items-center;  /* Use in global only */
+@apply flex items-center; /* Use in global only */
 
 /* Opacity for selection */
-background-color: var(--accent)/20;
+background-color: var(--accent) / 20;
 
 /* Hard-coded sizes */
 width: 44px;

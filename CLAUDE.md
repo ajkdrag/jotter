@@ -65,6 +65,7 @@ For adding/updating any feature, always refer to the decision tree in the archit
 **IMPORTANT: Proactive Skill Usage**
 
 You MUST proactively invoke relevant skills when the user asks for:
+
 - Adding or updating UI components → Use `/design-engineer` or `/shadcn-svelte-integration`
 - Adding new features → Use `/feature-dev`
 - Styling or design system work → Use `/design-system-principles` or `/tailwind-bem-naming`
@@ -81,11 +82,13 @@ Do NOT ask for permission to use these skills. Invoke them immediately as your F
 Always use shadcn semantic utilities. Use custom utilities only when shadcn lacks the specific token.
 
 **Default to shadcn:**
+
 - `bg-card`, `bg-background`, `bg-popover`, `bg-muted`, `bg-accent`
 - `text-foreground`, `text-muted-foreground`, `text-primary`, `text-destructive`
 - `border-border`, `border-input`, `ring-ring`
 
 **Use custom only when needed:**
+
 - `bg-background-surface-2/3` - Specific elevation levels
 - `text-foreground-tertiary` - Deeper text hierarchy
 - `border-border-strong/subtle` - Specific border weights
@@ -120,12 +123,12 @@ When you have made **code changes** (not documentation-only: e.g. README, .md, d
 - Add tests in the right location (if we should), even if the user might have forgotten to ask you to create them
 - Make sure files are always in snake_case
 
-
 <!-- Source: .ruler/broswer_automation.md -->
 
 Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
 
 Core workflow:
+
 1. `agent-browser open <url>` - Navigate to page
 2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
 3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs

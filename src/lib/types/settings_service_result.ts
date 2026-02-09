@@ -1,28 +1,28 @@
-import type { EditorSettings } from '$lib/types/editor_settings'
+import type { EditorSettings } from "$lib/types/editor_settings";
 
 export type SettingsLoadResult =
   | {
-      status: 'success'
-      settings: EditorSettings
+      status: "success";
+      settings: EditorSettings;
     }
   | {
-      status: 'skipped'
-      settings: EditorSettings
+      status: "skipped";
+      settings: EditorSettings;
     }
   | {
-      status: 'failed'
-      settings: EditorSettings
-      error: string
-    }
+      status: "failed";
+      settings: EditorSettings;
+      error: string;
+    };
 
 export type SettingsSaveResult =
   | {
-      status: 'success'
+      status: "success";
     }
   | {
-      status: 'skipped'
+      status: "skipped";
     }
   | {
-      status: 'failed'
-      error: string
-    }
+      status: "failed";
+      error: string;
+    };

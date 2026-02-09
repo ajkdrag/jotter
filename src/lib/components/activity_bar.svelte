@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Files, Settings } from '@lucide/svelte'
+  import { Files, Settings } from "@lucide/svelte";
 
   type Props = {
-    sidebar_open: boolean
-    on_toggle_sidebar: () => void
-    on_open_settings: () => void
-  }
+    sidebar_open: boolean;
+    on_toggle_sidebar: () => void;
+    on_open_settings: () => void;
+  };
 
-  let { sidebar_open, on_toggle_sidebar, on_open_settings }: Props = $props()
+  let { sidebar_open, on_toggle_sidebar, on_open_settings }: Props = $props();
 </script>
 
 <div class="ActivityBar">
@@ -86,7 +86,7 @@
   }
 
   .ActivityBar__button--active::before {
-    content: '';
+    content: "";
     position: absolute;
     inset-block: var(--space-2);
     inset-inline-start: 0;

@@ -1,4 +1,3 @@
 export interface ClipboardPort {
-  write_text: (text: string) => Promise<void>
+  write_text: (text: string) => Promise<void>;
 }
-

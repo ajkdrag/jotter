@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { use_app_context } from '$lib/context/app_context.svelte'
-  import { ACTION_IDS } from '$lib/actions/action_ids'
-  import type { OpenNoteState } from '$lib/types/editor'
+  import { use_app_context } from "$lib/context/app_context.svelte";
+  import { ACTION_IDS } from "$lib/actions/action_ids";
+  import type { OpenNoteState } from "$lib/types/editor";
 
-  const { stores, action_registry } = use_app_context()
+  const { stores, action_registry } = use_app_context();
 
-  const open_note = $derived(stores.editor.open_note)
+  const open_note = $derived(stores.editor.open_note);
 
   function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
     void action_registry.execute(
       ACTION_IDS.app_editor_mount,
       node,
       note,
-      stores.ui.editor_settings.link_syntax
-    )
+      stores.ui.editor_settings.link_syntax,
+    );
 
     return {
       destroy() {
-        void action_registry.execute(ACTION_IDS.app_editor_unmount)
-      }
-    }
+        void action_registry.execute(ACTION_IDS.app_editor_unmount);
+      },
+    };
   }
 </script>
 

@@ -1,23 +1,23 @@
 <script lang="ts">
-  import * as Dialog from "$lib/components/ui/dialog/index.js"
-  import { Button } from "$lib/components/ui/button"
-  import { Input } from "$lib/components/ui/input"
-  import type { NotePath } from "$lib/types/ids"
-  import { tick } from 'svelte'
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
+  import type { NotePath } from "$lib/types/ids";
+  import { tick } from "svelte";
 
   interface Props {
-    open: boolean
-    new_path: NotePath | null
-    folder_path: string
-    is_saving: boolean
-    is_checking: boolean
-    show_overwrite_confirm: boolean
-    error: string | null
-    on_update_path: (path: NotePath) => void
-    on_confirm: () => void
-    on_confirm_overwrite: () => void
-    on_retry: () => void
-    on_cancel: () => void
+    open: boolean;
+    new_path: NotePath | null;
+    folder_path: string;
+    is_saving: boolean;
+    is_checking: boolean;
+    show_overwrite_confirm: boolean;
+    error: string | null;
+    on_update_path: (path: NotePath) => void;
+    on_confirm: () => void;
+    on_confirm_overwrite: () => void;
+    on_retry: () => void;
+    on_cancel: () => void;
   }
 
   let {
@@ -32,50 +32,58 @@
     on_confirm,
     on_confirm_overwrite,
     on_retry,
-    on_cancel
-  }: Props = $props()
+    on_cancel,
+  }: Props = $props();
 
-  let input_el = $state<HTMLInputElement | null>(null)
+  let input_el = $state<HTMLInputElement | null>(null);
 
   const display_filename = $derived.by(() => {
-    if (!new_path) return ''
-    const path = String(new_path)
-    const last_slash = path.lastIndexOf('/')
-    return last_slash >= 0 ? path.slice(last_slash + 1) : path
-  })
+    if (!new_path) return "";
+    const path = String(new_path);
+    const last_slash = path.lastIndexOf("/");
+    return last_slash >= 0 ? path.slice(last_slash + 1) : path;
+  });
 
   $effect(() => {
     if (open && !show_overwrite_confirm && !error && input_el) {
-      const el = input_el
-      void tick().then(() => { el.focus(); })
+      const el = input_el;
+      void tick().then(() => {
+        el.focus();
+      });
     }
-  })
+  });
 
   function update_filename(value: string) {
-    const full_path = folder_path ? `${folder_path}/${value}` : value
-    on_update_path(full_path as NotePath)
+    const full_path = folder_path ? `${folder_path}/${value}` : value;
+    on_update_path(full_path as NotePath);
   }
 
   function get_title() {
-    if (error) return 'Save Failed'
-    if (show_overwrite_confirm) return 'File Already Exists'
-    return 'Save Note'
+    if (error) return "Save Failed";
+    if (show_overwrite_confirm) return "File Already Exists";
+    return "Save Note";
   }
 
   function get_description() {
-    if (error) return `Failed to save note: ${error}`
-    if (show_overwrite_confirm) return `A note already exists at "${new_path ?? ''}". Do you want to overwrite it?`
-    return 'Enter a filename for your note.'
+    if (error) return `Failed to save note: ${error}`;
+    if (show_overwrite_confirm)
+      return `A note already exists at "${new_path ?? ""}". Do you want to overwrite it?`;
+    return "Enter a filename for your note.";
   }
 
   function is_valid(): boolean {
-    return display_filename.trim().length > 0
+    return display_filename.trim().length > 0;
   }
 
-  const is_busy = $derived(is_saving || is_checking)
+  const is_busy = $derived(is_saving || is_checking);
 </script>
 
-<Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value && !is_busy) on_cancel() }}>
+<Dialog.Root
+  {open}
+  onOpenChange={(value: boolean) => {
+    if (!value && !is_busy) on_cancel();
+  }}
+>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>{get_title()}</Dialog.Title>
@@ -93,8 +101,12 @@
           bind:ref={input_el}
           type="text"
           value={display_filename}
-          onchange={(e: Event & { currentTarget: HTMLInputElement }) => { update_filename(e.currentTarget.value); }}
-          oninput={(e: Event & { currentTarget: HTMLInputElement }) => { update_filename(e.currentTarget.value); }}
+          onchange={(e: Event & { currentTarget: HTMLInputElement }) => {
+            update_filename(e.currentTarget.value);
+          }}
+          oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+            update_filename(e.currentTarget.value);
+          }}
           placeholder="e.g., my-note.md"
           disabled={is_busy}
         />
@@ -106,7 +118,11 @@
         <Button variant="outline" onclick={on_cancel} disabled={is_saving}>
           Cancel
         </Button>
-        <Button variant="destructive" onclick={on_confirm_overwrite} disabled={is_saving}>
+        <Button
+          variant="destructive"
+          onclick={on_confirm_overwrite}
+          disabled={is_saving}
+        >
           {#if is_saving}
             Saving...
           {:else}

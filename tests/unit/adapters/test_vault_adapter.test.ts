@@ -1,23 +1,23 @@
-import { describe, it, expect } from 'vitest'
-import { create_test_vault_adapter } from '$lib/adapters/test/test_vault_adapter'
-import { as_vault_path } from '$lib/types/ids'
+import { describe, it, expect } from "vitest";
+import { create_test_vault_adapter } from "$lib/adapters/test/test_vault_adapter";
+import { as_vault_path } from "$lib/types/ids";
 
-describe('test_vault_adapter', () => {
-  it('opens vault by path', async () => {
-    const adapter = create_test_vault_adapter()
-    const vault = await adapter.open_vault(as_vault_path('test-vault'))
+describe("test_vault_adapter", () => {
+  it("opens vault by path", async () => {
+    const adapter = create_test_vault_adapter();
+    const vault = await adapter.open_vault(as_vault_path("test-vault"));
 
-    expect(vault.id).toBeDefined()
-    expect(vault.path).toBe(as_vault_path('test-vault'))
-  })
+    expect(vault.id).toBeDefined();
+    expect(vault.path).toBe(as_vault_path("test-vault"));
+  });
 
-  it('remembers last vault', async () => {
-    const adapter = create_test_vault_adapter()
-    const vault = await adapter.open_vault(as_vault_path('test-vault'))
+  it("remembers last vault", async () => {
+    const adapter = create_test_vault_adapter();
+    const vault = await adapter.open_vault(as_vault_path("test-vault"));
 
-    await adapter.remember_last_vault(vault.id)
-    const last_id = await adapter.get_last_vault_id()
+    await adapter.remember_last_vault(vault.id);
+    const last_id = await adapter.get_last_vault_id();
 
-    expect(last_id).toBe(vault.id)
-  })
-})
+    expect(last_id).toBe(vault.id);
+  });
+});

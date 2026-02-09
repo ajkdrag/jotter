@@ -9,7 +9,6 @@ A local-first markdown vault for your notes. No cloud, no accounts, no sync — 
   <img src="./assets/editor-screenshot-light.png" style="width: 49%; display: inline-block;">
 </p>
 
-
 ## Quickstart
 
 You'll need [Node.js 20+](https://nodejs.org/), [pnpm](https://pnpm.io/), and a [Rust toolchain](https://rustup.rs/).
@@ -34,14 +33,14 @@ That's it. The app opens, you pick or create a vault (any folder on disk), and s
 
 ## Stack
 
-| Layer    | Tech |
-|----------|------|
-| Desktop  | Tauri 2 (Rust) |
+| Layer    | Tech                            |
+| -------- | ------------------------------- |
+| Desktop  | Tauri 2 (Rust)                  |
 | Frontend | Svelte 5, SvelteKit, TypeScript |
-| Editor   | Milkdown (ProseMirror) |
-| Styling  | Tailwind CSS 4, shadcn-svelte |
-| Search   | Tantivy (Rust) |
-| State    | XState 5, Svelte runes |
+| Editor   | Milkdown (ProseMirror)          |
+| Styling  | Tailwind CSS 4, shadcn-svelte   |
+| Search   | Tantivy (Rust)                  |
+| State    | XState 5, Svelte runes          |
 
 ## Project structure
 

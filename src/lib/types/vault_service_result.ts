@@ -1,48 +1,48 @@
-import type { VaultPath } from '$lib/types/ids'
-import type { ThemeMode } from '$lib/types/theme'
-import type { EditorSettings } from '$lib/types/editor_settings'
+import type { VaultPath } from "$lib/types/ids";
+import type { ThemeMode } from "$lib/types/theme";
+import type { EditorSettings } from "$lib/types/editor_settings";
 
 export type VaultInitializeResult =
   | {
-      status: 'ready'
-      theme: ThemeMode
-      has_vault: boolean
-      editor_settings: EditorSettings | null
+      status: "ready";
+      theme: ThemeMode;
+      has_vault: boolean;
+      editor_settings: EditorSettings | null;
     }
   | {
-      status: 'error'
-      theme: ThemeMode
-      error: string
-    }
+      status: "error";
+      theme: ThemeMode;
+      error: string;
+    };
 
 export type VaultChoosePathResult =
   | {
-      status: 'selected'
-      path: VaultPath
+      status: "selected";
+      path: VaultPath;
     }
   | {
-      status: 'cancelled'
+      status: "cancelled";
     }
   | {
-      status: 'failed'
-      error: string
-    }
+      status: "failed";
+      error: string;
+    };
 
 export type VaultOpenResult =
   | {
-      status: 'opened'
-      editor_settings: EditorSettings
+      status: "opened";
+      editor_settings: EditorSettings;
     }
   | {
-      status: 'failed'
-      error: string
-    }
+      status: "failed";
+      error: string;
+    };
 
 export type ThemeSetResult =
   | {
-      status: 'success'
+      status: "success";
     }
   | {
-      status: 'failed'
-      error: string
-    }
+      status: "failed";
+      error: string;
+    };

@@ -39,10 +39,10 @@
     "codemirror": "^6.0.2",
     "formsnap": "^2.0.1",
     "lucide-static": "^0.563.0",
-    "minisearch": "^7.2.0",
     "mode-watcher": "^1.1.0",
     "prismjs": "^1.30.0",
-    "svelte-themes": "^2.0.10"
+    "svelte-themes": "^2.0.10",
+    "wa-sqlite": "1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

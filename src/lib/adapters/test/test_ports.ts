@@ -1,17 +1,17 @@
-import { create_test_assets_adapter } from './test_assets_adapter'
-import { create_test_notes_adapter } from './test_notes_adapter'
-import { create_test_vault_adapter } from './test_vault_adapter'
-import { create_test_workspace_index_adapter } from './test_workspace_index_adapter'
-import { create_test_settings_adapter } from './test_settings_adapter'
-import { create_test_vault_settings_adapter } from './test_vault_settings_adapter'
-import { create_test_search_adapter } from './test_search_adapter'
-import { create_theme_adapter } from '$lib/adapters/theme_adapter'
-import type { Ports } from '$lib/ports/ports'
-import { create_milkdown_editor_port } from '$lib/adapters/editor/milkdown_adapter'
-import { create_test_clipboard_adapter } from '$lib/adapters/test/test_clipboard_adapter'
+import { create_test_assets_adapter } from "./test_assets_adapter";
+import { create_test_notes_adapter } from "./test_notes_adapter";
+import { create_test_vault_adapter } from "./test_vault_adapter";
+import { create_test_workspace_index_adapter } from "./test_workspace_index_adapter";
+import { create_test_settings_adapter } from "./test_settings_adapter";
+import { create_test_vault_settings_adapter } from "./test_vault_settings_adapter";
+import { create_test_search_adapter } from "./test_search_adapter";
+import { create_theme_adapter } from "$lib/adapters/theme_adapter";
+import type { Ports } from "$lib/ports/ports";
+import { create_milkdown_editor_port } from "$lib/adapters/editor/milkdown_adapter";
+import { create_test_clipboard_adapter } from "$lib/adapters/test/test_clipboard_adapter";
 
 export function create_test_ports(): Ports {
-  const assets = create_test_assets_adapter()
+  const assets = create_test_assets_adapter();
 
   return {
     vault: create_test_vault_adapter(),
@@ -23,9 +23,9 @@ export function create_test_ports(): Ports {
     assets,
     editor: create_milkdown_editor_port({
       resolve_asset_url_for_vault: (vault_id, asset_path) =>
-        assets.resolve_asset_url(vault_id, asset_path)
+        assets.resolve_asset_url(vault_id, asset_path),
     }),
     theme: create_theme_adapter(),
-    clipboard: create_test_clipboard_adapter()
-  }
+    clipboard: create_test_clipboard_adapter(),
+  };
 }

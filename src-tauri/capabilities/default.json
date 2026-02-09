@@ -5,4 +5,3 @@
   "windows": ["main"],
   "permissions": ["core:default", "dialog:default", "log:default"]
 }
-

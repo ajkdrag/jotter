@@ -1,20 +1,20 @@
 <script lang="ts">
-  import type { Vault } from '$lib/types/vault'
-  import type { VaultId } from '$lib/types/ids'
-  import * as Card from '$lib/components/ui/card'
-  import { Button } from '$lib/components/ui/button'
-  import { Plus, Check, X } from '@lucide/svelte'
+  import type { Vault } from "$lib/types/vault";
+  import type { VaultId } from "$lib/types/ids";
+  import * as Card from "$lib/components/ui/card";
+  import { Button } from "$lib/components/ui/button";
+  import { Plus, Check, X } from "@lucide/svelte";
 
   interface Props {
-    recent_vaults: Vault[]
-    current_vault_id: VaultId | null
-    is_loading?: boolean
-    error?: string | null
-    on_choose_vault_dir: () => void
-    on_select_vault: (vault_id: VaultId) => void
-    on_close?: () => void
-    is_dialog?: boolean
-    hide_choose_vault_button?: boolean
+    recent_vaults: Vault[];
+    current_vault_id: VaultId | null;
+    is_loading?: boolean;
+    error?: string | null;
+    on_choose_vault_dir: () => void;
+    on_select_vault: (vault_id: VaultId) => void;
+    on_close?: () => void;
+    is_dialog?: boolean;
+    hide_choose_vault_button?: boolean;
   }
 
   let {
@@ -26,31 +26,31 @@
     on_select_vault,
     on_close,
     is_dialog = false,
-    hide_choose_vault_button = false
-  }: Props = $props()
+    hide_choose_vault_button = false,
+  }: Props = $props();
 
   function handle_choose_vault(event?: MouseEvent) {
     if (event) {
-      event.stopPropagation()
-      event.preventDefault()
+      event.stopPropagation();
+      event.preventDefault();
     }
-    on_choose_vault_dir()
+    on_choose_vault_dir();
   }
 
   function handle_select_vault(vault: Vault, event?: Event) {
     if (event) {
-      event.stopPropagation()
-      event.preventDefault()
+      event.stopPropagation();
+      event.preventDefault();
     }
-    on_select_vault(vault.id)
+    on_select_vault(vault.id);
   }
 
   function format_path(path: string): string {
-    const parts = path.split(/[/\\\\]/)
+    const parts = path.split(/[/\\\\]/);
     if (parts.length > 3) {
-      return `.../${parts.slice(-2).join('/')}`
+      return `.../${parts.slice(-2).join("/")}`;
     }
-    return path
+    return path;
   }
 </script>
 
@@ -69,8 +69,12 @@
         </button>
       {/if}
       <div class="space-y-1.5 pr-8">
-        <h2 class="text-lg font-semibold leading-none tracking-tight">Select Vault</h2>
-        <p class="text-sm text-muted-foreground">Choose a vault directory or select from recent vaults</p>
+        <h2 class="text-lg font-semibold leading-none tracking-tight">
+          Select Vault
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          Choose a vault directory or select from recent vaults
+        </p>
       </div>
     </div>
     <div class="space-y-6">
@@ -82,7 +86,9 @@
     <Card.Root>
       <Card.Header>
         <Card.Title>Select Vault</Card.Title>
-        <Card.Description>Choose a vault directory or select from recent vaults</Card.Description>
+        <Card.Description
+          >Choose a vault directory or select from recent vaults</Card.Description
+        >
       </Card.Header>
       <Card.Content class="space-y-6">
         <!-- eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -->
@@ -95,7 +101,9 @@
 {#snippet content()}
   {#if !hide_choose_vault_button}
     <Button
-      onclick={(e: MouseEvent) => { handle_choose_vault(e); }}
+      onclick={(e: MouseEvent) => {
+        handle_choose_vault(e);
+      }}
       disabled={is_loading}
       class="VaultPanel__action-btn"
     >
@@ -112,14 +120,14 @@
 
   {#if recent_vaults.length > 0}
     <div class="VaultPanel__recent">
-      <h3 class="VaultPanel__section-title">
-        Recent Vaults
-      </h3>
+      <h3 class="VaultPanel__section-title">Recent Vaults</h3>
       <div class="VaultPanel__list">
         {#each recent_vaults as vault (vault.id)}
           <button
             type="button"
-            onclick={(e) => { handle_select_vault(vault, e); }}
+            onclick={(e) => {
+              handle_select_vault(vault, e);
+            }}
             disabled={is_loading || current_vault_id === vault.id}
             class="VaultPanel__vault-item"
             class:VaultPanel__vault-item--active={current_vault_id === vault.id}
@@ -127,7 +135,9 @@
           >
             <div class="VaultPanel__vault-info">
               <div class="VaultPanel__vault-name">{vault.name}</div>
-              <div class="VaultPanel__vault-path">{format_path(vault.path)}</div>
+              <div class="VaultPanel__vault-path">
+                {format_path(vault.path)}
+              </div>
             </div>
             {#if current_vault_id === vault.id}
               <Check class="VaultPanel__check-icon" />
@@ -139,7 +149,9 @@
   {:else}
     <div class="VaultPanel__empty">
       <p class="VaultPanel__empty-title">No recent vaults</p>
-      <p class="VaultPanel__empty-desc">Choose a vault directory to get started</p>
+      <p class="VaultPanel__empty-desc">
+        Choose a vault directory to get started
+      </p>
     </div>
   {/if}
 {/snippet}

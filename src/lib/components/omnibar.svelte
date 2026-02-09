@@ -1,37 +1,37 @@
 <script lang="ts">
-  import * as Dialog from '$lib/components/ui/dialog/index.js'
-  import { Input } from '$lib/components/ui/input'
-  import SearchIcon from '@lucide/svelte/icons/search'
-  import FileIcon from '@lucide/svelte/icons/file-text'
-  import ClockIcon from '@lucide/svelte/icons/clock'
-  import CommandIcon from '@lucide/svelte/icons/terminal'
-  import SettingsIcon from '@lucide/svelte/icons/settings'
-  import FilePlusIcon from '@lucide/svelte/icons/file-plus'
-  import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
-  import type { OmnibarItem } from '$lib/types/search'
-  import type { NoteMeta } from '$lib/types/note'
-  import type { CommandIcon as CommandIconType } from '$lib/types/command_palette'
-  import { COMMANDS_REGISTRY } from '$lib/utils/search_commands'
-  import type { Component } from 'svelte'
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { Input } from "$lib/components/ui/input";
+  import SearchIcon from "@lucide/svelte/icons/search";
+  import FileIcon from "@lucide/svelte/icons/file-text";
+  import ClockIcon from "@lucide/svelte/icons/clock";
+  import CommandIcon from "@lucide/svelte/icons/terminal";
+  import SettingsIcon from "@lucide/svelte/icons/settings";
+  import FilePlusIcon from "@lucide/svelte/icons/file-plus";
+  import FolderOpenIcon from "@lucide/svelte/icons/folder-open";
+  import type { OmnibarItem } from "$lib/types/search";
+  import type { NoteMeta } from "$lib/types/note";
+  import type { CommandIcon as CommandIconType } from "$lib/types/command_palette";
+  import { COMMANDS_REGISTRY } from "$lib/utils/search_commands";
+  import type { Component } from "svelte";
 
   const COMMAND_ICONS: Record<CommandIconType, Component> = {
-    'file-plus': FilePlusIcon,
-    'folder-open': FolderOpenIcon,
-    'settings': SettingsIcon
-  }
+    "file-plus": FilePlusIcon,
+    "folder-open": FolderOpenIcon,
+    settings: SettingsIcon,
+  };
 
   type Props = {
-    open: boolean
-    query: string
-    selected_index: number
-    is_searching: boolean
-    items: OmnibarItem[]
-    recent_notes: NoteMeta[]
-    on_open_change: (open: boolean) => void
-    on_query_change: (query: string) => void
-    on_selected_index_change: (index: number) => void
-    on_confirm: (item: OmnibarItem) => void
-  }
+    open: boolean;
+    query: string;
+    selected_index: number;
+    is_searching: boolean;
+    items: OmnibarItem[];
+    recent_notes: NoteMeta[];
+    on_open_change: (open: boolean) => void;
+    on_query_change: (query: string) => void;
+    on_selected_index_change: (index: number) => void;
+    on_confirm: (item: OmnibarItem) => void;
+  };
 
   let {
     open,
@@ -43,97 +43,101 @@
     on_open_change,
     on_query_change,
     on_selected_index_change,
-    on_confirm
-  }: Props = $props()
+    on_confirm,
+  }: Props = $props();
 
-  let input_ref: HTMLInputElement | null = $state(null)
+  let input_ref: HTMLInputElement | null = $state(null);
 
-  const is_command_mode = $derived(query.startsWith('>'))
-  const has_query = $derived(query.trim().length > 0 && (!is_command_mode || query.trim().length > 1))
+  const is_command_mode = $derived(query.startsWith(">"));
+  const has_query = $derived(
+    query.trim().length > 0 && (!is_command_mode || query.trim().length > 1),
+  );
 
   const display_items: OmnibarItem[] = $derived.by(() => {
-    if (has_query) return items
+    if (has_query) return items;
 
     if (is_command_mode) {
       return COMMANDS_REGISTRY.map((command) => ({
-        kind: 'command' as const,
+        kind: "command" as const,
         command,
-        score: 0
-      }))
+        score: 0,
+      }));
     }
 
     const recent: OmnibarItem[] = recent_notes.map((note) => ({
-      kind: 'recent_note' as const,
-      note
-    }))
+      kind: "recent_note" as const,
+      note,
+    }));
     const commands: OmnibarItem[] = COMMANDS_REGISTRY.map((command) => ({
-      kind: 'command' as const,
+      kind: "command" as const,
       command,
-      score: 0
-    }))
-    return [...recent, ...commands]
-  })
+      score: 0,
+    }));
+    return [...recent, ...commands];
+  });
 
   const show_recent_header = $derived(
-    !has_query && !is_command_mode && recent_notes.length > 0
-  )
+    !has_query && !is_command_mode && recent_notes.length > 0,
+  );
   const show_commands_header = $derived(
-    !has_query && !is_command_mode && COMMANDS_REGISTRY.length > 0
-  )
+    !has_query && !is_command_mode && COMMANDS_REGISTRY.length > 0,
+  );
   const commands_start_index = $derived(
-    !has_query && !is_command_mode ? recent_notes.length : -1
-  )
+    !has_query && !is_command_mode ? recent_notes.length : -1,
+  );
 
   function get_item_id(item: OmnibarItem): string {
     switch (item.kind) {
-      case 'note':
-        return `omni-note-${item.note.id}`
-      case 'recent_note':
-        return `omni-recent-${item.note.id}`
-      case 'command':
-        return `omni-cmd-${item.command.id}`
-      case 'setting':
-        return `omni-setting-${item.setting.key}`
+      case "note":
+        return `omni-note-${item.note.id}`;
+      case "recent_note":
+        return `omni-recent-${item.note.id}`;
+      case "command":
+        return `omni-cmd-${item.command.id}`;
+      case "setting":
+        return `omni-setting-${item.setting.key}`;
     }
   }
 
   function handle_keydown(event: KeyboardEvent) {
-    if (!open) return
+    if (!open) return;
 
     switch (event.key) {
-      case 'Escape':
-        event.preventDefault()
-        on_open_change(false)
-        break
-      case 'ArrowDown':
-        event.preventDefault()
+      case "Escape":
+        event.preventDefault();
+        on_open_change(false);
+        break;
+      case "ArrowDown":
+        event.preventDefault();
         if (display_items.length > 0) {
-          on_selected_index_change((selected_index + 1) % display_items.length)
+          on_selected_index_change((selected_index + 1) % display_items.length);
         }
-        break
-      case 'ArrowUp':
-        event.preventDefault()
+        break;
+      case "ArrowUp":
+        event.preventDefault();
         if (display_items.length > 0) {
           on_selected_index_change(
-            (selected_index - 1 + display_items.length) % display_items.length
-          )
+            (selected_index - 1 + display_items.length) % display_items.length,
+          );
         }
-        break
-      case 'Enter':
-        event.preventDefault()
+        break;
+      case "Enter":
+        event.preventDefault();
         if (display_items[selected_index]) {
-          on_confirm(display_items[selected_index])
+          on_confirm(display_items[selected_index]);
         }
-        break
+        break;
     }
   }
 
   $effect(() => {
-    if (!open) return
-    const ref = input_ref
-    if (!ref) return
-    setTimeout(() => { ref.focus() }, 0)
-  })
+    if (!open) return;
+    const ref = input_ref;
+    if (!ref) return;
+    setTimeout(() => {
+      ref.focus();
+    }, 0);
+  });
 </script>
 
 <Dialog.Root {open} onOpenChange={on_open_change}>
@@ -145,7 +149,9 @@
         type="text"
         placeholder="Search notes, commands, settings..."
         value={query}
-        oninput={(e: Event & { currentTarget: HTMLInputElement }) => { on_query_change(e.currentTarget.value); }}
+        oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+          on_query_change(e.currentTarget.value);
+        }}
         class="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       {#if is_searching}
@@ -189,10 +195,14 @@
           aria-selected={index === selected_index}
           class="Omnibar__item"
           class:Omnibar__item--selected={index === selected_index}
-          onmouseenter={() => { on_selected_index_change(index); }}
-          onclick={() => { on_confirm(item); }}
+          onmouseenter={() => {
+            on_selected_index_change(index);
+          }}
+          onclick={() => {
+            on_confirm(item);
+          }}
         >
-          {#if item.kind === 'note'}
+          {#if item.kind === "note"}
             <div class="Omnibar__item-row">
               <FileIcon />
               <div class="Omnibar__item-content">
@@ -203,7 +213,7 @@
                 {/if}
               </div>
             </div>
-          {:else if item.kind === 'recent_note'}
+          {:else if item.kind === "recent_note"}
             <div class="Omnibar__item-row">
               <ClockIcon />
               <div class="Omnibar__item-content">
@@ -211,14 +221,14 @@
                 <span class="Omnibar__item-path">{item.note.path}</span>
               </div>
             </div>
-          {:else if item.kind === 'command'}
+          {:else if item.kind === "command"}
             {@const IconComponent = COMMAND_ICONS[item.command.icon]}
             <div class="Omnibar__item-row">
               <span class="Omnibar__item-icon"><IconComponent /></span>
               <span class="Omnibar__item-title">{item.command.label}</span>
             </div>
             <div class="Omnibar__item-desc">{item.command.description}</div>
-          {:else if item.kind === 'setting'}
+          {:else if item.kind === "setting"}
             <div class="Omnibar__item-row">
               <SettingsIcon />
               <span class="Omnibar__item-title">{item.setting.label}</span>
@@ -243,7 +253,9 @@
     <div class="Omnibar__footer">
       <span class="Omnibar__hint"><kbd>&gt;</kbd> for commands</span>
       <span class="Omnibar__hint-sep">·</span>
-      <span class="Omnibar__hint"><kbd>title:</kbd> <kbd>path:</kbd> <kbd>content:</kbd></span>
+      <span class="Omnibar__hint"
+        ><kbd>title:</kbd> <kbd>path:</kbd> <kbd>content:</kbd></span
+      >
     </div>
   </Dialog.Content>
 </Dialog.Root>
@@ -432,7 +444,11 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

@@ -1,23 +1,25 @@
 <script lang="ts">
-import type { ThemeMode } from '$lib/types/theme'
-import { Sun, Moon, Monitor } from '@lucide/svelte'
+  import type { ThemeMode } from "$lib/types/theme";
+  import { Sun, Moon, Monitor } from "@lucide/svelte";
 
-interface ThemeToggleProps {
-  mode: ThemeMode
-  on_change: (mode: ThemeMode) => void
-}
+  interface ThemeToggleProps {
+    mode: ThemeMode;
+    on_change: (mode: ThemeMode) => void;
+  }
 
-let { mode, on_change }: ThemeToggleProps = $props()
+  let { mode, on_change }: ThemeToggleProps = $props();
 </script>
 
 <div class="ThemeToggle" role="radiogroup" aria-label="Theme selection">
   <button
     type="button"
     class="ThemeToggle__option"
-    class:ThemeToggle__option--active={mode === 'light'}
-    onclick={() => { on_change('light'); }}
+    class:ThemeToggle__option--active={mode === "light"}
+    onclick={() => {
+      on_change("light");
+    }}
     role="radio"
-    aria-checked={mode === 'light'}
+    aria-checked={mode === "light"}
     aria-label="Light theme"
   >
     <Sun />
@@ -25,10 +27,12 @@ let { mode, on_change }: ThemeToggleProps = $props()
   <button
     type="button"
     class="ThemeToggle__option"
-    class:ThemeToggle__option--active={mode === 'dark'}
-    onclick={() => { on_change('dark'); }}
+    class:ThemeToggle__option--active={mode === "dark"}
+    onclick={() => {
+      on_change("dark");
+    }}
     role="radio"
-    aria-checked={mode === 'dark'}
+    aria-checked={mode === "dark"}
     aria-label="Dark theme"
   >
     <Moon />
@@ -36,10 +40,12 @@ let { mode, on_change }: ThemeToggleProps = $props()
   <button
     type="button"
     class="ThemeToggle__option"
-    class:ThemeToggle__option--active={mode === 'system'}
-    onclick={() => { on_change('system'); }}
+    class:ThemeToggle__option--active={mode === "system"}
+    onclick={() => {
+      on_change("system");
+    }}
     role="radio"
-    aria-checked={mode === 'system'}
+    aria-checked={mode === "system"}
     aria-label="System theme"
   >
     <Monitor />

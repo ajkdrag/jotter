@@ -1,25 +1,30 @@
 <script lang="ts">
-  import * as Dialog from "$lib/components/ui/dialog/index.js"
-  import { Button } from "$lib/components/ui/button"
-  import type { OpenNoteState } from "$lib/types/editor"
-  import { format_bytes } from "$lib/utils/format_bytes"
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { Button } from "$lib/components/ui/button";
+  import type { OpenNoteState } from "$lib/types/editor";
+  import { format_bytes } from "$lib/utils/format_bytes";
 
   interface Props {
-    open: boolean
-    note: OpenNoteState | null
-    word_count: number
-    line_count: number
-    on_close: () => void
+    open: boolean;
+    note: OpenNoteState | null;
+    word_count: number;
+    line_count: number;
+    on_close: () => void;
   }
 
-  let { open, note, word_count, line_count, on_close }: Props = $props()
+  let { open, note, word_count, line_count, on_close }: Props = $props();
 
   function format_date(ms: number): string {
-    return new Date(ms).toLocaleString()
+    return new Date(ms).toLocaleString();
   }
 </script>
 
-<Dialog.Root {open} onOpenChange={(value: boolean) => { if (!value) on_close() }}>
+<Dialog.Root
+  {open}
+  onOpenChange={(value: boolean) => {
+    if (!value) on_close();
+  }}
+>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
       <Dialog.Title>Note Details</Dialog.Title>
@@ -35,15 +40,21 @@
         </div>
         <div class="NoteDetailsDialog__row">
           <span class="NoteDetailsDialog__label">Path</span>
-          <span class="NoteDetailsDialog__value NoteDetailsDialog__value--mono">{note.meta.path}</span>
+          <span class="NoteDetailsDialog__value NoteDetailsDialog__value--mono"
+            >{note.meta.path}</span
+          >
         </div>
         <div class="NoteDetailsDialog__row">
           <span class="NoteDetailsDialog__label">Size</span>
-          <span class="NoteDetailsDialog__value">{format_bytes(note.meta.size_bytes)}</span>
+          <span class="NoteDetailsDialog__value"
+            >{format_bytes(note.meta.size_bytes)}</span
+          >
         </div>
         <div class="NoteDetailsDialog__row">
           <span class="NoteDetailsDialog__label">Modified</span>
-          <span class="NoteDetailsDialog__value">{format_date(note.meta.mtime_ms)}</span>
+          <span class="NoteDetailsDialog__value"
+            >{format_date(note.meta.mtime_ms)}</span
+          >
         </div>
         <div class="NoteDetailsDialog__row">
           <span class="NoteDetailsDialog__label">Words</span>
