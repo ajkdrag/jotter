@@ -28,11 +28,12 @@ export function build_filetree(
   for (const note of notes) {
     const parts = note.path.split("/").filter(Boolean);
     let current = root;
+    let node_path = "";
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       if (!part) continue;
       const is_last = i === parts.length - 1;
-      const node_path = parts.slice(0, i + 1).join("/");
+      node_path = node_path ? `${node_path}/${part}` : part;
       if (!current.children.has(part)) {
         current.children.set(part, {
           name: part,

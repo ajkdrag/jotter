@@ -10,6 +10,11 @@ export function create_test_workspace_index_adapter(): WorkspaceIndexPort {
       _vault_id: VaultId,
       _note_ids: NoteId[],
     ): Promise<void> {},
+    async rename_folder_paths(
+      _vault_id: VaultId,
+      _old_prefix: string,
+      _new_prefix: string,
+    ): Promise<void> {},
     subscribe_index_progress() {
       return () => {};
     },

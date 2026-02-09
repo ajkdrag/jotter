@@ -206,9 +206,12 @@ export class VaultService {
     ]);
 
     this.index_progress_unsubscribe?.();
+    const target_vault_id = vault.id;
     this.index_progress_unsubscribe = this.index_port.subscribe_index_progress(
       (event) => {
-        this.search_store.set_index_progress(event);
+        if (event.vault_id === target_vault_id) {
+          this.search_store.set_index_progress(event);
+        }
       },
     );
 
@@ -221,6 +224,7 @@ export class VaultService {
     this.vault_store.clear();
     this.notes_store.reset();
     this.editor_store.reset();
+    this.search_store.reset();
 
     this.vault_store.set_vault(vault);
     this.notes_store.merge_folder_contents("", root_contents);

@@ -92,6 +92,58 @@ export function create_workspace_index_web_adapter(
         await search_db.remove_note(vault_id, note_id);
       }
     },
+    async rename_folder_paths(
+      vault_id: VaultId,
+      old_prefix: string,
+      new_prefix: string,
+    ): Promise<void> {
+      const old_len = old_prefix.length;
+      await search_db.exec(vault_id, "BEGIN IMMEDIATE");
+      try {
+        await search_db.exec(
+          vault_id,
+          `CREATE TEMP TABLE IF NOT EXISTS _fts_rename(title TEXT, name TEXT, path TEXT, body TEXT)`,
+        );
+        await search_db.exec(vault_id, `DELETE FROM _fts_rename`);
+        await search_db.exec(
+          vault_id,
+          `INSERT INTO _fts_rename SELECT title, name, ?1 || substr(path, ?2 + 1), body
+           FROM notes_fts WHERE path LIKE ?3`,
+          [new_prefix, old_len, `${old_prefix}%`],
+        );
+        await search_db.exec(
+          vault_id,
+          `DELETE FROM notes_fts WHERE path LIKE ?1`,
+          [`${old_prefix}%`],
+        );
+        await search_db.exec(
+          vault_id,
+          `INSERT INTO notes_fts(title, name, path, body) SELECT * FROM _fts_rename`,
+        );
+        await search_db.exec(vault_id, `DROP TABLE IF EXISTS _fts_rename`);
+        await search_db.exec(
+          vault_id,
+          `UPDATE notes SET path = ?1 || substr(path, ?2 + 1) WHERE path LIKE ?3`,
+          [new_prefix, old_len, `${old_prefix}%`],
+        );
+        await search_db.exec(
+          vault_id,
+          `UPDATE outlinks SET source_path = ?1 || substr(source_path, ?2 + 1)
+           WHERE source_path LIKE ?3`,
+          [new_prefix, old_len, `${old_prefix}%`],
+        );
+        await search_db.exec(
+          vault_id,
+          `UPDATE outlinks SET target_path = ?1 || substr(target_path, ?2 + 1)
+           WHERE target_path LIKE ?3`,
+          [new_prefix, old_len, `${old_prefix}%`],
+        );
+        await search_db.exec(vault_id, "COMMIT");
+      } catch (e) {
+        await search_db.exec(vault_id, "ROLLBACK").catch(() => undefined);
+        throw e;
+      }
+    },
     subscribe_index_progress(callback: (event: IndexProgressEvent) => void) {
       ensure_worker_progress_subscription();
       listeners.add(callback);

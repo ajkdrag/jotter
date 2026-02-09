@@ -140,15 +140,13 @@ function remove_expanded_paths(
 }
 
 function remap_path(path: string, old_path: string, new_path: string): string {
-  const old_prefix = `${old_path}/`;
-  const new_prefix = `${new_path}/`;
-
   if (path === old_path) {
     return new_path;
   }
 
+  const old_prefix = `${old_path}/`;
   if (path.startsWith(old_prefix)) {
-    return `${new_prefix}${path.slice(old_prefix.length)}`;
+    return `${new_path}/${path.slice(old_prefix.length)}`;
   }
 
   return path;
@@ -530,12 +528,20 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     const result = await services.folder.rename_folder(folder_path, new_path);
     if (result.status === "success") {
       const new_parent = parent_folder_path(new_path);
+      close_rename_dialog(input);
       clear_folder_filetree_state(input, parent);
       if (new_parent !== parent) {
         clear_folder_filetree_state(input, new_parent);
       }
       remap_expanded_paths(input, folder_path, new_path);
-      close_rename_dialog(input);
+
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+
+      services.folder.apply_folder_rename(folder_path, new_path);
     }
   }
 

@@ -152,20 +152,21 @@ export class FolderService {
     this.op_store.start("folder.rename");
 
     try {
+      await this.notes_port.rename_folder(vault_id, folder_path, new_path);
+
       const old_prefix = `${folder_path}/`;
-      const new_prefix = `${new_path}/`;
       const has_affected_notes = this.notes_store.notes.some((note) =>
         note.path.startsWith(old_prefix),
       );
 
-      await this.notes_port.rename_folder(vault_id, folder_path, new_path);
       if (has_affected_notes) {
-        await this.index_port.build_index(vault_id);
+        await this.index_port.rename_folder_paths(
+          vault_id,
+          old_prefix,
+          `${new_path}/`,
+        );
       }
 
-      this.notes_store.rename_folder(folder_path, new_path);
-      this.editor_store.update_open_note_path_prefix(old_prefix, new_prefix);
-      this.notes_store.update_recent_note_path_prefix(old_prefix, new_prefix);
       this.op_store.succeed("folder.rename");
       return { status: "success" };
     } catch (error) {
@@ -177,6 +178,18 @@ export class FolderService {
         error: message,
       };
     }
+  }
+
+  apply_folder_rename(folder_path: string, new_path: string): void {
+    this.notes_store.rename_folder(folder_path, new_path);
+    this.editor_store.update_open_note_path_prefix(
+      `${folder_path}/`,
+      `${new_path}/`,
+    );
+    this.notes_store.update_recent_note_path_prefix(
+      `${folder_path}/`,
+      `${new_path}/`,
+    );
   }
 
   async load_folder(

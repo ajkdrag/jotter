@@ -175,7 +175,7 @@ describe("FolderService", () => {
     expect(notes_store.recent_notes).toEqual([]);
   });
 
-  it("updates recent notes when renaming a folder", async () => {
+  it("rename_folder performs backend IO and index rename without store updates", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();
     const editor_store = new EditorStore();
@@ -204,7 +204,48 @@ describe("FolderService", () => {
       () => 1,
     );
 
-    await service.rename_folder("docs", "archive");
+    const result = await service.rename_folder("docs", "archive");
+
+    expect(result.status).toBe("success");
+    expect(notes_port._calls.rename_folder).toEqual([
+      { vault_id: vault.id, from_path: "docs", to_path: "archive" },
+    ]);
+    expect(index_port._calls.rename_folder_paths).toEqual([
+      { vault_id: vault.id, old_prefix: "docs/", new_prefix: "archive/" },
+    ]);
+    expect(notes_store.recent_notes[0]?.path).toBe("docs/note-001.md");
+  });
+
+  it("apply_folder_rename updates stores with new paths", () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const note_meta = {
+      ...create_note(1),
+      path: as_note_path("docs/note-001.md"),
+      id: as_note_path("docs/note-001.md"),
+    };
+    notes_store.set_notes([note_meta]);
+    notes_store.add_recent_note(note_meta);
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      () => 1,
+    );
+
+    service.apply_folder_rename("docs", "archive");
 
     expect(notes_store.recent_notes[0]?.path).toBe("archive/note-001.md");
   });

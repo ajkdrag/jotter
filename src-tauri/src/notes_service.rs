@@ -49,11 +49,11 @@ fn parse_safe_relative_path(path: &str) -> Result<PathBuf, String> {
 
 pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
     let rel = parse_safe_relative_path(note_rel)?;
-    let abs = vault_root.join(&rel);
-    let abs = abs.canonicalize().unwrap_or(abs);
     let base = vault_root
         .canonicalize()
         .unwrap_or_else(|_| vault_root.to_path_buf());
+    let abs = base.join(&rel);
+    let abs = abs.canonicalize().unwrap_or(abs);
     if !abs.starts_with(&base) {
         return Err("note path escapes vault".to_string());
     }

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::cell::RefCell;
 use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -74,6 +75,17 @@ enum DbCommand {
         cancel: Arc<AtomicBool>,
         app_handle: AppHandle,
         vault_id: String,
+    },
+    Sync {
+        vault_root: PathBuf,
+        cancel: Arc<AtomicBool>,
+        app_handle: AppHandle,
+        vault_id: String,
+    },
+    RenamePaths {
+        old_prefix: String,
+        new_prefix: String,
+        reply: SyncSender<Result<usize, String>>,
     },
     Shutdown,
 }
@@ -178,8 +190,32 @@ fn dispatch_command(
             }
             let _ = reply.send(result);
         }
+        DbCommand::RenamePaths { old_prefix, new_prefix, reply } => {
+            let result = search_db::rename_folder_paths(conn, &old_prefix, &new_prefix);
+            if let Ok(count) = &result {
+                if *count > 0 {
+                    let old_keys: Vec<String> = notes_cache
+                        .keys()
+                        .filter(|k| k.starts_with(&old_prefix))
+                        .cloned()
+                        .collect();
+                    for old_key in old_keys {
+                        if let Some(mut meta) = notes_cache.remove(&old_key) {
+                            let new_path = format!("{}{}", new_prefix, &old_key[old_prefix.len()..]);
+                            meta.id = new_path.clone();
+                            meta.path = new_path;
+                            notes_cache.insert(meta.id.clone(), meta);
+                        }
+                    }
+                }
+            }
+            let _ = reply.send(result);
+        }
         DbCommand::Rebuild { vault_root, cancel, app_handle, vault_id } => {
             handle_rebuild(conn, &vault_root, &cancel, &app_handle, &vault_id, rx, notes_cache);
+        }
+        DbCommand::Sync { vault_root, cancel, app_handle, vault_id } => {
+            handle_sync(conn, &vault_root, &cancel, &app_handle, &vault_id, rx, notes_cache);
         }
         DbCommand::Shutdown => {
             return LoopAction::Break;
@@ -213,7 +249,15 @@ fn handle_upsert(
     search_db::set_outlinks(conn, &meta.path, &resolved.into_iter().collect::<Vec<_>>())
 }
 
-fn handle_rebuild(
+type IndexFn = fn(
+    &Connection,
+    &Path,
+    &AtomicBool,
+    &dyn Fn(usize, usize),
+    &mut dyn FnMut(),
+) -> Result<search_db::IndexResult, String>;
+
+fn run_index_op(
     conn: &Connection,
     vault_root: &Path,
     cancel: &Arc<AtomicBool>,
@@ -221,46 +265,52 @@ fn handle_rebuild(
     vault_id: &str,
     rx: &Receiver<DbCommand>,
     notes_cache: &mut BTreeMap<String, IndexNoteMeta>,
+    label: &str,
+    index_fn: IndexFn,
 ) {
     let start = Instant::now();
     let vid = vault_id.to_string();
     let app = app_handle.clone();
+    let deferred: RefCell<Option<DbCommand>> = RefCell::new(None);
 
-    let mut drain_pending = || {
-        while let Ok(cmd) = rx.try_recv() {
-            match cmd {
-                DbCommand::Rebuild { .. } => {
-                    log::warn!("writer: ignoring rebuild command during active rebuild");
-                }
-                DbCommand::Shutdown => {
-                    log::warn!("writer: ignoring shutdown during rebuild");
-                }
-                other => {
-                    dispatch_command(conn, other, notes_cache, rx);
+    let result = {
+        let mut drain_pending = || {
+            while let Ok(cmd) = rx.try_recv() {
+                match cmd {
+                    DbCommand::Rebuild { .. } | DbCommand::Sync { .. } => {
+                        *deferred.borrow_mut() = Some(cmd);
+                    }
+                    DbCommand::Shutdown => {
+                        log::warn!("writer: deferring shutdown during {label}");
+                        *deferred.borrow_mut() = Some(cmd);
+                    }
+                    other => {
+                        dispatch_command(conn, other, notes_cache, rx);
+                    }
                 }
             }
-        }
+        };
+
+        index_fn(
+            conn,
+            vault_root,
+            cancel,
+            &|indexed, total| {
+                if indexed == 0 {
+                    let _ = app.emit(
+                        "index_progress",
+                        IndexProgressEvent::Started { vault_id: vid.clone(), total },
+                    );
+                } else {
+                    let _ = app.emit(
+                        "index_progress",
+                        IndexProgressEvent::Progress { vault_id: vid.clone(), indexed, total },
+                    );
+                }
+            },
+            &mut drain_pending,
+        )
     };
-
-    let result = search_db::rebuild_index(
-        conn,
-        vault_root,
-        cancel,
-        &|indexed, total| {
-            if indexed == 0 {
-                let _ = app.emit(
-                    "index_progress",
-                    IndexProgressEvent::Started { vault_id: vid.clone(), total },
-                );
-            } else {
-                let _ = app.emit(
-                    "index_progress",
-                    IndexProgressEvent::Progress { vault_id: vid.clone(), indexed, total },
-                );
-            }
-        },
-        &mut drain_pending,
-    );
 
     match result {
         Ok(res) => {
@@ -275,7 +325,7 @@ fn handle_rebuild(
             );
         }
         Err(e) => {
-            log::error!("index_build failed: {e}");
+            log::error!("{label} failed: {e}");
             let _ = app_handle.emit(
                 "index_progress",
                 IndexProgressEvent::Failed { vault_id: vid.clone(), error: e },
@@ -285,8 +335,36 @@ fn handle_rebuild(
 
     match search_db::get_all_notes_from_db(conn) {
         Ok(map) => *notes_cache = map,
-        Err(e) => log::warn!("writer: failed to reload notes cache after rebuild: {e}"),
+        Err(e) => log::warn!("writer: failed to reload notes cache after {label}: {e}"),
     }
+
+    if let Some(cmd) = deferred.into_inner() {
+        dispatch_command(conn, cmd, notes_cache, rx);
+    }
+}
+
+fn handle_rebuild(
+    conn: &Connection,
+    vault_root: &Path,
+    cancel: &Arc<AtomicBool>,
+    app_handle: &AppHandle,
+    vault_id: &str,
+    rx: &Receiver<DbCommand>,
+    notes_cache: &mut BTreeMap<String, IndexNoteMeta>,
+) {
+    run_index_op(conn, vault_root, cancel, app_handle, vault_id, rx, notes_cache, "rebuild", search_db::rebuild_index);
+}
+
+fn handle_sync(
+    conn: &Connection,
+    vault_root: &Path,
+    cancel: &Arc<AtomicBool>,
+    app_handle: &AppHandle,
+    vault_id: &str,
+    rx: &Receiver<DbCommand>,
+    notes_cache: &mut BTreeMap<String, IndexNoteMeta>,
+) {
+    run_index_op(conn, vault_root, cancel, app_handle, vault_id, rx, notes_cache, "sync", search_db::sync_index);
 }
 
 fn with_read_conn<F, T>(app: &AppHandle, vault_id: &str, f: F) -> Result<T, String>
@@ -318,6 +396,30 @@ fn send_write_blocking(app: &AppHandle, vault_id: &str, make_cmd: impl FnOnce(Sy
 
 #[tauri::command]
 pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
+    let vault_root = storage::vault_path(&app, &vault_id)?;
+    ensure_worker(&app, &vault_id)?;
+
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let state = app.state::<SearchDbState>();
+        let mut map = state.workers.lock().map_err(|e| e.to_string())?;
+        if let Some(worker) = map.get_mut(&vault_id) {
+            worker.cancel.store(true, Ordering::Relaxed);
+            worker.cancel = Arc::clone(&cancel);
+        }
+    }
+
+    let cmd = DbCommand::Sync {
+        vault_root,
+        cancel,
+        app_handle: app.clone(),
+        vault_id: vault_id.clone(),
+    };
+    send_write(&app, &vault_id, cmd)
+}
+
+#[tauri::command]
+pub fn index_rebuild(app: AppHandle, vault_id: String) -> Result<(), String> {
     let vault_root = storage::vault_path(&app, &vault_id)?;
     ensure_worker(&app, &vault_id)?;
 
@@ -406,6 +508,22 @@ pub fn index_outlinks(
     with_read_conn(&app, &vault_id, |conn| {
         search_db::get_outlinks(conn, &note_id)
     })
+}
+
+#[tauri::command]
+pub fn index_rename_folder(
+    app: AppHandle,
+    vault_id: String,
+    old_prefix: String,
+    new_prefix: String,
+) -> Result<usize, String> {
+    let (reply_tx, reply_rx) = mpsc::sync_channel(1);
+    send_write(&app, &vault_id, DbCommand::RenamePaths {
+        old_prefix,
+        new_prefix,
+        reply: reply_tx,
+    })?;
+    reply_rx.recv().map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

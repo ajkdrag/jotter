@@ -221,6 +221,75 @@ pub struct IndexResult {
     pub indexed: usize,
 }
 
+pub struct SyncPlan {
+    pub added: Vec<PathBuf>,
+    pub modified: Vec<PathBuf>,
+    pub removed: Vec<String>,
+    pub unchanged: usize,
+}
+
+pub fn get_manifest(conn: &Connection) -> Result<BTreeMap<String, (i64, i64)>, String> {
+    let mut stmt = conn
+        .prepare("SELECT path, mtime_ms, size_bytes FROM notes")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?, row.get::<_, i64>(2)?))
+        })
+        .map_err(|e| e.to_string())?;
+    let mut map = BTreeMap::new();
+    for row in rows {
+        let (path, mtime, size) = row.map_err(|e| e.to_string())?;
+        map.insert(path, (mtime, size));
+    }
+    Ok(map)
+}
+
+pub fn compute_sync_plan(
+    vault_root: &Path,
+    manifest: &BTreeMap<String, (i64, i64)>,
+    disk_files: &[PathBuf],
+) -> SyncPlan {
+    let mut added = Vec::new();
+    let mut modified = Vec::new();
+    let mut unchanged: usize = 0;
+
+    let mut seen_paths: BTreeSet<String> = BTreeSet::new();
+
+    for abs in disk_files {
+        let rel = match abs.strip_prefix(vault_root) {
+            Ok(r) => storage::normalize_relative_path(r),
+            Err(_) => continue,
+        };
+
+        seen_paths.insert(rel.clone());
+
+        match manifest.get(&rel) {
+            None => added.push(abs.clone()),
+            Some(&(db_mtime, db_size)) => {
+                match notes_service::file_meta(abs) {
+                    Ok((disk_mtime, disk_size)) => {
+                        if disk_mtime != db_mtime || disk_size != db_size {
+                            modified.push(abs.clone());
+                        } else {
+                            unchanged += 1;
+                        }
+                    }
+                    Err(_) => modified.push(abs.clone()),
+                }
+            }
+        }
+    }
+
+    let removed: Vec<String> = manifest
+        .keys()
+        .filter(|p| !seen_paths.contains(p.as_str()))
+        .cloned()
+        .collect();
+
+    SyncPlan { added, modified, removed, unchanged }
+}
+
 const BATCH_SIZE: usize = 100;
 
 pub fn rebuild_index(
@@ -296,6 +365,118 @@ pub fn rebuild_index(
     }
 
     Ok(IndexResult { total, indexed })
+}
+
+pub fn sync_index(
+    conn: &Connection,
+    vault_root: &Path,
+    cancel: &AtomicBool,
+    on_progress: &dyn Fn(usize, usize),
+    yield_fn: &mut dyn FnMut(),
+) -> Result<IndexResult, String> {
+    let manifest = get_manifest(conn).unwrap_or_default();
+    let disk_files = list_markdown_files(vault_root);
+    let plan = compute_sync_plan(vault_root, &manifest, &disk_files);
+
+    let change_count = plan.added.len() + plan.modified.len() + plan.removed.len();
+
+    if change_count == 0 {
+        log::info!(
+            "sync_index: no changes ({} files unchanged)",
+            plan.unchanged
+        );
+        on_progress(0, 0);
+        return Ok(IndexResult { total: plan.unchanged, indexed: 0 });
+    }
+
+    log::info!(
+        "sync_index: {} added, {} modified, {} removed, {} unchanged",
+        plan.added.len(),
+        plan.modified.len(),
+        plan.removed.len(),
+        plan.unchanged
+    );
+
+    let total = plan.added.len() + plan.modified.len();
+    on_progress(0, total);
+
+    if !plan.removed.is_empty() {
+        for batch in plan.removed.chunks(BATCH_SIZE) {
+            if cancel.load(Ordering::Relaxed) {
+                return Ok(IndexResult { total, indexed: 0 });
+            }
+            conn.execute_batch("BEGIN IMMEDIATE")
+                .map_err(|e| e.to_string())?;
+            for path in batch {
+                remove_note(conn, path)?;
+                conn.execute(
+                    "DELETE FROM outlinks WHERE source_path = ?1",
+                    params![path],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+            conn.execute_batch("COMMIT")
+                .map_err(|e| e.to_string())?;
+            yield_fn();
+        }
+    }
+
+    let upsert_files: Vec<&PathBuf> = plan.added.iter().chain(plan.modified.iter()).collect();
+    let mut indexed: usize = 0;
+    let mut pending_links: Vec<(String, Vec<String>)> = Vec::new();
+
+    for batch in upsert_files.chunks(BATCH_SIZE) {
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
+
+        conn.execute_batch("BEGIN IMMEDIATE")
+            .map_err(|e| e.to_string())?;
+
+        for abs in batch {
+            let markdown = match std::fs::read_to_string(abs) {
+                Ok(s) => s,
+                Err(e) => {
+                    log::warn!("skip {}: {}", abs.display(), e);
+                    continue;
+                }
+            };
+            let meta = match extract_meta(abs, vault_root) {
+                Ok(m) => m,
+                Err(e) => {
+                    log::warn!("skip {}: {}", abs.display(), e);
+                    continue;
+                }
+            };
+            upsert_note(conn, &meta, &markdown)?;
+            let targets = wiki_link_targets(&markdown);
+            if !targets.is_empty() {
+                pending_links.push((meta.path.clone(), targets));
+            }
+            indexed += 1;
+        }
+
+        conn.execute_batch("COMMIT")
+            .map_err(|e| e.to_string())?;
+        on_progress(indexed, total);
+        yield_fn();
+    }
+
+    let all_notes = get_all_notes_from_db(conn)?;
+    let key_map = build_key_map(&all_notes);
+    for (source, targets) in &pending_links {
+        let mut resolved: BTreeSet<String> = BTreeSet::new();
+        for token in targets {
+            if let Some(target) = resolve_wiki_target(token, &key_map) {
+                if target != *source {
+                    resolved.insert(target);
+                }
+            }
+        }
+        set_outlinks(conn, source, &resolved.into_iter().collect::<Vec<_>>())?;
+    }
+
+    Ok(IndexResult { total: total + plan.unchanged, indexed })
 }
 
 pub fn get_all_notes_from_db(conn: &Connection) -> Result<BTreeMap<String, IndexNoteMeta>, String> {
@@ -464,6 +645,76 @@ pub fn get_outlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>,
         .map_err(|e| e.to_string())
 }
 
+pub fn rename_folder_paths(
+    conn: &Connection,
+    old_prefix: &str,
+    new_prefix: &str,
+) -> Result<usize, String> {
+    let like_pattern = format!("{old_prefix}%");
+    let old_len = old_prefix.len() as i64;
+
+    let count: usize = conn
+        .query_row(
+            "SELECT COUNT(*) FROM notes WHERE path LIKE ?1",
+            params![like_pattern],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    if count == 0 {
+        return Ok(0);
+    }
+
+    conn.execute_batch("BEGIN IMMEDIATE")
+        .map_err(|e| e.to_string())?;
+
+    let result = conn.execute_batch(
+        "CREATE TEMP TABLE IF NOT EXISTS _fts_rename(title TEXT, name TEXT, path TEXT, body TEXT)",
+    )
+    .and_then(|_| conn.execute("DELETE FROM _fts_rename", []))
+    .and_then(|_| conn.execute(
+        "INSERT INTO _fts_rename SELECT title, name, ?1 || substr(path, ?2 + 1), body
+         FROM notes_fts WHERE path LIKE ?3",
+        params![new_prefix, old_len, like_pattern],
+    ))
+    .and_then(|_| conn.execute(
+        "DELETE FROM notes_fts WHERE path LIKE ?1",
+        params![like_pattern],
+    ))
+    .and_then(|_| conn.execute(
+        "INSERT INTO notes_fts(title, name, path, body) SELECT * FROM _fts_rename",
+        [],
+    ))
+    .and_then(|_| conn.execute("DROP TABLE IF EXISTS _fts_rename", []))
+    .and_then(|_| conn.execute(
+        "UPDATE notes SET path = ?1 || substr(path, ?2 + 1) WHERE path LIKE ?3",
+        params![new_prefix, old_len, like_pattern],
+    ))
+    .and_then(|_| conn.execute(
+        "UPDATE outlinks SET source_path = ?1 || substr(source_path, ?2 + 1)
+         WHERE source_path LIKE ?3",
+        params![new_prefix, old_len, like_pattern],
+    ))
+    .and_then(|_| conn.execute(
+        "UPDATE outlinks SET target_path = ?1 || substr(target_path, ?2 + 1)
+         WHERE target_path LIKE ?3",
+        params![new_prefix, old_len, like_pattern],
+    ))
+    .map_err(|e| e.to_string());
+
+    match result {
+        Ok(_) => {
+            conn.execute_batch("COMMIT")
+                .map_err(|e| e.to_string())?;
+            Ok(count)
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e)
+        }
+    }
+}
+
 pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>, String> {
     let sql = "SELECT n.path, n.title, n.mtime_ms, n.size_bytes
                FROM outlinks o
@@ -478,4 +729,134 @@ pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    fn write_md(dir: &Path, rel: &str, content: &str) -> PathBuf {
+        let p = dir.join(rel);
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(&p, content).unwrap();
+        p
+    }
+
+    fn set_mtime(path: &Path, secs_offset: i64) {
+        let t = filetime::FileTime::from_unix_time(
+            1_700_000_000 + secs_offset,
+            0,
+        );
+        filetime::set_file_mtime(path, t).unwrap();
+    }
+
+    #[test]
+    fn empty_manifest_all_added() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        let a = write_md(root, "a.md", "hello");
+        let b = write_md(root, "b.md", "world");
+
+        let manifest = BTreeMap::new();
+        let disk = vec![a, b];
+        let plan = compute_sync_plan(root, &manifest, &disk);
+
+        assert_eq!(plan.added.len(), 2);
+        assert!(plan.modified.is_empty());
+        assert!(plan.removed.is_empty());
+        assert_eq!(plan.unchanged, 0);
+    }
+
+    #[test]
+    fn all_in_manifest_nothing_on_disk() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+
+        let mut manifest = BTreeMap::new();
+        manifest.insert("a.md".to_string(), (1000i64, 5i64));
+        manifest.insert("b.md".to_string(), (2000i64, 5i64));
+
+        let plan = compute_sync_plan(root, &manifest, &[]);
+
+        assert!(plan.added.is_empty());
+        assert!(plan.modified.is_empty());
+        assert_eq!(plan.removed.len(), 2);
+        assert_eq!(plan.unchanged, 0);
+    }
+
+    #[test]
+    fn unchanged_files_detected() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        let p = write_md(root, "note.md", "content");
+        set_mtime(&p, 0);
+
+        let (mtime, size) = notes_service::file_meta(&p).unwrap();
+        let mut manifest = BTreeMap::new();
+        manifest.insert("note.md".to_string(), (mtime, size));
+
+        let plan = compute_sync_plan(root, &manifest, &[p]);
+
+        assert!(plan.added.is_empty());
+        assert!(plan.modified.is_empty());
+        assert!(plan.removed.is_empty());
+        assert_eq!(plan.unchanged, 1);
+    }
+
+    #[test]
+    fn modified_file_detected_by_mtime() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        let p = write_md(root, "note.md", "content");
+
+        let mut manifest = BTreeMap::new();
+        manifest.insert("note.md".to_string(), (0i64, 7i64));
+
+        let plan = compute_sync_plan(root, &manifest, &[p]);
+
+        assert!(plan.added.is_empty());
+        assert_eq!(plan.modified.len(), 1);
+        assert!(plan.removed.is_empty());
+    }
+
+    #[test]
+    fn mixed_add_modify_remove_unchanged() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+
+        let new_file = write_md(root, "new.md", "new");
+        let changed = write_md(root, "changed.md", "updated");
+        let same = write_md(root, "same.md", "same");
+        set_mtime(&same, 100);
+
+        let (same_mtime, same_size) = notes_service::file_meta(&same).unwrap();
+
+        let mut manifest = BTreeMap::new();
+        manifest.insert("changed.md".to_string(), (0i64, 0i64));
+        manifest.insert("same.md".to_string(), (same_mtime, same_size));
+        manifest.insert("deleted.md".to_string(), (999i64, 10i64));
+
+        let disk = vec![new_file, changed, same];
+        let plan = compute_sync_plan(root, &manifest, &disk);
+
+        assert_eq!(plan.added.len(), 1);
+        assert_eq!(plan.modified.len(), 1);
+        assert_eq!(plan.removed, vec!["deleted.md"]);
+        assert_eq!(plan.unchanged, 1);
+    }
+
+    #[test]
+    fn both_empty() {
+        let tmp = TempDir::new().unwrap();
+        let plan = compute_sync_plan(tmp.path(), &BTreeMap::new(), &[]);
+
+        assert!(plan.added.is_empty());
+        assert!(plan.modified.is_empty());
+        assert!(plan.removed.is_empty());
+        assert_eq!(plan.unchanged, 0);
+    }
 }

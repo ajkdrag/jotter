@@ -29,6 +29,17 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
         noteIds: note_ids,
       });
     },
+    async rename_folder_paths(
+      vault_id: VaultId,
+      old_prefix: string,
+      new_prefix: string,
+    ) {
+      await tauri_invoke<number>("index_rename_folder", {
+        vaultId: vault_id,
+        oldPrefix: old_prefix,
+        newPrefix: new_prefix,
+      });
+    },
     subscribe_index_progress(
       callback: (event: IndexProgressEvent) => void,
     ): () => void {
