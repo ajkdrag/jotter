@@ -216,6 +216,8 @@ export class VaultService {
       logger.error(`Background index build failed: ${error_message(e)}`);
     });
 
+    const loaded_recent_notes = await this.load_recent_notes(vault.id);
+
     this.vault_store.clear();
     this.notes_store.reset();
     this.editor_store.reset();
@@ -223,7 +225,7 @@ export class VaultService {
     this.vault_store.set_vault(vault);
     this.notes_store.merge_folder_contents("", root_contents);
     this.vault_store.set_recent_vaults(recent_vaults);
-    await this.load_recent_notes(vault.id);
+    this.notes_store.set_recent_notes(loaded_recent_notes);
 
     const ensured_note = ensure_open_note({
       vault,
@@ -281,15 +283,14 @@ export class VaultService {
     }
   }
 
-  private async load_recent_notes(vault_id: VaultId): Promise<void> {
+  private async load_recent_notes(vault_id: VaultId): Promise<NoteMeta[]> {
     try {
       const stored = await this.vault_settings_port.get_vault_setting<unknown>(
         vault_id,
         RECENT_NOTES_KEY,
       );
       if (!stored || !Array.isArray(stored)) {
-        this.notes_store.set_recent_notes([]);
-        return;
+        return [];
       }
       const parsed = stored.filter((entry): entry is NoteMeta => {
         if (!entry || typeof entry !== "object") return false;
@@ -303,10 +304,10 @@ export class VaultService {
           typeof record.size_bytes === "number"
         );
       });
-      this.notes_store.set_recent_notes(parsed);
+      return parsed;
     } catch (error) {
       logger.error(`Load recent notes failed: ${error_message(error)}`);
-      this.notes_store.set_recent_notes([]);
+      return [];
     }
   }
 

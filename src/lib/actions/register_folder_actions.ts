@@ -390,7 +390,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
         pagination: new SvelteMap<string, FolderPaginationState>(),
       };
 
-      stores.notes.reset();
+      stores.notes.reset_notes_and_folders();
 
       await load_folder(input, "");
       const non_root = Array.from(loaded_paths).filter((path) => path !== "");

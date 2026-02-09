@@ -247,11 +247,16 @@ export function create_wiki_link_converter_prose_plugin(input: {
       };
 
       if (force_full_scan) {
+        const blocks: Array<{ node: ProseNode; pos: number }> = [];
         new_state.doc.descendants((node, pos) => {
           if (!node.isTextblock) return true;
-          scan_textblock(node, pos + 1, null);
+          blocks.push({ node, pos: pos + 1 });
           return false;
         });
+        for (let i = blocks.length - 1; i >= 0; i--) {
+          const block = blocks[i];
+          if (block) scan_textblock(block.node, block.pos, null);
+        }
         return tr.docChanged ? tr : null;
       }
 

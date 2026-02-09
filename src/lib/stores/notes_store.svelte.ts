@@ -212,6 +212,11 @@ export class NotesStore {
     this.folder_paths = retained_folders;
   }
 
+  reset_notes_and_folders() {
+    this.notes = [];
+    this.folder_paths = [];
+  }
+
   reset() {
     this.notes = [];
     this.folder_paths = [];
