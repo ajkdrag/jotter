@@ -120,6 +120,12 @@
           oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
             on_update_name(e.currentTarget.value);
           }}
+          onkeydown={(e: KeyboardEvent) => {
+            if (e.key === "Enter" && is_input_valid() && !is_busy) {
+              e.preventDefault();
+              on_confirm();
+            }
+          }}
           placeholder="new-title"
           disabled={is_busy}
         />

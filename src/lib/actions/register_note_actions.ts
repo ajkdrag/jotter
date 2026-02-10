@@ -6,7 +6,7 @@ import { as_note_path, type NotePath } from "$lib/types/ids";
 import type { ImagePasteRequest } from "$lib/types/editor";
 import { sanitize_note_name } from "$lib/utils/sanitize_note_name";
 import { to_markdown_asset_target } from "$lib/utils/asset_markdown_path";
-import { parent_folder_path } from "$lib/utils/filetree";
+import { note_name_from_path, parent_folder_path } from "$lib/utils/filetree";
 
 function close_delete_dialog(input: ActionRegistrationInput) {
   input.stores.ui.delete_note_dialog = {
@@ -43,11 +43,6 @@ function build_full_path(folder_path: string, filename: string): NotePath {
 function filename_from_path(path: string): string {
   const last_slash = path.lastIndexOf("/");
   return last_slash >= 0 ? path.slice(last_slash + 1) : path;
-}
-
-function note_name_from_path(path: string): string {
-  const filename = filename_from_path(path);
-  return filename.endsWith(".md") ? filename.slice(0, -3) : filename;
 }
 
 function build_note_path_from_name(parent: string, name: string): NotePath {

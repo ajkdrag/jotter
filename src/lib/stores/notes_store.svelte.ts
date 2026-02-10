@@ -51,12 +51,13 @@ export class NotesStore {
     this.notes = this.notes
       .map((note) => {
         if (note.path !== old_path) return note;
+        const has_custom_title = note.title && note.title !== note.name;
         return {
           ...note,
           id: normalized_new,
           path: normalized_new,
           name,
-          title: name,
+          title: has_custom_title ? note.title : name,
         };
       })
       .sort((a, b) => a.path.localeCompare(b.path));

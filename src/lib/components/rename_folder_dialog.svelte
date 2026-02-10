@@ -109,6 +109,12 @@
           type="text"
           value={new_name}
           oninput={handle_input}
+          onkeydown={(e: KeyboardEvent) => {
+            if (e.key === "Enter" && is_input_valid() && !is_renaming) {
+              e.preventDefault();
+              on_confirm();
+            }
+          }}
           disabled={is_renaming}
           placeholder="folder-name"
         />

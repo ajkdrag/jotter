@@ -21,7 +21,6 @@ export class ClipboardService {
       this.op_store.succeed("clipboard.write");
     } catch (error) {
       this.op_store.fail("clipboard.write", error_message(error));
-      throw error;
     }
   }
 }

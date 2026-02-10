@@ -107,6 +107,12 @@
           oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
             update_filename(e.currentTarget.value);
           }}
+          onkeydown={(e: KeyboardEvent) => {
+            if (e.key === "Enter" && is_valid() && !is_busy) {
+              e.preventDefault();
+              on_confirm();
+            }
+          }}
           placeholder="e.g., my-note.md"
           disabled={is_busy}
         />

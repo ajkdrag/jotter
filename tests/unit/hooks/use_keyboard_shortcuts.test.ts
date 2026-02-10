@@ -15,6 +15,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
     });
 
@@ -45,6 +46,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
     });
 
@@ -73,6 +75,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes,
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
     });
 
@@ -103,6 +106,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes,
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
     });
 
@@ -131,6 +135,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save,
     });
 
@@ -159,6 +164,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
     });
 
@@ -187,6 +193,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar,
+      on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
     });
 
@@ -216,6 +223,7 @@ describe("use_keyboard_shortcuts", () => {
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
       on_save,
     });
 

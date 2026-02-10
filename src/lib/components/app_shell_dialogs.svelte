@@ -39,6 +39,13 @@
   );
   const image_paste_error = $derived(stores.op.get("asset.write").error);
 
+  const settings_has_unsaved_changes = $derived.by(() => {
+    const { current_settings, persisted_settings } = stores.ui.settings_dialog;
+    return (
+      JSON.stringify(current_settings) !== JSON.stringify(persisted_settings)
+    );
+  });
+
   const delete_folder_status = $derived.by(() => {
     const op_state = stores.op.get("folder.delete").status;
     if (op_state === "pending") return "deleting";
@@ -154,7 +161,7 @@
   open={stores.ui.settings_dialog.open}
   editor_settings={stores.ui.settings_dialog.current_settings}
   is_saving={stores.op.is_pending("settings.save")}
-  has_unsaved_changes={stores.ui.settings_dialog.has_unsaved_changes}
+  has_unsaved_changes={settings_has_unsaved_changes}
   error={settings_error}
   on_update_settings={(settings: EditorSettings) =>
     void action_registry.execute(ACTION_IDS.settings_update, settings)}

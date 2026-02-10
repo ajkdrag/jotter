@@ -11,6 +11,7 @@ export function use_keyboard_shortcuts(input: {
   on_open_omnibar_commands: () => void;
   on_open_omnibar_notes: () => void;
   on_toggle_sidebar: () => void;
+  on_toggle_find_in_file: () => void;
   on_save: () => void;
 }): KeyboardShortcuts {
   const {
@@ -21,6 +22,7 @@ export function use_keyboard_shortcuts(input: {
     on_open_omnibar_commands,
     on_open_omnibar_notes,
     on_toggle_sidebar,
+    on_toggle_find_in_file,
     on_save,
   } = input;
 
@@ -53,6 +55,15 @@ export function use_keyboard_shortcuts(input: {
       } else {
         on_open_omnibar_notes();
       }
+      return;
+    }
+
+    if (is_mod_combo(event, "f")) {
+      if (!is_enabled()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (is_blocked()) return;
+      on_toggle_find_in_file();
       return;
     }
 

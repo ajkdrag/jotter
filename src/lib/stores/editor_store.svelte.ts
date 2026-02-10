@@ -1,10 +1,10 @@
 import type { OpenNoteState, CursorInfo } from "$lib/types/editor";
 import type { NoteId, NotePath } from "$lib/types/ids";
 
-function path_title(path: string): string {
-  const parts = path.split("/");
-  const leaf = parts[parts.length - 1] ?? "";
-  return leaf.endsWith(".md") ? leaf.slice(0, -3) : leaf;
+function note_name_from_path(path: string): string {
+  const last_slash = path.lastIndexOf("/");
+  const filename = last_slash >= 0 ? path.slice(last_slash + 1) : path;
+  return filename.endsWith(".md") ? filename.slice(0, -3) : filename;
 }
 
 export class EditorStore {
@@ -45,7 +45,7 @@ export class EditorStore {
 
   update_open_note_path(new_path: NotePath) {
     if (!this.open_note) return;
-    const name = path_title(new_path);
+    const name = note_name_from_path(new_path);
     this.open_note = {
       ...this.open_note,
       meta: {
@@ -65,7 +65,7 @@ export class EditorStore {
 
     const new_path =
       `${new_prefix}${current_path.slice(old_prefix.length)}` as NotePath;
-    const name = path_title(new_path);
+    const name = note_name_from_path(new_path);
     this.open_note = {
       ...this.open_note,
       meta: {

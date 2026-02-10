@@ -54,6 +54,7 @@ export class SearchService {
 
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) {
+      this.op_store.reset("search.notes");
       return { status: "skipped", results: [] };
     }
 

@@ -2,8 +2,8 @@ use crate::constants;
 use crate::storage;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write as IoWrite};
 use std::path::{Path, PathBuf};
 use std::path::Component;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -15,6 +15,7 @@ use walkdir::WalkDir;
 pub struct NoteMeta {
     pub id: String,
     pub path: String,
+    pub name: String,
     pub title: String,
     pub mtime_ms: i64,
     pub size_bytes: i64,
@@ -82,6 +83,11 @@ fn safe_vault_rename_target_abs(vault_root: &Path, target_rel: &str) -> Result<P
     }
 
     Ok(target_abs)
+}
+
+fn name_from_rel_path(rel_path: &str) -> String {
+    let leaf = rel_path.rsplit('/').next().unwrap_or(rel_path);
+    leaf.strip_suffix(".md").unwrap_or(leaf).to_string()
 }
 
 pub(crate) fn extract_title(path: &Path) -> String {
@@ -157,9 +163,11 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
         let abs = safe_vault_abs(&root, &rel)?;
         let title = extract_title(&abs);
         let (mtime_ms, size_bytes) = file_meta(&abs)?;
+        let name = name_from_rel_path(&rel);
         out.push(NoteMeta {
             id: rel.clone(),
             path: rel,
+            name,
             title,
             mtime_ms,
             size_bytes,
@@ -178,12 +186,14 @@ pub fn read_note(app: AppHandle, vault_id: String, note_id: String) -> Result<No
         log::error!("Failed to read note {}: {}", note_id, e);
         e.to_string()
     })?;
+    let name = name_from_rel_path(&note_id);
     let title = extract_title(&abs);
     let (mtime_ms, size_bytes) = file_meta(&abs)?;
     Ok(NoteDoc {
         meta: NoteMeta {
             id: note_id.clone(),
             path: note_id,
+            name,
             title,
             mtime_ms,
             size_bytes,
@@ -230,15 +240,28 @@ pub struct NoteCreateArgs {
 pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs(&root, &args.note_path)?;
-    if abs.exists() {
-        return Err("note already exists".to_string());
-    }
-    atomic_write(&abs, &args.initial_markdown)?;
+    let dir = abs.parent().ok_or("invalid note path")?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&abs)
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                "note already exists".to_string()
+            } else {
+                e.to_string()
+            }
+        })?;
+    file.write_all(args.initial_markdown.as_bytes())
+        .map_err(|e| e.to_string())?;
+    let name = name_from_rel_path(&args.note_path);
     let title = extract_title(&abs);
     let (mtime_ms, size_bytes) = file_meta(&abs)?;
     let note = NoteMeta {
         id: args.note_path.clone(),
         path: args.note_path,
+        name,
         title,
         mtime_ms,
         size_bytes,
@@ -315,9 +338,19 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         .unwrap_or("image");
 
     let attachment_folder = args.attachment_folder.as_deref().unwrap_or(".assets");
+    if attachment_folder.contains('/') || attachment_folder.contains('\\') || attachment_folder.starts_with("..") {
+        return Err("invalid attachment folder name".to_string());
+    }
 
     let filename = if let Some(custom_filename) = args.custom_filename {
-        custom_filename
+        let sanitized = custom_filename
+            .replace('/', "")
+            .replace('\\', "");
+        let sanitized = sanitized.trim_start_matches('.');
+        if sanitized.is_empty() {
+            return Err("invalid custom filename".to_string());
+        }
+        sanitized.to_string()
     } else {
         let source_stem = args
             .file_name
@@ -736,15 +769,12 @@ pub fn list_folder_contents(
         if entry.is_dir {
             subfolders.push(rel);
         } else {
-            let title = entry
-                .name
-                .strip_suffix(".md")
-                .unwrap_or(&entry.name)
-                .to_string();
+            let name = name_from_rel_path(&rel);
             notes.push(NoteMeta {
                 id: rel.clone(),
                 path: rel,
-                title,
+                name: name.clone(),
+                title: name,
                 mtime_ms: 0,
                 size_bytes: 0,
             });

@@ -27,7 +27,9 @@
   {#if open_note}
     <div use:mount_editor={open_note} class="NoteEditor__content"></div>
   {:else}
-    <div class="NoteEditor__content"></div>
+    <div class="NoteEditor__empty">
+      <p class="text-muted-foreground text-sm">Select a note or create one</p>
+    </div>
   {/if}
 </div>
 
@@ -39,5 +41,12 @@
   .NoteEditor__content {
     max-width: 65ch;
     padding: 1.5rem 1.5rem;
+  }
+
+  .NoteEditor__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
   }
 </style>

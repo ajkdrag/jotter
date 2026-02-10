@@ -68,6 +68,12 @@
         oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
           on_folder_name_change(e.currentTarget.value);
         }}
+        onkeydown={(e: KeyboardEvent) => {
+          if (e.key === "Enter" && is_valid && !is_creating) {
+            e.preventDefault();
+            on_confirm();
+          }
+        }}
         placeholder="Folder name"
         disabled={is_creating}
       />

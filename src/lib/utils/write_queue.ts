@@ -3,8 +3,16 @@ export function create_write_queue() {
 
   return async (key: string, task: () => Promise<void>) => {
     const previous = queues.get(key) ?? Promise.resolve();
-    const next = previous.then(task, task);
+    const next = previous.catch(() => {}).then(task);
     queues.set(key, next);
+    next.then(
+      () => {
+        if (queues.get(key) === next) queues.delete(key);
+      },
+      () => {
+        if (queues.get(key) === next) queues.delete(key);
+      },
+    );
     await next;
   };
 }

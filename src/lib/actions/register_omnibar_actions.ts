@@ -119,7 +119,15 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       const result = await services.search.search_omnibar(normalized_query);
       if (stores.ui.omnibar.query !== normalized_query) return;
       stores.search.set_omnibar_items(result.items);
-      stores.ui.omnibar = { ...stores.ui.omnibar, is_searching: false };
+      const clamped_index =
+        result.items.length > 0
+          ? Math.min(stores.ui.omnibar.selected_index, result.items.length - 1)
+          : 0;
+      stores.ui.omnibar = {
+        ...stores.ui.omnibar,
+        is_searching: false,
+        selected_index: clamped_index,
+      };
     },
   });
 

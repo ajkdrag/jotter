@@ -457,6 +457,8 @@ export function register_folder_actions(input: ActionRegistrationInput) {
           affected_note_count: result.affected_note_count,
           affected_folder_count: result.affected_folder_count,
         };
+      } else {
+        close_delete_dialog(input);
       }
     },
   });
@@ -534,13 +536,6 @@ export function register_folder_actions(input: ActionRegistrationInput) {
         clear_folder_filetree_state(input, new_parent);
       }
       remap_expanded_paths(input, folder_path, new_path);
-
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          resolve();
-        });
-      });
-
       services.folder.apply_folder_rename(folder_path, new_path);
     }
   }

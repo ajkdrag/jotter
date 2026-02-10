@@ -12,6 +12,85 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 type AsyncStatus = "idle" | "loading" | "error";
 
+const INITIAL_DELETE_NOTE_DIALOG = { open: false, note: null } as const;
+
+const INITIAL_RENAME_NOTE_DIALOG = {
+  open: false,
+  note: null,
+  new_name: "",
+  show_overwrite_confirm: false,
+  is_checking_conflict: false,
+} as const;
+
+const INITIAL_SAVE_NOTE_DIALOG = {
+  open: false,
+  new_path: null,
+  folder_path: "",
+  show_overwrite_confirm: false,
+  is_checking_existence: false,
+} as const;
+
+const INITIAL_CREATE_FOLDER_DIALOG = {
+  open: false,
+  parent_path: "",
+  folder_name: "",
+} as const;
+
+const INITIAL_DELETE_FOLDER_DIALOG = {
+  open: false,
+  folder_path: null,
+  affected_note_count: 0,
+  affected_folder_count: 0,
+  status: "idle",
+} as const;
+
+const INITIAL_RENAME_FOLDER_DIALOG = {
+  open: false,
+  folder_path: null,
+  new_name: "",
+} as const;
+
+const INITIAL_OMNIBAR = {
+  open: false,
+  query: "",
+  selected_index: 0,
+  is_searching: false,
+} as const;
+
+const INITIAL_FIND_IN_FILE = {
+  open: false,
+  query: "",
+  selected_match_index: 0,
+} as const;
+
+const INITIAL_IMAGE_PASTE_DIALOG = {
+  open: false,
+  note_id: null,
+  note_path: null,
+  image: null,
+  filename: "",
+  estimated_size_bytes: 0,
+  target_folder: "",
+} as const;
+
+function initial_filetree() {
+  return {
+    expanded_paths: new SvelteSet<string>(),
+    load_states: new SvelteMap<string, FolderLoadState>(),
+    error_messages: new SvelteMap<string, string>(),
+    pagination: new SvelteMap<string, FolderPaginationState>(),
+  };
+}
+
+function initial_settings_dialog(settings: EditorSettings) {
+  return {
+    open: false,
+    current_settings: { ...settings },
+    persisted_settings: { ...settings },
+    has_unsaved_changes: false,
+  };
+}
+
 export class UIStore {
   theme = $state<ThemeMode>("system");
   sidebar_open = $state(true);
@@ -35,8 +114,7 @@ export class UIStore {
   });
 
   delete_note_dialog = $state<{ open: boolean; note: NoteMeta | null }>({
-    open: false,
-    note: null,
+    ...INITIAL_DELETE_NOTE_DIALOG,
   });
 
   rename_note_dialog = $state<{
@@ -45,13 +123,7 @@ export class UIStore {
     new_name: string;
     show_overwrite_confirm: boolean;
     is_checking_conflict: boolean;
-  }>({
-    open: false,
-    note: null,
-    new_name: "",
-    show_overwrite_confirm: false,
-    is_checking_conflict: false,
-  });
+  }>({ ...INITIAL_RENAME_NOTE_DIALOG });
 
   save_note_dialog = $state<{
     open: boolean;
@@ -59,23 +131,13 @@ export class UIStore {
     folder_path: string;
     show_overwrite_confirm: boolean;
     is_checking_existence: boolean;
-  }>({
-    open: false,
-    new_path: null,
-    folder_path: "",
-    show_overwrite_confirm: false,
-    is_checking_existence: false,
-  });
+  }>({ ...INITIAL_SAVE_NOTE_DIALOG });
 
   create_folder_dialog = $state<{
     open: boolean;
     parent_path: string;
     folder_name: string;
-  }>({
-    open: false,
-    parent_path: "",
-    folder_name: "",
-  });
+  }>({ ...INITIAL_CREATE_FOLDER_DIALOG });
 
   delete_folder_dialog = $state<{
     open: boolean;
@@ -83,69 +145,40 @@ export class UIStore {
     affected_note_count: number;
     affected_folder_count: number;
     status: "idle" | "fetching_stats" | "confirming";
-  }>({
-    open: false,
-    folder_path: null,
-    affected_note_count: 0,
-    affected_folder_count: 0,
-    status: "idle",
-  });
+  }>({ ...INITIAL_DELETE_FOLDER_DIALOG });
 
   rename_folder_dialog = $state<{
     open: boolean;
     folder_path: string | null;
     new_name: string;
-  }>({
-    open: false,
-    folder_path: null,
-    new_name: "",
-  });
+  }>({ ...INITIAL_RENAME_FOLDER_DIALOG });
 
   settings_dialog = $state<{
     open: boolean;
     current_settings: EditorSettings;
     persisted_settings: EditorSettings;
     has_unsaved_changes: boolean;
-  }>({
-    open: false,
-    current_settings: { ...DEFAULT_EDITOR_SETTINGS },
-    persisted_settings: { ...DEFAULT_EDITOR_SETTINGS },
-    has_unsaved_changes: false,
-  });
+  }>(initial_settings_dialog(DEFAULT_EDITOR_SETTINGS));
 
   omnibar = $state<{
     open: boolean;
     query: string;
     selected_index: number;
     is_searching: boolean;
-  }>({
-    open: false,
-    query: "",
-    selected_index: 0,
-    is_searching: false,
-  });
+  }>({ ...INITIAL_OMNIBAR });
 
   find_in_file = $state<{
     open: boolean;
     query: string;
     selected_match_index: number;
-  }>({
-    open: false,
-    query: "",
-    selected_match_index: 0,
-  });
+  }>({ ...INITIAL_FIND_IN_FILE });
 
   filetree = $state<{
     expanded_paths: SvelteSet<string>;
     load_states: SvelteMap<string, FolderLoadState>;
     error_messages: SvelteMap<string, string>;
     pagination: SvelteMap<string, FolderPaginationState>;
-  }>({
-    expanded_paths: new SvelteSet<string>(),
-    load_states: new SvelteMap<string, FolderLoadState>(),
-    error_messages: new SvelteMap<string, string>(),
-    pagination: new SvelteMap<string, FolderPaginationState>(),
-  });
+  }>(initial_filetree());
 
   image_paste_dialog = $state<{
     open: boolean;
@@ -155,15 +188,7 @@ export class UIStore {
     filename: string;
     estimated_size_bytes: number;
     target_folder: string;
-  }>({
-    open: false,
-    note_id: null,
-    note_path: null,
-    image: null,
-    filename: "",
-    estimated_size_bytes: 0,
-    target_folder: "",
-  });
+  }>({ ...INITIAL_IMAGE_PASTE_DIALOG });
 
   set_theme(theme: ThemeMode) {
     this.theme = theme;
@@ -188,69 +213,16 @@ export class UIStore {
 
   reset_for_new_vault() {
     this.selected_folder_path = "";
-    this.delete_note_dialog = { open: false, note: null };
-    this.rename_note_dialog = {
-      open: false,
-      note: null,
-      new_name: "",
-      show_overwrite_confirm: false,
-      is_checking_conflict: false,
-    };
-    this.save_note_dialog = {
-      open: false,
-      new_path: null,
-      folder_path: "",
-      show_overwrite_confirm: false,
-      is_checking_existence: false,
-    };
-    this.create_folder_dialog = {
-      open: false,
-      parent_path: "",
-      folder_name: "",
-    };
-    this.delete_folder_dialog = {
-      open: false,
-      folder_path: null,
-      affected_note_count: 0,
-      affected_folder_count: 0,
-      status: "idle",
-    };
-    this.rename_folder_dialog = {
-      open: false,
-      folder_path: null,
-      new_name: "",
-    };
-    this.settings_dialog = {
-      open: false,
-      current_settings: { ...this.editor_settings },
-      persisted_settings: { ...this.editor_settings },
-      has_unsaved_changes: false,
-    };
-    this.omnibar = {
-      open: false,
-      query: "",
-      selected_index: 0,
-      is_searching: false,
-    };
-    this.find_in_file = {
-      open: false,
-      query: "",
-      selected_match_index: 0,
-    };
-    this.filetree = {
-      expanded_paths: new SvelteSet<string>(),
-      load_states: new SvelteMap<string, FolderLoadState>(),
-      error_messages: new SvelteMap<string, string>(),
-      pagination: new SvelteMap<string, FolderPaginationState>(),
-    };
-    this.image_paste_dialog = {
-      open: false,
-      note_id: null,
-      note_path: null,
-      image: null,
-      filename: "",
-      estimated_size_bytes: 0,
-      target_folder: "",
-    };
+    this.delete_note_dialog = { ...INITIAL_DELETE_NOTE_DIALOG };
+    this.rename_note_dialog = { ...INITIAL_RENAME_NOTE_DIALOG };
+    this.save_note_dialog = { ...INITIAL_SAVE_NOTE_DIALOG };
+    this.create_folder_dialog = { ...INITIAL_CREATE_FOLDER_DIALOG };
+    this.delete_folder_dialog = { ...INITIAL_DELETE_FOLDER_DIALOG };
+    this.rename_folder_dialog = { ...INITIAL_RENAME_FOLDER_DIALOG };
+    this.settings_dialog = initial_settings_dialog(this.editor_settings);
+    this.omnibar = { ...INITIAL_OMNIBAR };
+    this.find_in_file = { ...INITIAL_FIND_IN_FILE };
+    this.filetree = initial_filetree();
+    this.image_paste_dialog = { ...INITIAL_IMAGE_PASTE_DIALOG };
   }
 }

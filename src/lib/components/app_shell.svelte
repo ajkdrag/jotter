@@ -52,6 +52,9 @@
     on_toggle_sidebar: () => {
       void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
     },
+    on_toggle_find_in_file: () => {
+      void action_registry.execute(ACTION_IDS.find_in_file_toggle);
+    },
     on_save: () => {
       void action_registry.execute(ACTION_IDS.note_request_save);
     },

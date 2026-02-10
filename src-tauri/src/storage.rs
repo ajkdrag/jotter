@@ -94,6 +94,25 @@ pub fn vault_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, String> {
     Ok(PathBuf::from(path))
 }
 
+fn url_decode(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.bytes();
+    while let Some(b) = chars.next() {
+        if b == b'%' {
+            let hi = chars.next().and_then(|c| (c as char).to_digit(16));
+            let lo = chars.next().and_then(|c| (c as char).to_digit(16));
+            if let (Some(h), Some(l)) = (hi, lo) {
+                result.push((h * 16 + l) as u8 as char);
+            } else {
+                result.push('%');
+            }
+        } else {
+            result.push(b as char);
+        }
+    }
+    result
+}
+
 pub fn handle_asset_request(app: &AppHandle, req: Request<Vec<u8>>) -> Response<Vec<u8>> {
     let uri = req.uri().to_string();
     let rel = uri
@@ -107,33 +126,17 @@ pub fn handle_asset_request(app: &AppHandle, req: Request<Vec<u8>>) -> Response<
     }
 
     let vault_id = parts[1];
-    let asset_rel = parts[2];
+    let asset_rel = url_decode(parts[2]);
 
-    let store = match load_store(app) {
-        Ok(s) => s,
-        Err(_) => return Response::builder().status(500).body(Vec::new()).unwrap(),
-    };
-
-    let vault_path = match vault_path_by_id(&store, vault_id) {
-        Some(p) => p,
-        None => return Response::builder().status(404).body(Vec::new()).unwrap(),
-    };
-
-    let vault_root = PathBuf::from(&vault_path);
-    let abs = vault_root.join(asset_rel);
-    let abs = match abs.canonicalize() {
+    let vault_path = match vault_path(app, vault_id) {
         Ok(p) => p,
         Err(_) => return Response::builder().status(404).body(Vec::new()).unwrap(),
     };
 
-    let base = match vault_root.canonicalize() {
+    let abs = match crate::notes_service::safe_vault_abs(&vault_path, &asset_rel) {
         Ok(p) => p,
-        Err(_) => return Response::builder().status(404).body(Vec::new()).unwrap(),
+        Err(_) => return Response::builder().status(403).body(Vec::new()).unwrap(),
     };
-
-    if !abs.starts_with(&base) {
-        return Response::builder().status(403).body(Vec::new()).unwrap();
-    }
 
     let bytes = match std::fs::read(&abs) {
         Ok(b) => b,

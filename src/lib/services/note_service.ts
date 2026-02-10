@@ -5,8 +5,9 @@ import {
   as_note_path,
   type NotePath,
   type AssetPath,
+  type VaultId,
 } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
+import type { NoteDoc, NoteMeta } from "$lib/types/note";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
@@ -46,6 +47,29 @@ export class NoteService {
     private readonly editor_service: EditorService,
     private readonly now_ms: () => number,
   ) {}
+
+  private async read_or_create_note(
+    vault_id: VaultId,
+    path: NotePath,
+  ): Promise<NoteDoc> {
+    try {
+      return await this.notes_port.read_note(vault_id, path);
+    } catch {
+      try {
+        const meta = await this.notes_port.create_note(
+          vault_id,
+          path,
+          as_markdown_text(""),
+        );
+        return { meta, markdown: as_markdown_text("") };
+      } catch (create_error) {
+        if (error_message(create_error).includes("note already exists")) {
+          return await this.notes_port.read_note(vault_id, path);
+        }
+        throw create_error;
+      }
+    }
+  }
 
   create_new_note(folder_path: string) {
     const open_note = create_untitled_open_note_in_folder({
@@ -92,58 +116,9 @@ export class NoteService {
         };
       }
 
-      let doc;
-      if (create_if_missing && resolved_existing === null) {
-        try {
-          doc = await this.notes_port.read_note(vault_id, resolved_path);
-        } catch {
-          try {
-            const meta = await this.notes_port.create_note(
-              vault_id,
-              resolved_path,
-              as_markdown_text(""),
-            );
-            doc = {
-              meta,
-              markdown: as_markdown_text(""),
-            };
-          } catch (create_error) {
-            const create_message = error_message(create_error);
-            if (create_message.includes("note already exists")) {
-              doc = await this.notes_port.read_note(vault_id, resolved_path);
-            } else {
-              throw create_error;
-            }
-          }
-        }
-      } else {
-        try {
-          doc = await this.notes_port.read_note(vault_id, resolved_path);
-        } catch (error) {
-          if (!create_if_missing) {
-            throw error;
-          }
-
-          try {
-            const meta = await this.notes_port.create_note(
-              vault_id,
-              resolved_path,
-              as_markdown_text(""),
-            );
-            doc = {
-              meta,
-              markdown: as_markdown_text(""),
-            };
-          } catch (create_error) {
-            const create_message = error_message(create_error);
-            if (create_message.includes("note already exists")) {
-              doc = await this.notes_port.read_note(vault_id, resolved_path);
-            } else {
-              throw create_error;
-            }
-          }
-        }
-      }
+      const doc = create_if_missing
+        ? await this.read_or_create_note(vault_id, resolved_path)
+        : await this.notes_port.read_note(vault_id, resolved_path);
 
       if (controller.signal.aborted) {
         return { status: "skipped" };
