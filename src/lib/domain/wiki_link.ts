@@ -55,6 +55,35 @@ function ensure_md_extension(value: string): string {
   return value.endsWith(".md") ? value : `${value}.md`;
 }
 
+function path_segments(value: string): string[] {
+  return normalize_path_segments(strip_leading_slash(value))
+    .split("/")
+    .filter(Boolean);
+}
+
+function relative_path(from_folder: string, to_path: string): string {
+  const from_segments = path_segments(from_folder);
+  const to_segments = path_segments(to_path);
+
+  let common = 0;
+  while (
+    common < from_segments.length &&
+    common < to_segments.length &&
+    from_segments[common] === to_segments[common]
+  ) {
+    common += 1;
+  }
+
+  const up = from_segments.length - common;
+  const down = to_segments.slice(common);
+  const relative_segments = [
+    ...Array.from({ length: up }, () => ".."),
+    ...down,
+  ];
+
+  return relative_segments.join("/");
+}
+
 export function resolve_wiki_target_to_note_path(input: {
   base_note_path: string;
   raw_target: string;
@@ -88,12 +117,9 @@ export function format_wiki_target_for_markdown(input: {
     return maybe_strip_md_extension(normalized_target);
   }
 
-  const prefix = `${base_folder}/`;
-  if (normalized_target.startsWith(prefix)) {
-    return maybe_strip_md_extension(normalized_target.slice(prefix.length));
-  }
-
-  return maybe_strip_md_extension(normalized_target);
+  return maybe_strip_md_extension(
+    relative_path(base_folder, normalized_target),
+  );
 }
 
 export function format_wiki_target_for_markdown_link(input: {
@@ -109,10 +135,5 @@ export function format_wiki_target_for_markdown_link(input: {
     return normalized_target;
   }
 
-  const prefix = `${base_folder}/`;
-  if (normalized_target.startsWith(prefix)) {
-    return normalized_target.slice(prefix.length);
-  }
-
-  return normalized_target;
+  return relative_path(base_folder, normalized_target);
 }

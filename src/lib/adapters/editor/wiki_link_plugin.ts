@@ -12,6 +12,7 @@ import {
   resolve_wiki_target_to_note_path,
   try_decode_wiki_link_href,
 } from "$lib/domain/wiki_link";
+import { dirty_state_plugin_key } from "./dirty_state_plugin";
 
 const ZERO_WIDTH_SPACE = "\u200B";
 const WIKI_LINK_REGEX = /\[\[([^\]\n]+?)(?:\|([^\]\n]+?))?\]\]/;
@@ -257,7 +258,9 @@ export function create_wiki_link_converter_prose_plugin(input: {
           const block = blocks[i];
           if (block) scan_textblock(block.node, block.pos, null);
         }
-        return tr.docChanged ? tr : null;
+        if (!tr.docChanged) return null;
+        tr.setMeta(dirty_state_plugin_key, { action: "mark_clean" });
+        return tr;
       }
 
       const from = new_state.selection.$from;
@@ -350,10 +353,15 @@ export function create_wiki_link_click_prose_plugin(input: {
   }
 
   function resolve_internal_href(href: string): string | null {
-    return (
-      try_decode_wiki_link_href(href) ??
-      try_resolve_markdown_href(input.base_note_path, href)
-    );
+    const encoded = try_decode_wiki_link_href(href);
+    if (encoded) {
+      return resolve_wiki_target_to_note_path({
+        base_note_path: input.base_note_path,
+        raw_target: `/${encoded}`,
+      });
+    }
+
+    return try_resolve_markdown_href(input.base_note_path, href);
   }
 
   function handle_internal_link_click(args: {

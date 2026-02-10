@@ -101,7 +101,7 @@
 <Dialog.Root
   {open}
   onOpenChange={(value: boolean) => {
-    if (!value) on_close();
+    if (!value && !is_saving) on_close();
   }}
 >
   <Dialog.Content class="max-w-md">
@@ -304,7 +304,9 @@
       {#if error}
         <span class="text-destructive text-sm mr-auto">{error}</span>
       {/if}
-      <Button variant="outline" onclick={on_close}>Cancel</Button>
+      <Button variant="outline" onclick={on_close} disabled={is_saving}>
+        Cancel
+      </Button>
       <Button onclick={on_save} disabled={!has_unsaved_changes || is_saving}>
         {is_saving
           ? "Saving..."

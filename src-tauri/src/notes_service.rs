@@ -48,17 +48,61 @@ fn parse_safe_relative_path(path: &str) -> Result<PathBuf, String> {
     Ok(rel)
 }
 
-pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
-    let rel = parse_safe_relative_path(note_rel)?;
-    let base = vault_root
-        .canonicalize()
-        .unwrap_or_else(|_| vault_root.to_path_buf());
-    let abs = base.join(&rel);
-    let abs = abs.canonicalize().unwrap_or(abs);
-    if !abs.starts_with(&base) {
+fn canonical_vault_root(vault_root: &Path) -> Result<PathBuf, String> {
+    vault_root.canonicalize().map_err(|e| e.to_string())
+}
+
+fn resolve_under_vault_root(vault_root: &Path, rel: &Path) -> Result<PathBuf, String> {
+    let base = canonical_vault_root(vault_root)?;
+    let candidate = base.join(rel);
+
+    let mut nearest_existing = candidate.as_path();
+    while !nearest_existing.exists() {
+        nearest_existing = nearest_existing
+            .parent()
+            .ok_or("note path escapes vault".to_string())?;
+    }
+
+    let nearest_existing_canon = nearest_existing.canonicalize().map_err(|e| e.to_string())?;
+    if !nearest_existing_canon.starts_with(&base) {
         return Err("note path escapes vault".to_string());
     }
-    Ok(abs)
+
+    let suffix = candidate
+        .strip_prefix(nearest_existing)
+        .map_err(|_| "note path escapes vault".to_string())?;
+    let resolved = nearest_existing_canon.join(suffix);
+    if !resolved.starts_with(&base) {
+        return Err("note path escapes vault".to_string());
+    }
+    Ok(resolved)
+}
+
+fn reject_symlink_components(vault_root: &Path, rel: &Path) -> Result<(), String> {
+    let mut current = vault_root.to_path_buf();
+    for component in rel.components() {
+        current.push(component.as_os_str());
+        if !current.exists() {
+            break;
+        }
+        let metadata = std::fs::symlink_metadata(&current).map_err(|e| e.to_string())?;
+        if metadata.file_type().is_symlink() {
+            return Err("note path contains symlink component".to_string());
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+    let rel = parse_safe_relative_path(note_rel)?;
+    resolve_under_vault_root(vault_root, &rel)
+}
+
+fn safe_vault_abs_for_write(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+    let rel = parse_safe_relative_path(note_rel)?;
+    let base = canonical_vault_root(vault_root)?;
+    reject_symlink_components(&base, &rel)?;
+    resolve_under_vault_root(&base, &rel)
 }
 
 fn safe_vault_rename_target_abs(vault_root: &Path, target_rel: &str) -> Result<PathBuf, String> {
@@ -224,7 +268,7 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
 #[tauri::command]
 pub fn write_note(args: NoteWriteArgs, app: AppHandle) -> Result<(), String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
-    let abs = safe_vault_abs(&root, &args.note_id)?;
+    let abs = safe_vault_abs_for_write(&root, &args.note_id)?;
     atomic_write(&abs, &args.markdown)?;
     Ok(())
 }
@@ -239,7 +283,7 @@ pub struct NoteCreateArgs {
 #[tauri::command]
 pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
-    let abs = safe_vault_abs(&root, &args.note_path)?;
+    let abs = safe_vault_abs_for_write(&root, &args.note_path)?;
     let dir = abs.parent().ok_or("invalid note path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let mut file = OpenOptions::new()
@@ -328,7 +372,7 @@ fn sanitize_stem(value: &str) -> String {
 #[tauri::command]
 pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<String, String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
-    let _ = safe_vault_abs(&root, &args.note_path)?;
+    let _ = safe_vault_abs_for_write(&root, &args.note_path)?;
 
     let note_rel = PathBuf::from(&args.note_path);
     let note_parent = note_rel.parent().unwrap_or_else(|| Path::new(""));
@@ -368,7 +412,7 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         note_parent.join(attachment_folder).join(filename)
     };
     let rel = storage::normalize_relative_path(&rel_path);
-    let abs = safe_vault_abs(&root, &rel)?;
+    let abs = safe_vault_abs_for_write(&root, &rel)?;
 
     let dir = abs.parent().ok_or("invalid asset path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -430,6 +474,13 @@ pub fn rename_note(args: NoteRenameArgs, app: AppHandle) -> Result<(), String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
     let from_abs = safe_vault_abs(&root, &args.from)?;
     let to_abs = safe_vault_rename_target_abs(&root, &args.to)?;
+    if to_abs.exists() {
+        let from_canon = from_abs.canonicalize().map_err(|e| e.to_string())?;
+        let to_canon = to_abs.canonicalize().map_err(|e| e.to_string())?;
+        if from_canon != to_canon {
+            return Err("note already exists".to_string());
+        }
+    }
     let dir = to_abs.parent().ok_or("invalid destination path")?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     rename_with_temp_path(&from_abs, &to_abs)?;
@@ -770,13 +821,16 @@ pub fn list_folder_contents(
             subfolders.push(rel);
         } else {
             let name = name_from_rel_path(&rel);
+            let abs = safe_vault_abs(&root, &rel)?;
+            let title = extract_title(&abs);
+            let (mtime_ms, size_bytes) = file_meta(&abs)?;
             notes.push(NoteMeta {
                 id: rel.clone(),
                 path: rel,
-                name: name.clone(),
-                title: name,
-                mtime_ms: 0,
-                size_bytes: 0,
+                name,
+                title,
+                mtime_ms,
+                size_bytes,
             });
         }
     }
@@ -842,6 +896,8 @@ pub fn get_folder_stats(
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
+    #[cfg(unix)]
+    use std::os::unix::fs as unix_fs;
 
     static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -865,6 +921,52 @@ mod tests {
         assert!(safe_vault_abs(&root, "a/../x.md").is_err());
         assert!(safe_vault_abs(&root, "/abs/x.md").is_err());
         assert!(safe_vault_abs(&root, "a/b.md").is_ok());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_note_target_rejects_symlink_escape() {
+        let root = mk_temp_dir();
+        let outside = mk_temp_dir();
+        let link = root.join("notes");
+        unix_fs::symlink(&outside, &link).unwrap();
+
+        let result = safe_vault_abs_for_write(&root, "notes/escape.md");
+        assert!(result.is_err());
+
+        let _ = std::fs::remove_dir_all(&outside);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_note_target_rejects_symlink_escape() {
+        let root = mk_temp_dir();
+        let outside = mk_temp_dir();
+        let link = root.join("drafts");
+        unix_fs::symlink(&outside, &link).unwrap();
+
+        let result = safe_vault_abs_for_write(&root, "drafts/new-note.md");
+        assert!(result.is_err());
+
+        let _ = std::fs::remove_dir_all(&outside);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_image_asset_target_rejects_symlink_escape() {
+        let root = mk_temp_dir();
+        std::fs::write(root.join("note.md"), "# test").unwrap();
+        let outside = mk_temp_dir();
+        let assets_link = root.join(".assets");
+        unix_fs::symlink(&outside, &assets_link).unwrap();
+
+        let result = safe_vault_abs_for_write(&root, ".assets/clip.png");
+        assert!(result.is_err());
+
+        let _ = std::fs::remove_dir_all(&outside);
         let _ = std::fs::remove_dir_all(&root);
     }
 

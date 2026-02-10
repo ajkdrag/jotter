@@ -57,7 +57,7 @@ export class EditorService {
     this.active_note = args.note;
     this.active_link_syntax = args.link_syntax;
 
-    this.op_store.start("editor.mount");
+    this.op_store.start("editor.mount", Date.now());
     try {
       await this.recreate_session();
       this.focus();
@@ -84,7 +84,7 @@ export class EditorService {
 
     if (!this.host_root) return;
 
-    this.op_store.start("editor.open_buffer");
+    this.op_store.start("editor.open_buffer", Date.now());
     try {
       await this.recreate_session();
       this.focus();

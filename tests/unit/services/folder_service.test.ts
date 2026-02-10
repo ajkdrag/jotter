@@ -175,6 +175,37 @@ describe("FolderService", () => {
     expect(notes_store.recent_notes).toEqual([]);
   });
 
+  it("uses dedicated folder.delete_stats op key for delete preflight failures", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+    notes_port.get_folder_stats = vi
+      .fn()
+      .mockRejectedValue(new Error("stats failed"));
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      () => 1,
+    );
+
+    const result = await service.load_delete_stats("docs");
+
+    expect(result.status).toBe("failed");
+    expect(op_store.get("folder.delete_stats").status).toBe("error");
+    expect(op_store.get("folder.delete").status).toBe("idle");
+  });
+
   it("rename_folder performs backend IO and index rename without store updates", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();

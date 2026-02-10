@@ -41,7 +41,12 @@ describe("SearchService", () => {
 
     const op_store = new OpStore();
 
-    const service = new SearchService(search_port, vault_store, op_store);
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
 
     const result = await service.search_notes("alpha");
 
@@ -62,9 +67,14 @@ describe("SearchService", () => {
     const vault_store = new VaultStore();
     const op_store = new OpStore();
 
-    const service = new SearchService(search_port, vault_store, op_store);
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
 
-    op_store.start("search.notes");
+    op_store.start("search.notes", 123);
     const result = await service.search_notes("  ");
 
     expect(result).toEqual({
@@ -91,7 +101,12 @@ describe("SearchService", () => {
     const vault_store = new VaultStore();
     vault_store.set_vault(create_test_vault());
     const op_store = new OpStore();
-    const service = new SearchService(search_port, vault_store, op_store);
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
 
     const p1 = service.suggest_wiki_links("alpha");
     const p2 = service.suggest_wiki_links("beta");
@@ -140,7 +155,12 @@ describe("SearchService", () => {
     const vault_store = new VaultStore();
     vault_store.set_vault(create_test_vault());
     const op_store = new OpStore();
-    const service = new SearchService(search_port, vault_store, op_store);
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
 
     const inflight = service.suggest_wiki_links("alpha");
     const empty = await service.suggest_wiki_links("   ");

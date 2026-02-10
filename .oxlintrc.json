@@ -1,8 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript"
-  ],
+  "plugins": ["typescript"],
   "categories": {
     "correctness": "off"
   },
@@ -172,12 +170,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/*.ts",
-        "**/*.tsx",
-        "**/*.mts",
-        "**/*.cts"
-      ],
+      "files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
       "rules": {
         "constructor-super": "off",
         "no-class-assign": "off",
@@ -200,31 +193,21 @@
       }
     },
     {
-      "files": [
-        "*.svelte",
-        "**/*.svelte"
-      ],
+      "files": ["*.svelte", "**/*.svelte"],
       "rules": {
         "no-inner-declarations": "off",
         "no-self-assign": "off"
       }
     },
     {
-      "files": [
-        "**/*.svelte"
-      ],
+      "files": ["**/*.svelte"],
       "rules": {
         "@typescript-eslint/no-confusing-void-expression": "off",
         "@typescript-eslint/no-unsafe-call": "off"
       }
     },
     {
-      "files": [
-        "*.js",
-        "*.mjs",
-        "scripts/**/*.js",
-        "scripts/**/*.mjs"
-      ],
+      "files": ["*.js", "*.mjs", "scripts/**/*.js", "scripts/**/*.mjs"],
       "rules": {
         "@typescript-eslint/await-thenable": "off",
         "@typescript-eslint/no-array-delete": "off",

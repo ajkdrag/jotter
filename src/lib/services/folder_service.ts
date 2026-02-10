@@ -39,7 +39,7 @@ export class FolderService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.create");
+    this.op_store.start("folder.create", this.now_ms());
 
     try {
       await this.notes_port.create_folder(vault_id, parent_path, trimmed_name);
@@ -68,11 +68,14 @@ export class FolderService {
       return { status: "skipped" };
     }
 
+    this.op_store.start("folder.delete_stats", this.now_ms());
+
     try {
       const stats = await this.notes_port.get_folder_stats(
         vault_id,
         folder_path,
       );
+      this.op_store.succeed("folder.delete_stats");
       return {
         status: "ready",
         affected_note_count: stats.note_count,
@@ -81,7 +84,7 @@ export class FolderService {
     } catch (error) {
       const message = error_message(error);
       logger.error(`Load folder delete stats failed: ${message}`);
-      this.op_store.fail("folder.delete", message);
+      this.op_store.fail("folder.delete_stats", message);
       return {
         status: "failed",
         error: message,
@@ -95,7 +98,7 @@ export class FolderService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.delete");
+    this.op_store.start("folder.delete", this.now_ms());
 
     try {
       const folder_prefix = `${folder_path}/`;
@@ -149,7 +152,7 @@ export class FolderService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.rename");
+    this.op_store.start("folder.rename", this.now_ms());
 
     try {
       await this.notes_port.rename_folder(vault_id, folder_path, new_path);
@@ -281,5 +284,21 @@ export class FolderService {
         error: message,
       };
     }
+  }
+
+  reset_create_operation() {
+    this.op_store.reset("folder.create");
+  }
+
+  reset_delete_stats_operation() {
+    this.op_store.reset("folder.delete_stats");
+  }
+
+  reset_delete_operation() {
+    this.op_store.reset("folder.delete");
+  }
+
+  reset_rename_operation() {
+    this.op_store.reset("folder.rename");
   }
 }

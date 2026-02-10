@@ -15,6 +15,7 @@ export class SettingsService {
     private readonly vault_settings_port: VaultSettingsPort,
     private readonly vault_store: VaultStore,
     private readonly op_store: OpStore,
+    private readonly now_ms: () => number,
   ) {}
 
   async load_settings(
@@ -28,7 +29,7 @@ export class SettingsService {
       };
     }
 
-    this.op_store.start("settings.load");
+    this.op_store.start("settings.load", this.now_ms());
 
     try {
       const stored =
@@ -62,7 +63,7 @@ export class SettingsService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("settings.save");
+    this.op_store.start("settings.save", this.now_ms());
 
     try {
       await this.vault_settings_port.set_vault_setting(
@@ -81,5 +82,13 @@ export class SettingsService {
         error: message,
       };
     }
+  }
+
+  reset_load_operation() {
+    this.op_store.reset("settings.load");
+  }
+
+  reset_save_operation() {
+    this.op_store.reset("settings.save");
   }
 }

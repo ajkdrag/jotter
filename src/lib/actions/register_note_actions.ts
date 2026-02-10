@@ -57,51 +57,6 @@ function image_alt_text(file_name: string | null): string {
   return stem !== "" ? stem : "image";
 }
 
-function safe_stem(input: string): string {
-  const normalized = input
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return normalized.length > 0 ? normalized : "image";
-}
-
-function image_extension(mime_type: string, file_name: string | null): string {
-  const from_name = file_name
-    ?.split("/")
-    .pop()
-    ?.split(".")
-    .pop()
-    ?.toLowerCase();
-  if (from_name && from_name.length > 0) return from_name;
-
-  const from_mime = mime_type.toLowerCase();
-  if (from_mime === "image/jpeg") return "jpg";
-  if (from_mime === "image/png") return "png";
-  if (from_mime === "image/gif") return "gif";
-  if (from_mime === "image/webp") return "webp";
-  if (from_mime === "image/bmp") return "bmp";
-  if (from_mime === "image/svg+xml") return "svg";
-  return "png";
-}
-
-function generate_default_filename(
-  note_path: NotePath,
-  image: { mime_type: string; file_name: string | null },
-  now_ms: number,
-): string {
-  const note_parts = String(note_path).split("/").filter(Boolean);
-  const note_file = note_parts.pop() ?? "note.md";
-  const note_stem = safe_stem(note_file.replace(/\.md$/i, ""));
-  const source_name = image.file_name?.split("/").pop() ?? "";
-  const source_stem =
-    source_name.length > 0
-      ? safe_stem(source_name.replace(/\.[^.]+$/i, ""))
-      : note_stem;
-  const ext = image_extension(image.mime_type, image.file_name);
-  return `${source_stem}-${String(now_ms)}.${ext}`;
-}
-
 function close_image_paste_dialog(input: ActionRegistrationInput) {
   input.stores.ui.image_paste_dialog = {
     open: false,
@@ -204,11 +159,6 @@ export function register_note_actions(input: ActionRegistrationInput) {
       if (open_note.meta.id !== payload.note_id) return;
 
       const estimated_size_bytes = payload.image.bytes.byteLength;
-      const default_filename = generate_default_filename(
-        payload.note_path,
-        payload.image,
-        Date.now(),
-      );
       const attachment_folder =
         stores.ui.editor_settings.attachment_folder || ".assets";
 
@@ -224,11 +174,11 @@ export function register_note_actions(input: ActionRegistrationInput) {
         note_id: payload.note_id,
         note_path: payload.note_path,
         image: payload.image,
-        filename: default_filename,
+        filename: "",
         estimated_size_bytes,
         target_folder,
       };
-      stores.op.reset("asset.write");
+      services.note.reset_asset_write_operation();
     },
   });
 
@@ -254,11 +204,12 @@ export function register_note_actions(input: ActionRegistrationInput) {
 
       const attachment_folder =
         stores.ui.editor_settings.attachment_folder || ".assets";
+      const custom_filename = dialog.filename.trim();
       const write_result = await services.note.save_pasted_image(
         dialog.note_path,
         dialog.image,
         {
-          custom_filename: dialog.filename,
+          ...(custom_filename ? { custom_filename } : {}),
           attachment_folder,
         },
       );
@@ -285,7 +236,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: "Cancel Image Paste",
     execute: () => {
       close_image_paste_dialog(input);
-      stores.op.reset("asset.write");
+      services.note.reset_asset_write_operation();
     },
   });
 
@@ -297,7 +248,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
         open: true,
         note: note as NoteMeta,
       };
-      stores.op.reset("note.delete");
+      services.note.reset_delete_operation();
     },
   });
 
@@ -321,7 +272,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: "Cancel Delete Note",
     execute: () => {
       close_delete_dialog(input);
-      stores.op.reset("note.delete");
+      services.note.reset_delete_operation();
     },
   });
 
@@ -337,12 +288,12 @@ export function register_note_actions(input: ActionRegistrationInput) {
         show_overwrite_confirm: false,
         is_checking_conflict: false,
       };
-      stores.op.reset("note.rename");
+      services.note.reset_rename_operation();
     },
   });
 
   registry.register({
-    id: ACTION_IDS.note_rename,
+    id: ACTION_IDS.note_update_rename_name,
     label: "Update Rename Note Name",
     execute: (name: unknown) => {
       stores.ui.rename_note_dialog.new_name = String(name);
@@ -411,7 +362,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: "Cancel Rename Note",
     execute: () => {
       close_rename_dialog(input);
-      stores.op.reset("note.rename");
+      services.note.reset_rename_operation();
     },
   });
 
@@ -446,7 +397,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
         show_overwrite_confirm: false,
         is_checking_existence: false,
       };
-      stores.op.reset("note.save");
+      services.note.reset_save_operation();
     },
   });
 
@@ -531,7 +482,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: "Cancel Save Note",
     execute: () => {
       close_save_dialog(input);
-      stores.op.reset("note.save");
+      services.note.reset_save_operation();
     },
   });
 }

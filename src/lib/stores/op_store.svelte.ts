@@ -25,11 +25,11 @@ export class OpStore {
     return this.get(key).status === "pending";
   }
 
-  start(key: string) {
+  start(key: string, started_at: number) {
     this.ops.set(key, {
       status: "pending",
       error: null,
-      started_at: Date.now(),
+      started_at,
     });
   }
 

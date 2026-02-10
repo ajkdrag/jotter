@@ -7,6 +7,7 @@
   import ActivityBar from "$lib/components/activity_bar.svelte";
   import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
   import NoteEditor from "$lib/components/note_editor.svelte";
+  import FindInFileBar from "$lib/components/find_in_file_bar.svelte";
   import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
   import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
   import ThemeToggle from "$lib/components/theme_toggle.svelte";
@@ -292,6 +293,24 @@
                 </div>
               </header>
               <div class="flex min-h-0 flex-1 flex-col">
+                <FindInFileBar
+                  open={stores.ui.find_in_file.open}
+                  query={stores.ui.find_in_file.query}
+                  matches={stores.search.in_file_matches}
+                  selected_match_index={stores.ui.find_in_file
+                    .selected_match_index}
+                  on_query_change={(query: string) =>
+                    void action_registry.execute(
+                      ACTION_IDS.find_in_file_set_query,
+                      query,
+                    )}
+                  on_next={() =>
+                    void action_registry.execute(ACTION_IDS.find_in_file_next)}
+                  on_prev={() =>
+                    void action_registry.execute(ACTION_IDS.find_in_file_prev)}
+                  on_close={() =>
+                    void action_registry.execute(ACTION_IDS.find_in_file_close)}
+                />
                 <NoteEditor />
               </div>
             </Sidebar.Inset>

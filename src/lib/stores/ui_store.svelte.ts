@@ -144,7 +144,7 @@ export class UIStore {
     folder_path: string | null;
     affected_note_count: number;
     affected_folder_count: number;
-    status: "idle" | "fetching_stats" | "confirming";
+    status: "idle" | "fetching_stats" | "confirming" | "error";
   }>({ ...INITIAL_DELETE_FOLDER_DIALOG });
 
   rename_folder_dialog = $state<{

@@ -43,6 +43,7 @@ export class SearchService {
     private readonly search_port: SearchPort,
     private readonly vault_store: VaultStore,
     private readonly op_store: OpStore,
+    private readonly now_ms: () => number,
   ) {}
 
   async search_notes(query: string): Promise<SearchNotesResult> {
@@ -59,7 +60,7 @@ export class SearchService {
     }
 
     const revision = ++this.active_search_revision;
-    this.op_store.start("search.notes");
+    this.op_store.start("search.notes", this.now_ms());
 
     try {
       const results = await this.search_port.search_notes(
@@ -168,5 +169,9 @@ export class SearchService {
       snippet: r.snippet,
     }));
     return { domain: "notes", items, status: result.status };
+  }
+
+  reset_search_notes_operation() {
+    this.op_store.reset("search.notes");
   }
 }

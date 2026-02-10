@@ -23,7 +23,7 @@ function close_omnibar(input: ActionRegistrationInput) {
     is_searching: false,
   };
   input.stores.search.clear_omnibar();
-  input.stores.op.reset("search.notes");
+  input.services.search.reset_search_notes_operation();
 }
 
 async function execute_command(
@@ -111,7 +111,7 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       if (!normalized_query.trim()) {
         stores.ui.omnibar = { ...stores.ui.omnibar, is_searching: false };
         stores.search.clear_omnibar();
-        stores.op.reset("search.notes");
+        services.search.reset_search_notes_operation();
         return;
       }
 

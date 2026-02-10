@@ -44,13 +44,21 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
       callback: (event: IndexProgressEvent) => void,
     ): () => void {
       let unlisten_fn: (() => void) | null = null;
+      let is_disposed = false;
       void listen<IndexProgressEvent>("index_progress", (event) => {
+        if (is_disposed) return;
         callback(event.payload);
       }).then((fn_ref) => {
+        if (is_disposed) {
+          fn_ref();
+          return;
+        }
         unlisten_fn = fn_ref;
       });
       return () => {
+        is_disposed = true;
         unlisten_fn?.();
+        unlisten_fn = null;
       };
     },
   };

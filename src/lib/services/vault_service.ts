@@ -36,6 +36,13 @@ export type AppMountConfig = {
 
 const RECENT_NOTES_KEY = "recent_notes";
 
+class StaleVaultOpenError extends Error {
+  constructor() {
+    super("Stale vault-open request");
+    this.name = "StaleVaultOpenError";
+  }
+}
+
 export class VaultService {
   constructor(
     private readonly vault_port: VaultPort,
@@ -53,6 +60,7 @@ export class VaultService {
   ) {}
 
   private index_progress_unsubscribe: (() => void) | null = null;
+  private active_open_revision = 0;
 
   async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
     const theme = this.get_theme();
@@ -61,7 +69,7 @@ export class VaultService {
       this.reset_app_state();
     }
 
-    this.op_store.start("app.startup");
+    this.op_store.start("app.startup", this.now_ms());
 
     try {
       let editor_settings: EditorSettings | null = null;
@@ -69,8 +77,10 @@ export class VaultService {
       const has_vault = this.vault_store.vault !== null;
 
       if (!has_vault && config.bootstrap_default_vault_path) {
+        const open_revision = this.begin_open_revision();
         editor_settings = await this.open_vault_by_path(
           config.bootstrap_default_vault_path,
+          open_revision,
         );
       } else {
         const recent_vaults = await this.vault_port.list_vaults();
@@ -126,16 +136,26 @@ export class VaultService {
   }
 
   async change_vault_by_path(vault_path: VaultPath): Promise<VaultOpenResult> {
-    this.op_store.start("vault.change");
+    const open_revision = this.begin_open_revision();
+    this.op_store.start("vault.change", this.now_ms());
 
     try {
-      const editor_settings = await this.open_vault_by_path(vault_path);
+      const editor_settings = await this.open_vault_by_path(
+        vault_path,
+        open_revision,
+      );
+      if (!this.is_current_open_revision(open_revision)) {
+        return { status: "stale" };
+      }
       this.op_store.succeed("vault.change");
       return {
         status: "opened",
         editor_settings,
       };
     } catch (error) {
+      if (error instanceof StaleVaultOpenError) {
+        return { status: "stale" };
+      }
       const message = error_message(error);
       logger.error(`Choose vault failed: ${message}`);
       this.op_store.fail("vault.change", message);
@@ -147,16 +167,26 @@ export class VaultService {
   }
 
   async change_vault_by_id(vault_id: VaultId): Promise<VaultOpenResult> {
-    this.op_store.start("vault.change");
+    const open_revision = this.begin_open_revision();
+    this.op_store.start("vault.change", this.now_ms());
 
     try {
-      const editor_settings = await this.open_vault_by_id(vault_id);
+      const editor_settings = await this.open_vault_by_id(
+        vault_id,
+        open_revision,
+      );
+      if (!this.is_current_open_revision(open_revision)) {
+        return { status: "stale" };
+      }
       this.op_store.succeed("vault.change");
       return {
         status: "opened",
         editor_settings,
       };
     } catch (error) {
+      if (error instanceof StaleVaultOpenError) {
+        return { status: "stale" };
+      }
       const message = error_message(error);
       logger.error(`Select vault failed: ${message}`);
       this.op_store.fail("vault.change", message);
@@ -168,7 +198,7 @@ export class VaultService {
   }
 
   set_theme(theme: ThemeMode): ThemeSetResult {
-    this.op_store.start("theme.set");
+    this.op_store.start("theme.set", this.now_ms());
 
     try {
       this.theme_port.set_theme(theme);
@@ -187,40 +217,42 @@ export class VaultService {
 
   private async open_vault_by_path(
     vault_path: VaultPath,
+    open_revision: number,
   ): Promise<EditorSettings> {
     const vault = await this.vault_port.open_vault(vault_path);
-    return this.finish_open_vault(vault);
+    this.throw_if_stale(open_revision);
+    return this.finish_open_vault(vault, open_revision);
   }
 
-  private async open_vault_by_id(vault_id: VaultId): Promise<EditorSettings> {
+  private async open_vault_by_id(
+    vault_id: VaultId,
+    open_revision: number,
+  ): Promise<EditorSettings> {
     const vault = await this.vault_port.open_vault_by_id(vault_id);
-    return this.finish_open_vault(vault);
+    this.throw_if_stale(open_revision);
+    return this.finish_open_vault(vault, open_revision);
   }
 
-  private async finish_open_vault(vault: Vault): Promise<EditorSettings> {
+  private async finish_open_vault(
+    vault: Vault,
+    open_revision: number,
+  ): Promise<EditorSettings> {
+    this.throw_if_stale(open_revision);
     await this.vault_port.remember_last_vault(vault.id);
+    this.throw_if_stale(open_revision);
 
     const [root_contents, recent_vaults] = await Promise.all([
       this.notes_port.list_folder_contents(vault.id, "", 0, PAGE_SIZE),
       this.vault_port.list_vaults(),
     ]);
-
-    this.index_progress_unsubscribe?.();
-    const target_vault_id = vault.id;
-    this.index_progress_unsubscribe = this.index_port.subscribe_index_progress(
-      (event) => {
-        if (event.vault_id === target_vault_id) {
-          this.search_store.set_index_progress(event);
-        }
-      },
-    );
-
-    this.index_port.build_index(vault.id).catch((e: unknown) => {
-      logger.error(`Background index build failed: ${error_message(e)}`);
-    });
+    this.throw_if_stale(open_revision);
 
     const loaded_recent_notes = await this.load_recent_notes(vault.id);
+    const editor_settings = await this.load_editor_settings(vault.id);
+    this.throw_if_stale(open_revision);
 
+    this.index_progress_unsubscribe?.();
+    this.index_progress_unsubscribe = null;
     this.vault_store.clear();
     this.notes_store.reset();
     this.editor_store.reset();
@@ -242,7 +274,27 @@ export class VaultService {
       this.editor_store.set_open_note(ensured_note);
     }
 
-    return this.load_editor_settings(vault.id);
+    const target_vault_id = vault.id;
+    const event_revision = open_revision;
+    this.index_progress_unsubscribe = this.index_port.subscribe_index_progress(
+      (event) => {
+        if (!this.is_current_open_revision(event_revision)) {
+          return;
+        }
+        if (event.vault_id === target_vault_id) {
+          this.search_store.set_index_progress(event);
+        }
+      },
+    );
+
+    this.index_port.build_index(vault.id).catch((e: unknown) => {
+      if (!this.is_current_open_revision(event_revision)) {
+        return;
+      }
+      logger.error(`Background index build failed: ${error_message(e)}`);
+    });
+
+    return editor_settings;
   }
 
   private async load_editor_settings(
@@ -320,5 +372,26 @@ export class VaultService {
     this.notes_store.reset();
     this.editor_store.reset();
     this.op_store.reset_all();
+  }
+
+  reset_change_operation() {
+    this.op_store.reset("vault.change");
+  }
+
+  private begin_open_revision(): number {
+    this.active_open_revision += 1;
+    this.index_progress_unsubscribe?.();
+    this.index_progress_unsubscribe = null;
+    return this.active_open_revision;
+  }
+
+  private is_current_open_revision(revision: number): boolean {
+    return revision === this.active_open_revision;
+  }
+
+  private throw_if_stale(revision: number): void {
+    if (!this.is_current_open_revision(revision)) {
+      throw new StaleVaultOpenError();
+    }
   }
 }

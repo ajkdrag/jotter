@@ -13,6 +13,16 @@ import {
 import type { EditorService } from "$lib/services/editor_service";
 import type { AssetsPort } from "$lib/ports/assets_port";
 
+function create_deferred<T>() {
+  let resolve: (value: T) => void = () => {};
+  let reject: (error?: unknown) => void = () => {};
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("NoteService", () => {
   it("opens note content and updates editor/ui state", async () => {
     const vault_store = new VaultStore();
@@ -550,5 +560,219 @@ describe("NoteService", () => {
       asset_path: as_asset_path("docs/.assets/alpha-1.png"),
     });
     expect(op_store.get("asset.write").status).toBe("success");
+  });
+
+  it("keeps note.save pending until overlapping saves settle", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    editor_store.set_open_note({
+      meta: {
+        id: as_note_path("docs/alpha.md"),
+        path: as_note_path("docs/alpha.md"),
+        name: "alpha",
+        title: "alpha",
+        mtime_ms: 0,
+        size_bytes: 0,
+      },
+      markdown: as_markdown_text("# Alpha"),
+      buffer_id: "alpha-buffer",
+      is_dirty: true,
+    });
+
+    const first_write = create_deferred<void>();
+    const second_write = create_deferred<void>();
+    const notes_port = create_mock_notes_port();
+    notes_port.write_note = vi
+      .fn()
+      .mockImplementationOnce(() => first_write.promise)
+      .mockImplementationOnce(() => second_write.promise);
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const first_save = service.save_note(null, true);
+    const second_save = service.save_note(null, true);
+
+    expect(op_store.get("note.save").status).toBe("pending");
+
+    first_write.resolve();
+    await first_save;
+    expect(op_store.get("note.save").status).toBe("pending");
+
+    second_write.resolve();
+    await second_save;
+    expect(op_store.get("note.save").status).toBe("success");
+  });
+
+  it("maps backend rename already-exists errors to conflict", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/alpha.md"),
+      path: as_note_path("docs/alpha.md"),
+      name: "alpha",
+      title: "alpha",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    notes_store.set_notes([note_meta]);
+
+    const notes_port = create_mock_notes_port();
+    notes_port.rename_note = vi
+      .fn()
+      .mockRejectedValue(new Error("tauri invoke failed: note already exists"));
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.rename_note(
+      note_meta,
+      as_note_path("docs/archived.md"),
+      false,
+    );
+
+    expect(result).toEqual({ status: "conflict" });
+  });
+
+  it("maps create_note already-exists errors to save conflict", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    editor_store.set_open_note({
+      meta: {
+        id: as_note_path("Untitled-1"),
+        path: as_note_path("Untitled-1"),
+        name: "Untitled-1",
+        title: "Untitled-1",
+        mtime_ms: 0,
+        size_bytes: 0,
+      },
+      markdown: as_markdown_text("draft"),
+      buffer_id: "untitled-buffer",
+      is_dirty: true,
+    });
+
+    const notes_port = create_mock_notes_port();
+    notes_port.create_note = vi
+      .fn()
+      .mockRejectedValue(new Error("tauri invoke failed: note already exists"));
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.save_note(
+      as_note_path("docs/existing.md"),
+      false,
+    );
+    expect(result).toEqual({ status: "conflict" });
+  });
+
+  it("does not create when read failure is not not-found", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const notes_port = create_mock_notes_port();
+    notes_port.read_note = vi
+      .fn()
+      .mockRejectedValue(new Error("permission denied"));
+    const create_note = vi.fn();
+    notes_port.create_note = create_note;
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.open_note("docs/alpha.md", true);
+    expect(result.status).toBe("failed");
+    expect(create_note).not.toHaveBeenCalled();
   });
 });

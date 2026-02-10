@@ -151,7 +151,9 @@
           onclick={on_confirm}
           disabled={!is_valid() || is_busy}
         >
-          {#if is_busy}
+          {#if is_checking}
+            Checking...
+          {:else if is_saving}
             Saving...
           {:else}
             Save

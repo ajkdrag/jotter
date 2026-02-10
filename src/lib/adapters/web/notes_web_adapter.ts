@@ -122,6 +122,7 @@ async function move_note_between_paths(
   root: FileSystemDirectoryHandle,
   from: NotePath,
   to: NotePath,
+  allow_overwrite: boolean = false,
 ): Promise<void> {
   const from_resolved = await resolve_note_path(root, from);
   const from_file_handle = from_resolved.handle as FileSystemFileHandle;
@@ -134,6 +135,17 @@ async function move_note_between_paths(
     const part = to_normalized.parts[i];
     if (!part) continue;
     to_parent = await to_parent.getDirectoryHandle(part, { create: true });
+  }
+
+  if (!allow_overwrite) {
+    try {
+      await to_parent.getFileHandle(to_normalized.leaf, { create: false });
+      throw new Error("note already exists");
+    } catch (error) {
+      if (!is_not_found_error(error)) {
+        throw error;
+      }
+    }
   }
 
   const to_file_handle = await to_parent.getFileHandle(to_normalized.leaf, {
@@ -356,6 +368,7 @@ export function create_notes_web_adapter(): NotesPort {
           root,
           temp_path,
           from_normalized.full_path,
+          true,
         ).catch(() => undefined);
         throw error;
       }
@@ -427,13 +440,18 @@ export function create_notes_web_adapter(): NotesPort {
           ? `${folder_path}/${entry.name}`
           : entry.name;
         const note_path = as_note_path(full_path);
+        const file_handle = await target.getFileHandle(entry.name, {
+          create: false,
+        });
+        const file = await file_handle.getFile();
+        const title_probe = await file.slice(0, 8192).text();
         notes.push({
           id: note_path,
           path: note_path,
           name: entry.name.replace(/\.md$/, ""),
-          title: entry.name.replace(/\.md$/, ""),
-          mtime_ms: 0,
-          size_bytes: 0,
+          title: extract_note_title(title_probe, note_path),
+          mtime_ms: file.lastModified,
+          size_bytes: file.size,
         });
       }
 

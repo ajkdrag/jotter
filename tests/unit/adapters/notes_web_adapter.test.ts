@@ -262,6 +262,33 @@ describe("notes_web_adapter", () => {
     expect(await mock_fs.read_text("docs/existing.md")).toBe("# Keep");
   });
 
+  it("rename_note fails when destination already exists", async () => {
+    const mock_fs = create_mock_vault_root();
+    await mock_fs.write_text("docs/source.md", "# Source");
+    await mock_fs.write_text("docs/target.md", "# Target");
+
+    vi.spyOn(storage, "get_vault").mockResolvedValue({
+      id: String(vault_id),
+      name: "vault",
+      path: "vault",
+      handle: mock_fs.root as unknown as FileSystemDirectoryHandle,
+      created_at: 1,
+      last_accessed: 1,
+    });
+
+    const adapter = create_notes_web_adapter();
+    await expect(
+      adapter.rename_note(
+        vault_id,
+        as_note_path("docs/source.md"),
+        as_note_path("docs/target.md"),
+      ),
+    ).rejects.toThrow("note already exists");
+
+    expect(await mock_fs.read_text("docs/source.md")).toBe("# Source");
+    expect(await mock_fs.read_text("docs/target.md")).toBe("# Target");
+  });
+
   it("list_notes returns a deterministic sorted order", async () => {
     const mock_fs = create_mock_vault_root();
     await mock_fs.write_text("zeta.md", "# Z");

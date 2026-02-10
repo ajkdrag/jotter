@@ -18,6 +18,7 @@ async function apply_opened_vault(
 
 export function register_vault_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
+  let change_vault_request_revision = 0;
 
   registry.register({
     id: ACTION_IDS.vault_request_change,
@@ -40,7 +41,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         open: false,
         error: null,
       };
-      stores.op.reset("vault.change");
+      services.vault.reset_change_operation();
     },
   });
 
@@ -48,6 +49,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.vault_choose,
     label: "Choose Vault",
     execute: async () => {
+      const request_revision = ++change_vault_request_revision;
       stores.ui.change_vault = {
         ...stores.ui.change_vault,
         is_loading: true,
@@ -58,12 +60,16 @@ export function register_vault_actions(input: ActionRegistrationInput) {
       const path_result = await services.vault.choose_vault_path();
       stores.ui.set_system_dialog_open(false);
 
+      if (request_revision !== change_vault_request_revision) {
+        return;
+      }
+
       if (path_result.status === "cancelled") {
         stores.ui.change_vault = {
           ...stores.ui.change_vault,
           is_loading: false,
         };
-        stores.op.reset("vault.change");
+        services.vault.reset_change_operation();
         return;
       }
 
@@ -73,15 +79,20 @@ export function register_vault_actions(input: ActionRegistrationInput) {
           is_loading: false,
           error: path_result.error,
         };
-        stores.op.fail("vault.change", path_result.error);
         return;
       }
 
       const result = await services.vault.change_vault_by_path(
         path_result.path,
       );
+      if (request_revision !== change_vault_request_revision) {
+        return;
+      }
       if (result.status === "opened") {
         await apply_opened_vault(input, result.editor_settings);
+        return;
+      }
+      if (result.status === "stale") {
         return;
       }
 
@@ -97,6 +108,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.vault_select,
     label: "Select Vault",
     execute: async (vault_id: unknown) => {
+      const request_revision = ++change_vault_request_revision;
       stores.ui.change_vault = {
         ...stores.ui.change_vault,
         is_loading: true,
@@ -107,8 +119,14 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         typeof services.vault.change_vault_by_id
       >[0];
       const result = await services.vault.change_vault_by_id(selected_vault_id);
+      if (request_revision !== change_vault_request_revision) {
+        return;
+      }
       if (result.status === "opened") {
         await apply_opened_vault(input, result.editor_settings);
+        return;
+      }
+      if (result.status === "stale") {
         return;
       }
 

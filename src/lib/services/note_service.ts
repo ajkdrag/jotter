@@ -35,6 +35,8 @@ import { logger } from "$lib/utils/logger";
 export class NoteService {
   private readonly enqueue_write = create_write_queue();
   private open_abort: AbortController | null = null;
+  private active_save_count = 0;
+  private pending_save_error: string | null = null;
 
   constructor(
     private readonly notes_port: NotesPort,
@@ -54,7 +56,11 @@ export class NoteService {
   ): Promise<NoteDoc> {
     try {
       return await this.notes_port.read_note(vault_id, path);
-    } catch {
+    } catch (read_error) {
+      if (!this.is_not_found_error(read_error)) {
+        throw read_error;
+      }
+
       try {
         const meta = await this.notes_port.create_note(
           vault_id,
@@ -95,7 +101,7 @@ export class NoteService {
     this.open_abort = controller;
 
     const op_key = `note.open:${note_path}`;
-    this.op_store.start(op_key);
+    this.op_store.start(op_key, this.now_ms());
 
     try {
       const resolved_existing = create_if_missing
@@ -166,7 +172,7 @@ export class NoteService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("asset.write");
+    this.op_store.start("asset.write", this.now_ms());
 
     try {
       const input: Parameters<AssetsPort["write_image_asset"]>[1] = {
@@ -205,7 +211,7 @@ export class NoteService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("note.delete");
+    this.op_store.start("note.delete", this.now_ms());
 
     try {
       await this.notes_port.delete_note(vault_id, note.id);
@@ -258,10 +264,15 @@ export class NoteService {
       return { status: "conflict" };
     }
 
-    this.op_store.start("note.rename");
+    this.op_store.start("note.rename", this.now_ms());
 
     try {
-      await this.notes_port.rename_note(vault_id, note.path, new_path);
+      await this.rename_note_with_overwrite_if_needed(
+        vault_id,
+        note.path,
+        new_path,
+        overwrite,
+      );
       await this.index_port.remove_note(vault_id, note.id);
       await this.index_port.upsert_note(vault_id, new_path);
 
@@ -282,6 +293,9 @@ export class NoteService {
       this.op_store.succeed("note.rename");
       return { status: "renamed" };
     } catch (error) {
+      if (this.is_note_exists_error(error)) {
+        return { status: "conflict" };
+      }
       const message = error_message(error);
       logger.error(`Rename note failed: ${message}`);
       this.op_store.fail("note.rename", message);
@@ -327,23 +341,19 @@ export class NoteService {
       }
     }
 
-    this.op_store.start("note.save");
+    this.begin_save_operation();
 
     try {
       if (is_untitled && target_path) {
         await this.enqueue_write(
           `note.save:${latest_open_note.meta.id}`,
           async () => {
-            const created_meta = await this.notes_port.create_note(
+            await this.save_untitled_note(
               vault_id,
+              latest_open_note,
               target_path,
-              latest_open_note.markdown,
+              overwrite,
             );
-            await this.index_port.upsert_note(vault_id, created_meta.id);
-            this.notes_store.add_note(created_meta);
-            this.editor_store.update_open_note_path(target_path);
-            this.editor_store.mark_clean(target_path);
-            this.notes_store.add_recent_note(created_meta);
           },
         );
       } else {
@@ -365,7 +375,7 @@ export class NoteService {
       }
 
       this.editor_service.mark_clean();
-      this.op_store.succeed("note.save");
+      this.finish_save_operation(null);
 
       const saved_path =
         this.editor_store.open_note?.meta.path ?? latest_open_note.meta.path;
@@ -374,13 +384,141 @@ export class NoteService {
         saved_path: as_note_path(saved_path),
       };
     } catch (error) {
+      if (is_untitled && target_path && this.is_note_exists_error(error)) {
+        this.finish_save_operation(null);
+        return { status: "conflict" };
+      }
       const message = error_message(error);
       logger.error(`Save note failed: ${message}`);
-      this.op_store.fail("note.save", message);
+      this.finish_save_operation(message);
       return {
         status: "failed",
         error: message,
       };
     }
+  }
+
+  reset_save_operation() {
+    this.active_save_count = 0;
+    this.pending_save_error = null;
+    this.op_store.reset("note.save");
+  }
+
+  reset_asset_write_operation() {
+    this.op_store.reset("asset.write");
+  }
+
+  reset_delete_operation() {
+    this.op_store.reset("note.delete");
+  }
+
+  reset_rename_operation() {
+    this.op_store.reset("note.rename");
+  }
+
+  private begin_save_operation() {
+    if (this.active_save_count === 0) {
+      this.pending_save_error = null;
+      this.op_store.start("note.save", this.now_ms());
+    }
+    this.active_save_count += 1;
+  }
+
+  private finish_save_operation(error: string | null) {
+    if (error) {
+      this.pending_save_error = error;
+    }
+
+    this.active_save_count = Math.max(0, this.active_save_count - 1);
+    if (this.active_save_count > 0) {
+      return;
+    }
+
+    const final_error = this.pending_save_error;
+    this.pending_save_error = null;
+    if (final_error) {
+      this.op_store.fail("note.save", final_error);
+      return;
+    }
+    this.op_store.succeed("note.save");
+  }
+
+  private async save_untitled_note(
+    vault_id: VaultId,
+    open_note: NonNullable<EditorStore["open_note"]>,
+    target_path: NotePath,
+    overwrite: boolean,
+  ) {
+    try {
+      const created_meta = await this.notes_port.create_note(
+        vault_id,
+        target_path,
+        open_note.markdown,
+      );
+      await this.index_port.upsert_note(vault_id, created_meta.id);
+      this.notes_store.add_note(created_meta);
+      this.editor_store.update_open_note_path(target_path);
+      this.editor_store.mark_clean(target_path);
+      this.notes_store.add_recent_note(created_meta);
+      return;
+    } catch (error) {
+      if (!this.is_note_exists_error(error)) {
+        throw error;
+      }
+      if (!overwrite) {
+        throw error;
+      }
+    }
+
+    await this.notes_port.write_note(vault_id, target_path, open_note.markdown);
+    await this.index_port.upsert_note(vault_id, target_path);
+    const written = await this.notes_port.read_note(vault_id, target_path);
+    this.notes_store.add_note(written.meta);
+    this.editor_store.update_open_note_path(target_path);
+    this.editor_store.mark_clean(target_path);
+    this.notes_store.add_recent_note(written.meta);
+  }
+
+  private async rename_note_with_overwrite_if_needed(
+    vault_id: VaultId,
+    from_path: NotePath,
+    to_path: NotePath,
+    overwrite: boolean,
+  ) {
+    try {
+      await this.notes_port.rename_note(vault_id, from_path, to_path);
+      return;
+    } catch (error) {
+      if (!overwrite || !this.is_note_exists_error(error)) {
+        throw error;
+      }
+    }
+
+    if (
+      this.editor_store.open_note?.meta.id === to_path &&
+      this.editor_store.open_note.meta.id !== from_path
+    ) {
+      throw new Error("cannot overwrite note that is currently open");
+    }
+
+    await this.notes_port.delete_note(vault_id, to_path);
+    await this.index_port.remove_note(vault_id, to_path);
+    this.notes_store.remove_note(to_path);
+    this.notes_store.remove_recent_note(to_path);
+    await this.notes_port.rename_note(vault_id, from_path, to_path);
+  }
+
+  private is_not_found_error(error: unknown): boolean {
+    const message = error_message(error).toLowerCase();
+    return message.includes("not found") || message.includes("no such file");
+  }
+
+  private is_note_exists_error(error: unknown): boolean {
+    const message = error_message(error).toLowerCase();
+    return (
+      message.includes("note already exists") ||
+      message.includes("already exists") ||
+      message.includes("destination already exists")
+    );
   }
 }

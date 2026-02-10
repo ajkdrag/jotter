@@ -261,6 +261,10 @@ Bootstrap sequence:
 
 **EditorService statefulness**: EditorService holds persistent session state (`session`, `host_root`, `active_note`, `active_link_syntax`, `session_generation`) because it manages a live DOM editor session. Exception to "services are stateless between method calls". The `session_generation` counter guards against race conditions analogous to AbortController.
 
+**VaultService open lifecycle state**: VaultService stores `active_open_revision` and `index_progress_unsubscribe` to enforce "latest vault-open intent wins" and deterministic progress listener teardown. This state is lifecycle/cancellation bookkeeping only and must not contain domain data.
+
+**SearchService request revisions**: SearchService stores per-use-case revision counters (`active_search_revision`, `active_wiki_suggest_revision`) to ignore stale async responses. This is cancellation bookkeeping only and must not hold domain state.
+
 **Keyboard shortcuts**: Action definitions include `shortcut` metadata for UI display (e.g., command palette hints). Actual keyboard binding is imperative in `src/lib/hooks/use_keyboard_shortcuts.svelte.ts` for fine-grained control over event propagation and blocked-state checks. Intentional design choice.
 
 **op_toast reactor**: Calls `svelte-sonner` toast functions directly instead of routing through a service. Toast notifications are fire-and-forget UI feedback with no store side effects, fitting the "pure runtime utilities" exception in reactor rule 3.

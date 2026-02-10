@@ -1,10 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { Schema } from "@milkdown/kit/prose/model";
-import { EditorState, TextSelection } from "@milkdown/kit/prose/state";
+import {
+  EditorState,
+  Plugin,
+  PluginKey,
+  TextSelection,
+} from "@milkdown/kit/prose/state";
 import {
   create_wiki_link_converter_prose_plugin,
   wiki_link_plugin_key,
 } from "$lib/adapters/editor/wiki_link_plugin";
+import { dirty_state_plugin_key } from "$lib/adapters/editor/dirty_state_plugin";
 import type {
   MarkType,
   Node as ProseNode,
@@ -162,6 +168,50 @@ describe("create_wiki_link_converter_prose_plugin", () => {
       return true;
     });
     expect(hrefs).toHaveLength(2);
+  });
+
+  it("marks full-scan conversions as clean", () => {
+    const schema = create_schema();
+    const plugin = create_wiki_link_converter_prose_plugin({
+      link_type: schema.marks.link,
+      base_note_path: "vault/current.md",
+    });
+
+    const observer_key = new PluginKey<{ saw_mark_clean: boolean }>(
+      "dirty-meta-observer",
+    );
+    const observer = new Plugin<{ saw_mark_clean: boolean }>({
+      key: observer_key,
+      state: {
+        init: () => ({ saw_mark_clean: false }),
+        apply: (tr, prev) => {
+          const meta = tr.getMeta(dirty_state_plugin_key) as
+            | { action?: string }
+            | undefined;
+          if (meta?.action === "mark_clean") {
+            return { saw_mark_clean: true };
+          }
+          return prev;
+        },
+      },
+    });
+
+    const doc = schema.node("doc", null, [
+      schema.node("paragraph", null, schema.text("See [[alpha]]")),
+    ]);
+
+    const state = EditorState.create({
+      schema,
+      doc,
+      plugins: [plugin, observer],
+    });
+
+    const tr = state.tr;
+    tr.setMeta(wiki_link_plugin_key, { action: "full_scan" });
+    const next = state.apply(tr);
+
+    const observer_state = observer_key.getState(next);
+    expect(observer_state?.saw_mark_clean).toBe(true);
   });
 
   it("does not convert wikilinks inside code marks", () => {

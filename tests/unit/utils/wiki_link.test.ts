@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   format_wiki_target_for_markdown,
+  format_wiki_target_for_markdown_link,
   resolve_wiki_target_to_note_path,
 } from "$lib/domain/wiki_link";
 
@@ -43,5 +44,21 @@ describe("wiki_link utils", () => {
       resolved_note_path: "abc/pqr/sub/note.md",
     });
     expect(formatted).toBe("sub/note.md");
+  });
+
+  it("formats parent targets with .. segments", () => {
+    const formatted = format_wiki_target_for_markdown({
+      base_note_path: "abc/pqr/current.md",
+      resolved_note_path: "abc/note.md",
+    });
+    expect(formatted).toBe("../note.md");
+  });
+
+  it("formats markdown-link targets with relative .. segments", () => {
+    const formatted = format_wiki_target_for_markdown_link({
+      base_note_path: "abc/pqr/current.md",
+      resolved_note_path: "abc/note.md",
+    });
+    expect(formatted).toBe("../note.md");
   });
 });

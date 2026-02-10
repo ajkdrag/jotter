@@ -28,6 +28,7 @@ export function create_app_context(input: {
     input.ports.search,
     stores.vault,
     stores.op,
+    now_ms,
   );
 
   const editor_service = new EditorService(
@@ -52,6 +53,7 @@ export function create_app_context(input: {
     input.ports.vault_settings,
     stores.vault,
     stores.op,
+    now_ms,
   );
 
   const note_service = new NoteService(
@@ -80,6 +82,7 @@ export function create_app_context(input: {
     input.ports.clipboard,
     stores.editor,
     stores.op,
+    now_ms,
   );
 
   const vault_service = new VaultService(

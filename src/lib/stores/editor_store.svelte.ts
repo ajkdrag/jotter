@@ -1,11 +1,6 @@
 import type { OpenNoteState, CursorInfo } from "$lib/types/editor";
 import type { NoteId, NotePath } from "$lib/types/ids";
-
-function note_name_from_path(path: string): string {
-  const last_slash = path.lastIndexOf("/");
-  const filename = last_slash >= 0 ? path.slice(last_slash + 1) : path;
-  return filename.endsWith(".md") ? filename.slice(0, -3) : filename;
-}
+import { note_name_from_path } from "$lib/utils/path";
 
 export class EditorStore {
   open_note = $state<OpenNoteState | null>(null);

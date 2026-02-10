@@ -65,6 +65,8 @@ import {
   format_wiki_target_for_markdown_link,
   try_decode_wiki_link_href,
 } from "$lib/domain/wiki_link";
+import { error_message } from "$lib/utils/error_message";
+import { logger } from "$lib/utils/logger";
 
 function create_svg_data_uri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -164,6 +166,8 @@ export function create_milkdown_editor_port(args?: {
   resolve_asset_url_for_vault?: ResolveAssetUrlForVault;
 }): EditorPort {
   const resolve_asset_url_for_vault = args?.resolve_asset_url_for_vault ?? null;
+  const is_missing_editor_view = (error: unknown): boolean =>
+    error_message(error).includes('Context "editorView" not found');
 
   return {
     start_session: async (config) => {
@@ -417,8 +421,19 @@ export function create_milkdown_editor_port(args?: {
 
       editor = await builder.create();
 
+      const run_editor_action = (
+        action: Parameters<NonNullable<typeof editor>["action"]>[0],
+      ) => {
+        if (!editor) return;
+        const outcome = editor.action(action);
+        void Promise.resolve(outcome).catch((error: unknown) => {
+          if (is_missing_editor_view(error)) return;
+          logger.error(`Editor action failed: ${error_message(error)}`);
+        });
+      };
+
       if (!is_large_note) {
-        editor.action((ctx) => {
+        run_editor_action((ctx) => {
           const view = ctx.get(editorViewCtx);
           const tr = view.state.tr.setMeta(wiki_link_plugin_key, {
             action: "full_scan",
@@ -429,7 +444,7 @@ export function create_milkdown_editor_port(args?: {
 
       function mark_clean() {
         if (!editor) return;
-        editor.action((ctx) => {
+        run_editor_action((ctx) => {
           const view = ctx.get(editorViewCtx);
           const tr = view.state.tr;
           tr.setMeta(dirty_state_plugin_key, { action: "mark_clean" });
@@ -447,9 +462,9 @@ export function create_milkdown_editor_port(args?: {
           if (!editor) return;
           is_large_note = is_large_markdown(markdown);
           current_markdown = markdown;
-          editor.action(replaceAll(markdown));
+          run_editor_action(replaceAll(markdown));
           if (!is_large_note) {
-            editor.action((ctx) => {
+            run_editor_action((ctx) => {
               const view = ctx.get(editorViewCtx);
               const tr = view.state.tr.setMeta(wiki_link_plugin_key, {
                 action: "full_scan",
@@ -463,7 +478,7 @@ export function create_milkdown_editor_port(args?: {
         },
         insert_text_at_cursor(text: string) {
           if (!editor) return;
-          editor.action((ctx) => {
+          run_editor_action((ctx) => {
             const view = ctx.get(editorViewCtx);
             const { state } = view;
             try {
@@ -492,21 +507,19 @@ export function create_milkdown_editor_port(args?: {
         },
         focus() {
           if (!editor) return;
-          editor.action((ctx) => {
+          run_editor_action((ctx) => {
             const view = ctx.get(editorViewCtx);
             view.focus();
           });
         },
         set_wiki_suggestions(items: Array<{ title: string; path: string }>) {
           if (!editor) return;
-          editor.action((ctx) => {
+          run_editor_action((ctx) => {
             const view = ctx.get(editorViewCtx);
             set_wiki_suggestions(view, items);
           });
         },
       };
-
-      mark_clean();
 
       return handle;
     },

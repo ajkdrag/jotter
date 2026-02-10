@@ -27,7 +27,7 @@
 <Dialog.Root
   {open}
   onOpenChange={(value: boolean) => {
-    if (!value) on_cancel();
+    if (!value && !is_deleting) on_cancel();
   }}
 >
   <Dialog.Content class="max-w-md">

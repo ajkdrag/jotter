@@ -152,16 +152,18 @@ describe("use_keyboard_shortcuts", () => {
     expect(on_save).toHaveBeenCalledTimes(1);
   });
 
-  it("does not handle mod+k (removed shortcut)", () => {
+  it("does not bind mod+k", () => {
+    const on_open_omnibar_commands = vi.fn();
     const on_toggle_omnibar = vi.fn();
     const prevent_default = vi.fn();
+    const stop_propagation = vi.fn();
 
     const shortcuts = use_keyboard_shortcuts({
       is_enabled: () => true,
       is_blocked: () => false,
       is_omnibar_open: () => false,
       on_toggle_omnibar,
-      on_open_omnibar_commands: vi.fn(),
+      on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -173,11 +175,13 @@ describe("use_keyboard_shortcuts", () => {
       ctrlKey: false,
       key: "k",
       preventDefault: prevent_default,
-      stopPropagation: vi.fn(),
+      stopPropagation: stop_propagation,
     } as unknown as KeyboardEvent);
 
     expect(prevent_default).toHaveBeenCalledTimes(0);
+    expect(stop_propagation).toHaveBeenCalledTimes(0);
     expect(on_toggle_omnibar).toHaveBeenCalledTimes(0);
+    expect(on_open_omnibar_commands).toHaveBeenCalledTimes(0);
   });
 
   it("blocks sidebar toggle on mod+b when blocked", () => {

@@ -34,6 +34,9 @@ export type VaultOpenResult =
       editor_settings: EditorSettings;
     }
   | {
+      status: "stale";
+    }
+  | {
       status: "failed";
       error: string;
     };

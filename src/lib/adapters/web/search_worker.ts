@@ -63,6 +63,10 @@ type VfsWithLifecycle = {
   close?: () => Promise<void> | void;
 };
 
+type VfsFactory = {
+  create: (name: string, module: unknown) => Promise<VfsWithLifecycle>;
+};
+
 const worker_scope = self as unknown as {
   postMessage: (message: SearchWorkerMessage) => void;
   onmessage: ((event: MessageEvent<SearchWorkerRequest>) => void) | null;
@@ -181,26 +185,33 @@ async function create_runtime(): Promise<RuntimeState> {
       storage: "opfs",
       create: async () => {
         if (!is_opfs_supported()) return null;
-        const { OPFSAdaptiveVFS } =
-          await import("@journeyapps/wa-sqlite/src/examples/OPFSAdaptiveVFS.js");
-        return OPFSAdaptiveVFS.create("jotter-search-opfs", module as never);
+        const imported =
+          (await import("@journeyapps/wa-sqlite/src/examples/OPFSAdaptiveVFS.js")) as unknown as {
+            OPFSAdaptiveVFS: VfsFactory;
+          };
+        return imported.OPFSAdaptiveVFS.create("jotter-search-opfs", module);
       },
     },
     {
       storage: "idb",
       create: async () => {
         if (typeof indexedDB === "undefined") return null;
-        const { IDBBatchAtomicVFS } =
-          await import("@journeyapps/wa-sqlite/src/examples/IDBBatchAtomicVFS.js");
-        return IDBBatchAtomicVFS.create("jotter-search", module as never);
+        const imported =
+          (await import("@journeyapps/wa-sqlite/src/examples/IDBBatchAtomicVFS.js")) as unknown as {
+            IDBBatchAtomicVFS: VfsFactory;
+          };
+        return imported.IDBBatchAtomicVFS.create("jotter-search", module);
       },
     },
     {
       storage: "memory",
-      create: async () =>
-        (
-          await import("@journeyapps/wa-sqlite/src/examples/MemoryAsyncVFS.js")
-        ).MemoryAsyncVFS.create("jotter-search-memory", module as never),
+      create: async () => {
+        const imported =
+          (await import("@journeyapps/wa-sqlite/src/examples/MemoryAsyncVFS.js")) as unknown as {
+            MemoryAsyncVFS: VfsFactory;
+          };
+        return imported.MemoryAsyncVFS.create("jotter-search-memory", module);
+      },
     },
   ];
 

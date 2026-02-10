@@ -93,6 +93,16 @@ function build_folder_path_from_name(parent: string, name: string): string {
   return parent ? `${parent}/${name}` : name;
 }
 
+function is_valid_folder_name(name: string): boolean {
+  const trimmed = name.trim();
+  return (
+    trimmed.length > 0 &&
+    !trimmed.includes("/") &&
+    trimmed !== "." &&
+    trimmed !== ".."
+  );
+}
+
 function remove_expanded_paths(
   input: ActionRegistrationInput,
   folder_path: string,
@@ -228,7 +238,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
         parent_path: String(parent_path),
         folder_name: "",
       };
-      stores.op.reset("folder.create");
+      services.folder.reset_create_operation();
     },
   });
 
@@ -261,7 +271,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     label: "Cancel Create Folder",
     execute: () => {
       close_create_dialog(input);
-      stores.op.reset("folder.create");
+      services.folder.reset_create_operation();
     },
   });
 
@@ -433,6 +443,30 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     },
   });
 
+  async function load_delete_stats_for_dialog(folder_path: string) {
+    const result = await services.folder.load_delete_stats(folder_path);
+
+    if (result.status === "ready") {
+      stores.ui.delete_folder_dialog = {
+        ...stores.ui.delete_folder_dialog,
+        status: "confirming",
+        affected_note_count: result.affected_note_count,
+        affected_folder_count: result.affected_folder_count,
+      };
+      return;
+    }
+
+    if (result.status === "failed") {
+      stores.ui.delete_folder_dialog = {
+        ...stores.ui.delete_folder_dialog,
+        status: "error",
+      };
+      return;
+    }
+
+    close_delete_dialog(input);
+  }
+
   registry.register({
     id: ACTION_IDS.folder_request_delete,
     label: "Request Delete Folder",
@@ -447,19 +481,9 @@ export function register_folder_actions(input: ActionRegistrationInput) {
         status: "fetching_stats",
       };
 
-      stores.op.reset("folder.delete");
-      const result = await services.folder.load_delete_stats(normalized_path);
-
-      if (result.status === "ready") {
-        stores.ui.delete_folder_dialog = {
-          ...stores.ui.delete_folder_dialog,
-          status: "confirming",
-          affected_note_count: result.affected_note_count,
-          affected_folder_count: result.affected_folder_count,
-        };
-      } else {
-        close_delete_dialog(input);
-      }
+      services.folder.reset_delete_operation();
+      services.folder.reset_delete_stats_operation();
+      await load_delete_stats_for_dialog(normalized_path);
     },
   });
 
@@ -487,14 +511,29 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     label: "Cancel Delete Folder",
     execute: () => {
       close_delete_dialog(input);
-      stores.op.reset("folder.delete");
+      services.folder.reset_delete_operation();
+      services.folder.reset_delete_stats_operation();
     },
   });
 
   registry.register({
     id: ACTION_IDS.folder_retry_delete,
     label: "Retry Delete Folder",
-    execute: execute_delete_folder,
+    execute: async () => {
+      if (stores.ui.delete_folder_dialog.status === "error") {
+        const folder_path = stores.ui.delete_folder_dialog.folder_path;
+        if (!folder_path) return;
+
+        stores.ui.delete_folder_dialog = {
+          ...stores.ui.delete_folder_dialog,
+          status: "fetching_stats",
+        };
+        services.folder.reset_delete_stats_operation();
+        await load_delete_stats_for_dialog(folder_path);
+        return;
+      }
+      await execute_delete_folder();
+    },
   });
 
   registry.register({
@@ -507,12 +546,12 @@ export function register_folder_actions(input: ActionRegistrationInput) {
         folder_path: path,
         new_name: folder_name_from_path(path),
       };
-      stores.op.reset("folder.rename");
+      services.folder.reset_rename_operation();
     },
   });
 
   registry.register({
-    id: ACTION_IDS.folder_rename,
+    id: ACTION_IDS.folder_update_rename_name,
     label: "Update Rename Folder Name",
     execute: (name: unknown) => {
       stores.ui.rename_folder_dialog.new_name = String(name);
@@ -522,7 +561,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
   async function execute_rename_folder() {
     const folder_path = stores.ui.rename_folder_dialog.folder_path;
     const new_name = stores.ui.rename_folder_dialog.new_name.trim();
-    if (!folder_path || !new_name) return;
+    if (!folder_path || !is_valid_folder_name(new_name)) return;
 
     const parent = parent_folder_path(folder_path);
     const new_path = build_folder_path_from_name(parent, new_name);
@@ -551,7 +590,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     label: "Cancel Rename Folder",
     execute: () => {
       close_rename_dialog(input);
-      stores.op.reset("folder.rename");
+      services.folder.reset_rename_operation();
     },
   });
 

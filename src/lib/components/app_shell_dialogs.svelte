@@ -31,7 +31,10 @@
   const rename_note_error = $derived(stores.op.get("note.rename").error);
   const save_note_error = $derived(stores.op.get("note.save").error);
   const create_folder_error = $derived(stores.op.get("folder.create").error);
-  const delete_folder_error = $derived(stores.op.get("folder.delete").error);
+  const delete_folder_error = $derived(
+    stores.op.get("folder.delete").error ??
+      stores.op.get("folder.delete_stats").error,
+  );
   const rename_folder_error = $derived(stores.op.get("folder.rename").error);
   const settings_error = $derived(
     stores.op.get("settings.save").error ??
@@ -47,9 +50,14 @@
   });
 
   const delete_folder_status = $derived.by(() => {
-    const op_state = stores.op.get("folder.delete").status;
-    if (op_state === "pending") return "deleting";
-    if (op_state === "error") return "error";
+    const delete_op_state = stores.op.get("folder.delete").status;
+    if (delete_op_state === "pending") return "deleting";
+    if (delete_op_state === "error") return "error";
+
+    const delete_stats_state = stores.op.get("folder.delete_stats").status;
+    if (delete_stats_state === "pending") return "fetching_stats";
+    if (delete_stats_state === "error") return "error";
+
     return stores.ui.delete_folder_dialog.status;
   });
 
@@ -102,7 +110,7 @@
   error={rename_note_error}
   show_overwrite_confirm={stores.ui.rename_note_dialog.show_overwrite_confirm}
   on_update_name={(name: string) =>
-    void action_registry.execute(ACTION_IDS.note_rename, name)}
+    void action_registry.execute(ACTION_IDS.note_update_rename_name, name)}
   on_confirm={() =>
     void action_registry.execute(ACTION_IDS.note_confirm_rename)}
   on_confirm_overwrite={() =>
@@ -132,7 +140,7 @@
   status={rename_folder_status}
   error={rename_folder_error}
   on_update_name={(name: string) =>
-    void action_registry.execute(ACTION_IDS.folder_rename, name)}
+    void action_registry.execute(ACTION_IDS.folder_update_rename_name, name)}
   on_confirm={() =>
     void action_registry.execute(ACTION_IDS.folder_confirm_rename)}
   on_cancel={() =>

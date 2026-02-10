@@ -4,11 +4,13 @@ import type { EditorSettings } from "$lib/types/editor_settings";
 
 export function register_settings_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
+  let settings_open_revision = 0;
 
   registry.register({
     id: ACTION_IDS.settings_open,
     label: "Open Settings",
     execute: async () => {
+      const open_revision = ++settings_open_revision;
       const snapshot = { ...stores.ui.editor_settings };
       stores.ui.settings_dialog = {
         open: true,
@@ -20,6 +22,12 @@ export function register_settings_actions(input: ActionRegistrationInput) {
       const result = await services.settings.load_settings(
         stores.ui.editor_settings,
       );
+      if (open_revision !== settings_open_revision) {
+        return;
+      }
+      if (!stores.ui.settings_dialog.open) {
+        return;
+      }
       if (result.status === "success") {
         stores.ui.settings_dialog = {
           ...stores.ui.settings_dialog,
@@ -36,6 +44,10 @@ export function register_settings_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.settings_close,
     label: "Close Settings",
     execute: () => {
+      if (stores.op.is_pending("settings.save")) {
+        return;
+      }
+      settings_open_revision += 1;
       const persisted = stores.ui.settings_dialog.persisted_settings;
       stores.ui.set_editor_settings(persisted);
       stores.ui.settings_dialog = {
@@ -44,8 +56,8 @@ export function register_settings_actions(input: ActionRegistrationInput) {
         current_settings: persisted,
         has_unsaved_changes: false,
       };
-      stores.op.reset("settings.load");
-      stores.op.reset("settings.save");
+      services.settings.reset_load_operation();
+      services.settings.reset_save_operation();
     },
   });
 

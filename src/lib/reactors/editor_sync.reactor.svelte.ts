@@ -23,6 +23,8 @@ export function create_editor_sync_reactor(
       }
 
       if (!editor_service.is_mounted()) {
+        last_note_id = open_note.meta.id;
+        last_link_syntax = link_syntax;
         return;
       }
 

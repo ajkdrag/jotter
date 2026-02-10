@@ -54,7 +54,11 @@
   function is_input_valid(): boolean {
     const trimmed = new_name.trim();
     return (
-      trimmed.length > 0 && !trimmed.includes("/") && trimmed !== current_name
+      trimmed.length > 0 &&
+      !trimmed.includes("/") &&
+      trimmed !== "." &&
+      trimmed !== ".." &&
+      trimmed !== current_name
     );
   }
 
