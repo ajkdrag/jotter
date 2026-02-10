@@ -36,6 +36,12 @@ describe("search_queries", () => {
     );
   });
 
+  it("returns empty string when suggest query has only special characters", () => {
+    expect(suggest_match_expression("!!!")).toBe("");
+    expect(suggest_match_expression("  ")).toBe("");
+    expect(suggest_match_expression("@#$")).toBe("");
+  });
+
   it("keeps SQL constants aligned with FTS parity settings", () => {
     expect(SEARCH_BM25_WEIGHTS).toEqual({
       title: 10,

@@ -587,6 +587,9 @@ pub fn suggest(
     }
 
     let escaped = escape_fts_prefix_query(trimmed);
+    if escaped.is_empty() {
+        return Ok(Vec::new());
+    }
     let match_expr = format!("{{title name path}} : {escaped}");
 
     let sql = "SELECT n.path, n.title, n.mtime_ms, n.size_bytes,

@@ -111,5 +111,6 @@ export function search_match_expression(
 
 export function suggest_match_expression(query: string): string {
   const escaped = escape_fts_prefix_query(query.trim());
+  if (escaped === "") return "";
   return `{title name path} : ${escaped}`;
 }

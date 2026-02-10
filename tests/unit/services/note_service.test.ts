@@ -789,6 +789,47 @@ describe("NoteService", () => {
     expect(result.status).toBe("opened");
   });
 
+  it("rejects wiki links that escape the vault", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const notes_port = create_mock_notes_port();
+    const read_note = vi.fn();
+    notes_port.read_note = read_note;
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.open_wiki_link("../foo");
+
+    expect(result).toEqual({
+      status: "failed",
+      error: "Cannot link outside the vault",
+    });
+    expect(read_note).not.toHaveBeenCalled();
+  });
+
   it("does not create when read failure is not not-found", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();
