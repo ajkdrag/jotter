@@ -7,6 +7,7 @@ import type { ImagePasteRequest } from "$lib/types/editor";
 import { sanitize_note_name } from "$lib/domain/sanitize_note_name";
 import { to_markdown_asset_target } from "$lib/domain/asset_markdown_path";
 import { note_name_from_path, parent_folder_path } from "$lib/utils/path";
+import { toast } from "svelte-sonner";
 
 function close_delete_dialog(input: ActionRegistrationInput) {
   input.stores.ui.delete_note_dialog = {
@@ -107,6 +108,10 @@ export function register_note_actions(input: ActionRegistrationInput) {
       const result = await services.note.open_wiki_link(String(note_path));
       if (result.status === "opened") {
         stores.ui.set_selected_folder_path(result.selected_folder_path);
+        clear_folder_filetree_state(input, result.selected_folder_path);
+      }
+      if (result.status === "failed") {
+        toast.error(result.error);
       }
     },
   });

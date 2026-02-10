@@ -735,6 +735,60 @@ describe("NoteService", () => {
     expect(result).toEqual({ status: "conflict" });
   });
 
+  it("creates note when read throws DOMException with NotFoundError name", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/new-from-link.md"),
+      path: as_note_path("docs/new-from-link.md"),
+      name: "new-from-link",
+      title: "new-from-link",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+
+    const dom_error = new DOMException(
+      "A requested file or directory could not be found at the time an operation was processed.",
+      "NotFoundError",
+    );
+
+    const notes_port = create_mock_notes_port();
+    notes_port.read_note = vi.fn().mockRejectedValueOnce(dom_error);
+    const create_note = vi.fn().mockResolvedValue(note_meta);
+    notes_port.create_note = create_note;
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.open_note("docs/new-from-link.md", true);
+
+    expect(create_note).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("opened");
+  });
+
   it("does not create when read failure is not not-found", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();

@@ -155,6 +155,9 @@ export class NoteService {
   }
 
   async open_wiki_link(note_path: string): Promise<NoteOpenResult> {
+    if (this.escapes_vault(note_path)) {
+      return { status: "failed", error: "Cannot link outside the vault" };
+    }
     return this.open_note(note_path, true);
   }
 
@@ -508,9 +511,28 @@ export class NoteService {
     await this.notes_port.rename_note(vault_id, from_path, to_path);
   }
 
+  private escapes_vault(path: string): boolean {
+    let depth = 0;
+    for (const segment of path.split("/")) {
+      if (segment === "" || segment === ".") continue;
+      if (segment === "..") {
+        if (depth === 0) return true;
+        depth--;
+      } else {
+        depth++;
+      }
+    }
+    return false;
+  }
+
   private is_not_found_error(error: unknown): boolean {
+    if (error instanceof Error && error.name === "NotFoundError") return true;
     const message = error_message(error).toLowerCase();
-    return message.includes("not found") || message.includes("no such file");
+    return (
+      message.includes("not found") ||
+      message.includes("no such file") ||
+      message.includes("could not be found")
+    );
   }
 
   private is_note_exists_error(error: unknown): boolean {

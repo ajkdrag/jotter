@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  does_target_escape_vault,
   format_wiki_target_for_markdown,
   format_wiki_target_for_markdown_link,
   resolve_wiki_target_to_note_path,
@@ -113,6 +114,71 @@ describe("format_wiki_target_for_markdown_link", () => {
 
   it("root-level base note → vault-relative with .md", () => {
     expect(format("current.md", "docs/ref.md")).toBe("docs/ref.md");
+  });
+});
+
+describe("vault escape detection", () => {
+  it("returns null for ../foo from root-level note", () => {
+    expect(
+      resolve_wiki_target_to_note_path({
+        base_note_path: "current.md",
+        raw_target: "../foo",
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null for excessive .. from nested note", () => {
+    expect(
+      resolve_wiki_target_to_note_path({
+        base_note_path: "abc/pqr/current.md",
+        raw_target: "../../../../foo",
+      }),
+    ).toBeNull();
+  });
+
+  it("returns valid path for ../foo from nested note (within bounds)", () => {
+    expect(
+      resolve_wiki_target_to_note_path({
+        base_note_path: "abc/pqr/current.md",
+        raw_target: "../foo",
+      }),
+    ).toBe("abc/foo.md");
+  });
+
+  it("does_target_escape_vault returns true for escape attempt", () => {
+    expect(
+      does_target_escape_vault({
+        base_note_path: "current.md",
+        raw_target: "../foo",
+      }),
+    ).toBe(true);
+  });
+
+  it("does_target_escape_vault returns false for valid relative", () => {
+    expect(
+      does_target_escape_vault({
+        base_note_path: "abc/pqr/current.md",
+        raw_target: "../foo",
+      }),
+    ).toBe(false);
+  });
+
+  it("does_target_escape_vault returns true for deep escape", () => {
+    expect(
+      does_target_escape_vault({
+        base_note_path: "abc/pqr/current.md",
+        raw_target: "../../../../secret",
+      }),
+    ).toBe(true);
+  });
+
+  it("does_target_escape_vault returns false for empty target", () => {
+    expect(
+      does_target_escape_vault({
+        base_note_path: "current.md",
+        raw_target: "",
+      }),
+    ).toBe(false);
   });
 });
 

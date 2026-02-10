@@ -22,14 +22,15 @@ export function try_decode_wiki_link_href(href: string): string | null {
   }
 }
 
-function normalize_path_segments(path: string): string {
+function normalize_path_segments(path: string): string | null {
   const raw_parts = path.split("/").filter(Boolean);
   const parts: string[] = [];
 
   for (const part of raw_parts) {
     if (part === "." || part === "") continue;
     if (part === "..") {
-      if (parts.length > 0) parts.pop();
+      if (parts.length === 0) return null;
+      parts.pop();
       continue;
     }
     parts.push(part);
@@ -90,7 +91,7 @@ export function resolve_wiki_target_to_note_path(input: {
       ? cleaned
       : `${base_folder}/${cleaned}`;
   const normalized = normalize_path_segments(combined);
-  if (normalized === "") return null;
+  if (normalized === null || normalized === "") return null;
 
   const without_ext = strip_md_extension(normalized);
   return ensure_md_extension(without_ext);
@@ -101,7 +102,7 @@ export function format_wiki_target_for_markdown(input: {
   resolved_note_path: string;
 }): string {
   const normalized = strip_leading_slash(
-    normalize_path_segments(input.resolved_note_path),
+    normalize_path_segments(input.resolved_note_path) ?? "",
   );
   const base_folder = parent_folder_path(input.base_note_path);
   if (base_folder === "") return strip_md_extension(normalized);
@@ -113,9 +114,30 @@ export function format_wiki_target_for_markdown_link(input: {
   resolved_note_path: string;
 }): string {
   const normalized = strip_leading_slash(
-    normalize_path_segments(input.resolved_note_path),
+    normalize_path_segments(input.resolved_note_path) ?? "",
   );
   const base_folder = parent_folder_path(input.base_note_path);
   if (base_folder === "") return normalized;
   return compute_relative_path(base_folder, normalized);
+}
+
+export function does_target_escape_vault(input: {
+  base_note_path: string;
+  raw_target: string;
+}): boolean {
+  const trimmed = input.raw_target.trim();
+  if (trimmed === "") return false;
+
+  const is_explicit_relative =
+    trimmed.startsWith("./") || trimmed.startsWith("../");
+  const is_absolute = trimmed.startsWith("/");
+  const cleaned = strip_leading_slash(trimmed);
+  const is_vault_relative = !is_explicit_relative && cleaned.includes("/");
+
+  const base_folder = parent_folder_path(input.base_note_path);
+  const combined =
+    is_absolute || is_vault_relative || base_folder === ""
+      ? cleaned
+      : `${base_folder}/${cleaned}`;
+  return normalize_path_segments(combined) === null;
 }
