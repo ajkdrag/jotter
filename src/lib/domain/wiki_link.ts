@@ -104,6 +104,7 @@ export function format_wiki_target_for_markdown(input: {
   const normalized = strip_leading_slash(
     normalize_path_segments(input.resolved_note_path) ?? "",
   );
+  if (!normalized) return strip_md_extension(input.resolved_note_path);
   const base_folder = parent_folder_path(input.base_note_path);
   if (base_folder === "") return strip_md_extension(normalized);
   return strip_md_extension(compute_relative_path(base_folder, normalized));
@@ -116,6 +117,7 @@ export function format_wiki_target_for_markdown_link(input: {
   const normalized = strip_leading_slash(
     normalize_path_segments(input.resolved_note_path) ?? "",
   );
+  if (!normalized) return input.resolved_note_path;
   const base_folder = parent_folder_path(input.base_note_path);
   if (base_folder === "") return normalized;
   return compute_relative_path(base_folder, normalized);

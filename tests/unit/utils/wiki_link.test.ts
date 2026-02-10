@@ -89,6 +89,18 @@ describe("format_wiki_target_for_markdown", () => {
   it("root-level base note same dir → bare name", () => {
     expect(format("current.md", "note.md")).toBe("note");
   });
+
+  it("vault-escape path → preserves raw target without .md", () => {
+    expect(format("current.md", "../xyz")).toBe("../xyz");
+  });
+
+  it("deep vault-escape path → preserves raw target without .md", () => {
+    expect(format("abc/current.md", "../../../xyz")).toBe("../../../xyz");
+  });
+
+  it("vault-escape path with .md → strips extension", () => {
+    expect(format("current.md", "../xyz.md")).toBe("../xyz");
+  });
 });
 
 describe("format_wiki_target_for_markdown_link", () => {
@@ -114,6 +126,14 @@ describe("format_wiki_target_for_markdown_link", () => {
 
   it("root-level base note → vault-relative with .md", () => {
     expect(format("current.md", "docs/ref.md")).toBe("docs/ref.md");
+  });
+
+  it("vault-escape path → preserves raw target", () => {
+    expect(format("current.md", "../xyz")).toBe("../xyz");
+  });
+
+  it("vault-escape path with .md → preserves raw target with .md", () => {
+    expect(format("current.md", "../xyz.md")).toBe("../xyz.md");
   });
 });
 
