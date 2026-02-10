@@ -377,20 +377,6 @@ export function create_wiki_link_click_prose_plugin(input: {
   return new Plugin({
     key: new PluginKey("wiki-link-click"),
     props: {
-      handleDOMEvents: {
-        click: (_view, raw_event) => {
-          if (!(raw_event instanceof MouseEvent)) return false;
-          if (!should_handle_event(raw_event)) return false;
-
-          const href = href_from_dom_event_target(raw_event);
-          if (typeof href !== "string") return false;
-          return handle_internal_link_click({
-            href,
-            event: raw_event,
-            stop_propagation: true,
-          });
-        },
-      },
       handleClick: (view, pos, event) => {
         if (!should_handle_event(event)) return false;
 
