@@ -23,6 +23,7 @@ const internal_roots = {
   actions: path.join(project_root, "src/lib/actions"),
   components: path.join(project_root, "src/lib/components"),
   utils: path.join(project_root, "src/lib/utils"),
+  domain: path.join(project_root, "src/lib/domain"),
   types: path.join(project_root, "src/lib/types"),
 };
 
@@ -51,7 +52,7 @@ const layer_rules = [
       "reactors",
       "actions",
       "components",
-      "utils",
+      "domain",
     ]),
     disallow_patterns: [
       {

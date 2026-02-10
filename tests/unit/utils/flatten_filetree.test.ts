@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { flatten_filetree } from "$lib/utils/flatten_filetree";
+import { flatten_filetree } from "$lib/domain/flatten_filetree";
 import { as_note_path } from "$lib/types/ids";
 import type { NoteMeta } from "$lib/types/note";
 import type { FolderLoadState } from "$lib/types/filetree";

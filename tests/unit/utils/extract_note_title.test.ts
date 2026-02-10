@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extract_note_title } from "$lib/utils/extract_note_title";
+import { extract_note_title } from "$lib/domain/extract_note_title";
 
 describe("extract_note_title", () => {
   it("extracts first markdown heading title", () => {

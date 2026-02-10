@@ -23,10 +23,10 @@ import { error_message } from "$lib/utils/error_message";
 import {
   ensure_open_note,
   create_untitled_open_note_in_folder,
-} from "$lib/utils/ensure_open_note";
-import { parent_folder_path } from "$lib/utils/filetree";
-import { resolve_existing_note_path } from "$lib/utils/note_lookup";
-import { note_path_exists } from "$lib/utils/note_path_exists";
+} from "$lib/domain/ensure_open_note";
+import { parent_folder_path } from "$lib/utils/path";
+import { resolve_existing_note_path } from "$lib/domain/note_lookup";
+import { note_path_exists } from "$lib/domain/note_path_exists";
 import type { EditorService } from "$lib/services/editor_service";
 import { to_open_note_state, type PastedImagePayload } from "$lib/types/editor";
 import { create_write_queue } from "$lib/utils/write_queue";

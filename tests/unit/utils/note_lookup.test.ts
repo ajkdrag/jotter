@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolve_existing_note_path } from "$lib/utils/note_lookup";
+import { resolve_existing_note_path } from "$lib/domain/note_lookup";
 import { as_note_path } from "$lib/types/ids";
 import type { NoteMeta } from "$lib/types/note";
 

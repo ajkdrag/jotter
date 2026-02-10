@@ -81,7 +81,7 @@ Run all of these before submitting changes:
 
 ```bash
 pnpm check           # Svelte/TypeScript type checking
-pnpm lint            # ESLint
+pnpm lint            # oxlint
 pnpm format:check    # Prettier (fails if files need formatting)
 pnpm format          # Prettier (writes formatting)
 pnpm test            # Vitest

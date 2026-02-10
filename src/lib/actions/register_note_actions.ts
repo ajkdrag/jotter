@@ -4,9 +4,9 @@ import { clear_folder_filetree_state } from "$lib/actions/filetree_state";
 import type { NoteMeta } from "$lib/types/note";
 import { as_note_path, type NotePath } from "$lib/types/ids";
 import type { ImagePasteRequest } from "$lib/types/editor";
-import { sanitize_note_name } from "$lib/utils/sanitize_note_name";
-import { to_markdown_asset_target } from "$lib/utils/asset_markdown_path";
-import { note_name_from_path, parent_folder_path } from "$lib/utils/filetree";
+import { sanitize_note_name } from "$lib/domain/sanitize_note_name";
+import { to_markdown_asset_target } from "$lib/domain/asset_markdown_path";
+import { note_name_from_path, parent_folder_path } from "$lib/utils/path";
 
 function close_delete_dialog(input: ActionRegistrationInput) {
   input.stores.ui.delete_note_dialog = {

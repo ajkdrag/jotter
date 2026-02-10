@@ -112,7 +112,7 @@ When you have made **code changes** (not documentation-only: e.g. README, .md, d
 
 - Run all validation commands and fix any issues:
   - `pnpm check` — Svelte/TypeScript type checking
-  - `pnpm lint` — ESLint linting
+  - `pnpm lint` — oxlint linting
   - `pnpm test` — Vitest unit/integration tests
   - `cd src-tauri && cargo check` — Rust type checking (run from `src-tauri/` directory)
   - `pnpm format` — Prettier (writes formatting)

@@ -7,7 +7,7 @@ import type {
   FolderLoadState,
   FolderPaginationState,
 } from "$lib/types/filetree";
-import { parent_folder_path } from "$lib/utils/filetree";
+import { parent_folder_path } from "$lib/utils/path";
 
 function should_load_folder(state: FolderLoadState | undefined): boolean {
   return !state || state === "unloaded" || state === "error";

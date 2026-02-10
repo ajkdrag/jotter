@@ -1,4 +1,4 @@
-import { parent_folder_path } from "$lib/utils/filetree";
+import { parent_folder_path } from "$lib/utils/path";
 
 const WIKI_LINK_PROTOCOL = "jotter:";
 const WIKI_LINK_HOST = "wiki";

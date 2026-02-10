@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { search_within_text } from "$lib/utils/search_within_text";
+import { search_within_text } from "$lib/domain/search_within_text";
 
 describe("search_within_text", () => {
   it("returns empty array for empty text", () => {

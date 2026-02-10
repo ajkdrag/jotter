@@ -64,7 +64,7 @@ import {
   format_wiki_target_for_markdown,
   format_wiki_target_for_markdown_link,
   try_decode_wiki_link_href,
-} from "$lib/utils/wiki_link";
+} from "$lib/domain/wiki_link";
 
 function create_svg_data_uri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

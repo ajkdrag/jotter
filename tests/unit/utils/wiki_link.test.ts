@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   format_wiki_target_for_markdown,
   resolve_wiki_target_to_note_path,
-} from "$lib/utils/wiki_link";
+} from "$lib/domain/wiki_link";
 
 describe("wiki_link utils", () => {
   it("resolves relative targets to note paths", () => {

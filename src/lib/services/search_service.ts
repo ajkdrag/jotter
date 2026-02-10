@@ -9,9 +9,9 @@ import type {
   WikiSuggestionsResult,
   OmnibarSearchResult,
 } from "$lib/types/search_service_result";
-import { parse_search_query } from "$lib/utils/search_query_parser";
-import { search_within_text } from "$lib/utils/search_within_text";
-import { COMMANDS_REGISTRY } from "$lib/utils/search_commands";
+import { parse_search_query } from "$lib/domain/search_query_parser";
+import { search_within_text } from "$lib/domain/search_within_text";
+import { COMMANDS_REGISTRY } from "$lib/domain/search_commands";
 import { SETTINGS_REGISTRY } from "$lib/types/settings_registry";
 import { error_message } from "$lib/utils/error_message";
 import { logger } from "$lib/utils/logger";

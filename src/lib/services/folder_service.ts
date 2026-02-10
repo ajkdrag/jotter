@@ -11,7 +11,7 @@ import type {
 } from "$lib/types/folder_service_result";
 import { PAGE_SIZE } from "$lib/constants/pagination";
 import { error_message } from "$lib/utils/error_message";
-import { ensure_open_note } from "$lib/utils/ensure_open_note";
+import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { logger } from "$lib/utils/logger";
 
 export class FolderService {

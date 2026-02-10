@@ -1,9 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-  build_filetree,
-  parent_folder_path,
-  sort_tree,
-} from "$lib/utils/filetree";
+import { build_filetree, sort_tree } from "$lib/domain/filetree";
+import { parent_folder_path } from "$lib/utils/path";
 import type { NoteMeta } from "$lib/types/note";
 import { as_note_path } from "$lib/types/ids";
 

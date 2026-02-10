@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { jotter_asset_url } from "$lib/utils/asset_url";
+import { jotter_asset_url } from "$lib/domain/asset_url";
 import { as_asset_path, as_vault_id } from "$lib/types/ids";
 
 describe("jotter_asset_url", () => {

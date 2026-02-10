@@ -10,7 +10,7 @@ import {
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
 import type { FolderContents } from "$lib/types/filetree";
 import { is_excluded_folder } from "$lib/constants/special_folders";
-import { extract_note_title } from "$lib/utils/extract_note_title";
+import { extract_note_title } from "$lib/domain/extract_note_title";
 import { get_vault } from "./storage";
 
 function is_not_found_error(error: unknown): boolean {

@@ -23,7 +23,7 @@ async function open_db(): Promise<IDBDatabase> {
     request.onerror = () => {
       reject(
         request.error
-          ? new Error(String(request.error))
+          ? new Error(request.error.message || "IndexedDB open failed")
           : new Error("IndexedDB open failed"),
       );
     };
@@ -65,14 +65,14 @@ export async function store_vault(
     request.onerror = () => {
       reject(
         request.error
-          ? new Error(String(request.error))
+          ? new Error(request.error.message || "IndexedDB put failed")
           : new Error("IndexedDB put failed"),
       );
     };
     tx.onerror = () => {
       reject(
         tx.error
-          ? new Error(String(tx.error))
+          ? new Error(tx.error.message || "IndexedDB transaction failed")
           : new Error("IndexedDB transaction failed"),
       );
     };
@@ -92,7 +92,7 @@ export async function get_vault(id: string): Promise<VaultRecord | null> {
     request.onerror = () => {
       reject(
         request.error
-          ? new Error(String(request.error))
+          ? new Error(request.error.message || "IndexedDB get failed")
           : new Error("IndexedDB get failed"),
       );
     };
@@ -119,7 +119,7 @@ export async function list_vaults(): Promise<VaultRecord[]> {
     request.onerror = () => {
       reject(
         request.error
-          ? new Error(String(request.error))
+          ? new Error(request.error.message || "IndexedDB getAll failed")
           : new Error("IndexedDB getAll failed"),
       );
     };
@@ -140,7 +140,7 @@ export async function remove_vault(id: string): Promise<void> {
     request.onerror = () => {
       reject(
         request.error
-          ? new Error(String(request.error))
+          ? new Error(request.error.message || "IndexedDB delete failed")
           : new Error("IndexedDB delete failed"),
       );
     };
@@ -150,7 +150,7 @@ export async function remove_vault(id: string): Promise<void> {
     tx.onerror = () => {
       reject(
         tx.error
-          ? new Error(String(tx.error))
+          ? new Error(tx.error.message || "IndexedDB transaction failed")
           : new Error("IndexedDB transaction failed"),
       );
     };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parse_search_query } from "$lib/utils/search_query_parser";
+import { parse_search_query } from "$lib/domain/search_query_parser";
 
 describe("parse_search_query", () => {
   it("parses path scope", () => {

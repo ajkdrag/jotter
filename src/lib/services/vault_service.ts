@@ -23,7 +23,7 @@ import type {
   VaultInitializeResult,
   VaultOpenResult,
 } from "$lib/types/vault_service_result";
-import { ensure_open_note } from "$lib/utils/ensure_open_note";
+import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { error_message } from "$lib/utils/error_message";
 import { logger } from "$lib/utils/logger";
 import type { ThemeMode } from "$lib/types/theme";

@@ -3,7 +3,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import type { NoteMeta } from "$lib/types/note";
-  import { parent_folder_path } from "$lib/utils/filetree";
+  import { parent_folder_path } from "$lib/utils/path";
   import { tick } from "svelte";
 
   interface Props {

@@ -11,7 +11,7 @@
   import type { OmnibarItem } from "$lib/types/search";
   import type { NoteMeta } from "$lib/types/note";
   import type { CommandIcon as CommandIconType } from "$lib/types/command_palette";
-  import { COMMANDS_REGISTRY } from "$lib/utils/search_commands";
+  import { COMMANDS_REGISTRY } from "$lib/domain/search_commands";
   import type { Component } from "svelte";
 
   const COMMAND_ICONS: Record<CommandIconType, Component> = {

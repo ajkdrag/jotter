@@ -8,7 +8,7 @@ import {
   build_filetree,
   sort_tree,
   type FileTreeNode,
-} from "$lib/utils/filetree";
+} from "$lib/domain/filetree";
 
 export type FlattenInput = {
   notes: NoteMeta[];

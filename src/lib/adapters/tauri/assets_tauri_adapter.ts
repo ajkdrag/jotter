@@ -1,6 +1,6 @@
 import type { AssetsPort } from "$lib/ports/assets_port";
 import type { AssetPath, VaultId } from "$lib/types/ids";
-import { jotter_asset_url } from "$lib/utils/asset_url";
+import { jotter_asset_url } from "$lib/domain/asset_url";
 import { tauri_invoke } from "$lib/adapters/tauri/tauri_invoke";
 import { as_asset_path } from "$lib/types/ids";
 

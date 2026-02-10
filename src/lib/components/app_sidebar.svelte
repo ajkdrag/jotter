@@ -10,7 +10,7 @@
   import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
   import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
   import ThemeToggle from "$lib/components/theme_toggle.svelte";
-  import { flatten_filetree } from "$lib/utils/flatten_filetree";
+  import { flatten_filetree } from "$lib/domain/flatten_filetree";
   import { count_words } from "$lib/utils/count_words";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";

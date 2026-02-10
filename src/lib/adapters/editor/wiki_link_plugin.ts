@@ -11,7 +11,7 @@ import {
   format_wiki_target_for_markdown,
   resolve_wiki_target_to_note_path,
   try_decode_wiki_link_href,
-} from "$lib/utils/wiki_link";
+} from "$lib/domain/wiki_link";
 
 const ZERO_WIDTH_SPACE = "\u200B";
 const WIKI_LINK_REGEX = /\[\[([^\]\n]+?)(?:\|([^\]\n]+?))?\]\]/;

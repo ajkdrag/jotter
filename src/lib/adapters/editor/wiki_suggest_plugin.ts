@@ -2,7 +2,7 @@ import { $ctx, $prose } from "@milkdown/kit/utils";
 import { TooltipProvider } from "@milkdown/kit/plugin/tooltip";
 import { Plugin, PluginKey } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { format_wiki_target_for_markdown } from "$lib/utils/wiki_link";
+import { format_wiki_target_for_markdown } from "$lib/domain/wiki_link";
 
 export const wiki_suggest_plugin_key = new PluginKey<WikiSuggestState>(
   "wiki-suggest",

@@ -1,5 +1,5 @@
 import type { NoteMeta } from "$lib/types/note";
-import { parent_folder_path } from "$lib/utils/filetree";
+import { parent_folder_path } from "$lib/utils/path";
 
 export function resolve_existing_note_path(
   notes: NoteMeta[],

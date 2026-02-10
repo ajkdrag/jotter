@@ -113,6 +113,22 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 - shared domain and UI-safe types only
 
+### `src/lib/utils`
+
+- pure, domain-agnostic utility functions
+- no business logic or domain knowledge
+- no imports of domain types (NoteMeta, NotePath, etc.)
+- stores can import from utils
+- examples: `format_bytes`, `count_words`, `error_message`, `parent_folder_path`
+
+### `src/lib/domain`
+
+- domain-aware utility functions with business logic
+- works with domain types (NoteMeta, NotePath, etc.)
+- contains domain rules and transformations
+- stores cannot import from domain
+- examples: `extract_note_title`, `wiki_link`, `sanitize_note_name`, `search_query_parser`
+
 ### `src/lib/ports`
 
 - interface contracts for IO boundaries only
@@ -124,6 +140,8 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 ### `src/lib/stores`
 
 - synchronous app state classes
+- can import from `utils` (pure utilities)
+- cannot import from `domain` (business logic)
 
 ### `src/lib/services`
 
@@ -230,7 +248,7 @@ Bootstrap sequence:
 ## Invariants
 
 1. All external IO goes through ports/adapters. No `invoke()` outside adapters.
-2. Stores remain sync and side-effect free. Stores never import anything except types.
+2. Stores remain sync and side-effect free. Stores can import types and pure utilities from `utils`, but cannot import from `domain`.
 3. Services never self-subscribe to store changes with `$effect`. Read yes, observe no — that's a reactor.
 4. Reactors are the only persistent store observers that trigger side effects.
 5. User-triggerable behavior is exposed through the action registry. Components never call services for side effects directly — use `action_registry.execute()`.
@@ -292,7 +310,8 @@ XState is not part of the default architecture. If ever needed, it should be a l
 Current rules include:
 
 - `components` cannot import ports/adapters/services/reactors
-- `stores` cannot import ports/adapters/services/reactors/actions/components/utils and cannot use `async`/`await`
+- `stores` cannot import ports/adapters/services/reactors/actions/components/domain and cannot use `async`/`await`
+- `stores` can import from `utils` (pure utilities only)
 - `services` cannot import adapters/components/reactors and cannot use `$effect`
 - `services` cannot import `ui_store.svelte`
 - `reactors` cannot import adapters/components and should not use inline `await`
