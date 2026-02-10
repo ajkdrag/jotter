@@ -46,24 +46,9 @@ function strip_md_extension(value: string): string {
   return value.endsWith(".md") ? value.slice(0, -3) : value;
 }
 
-function maybe_strip_md_extension(value: string): string {
-  if (value.includes("/")) return value;
-  return strip_md_extension(value);
-}
-
-function ensure_md_extension(value: string): string {
-  return value.endsWith(".md") ? value : `${value}.md`;
-}
-
-function path_segments(value: string): string[] {
-  return normalize_path_segments(strip_leading_slash(value))
-    .split("/")
-    .filter(Boolean);
-}
-
-function relative_path(from_folder: string, to_path: string): string {
-  const from_segments = path_segments(from_folder);
-  const to_segments = path_segments(to_path);
+function compute_relative_path(from_dir: string, to_path: string): string {
+  const from_segments = from_dir === "" ? [] : from_dir.split("/");
+  const to_segments = to_path.split("/");
 
   let common = 0;
   while (
@@ -71,17 +56,19 @@ function relative_path(from_folder: string, to_path: string): string {
     common < to_segments.length &&
     from_segments[common] === to_segments[common]
   ) {
-    common += 1;
+    common++;
   }
 
-  const up = from_segments.length - common;
-  const down = to_segments.slice(common);
-  const relative_segments = [
-    ...Array.from({ length: up }, () => ".."),
-    ...down,
-  ];
+  const ups = from_segments.length - common;
+  const remaining = to_segments.slice(common);
 
-  return relative_segments.join("/");
+  if (ups === 0 && remaining.length === 1) return remaining[0] ?? to_path;
+  if (ups === 0) return `./${remaining.join("/")}`;
+  return [...Array<string>(ups).fill(".."), ...remaining].join("/");
+}
+
+function ensure_md_extension(value: string): string {
+  return value.endsWith(".md") ? value : `${value}.md`;
 }
 
 export function resolve_wiki_target_to_note_path(input: {
@@ -91,12 +78,17 @@ export function resolve_wiki_target_to_note_path(input: {
   const trimmed = input.raw_target.trim();
   if (trimmed === "") return null;
 
+  const is_explicit_relative =
+    trimmed.startsWith("./") || trimmed.startsWith("../");
   const is_absolute = trimmed.startsWith("/");
   const cleaned = strip_leading_slash(trimmed);
+  const is_vault_relative = !is_explicit_relative && cleaned.includes("/");
 
   const base_folder = parent_folder_path(input.base_note_path);
   const combined =
-    is_absolute || base_folder === "" ? cleaned : `${base_folder}/${cleaned}`;
+    is_absolute || is_vault_relative || base_folder === ""
+      ? cleaned
+      : `${base_folder}/${cleaned}`;
   const normalized = normalize_path_segments(combined);
   if (normalized === "") return null;
 
@@ -108,32 +100,22 @@ export function format_wiki_target_for_markdown(input: {
   base_note_path: string;
   resolved_note_path: string;
 }): string {
-  const base_folder = parent_folder_path(input.base_note_path);
-  const normalized_target = strip_leading_slash(
+  const normalized = strip_leading_slash(
     normalize_path_segments(input.resolved_note_path),
   );
-
-  if (base_folder === "") {
-    return maybe_strip_md_extension(normalized_target);
-  }
-
-  return maybe_strip_md_extension(
-    relative_path(base_folder, normalized_target),
-  );
+  const base_folder = parent_folder_path(input.base_note_path);
+  if (base_folder === "") return strip_md_extension(normalized);
+  return strip_md_extension(compute_relative_path(base_folder, normalized));
 }
 
 export function format_wiki_target_for_markdown_link(input: {
   base_note_path: string;
   resolved_note_path: string;
 }): string {
-  const base_folder = parent_folder_path(input.base_note_path);
-  const normalized_target = strip_leading_slash(
+  const normalized = strip_leading_slash(
     normalize_path_segments(input.resolved_note_path),
   );
-
-  if (base_folder === "") {
-    return normalized_target;
-  }
-
-  return relative_path(base_folder, normalized_target);
+  const base_folder = parent_folder_path(input.base_note_path);
+  if (base_folder === "") return normalized;
+  return compute_relative_path(base_folder, normalized);
 }

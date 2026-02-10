@@ -331,10 +331,7 @@ export function create_wiki_link_click_prose_plugin(input: {
     if (raw_path === "") return null;
 
     const decoded_path = safe_decode_uri_component(raw_path);
-    const cleaned = decoded_path.startsWith("./")
-      ? decoded_path.slice(2)
-      : decoded_path;
-    const trimmed = cleaned.trim();
+    const trimmed = decoded_path.trim();
     if (trimmed === "") return null;
 
     const last_slash_index = trimmed.lastIndexOf("/");
