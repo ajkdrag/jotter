@@ -29,6 +29,12 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
         noteIds: note_ids,
       });
     },
+    async remove_notes_by_prefix(vault_id: VaultId, prefix: string) {
+      await tauri_invoke<undefined>("index_remove_notes_by_prefix", {
+        vaultId: vault_id,
+        prefix,
+      });
+    },
     async rename_folder_paths(
       vault_id: VaultId,
       old_prefix: string,

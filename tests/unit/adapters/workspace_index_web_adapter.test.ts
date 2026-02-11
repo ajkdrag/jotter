@@ -55,10 +55,7 @@ function create_notes_port(docs: Map<string, NoteDoc>): {
       rename_note: vi.fn().mockResolvedValue(undefined),
       delete_note: vi.fn().mockResolvedValue(undefined),
       rename_folder: vi.fn().mockResolvedValue(undefined),
-      delete_folder: vi.fn().mockResolvedValue({
-        deleted_notes: [],
-        deleted_folders: [],
-      }),
+      delete_folder: vi.fn().mockResolvedValue(undefined),
       list_folder_contents: vi.fn().mockResolvedValue({
         notes: [],
         subfolders: [],

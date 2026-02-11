@@ -70,6 +70,10 @@ enum DbCommand {
         note_ids: Vec<String>,
         reply: SyncSender<Result<(), String>>,
     },
+    RemoveNotesByPrefix {
+        prefix: String,
+        reply: SyncSender<Result<(), String>>,
+    },
     Rebuild {
         vault_root: PathBuf,
         cancel: Arc<AtomicBool>,
@@ -186,6 +190,22 @@ fn dispatch_command(
             } else {
                 for id in &note_ids {
                     notes_cache.remove(id);
+                }
+            }
+            let _ = reply.send(result);
+        }
+        DbCommand::RemoveNotesByPrefix { prefix, reply } => {
+            let result = search_db::remove_notes_by_prefix(conn, &prefix);
+            if let Err(ref e) = result {
+                log::warn!("writer: prefix remove failed for {prefix}: {e}");
+            } else {
+                let matching_keys: Vec<String> = notes_cache
+                    .keys()
+                    .filter(|k| k.starts_with(&prefix))
+                    .cloned()
+                    .collect();
+                for key in matching_keys {
+                    notes_cache.remove(&key);
                 }
             }
             let _ = reply.send(result);
@@ -495,6 +515,18 @@ pub fn index_remove_notes(
 ) -> Result<(), String> {
     send_write_blocking(&app, &vault_id, |reply| DbCommand::RemoveNotes {
         note_ids,
+        reply,
+    })
+}
+
+#[tauri::command]
+pub fn index_remove_notes_by_prefix(
+    app: AppHandle,
+    vault_id: String,
+    prefix: String,
+) -> Result<(), String> {
+    send_write_blocking(&app, &vault_id, |reply| DbCommand::RemoveNotesByPrefix {
+        prefix,
         reply,
     })
 }

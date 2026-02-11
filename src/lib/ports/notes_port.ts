@@ -33,10 +33,7 @@ export interface NotesPort {
     from_path: string,
     to_path: string,
   ): Promise<void>;
-  delete_folder(
-    vault_id: VaultId,
-    folder_path: string,
-  ): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }>;
+  delete_folder(vault_id: VaultId, folder_path: string): Promise<void>;
   list_folder_contents(
     vault_id: VaultId,
     folder_path: string,

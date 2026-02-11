@@ -78,10 +78,7 @@ export function create_notes_tauri_adapter(): NotesPort {
       });
     },
     async delete_folder(vault_id: VaultId, folder_path: string) {
-      return await tauri_invoke<{
-        deleted_notes: NotePath[];
-        deleted_folders: string[];
-      }>("delete_folder", {
+      await tauri_invoke<undefined>("delete_folder", {
         args: { vault_id, folder_path },
       });
     },

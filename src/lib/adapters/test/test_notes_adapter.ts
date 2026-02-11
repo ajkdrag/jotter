@@ -330,33 +330,15 @@ export function create_test_notes_adapter(): NotesPort {
       return Promise.resolve();
     },
 
-    async delete_folder(
-      _vault_id: VaultId,
-      folder_path: string,
-    ): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }> {
-      const deleted_notes: NotePath[] = [];
-      const deleted_folders: string[] = [];
-
-      const notes = await load_base_files();
+    delete_folder(_vault_id: VaultId, folder_path: string): Promise<void> {
       const prefix = folder_path + "/";
-
-      for (const note_path of notes.keys()) {
-        if (note_path.startsWith(prefix)) {
-          deleted_notes.push(note_path);
-        }
-      }
 
       for (const folder of created_folders) {
         if (folder === folder_path || folder.startsWith(prefix)) {
-          deleted_folders.push(folder);
+          created_folders.delete(folder);
         }
       }
-
-      for (const folder of deleted_folders) {
-        created_folders.delete(folder);
-      }
-
-      return { deleted_notes, deleted_folders };
+      return Promise.resolve();
     },
 
     async get_folder_stats(

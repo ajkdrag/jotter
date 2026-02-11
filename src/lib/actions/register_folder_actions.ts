@@ -7,6 +7,8 @@ import type {
   FolderLoadState,
   FolderPaginationState,
 } from "$lib/types/filetree";
+import { error_message } from "$lib/utils/error_message";
+import { logger } from "$lib/utils/logger";
 import { parent_folder_path } from "$lib/utils/path";
 
 function should_load_folder(state: FolderLoadState | undefined): boolean {
@@ -493,10 +495,19 @@ export function register_folder_actions(input: ActionRegistrationInput) {
 
     const result = await services.folder.delete_folder(folder_path);
     if (result.status === "success") {
-      const parent_path = parent_folder_path(folder_path);
-      clear_folder_filetree_state(input, parent_path);
-      remove_expanded_paths(input, folder_path);
       close_delete_dialog(input);
+      const parent_path = parent_folder_path(folder_path);
+      remove_expanded_paths(input, folder_path);
+      clear_folder_filetree_state(input, parent_path);
+
+      const folder_prefix = `${folder_path}/`;
+      void services.folder
+        .remove_notes_by_prefix(folder_prefix)
+        .catch((err: unknown) => {
+          logger.error(
+            `Background index cleanup failed for ${folder_path}: ${error_message(err)}`,
+          );
+        });
     }
   }
 
@@ -568,14 +579,24 @@ export function register_folder_actions(input: ActionRegistrationInput) {
 
     const result = await services.folder.rename_folder(folder_path, new_path);
     if (result.status === "success") {
-      const new_parent = parent_folder_path(new_path);
       close_rename_dialog(input);
+      services.folder.apply_folder_rename(folder_path, new_path);
+      remap_expanded_paths(input, folder_path, new_path);
       clear_folder_filetree_state(input, parent);
+      const new_parent = parent_folder_path(new_path);
       if (new_parent !== parent) {
         clear_folder_filetree_state(input, new_parent);
       }
-      remap_expanded_paths(input, folder_path, new_path);
-      services.folder.apply_folder_rename(folder_path, new_path);
+
+      const old_prefix = `${folder_path}/`;
+      const new_prefix = `${new_path}/`;
+      void services.folder
+        .rename_folder_index(old_prefix, new_prefix)
+        .catch((err: unknown) => {
+          logger.error(
+            `Background index rename failed for ${folder_path}: ${error_message(err)}`,
+          );
+        });
     }
   }
 

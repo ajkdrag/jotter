@@ -257,4 +257,27 @@ describe("NotesStore recent notes", () => {
       "archive/a.md",
     ]);
   });
+
+  it("remove_recent_notes_by_prefix filters matching notes in one pass", () => {
+    const store = new NotesStore();
+    store.add_recent_note(note("docs/a.md"));
+    store.add_recent_note(note("docs/sub/b.md"));
+    store.add_recent_note(note("misc/c.md"));
+
+    store.remove_recent_notes_by_prefix("docs/");
+
+    expect(store.recent_notes.map((entry) => entry.path)).toEqual([
+      "misc/c.md",
+    ]);
+  });
+
+  it("remove_recent_notes_by_prefix is a no-op when prefix matches nothing", () => {
+    const store = new NotesStore();
+    store.add_recent_note(note("misc/a.md"));
+    store.add_recent_note(note("misc/b.md"));
+
+    store.remove_recent_notes_by_prefix("docs/");
+
+    expect(store.recent_notes).toHaveLength(2);
+  });
 });

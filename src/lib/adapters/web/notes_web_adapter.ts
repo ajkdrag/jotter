@@ -561,10 +561,7 @@ export function create_notes_web_adapter(): NotesPort {
       await from_parent.removeEntry(from_name, { recursive: true });
     },
 
-    async delete_folder(
-      vault_id: VaultId,
-      folder_path: string,
-    ): Promise<{ deleted_notes: NotePath[]; deleted_folders: string[] }> {
+    async delete_folder(vault_id: VaultId, folder_path: string): Promise<void> {
       const root = await get_vault_handle(vault_id);
 
       const parts = folder_path.split("/").filter(Boolean);
@@ -578,33 +575,7 @@ export function create_notes_web_adapter(): NotesPort {
       const folder_name = parts[parts.length - 1];
       if (!folder_name) throw new Error("Invalid folder path: missing name");
 
-      const deleted_notes: NotePath[] = [];
-      const deleted_folders: string[] = [];
-
-      async function collect_items(
-        dir: FileSystemDirectoryHandle,
-        prefix: string,
-      ) {
-        for await (const entry of dir.values()) {
-          const entry_path = prefix ? `${prefix}/${entry.name}` : entry.name;
-
-          if (entry.kind === "file" && entry.name.endsWith(".md")) {
-            deleted_notes.push(as_note_path(entry_path));
-          } else if (entry.kind === "directory") {
-            deleted_folders.push(entry_path);
-            await collect_items(entry as FileSystemDirectoryHandle, entry_path);
-          }
-        }
-      }
-
-      const folder_handle = await parent.getDirectoryHandle(folder_name, {
-        create: false,
-      });
-      await collect_items(folder_handle, folder_path);
-
       await parent.removeEntry(folder_name, { recursive: true });
-
-      return { deleted_notes, deleted_folders };
     },
 
     async get_folder_stats(

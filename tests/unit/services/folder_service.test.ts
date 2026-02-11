@@ -140,7 +140,7 @@ describe("FolderService", () => {
     expect(notes_store.notes).toEqual([]);
   });
 
-  it("removes recent notes when deleting a folder", async () => {
+  it("removes recent notes by prefix when deleting a folder", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();
     const editor_store = new EditorStore();
@@ -151,14 +151,17 @@ describe("FolderService", () => {
     const vault = create_test_vault();
     vault_store.set_vault(vault);
 
-    const note_meta = create_note(1);
-    notes_store.set_notes([note_meta]);
-    notes_store.add_recent_note(note_meta);
+    const note_in_folder = {
+      ...create_note(1),
+      path: as_note_path("docs/note-001.md"),
+      id: as_note_path("docs/note-001.md"),
+    };
+    const note_outside = create_note(2);
+    notes_store.set_notes([note_in_folder, note_outside]);
+    notes_store.add_recent_note(note_in_folder);
+    notes_store.add_recent_note(note_outside);
 
-    notes_port.delete_folder = vi.fn().mockResolvedValue({
-      deleted_notes: [note_meta.id],
-      deleted_folders: [],
-    });
+    notes_port.delete_folder = vi.fn().mockResolvedValue(undefined);
 
     const service = new FolderService(
       notes_port,
@@ -172,7 +175,8 @@ describe("FolderService", () => {
 
     await service.delete_folder("docs");
 
-    expect(notes_store.recent_notes).toEqual([]);
+    expect(notes_store.recent_notes).toHaveLength(1);
+    expect(notes_store.recent_notes[0]?.path).toBe("note-002.md");
   });
 
   it("uses dedicated folder.delete_stats op key for delete preflight failures", async () => {
@@ -206,7 +210,7 @@ describe("FolderService", () => {
     expect(op_store.get("folder.delete").status).toBe("idle");
   });
 
-  it("rename_folder performs backend IO and index rename without store updates", async () => {
+  it("rename_folder performs backend FS rename without blocking on index", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();
     const editor_store = new EditorStore();
@@ -241,10 +245,64 @@ describe("FolderService", () => {
     expect(notes_port._calls.rename_folder).toEqual([
       { vault_id: vault.id, from_path: "docs", to_path: "archive" },
     ]);
+    expect(index_port._calls.rename_folder_paths).toEqual([]);
+    expect(notes_store.recent_notes[0]?.path).toBe("docs/note-001.md");
+  });
+
+  it("rename_folder_index delegates to index port", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      () => 1,
+    );
+
+    await service.rename_folder_index("docs/", "archive/");
+
     expect(index_port._calls.rename_folder_paths).toEqual([
       { vault_id: vault.id, old_prefix: "docs/", new_prefix: "archive/" },
     ]);
-    expect(notes_store.recent_notes[0]?.path).toBe("docs/note-001.md");
+  });
+
+  it("remove_notes_by_prefix delegates to index port", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      () => 1,
+    );
+
+    await service.remove_notes_by_prefix("docs/");
+
+    expect(index_port._calls.remove_notes_by_prefix).toEqual([
+      { vault_id: vault.id, prefix: "docs/" },
+    ]);
   });
 
   it("apply_folder_rename updates stores with new paths", () => {

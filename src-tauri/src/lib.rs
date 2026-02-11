@@ -43,6 +43,7 @@ pub fn run() {
             index_service::index_upsert_note,
             index_service::index_remove_note,
             index_service::index_remove_notes,
+            index_service::index_remove_notes_by_prefix,
             index_service::index_rename_folder,
             index_service::index_backlinks,
             index_service::index_outlinks,

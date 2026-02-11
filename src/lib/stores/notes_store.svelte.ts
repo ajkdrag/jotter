@@ -76,6 +76,12 @@ export class NotesStore {
     this.recent_notes = this.recent_notes.filter((note) => note.id !== note_id);
   }
 
+  remove_recent_notes_by_prefix(prefix: string) {
+    this.recent_notes = this.recent_notes.filter(
+      (note) => !note.path.startsWith(prefix),
+    );
+  }
+
   rename_recent_note(old_id: NoteId, next_note: NoteMeta) {
     const index = this.recent_notes.findIndex((note) => note.id === old_id);
     if (index < 0) return;

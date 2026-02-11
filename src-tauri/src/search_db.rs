@@ -215,6 +215,37 @@ pub fn remove_notes(conn: &Connection, paths: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+pub fn remove_notes_by_prefix(conn: &Connection, prefix: &str) -> Result<(), String> {
+    let like_pattern = format!("{prefix}%");
+    conn.execute_batch("BEGIN IMMEDIATE")
+        .map_err(|e| e.to_string())?;
+    let result = conn
+        .execute(
+            "DELETE FROM notes_fts WHERE path LIKE ?1",
+            params![like_pattern],
+        )
+        .and_then(|_| {
+            conn.execute(
+                "DELETE FROM outlinks WHERE source_path LIKE ?1",
+                params![like_pattern],
+            )
+        })
+        .and_then(|_| {
+            conn.execute(
+                "DELETE FROM notes WHERE path LIKE ?1",
+                params![like_pattern],
+            )
+        })
+        .map_err(|e| e.to_string());
+    match result {
+        Ok(_) => conn.execute_batch("COMMIT").map_err(|e| e.to_string()),
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e)
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct IndexResult {
     pub total: usize,
@@ -861,5 +892,50 @@ mod tests {
         assert!(plan.modified.is_empty());
         assert!(plan.removed.is_empty());
         assert_eq!(plan.unchanged, 0);
+    }
+
+    #[test]
+    fn remove_notes_by_prefix_deletes_matching_and_keeps_others() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let notes = vec![
+            ("docs/a.md", "A", "a", "body a"),
+            ("docs/sub/b.md", "B", "b", "body b"),
+            ("misc/c.md", "C", "c", "body c"),
+        ];
+        for (path, title, name, body) in &notes {
+            let meta = IndexNoteMeta {
+                id: path.to_string(),
+                path: path.to_string(),
+                title: title.to_string(),
+                name: name.to_string(),
+                mtime_ms: 100,
+                size_bytes: 10,
+            };
+            upsert_note(&conn, &meta, body).unwrap();
+        }
+
+        set_outlinks(&conn, "docs/a.md", &["misc/c.md".to_string()]).unwrap();
+        set_outlinks(&conn, "docs/sub/b.md", &["docs/a.md".to_string()]).unwrap();
+
+        remove_notes_by_prefix(&conn, "docs/").unwrap();
+
+        let manifest = get_manifest(&conn).unwrap();
+        assert_eq!(manifest.len(), 1);
+        assert!(manifest.contains_key("misc/c.md"));
+
+        let results = search(&conn, "body", SearchScope::All, 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].note.path, "misc/c.md");
+
+        let outlinks: Vec<String> = conn
+            .prepare("SELECT source_path FROM outlinks")
+            .unwrap()
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        assert!(outlinks.is_empty());
     }
 }

@@ -225,6 +225,32 @@ export function create_workspace_index_web_adapter(
         await search_db.remove_note(vault_id, note_id);
       }
     },
+    async remove_notes_by_prefix(
+      vault_id: VaultId,
+      prefix: string,
+    ): Promise<void> {
+      const pattern = `${prefix}%`;
+      await search_db.exec(vault_id, "BEGIN IMMEDIATE");
+      try {
+        await search_db.exec(
+          vault_id,
+          "DELETE FROM notes_fts WHERE path LIKE ?1",
+          [pattern],
+        );
+        await search_db.exec(
+          vault_id,
+          "DELETE FROM outlinks WHERE source_path LIKE ?1",
+          [pattern],
+        );
+        await search_db.exec(vault_id, "DELETE FROM notes WHERE path LIKE ?1", [
+          pattern,
+        ]);
+        await search_db.exec(vault_id, "COMMIT");
+      } catch (e) {
+        await search_db.exec(vault_id, "ROLLBACK").catch(() => undefined);
+        throw e;
+      }
+    },
     async rename_folder_paths(
       vault_id: VaultId,
       old_prefix: string,

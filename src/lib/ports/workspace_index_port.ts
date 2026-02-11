@@ -8,6 +8,7 @@ export interface WorkspaceIndexPort {
   upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void>;
+  remove_notes_by_prefix(vault_id: VaultId, prefix: string): Promise<void>;
   rename_folder_paths(
     vault_id: VaultId,
     old_prefix: string,

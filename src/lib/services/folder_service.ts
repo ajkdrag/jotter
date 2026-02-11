@@ -106,16 +106,10 @@ export class FolderService {
         this.editor_store.open_note?.meta.path.startsWith(folder_prefix) ??
         false;
 
-      const result = await this.notes_port.delete_folder(vault_id, folder_path);
-
-      if (result.deleted_notes.length > 0) {
-        await this.index_port.remove_notes(vault_id, result.deleted_notes);
-      }
+      await this.notes_port.delete_folder(vault_id, folder_path);
 
       this.notes_store.remove_folder(folder_path);
-      for (const note_id of result.deleted_notes) {
-        this.notes_store.remove_recent_note(note_id);
-      }
+      this.notes_store.remove_recent_notes_by_prefix(folder_prefix);
 
       const ensured = ensure_open_note({
         vault: this.vault_store.vault,
@@ -156,20 +150,6 @@ export class FolderService {
 
     try {
       await this.notes_port.rename_folder(vault_id, folder_path, new_path);
-
-      const old_prefix = `${folder_path}/`;
-      const has_affected_notes = this.notes_store.notes.some((note) =>
-        note.path.startsWith(old_prefix),
-      );
-
-      if (has_affected_notes) {
-        await this.index_port.rename_folder_paths(
-          vault_id,
-          old_prefix,
-          `${new_path}/`,
-        );
-      }
-
       this.op_store.succeed("folder.rename");
       return { status: "success" };
     } catch (error) {
@@ -300,5 +280,20 @@ export class FolderService {
 
   reset_rename_operation() {
     this.op_store.reset("folder.rename");
+  }
+
+  async remove_notes_by_prefix(folder_prefix: string): Promise<void> {
+    const vault_id = this.vault_store.vault?.id;
+    if (!vault_id) return;
+    await this.index_port.remove_notes_by_prefix(vault_id, folder_prefix);
+  }
+
+  async rename_folder_index(
+    old_prefix: string,
+    new_prefix: string,
+  ): Promise<void> {
+    const vault_id = this.vault_store.vault?.id;
+    if (!vault_id) return;
+    await this.index_port.rename_folder_paths(vault_id, old_prefix, new_prefix);
   }
 }

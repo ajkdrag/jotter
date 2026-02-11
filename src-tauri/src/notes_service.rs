@@ -71,7 +71,12 @@ fn resolve_under_vault_root(vault_root: &Path, rel: &Path) -> Result<PathBuf, St
     let suffix = candidate
         .strip_prefix(nearest_existing)
         .map_err(|_| "note path escapes vault".to_string())?;
-    let resolved = nearest_existing_canon.join(suffix);
+    let resolved = if suffix.as_os_str().is_empty() {
+        nearest_existing_canon
+    } else {
+        nearest_existing_canon.join(suffix)
+    };
+  
     if !resolved.starts_with(&base) {
         return Err("note path escapes vault".to_string());
     }
@@ -739,14 +744,8 @@ pub struct FolderDeleteArgs {
     pub folder_path: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct FolderDeleteResult {
-    pub deleted_notes: Vec<String>,
-    pub deleted_folders: Vec<String>,
-}
-
 #[tauri::command]
-pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<FolderDeleteResult, String> {
+pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<(), String> {
     let root = storage::vault_path(&app, &args.vault_id)?;
     if args.folder_path.is_empty() {
         return Err("cannot delete vault root".to_string());
@@ -756,30 +755,9 @@ pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<FolderDel
         return Err("path is not a directory".to_string());
     }
 
-    let mut deleted_notes = Vec::new();
-    let mut deleted_folders = Vec::new();
-
-    for entry in WalkDir::new(&abs)
-        .follow_links(false)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let p = entry.path();
-        if p == abs {
-            continue;
-        }
-        let rel = p.strip_prefix(&root).map_err(|e| e.to_string())?;
-        let rel_str = storage::normalize_relative_path(rel);
-        if entry.file_type().is_file() && p.extension().and_then(|e| e.to_str()) == Some("md") {
-            deleted_notes.push(rel_str);
-        } else if entry.file_type().is_dir() {
-            deleted_folders.push(rel_str);
-        }
-    }
-
     std::fs::remove_dir_all(&abs).map_err(|e| e.to_string())?;
     invalidate_folder_parent_cache(&args.vault_id, &args.folder_path);
-    Ok(FolderDeleteResult { deleted_notes, deleted_folders })
+    Ok(())
 }
 
 #[tauri::command]
