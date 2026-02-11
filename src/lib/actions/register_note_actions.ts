@@ -72,7 +72,7 @@ function close_image_paste_dialog(input: ActionRegistrationInput) {
 
 function parse_note_open_input(input: unknown): {
   note_path: string;
-  from_search_result: boolean;
+  cleanup_if_missing: boolean;
 } {
   if (
     input &&
@@ -82,14 +82,14 @@ function parse_note_open_input(input: unknown): {
   ) {
     return {
       note_path: (input as { note_path: string }).note_path,
-      from_search_result:
-        (input as { from_search_result?: boolean }).from_search_result === true,
+      cleanup_if_missing:
+        (input as { cleanup_if_missing?: boolean }).cleanup_if_missing === true,
     };
   }
 
   return {
     note_path: String(input),
-    from_search_result: false,
+    cleanup_if_missing: false,
   };
 }
 
@@ -118,7 +118,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
     execute: async (note_input: unknown) => {
       const parsed = parse_note_open_input(note_input);
       const result = await services.note.open_note(parsed.note_path, false, {
-        from_search_result: parsed.from_search_result,
+        cleanup_if_missing: parsed.cleanup_if_missing,
       });
       if (result.status === "opened") {
         stores.ui.set_selected_folder_path(result.selected_folder_path);

@@ -184,7 +184,7 @@ describe("NoteService", () => {
     );
 
     const result = await service.open_note("docs/stale.md", false, {
-      from_search_result: true,
+      cleanup_if_missing: true,
     });
     const vault_id = vault_store.vault?.id;
     if (!vault_id) {

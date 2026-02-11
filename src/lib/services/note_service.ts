@@ -90,7 +90,7 @@ export class NoteService {
   async open_note(
     note_path: string,
     create_if_missing: boolean = false,
-    options?: { from_search_result?: boolean },
+    options?: { cleanup_if_missing?: boolean },
   ): Promise<NoteOpenResult> {
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) {
@@ -149,7 +149,7 @@ export class NoteService {
         return { status: "skipped" };
       }
       if (
-        options?.from_search_result &&
+        options?.cleanup_if_missing &&
         !create_if_missing &&
         resolved_path &&
         this.is_not_found_error(error)
