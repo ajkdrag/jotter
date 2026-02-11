@@ -30,16 +30,27 @@ export type InFileMatch = {
   context: string;
 };
 
+type IndexProgressMeta = {
+  mode?: "smart" | "dumb";
+  run_id?: number;
+  queued_work_items?: number;
+};
+
 export type IndexProgressEvent =
-  | { status: "started"; vault_id: string; total: number }
-  | { status: "progress"; vault_id: string; indexed: number; total: number }
-  | {
+  | ({ status: "started"; vault_id: string; total: number } & IndexProgressMeta)
+  | ({
+      status: "progress";
+      vault_id: string;
+      indexed: number;
+      total: number;
+    } & IndexProgressMeta)
+  | ({
       status: "completed";
       vault_id: string;
       indexed: number;
       elapsed_ms: number;
-    }
-  | { status: "failed"; vault_id: string; error: string };
+    } & IndexProgressMeta)
+  | ({ status: "failed"; vault_id: string; error: string } & IndexProgressMeta);
 
 export type OmnibarItem =
   | {

@@ -214,24 +214,32 @@ pub fn remove_notes(conn: &Connection, paths: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn like_prefix_pattern(prefix: &str) -> String {
+    let escaped = prefix
+        .replace('\\', r"\\")
+        .replace('%', r"\%")
+        .replace('_', r"\_");
+    format!("{escaped}%")
+}
+
 pub fn remove_notes_by_prefix(conn: &Connection, prefix: &str) -> Result<(), String> {
-    let like_pattern = format!("{prefix}%");
+    let like_pattern = like_prefix_pattern(prefix);
     conn.execute_batch("BEGIN IMMEDIATE")
         .map_err(|e| e.to_string())?;
     let result = conn
         .execute(
-            "DELETE FROM notes_fts WHERE path LIKE ?1",
+            "DELETE FROM notes_fts WHERE path LIKE ?1 ESCAPE '\\'",
             params![like_pattern],
         )
         .and_then(|_| {
             conn.execute(
-                "DELETE FROM outlinks WHERE source_path LIKE ?1",
+                "DELETE FROM outlinks WHERE source_path LIKE ?1 ESCAPE '\\' OR target_path LIKE ?1 ESCAPE '\\'",
                 params![like_pattern],
             )
         })
         .and_then(|_| {
             conn.execute(
-                "DELETE FROM notes WHERE path LIKE ?1",
+                "DELETE FROM notes WHERE path LIKE ?1 ESCAPE '\\'",
                 params![like_pattern],
             )
         })
@@ -686,12 +694,12 @@ pub fn rename_folder_paths(
     old_prefix: &str,
     new_prefix: &str,
 ) -> Result<usize, String> {
-    let like_pattern = format!("{old_prefix}%");
+    let like_pattern = like_prefix_pattern(old_prefix);
     let old_len = old_prefix.len() as i64;
 
     let count: usize = conn
         .query_row(
-            "SELECT COUNT(*) FROM notes WHERE path LIKE ?1",
+            "SELECT COUNT(*) FROM notes WHERE path LIKE ?1 ESCAPE '\\'",
             params![like_pattern],
             |row| row.get(0),
         )
@@ -710,11 +718,11 @@ pub fn rename_folder_paths(
     .and_then(|_| conn.execute("DELETE FROM _fts_rename", []))
     .and_then(|_| conn.execute(
         "INSERT INTO _fts_rename SELECT title, name, ?1 || substr(path, ?2 + 1), body
-         FROM notes_fts WHERE path LIKE ?3",
+         FROM notes_fts WHERE path LIKE ?3 ESCAPE '\\'",
         params![new_prefix, old_len, like_pattern],
     ))
     .and_then(|_| conn.execute(
-        "DELETE FROM notes_fts WHERE path LIKE ?1",
+        "DELETE FROM notes_fts WHERE path LIKE ?1 ESCAPE '\\'",
         params![like_pattern],
     ))
     .and_then(|_| conn.execute(
@@ -723,17 +731,17 @@ pub fn rename_folder_paths(
     ))
     .and_then(|_| conn.execute("DROP TABLE IF EXISTS _fts_rename", []))
     .and_then(|_| conn.execute(
-        "UPDATE notes SET path = ?1 || substr(path, ?2 + 1) WHERE path LIKE ?3",
+        "UPDATE notes SET path = ?1 || substr(path, ?2 + 1) WHERE path LIKE ?3 ESCAPE '\\'",
         params![new_prefix, old_len, like_pattern],
     ))
     .and_then(|_| conn.execute(
         "UPDATE outlinks SET source_path = ?1 || substr(source_path, ?2 + 1)
-         WHERE source_path LIKE ?3",
+         WHERE source_path LIKE ?3 ESCAPE '\\'",
         params![new_prefix, old_len, like_pattern],
     ))
     .and_then(|_| conn.execute(
         "UPDATE outlinks SET target_path = ?1 || substr(target_path, ?2 + 1)
-         WHERE target_path LIKE ?3",
+         WHERE target_path LIKE ?3 ESCAPE '\\'",
         params![new_prefix, old_len, like_pattern],
     ))
     .map_err(|e| e.to_string());
@@ -936,6 +944,70 @@ mod tests {
             .map(|r| r.unwrap())
             .collect();
         assert!(outlinks.is_empty());
+    }
+
+    #[test]
+    fn remove_notes_by_prefix_escapes_like_wildcards() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let notes = vec![
+            ("docs_50%/a.md", "A", "a", "body a"),
+            ("docs_500/x.md", "X", "x", "body x"),
+            ("docs_50x/y.md", "Y", "y", "body y"),
+        ];
+        for (path, title, name, body) in &notes {
+            let meta = IndexNoteMeta {
+                id: path.to_string(),
+                path: path.to_string(),
+                title: title.to_string(),
+                name: name.to_string(),
+                mtime_ms: 100,
+                size_bytes: 10,
+            };
+            upsert_note(&conn, &meta, body).unwrap();
+        }
+
+        remove_notes_by_prefix(&conn, "docs_50%/").unwrap();
+
+        let manifest = get_manifest(&conn).unwrap();
+        assert_eq!(manifest.len(), 2);
+        assert!(manifest.contains_key("docs_500/x.md"));
+        assert!(manifest.contains_key("docs_50x/y.md"));
+        assert!(!manifest.contains_key("docs_50%/a.md"));
+    }
+
+    #[test]
+    fn rename_folder_paths_escapes_like_wildcards() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let a = IndexNoteMeta {
+            id: "old_50%/a.md".to_string(),
+            path: "old_50%/a.md".to_string(),
+            title: "A".to_string(),
+            name: "a".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        let b = IndexNoteMeta {
+            id: "old_500/b.md".to_string(),
+            path: "old_500/b.md".to_string(),
+            title: "B".to_string(),
+            name: "b".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        upsert_note(&conn, &a, "body a").unwrap();
+        upsert_note(&conn, &b, "body b").unwrap();
+
+        let renamed = rename_folder_paths(&conn, "old_50%/", "new/").unwrap();
+        assert_eq!(renamed, 1);
+
+        let manifest = get_manifest(&conn).unwrap();
+        assert!(manifest.contains_key("new/a.md"));
+        assert!(manifest.contains_key("old_500/b.md"));
+        assert!(!manifest.contains_key("old_50%/a.md"));
     }
 
     #[test]

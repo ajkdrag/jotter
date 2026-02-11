@@ -81,156 +81,231 @@ function create_search_db(overrides: Partial<SearchDbWeb> = {}): {
     rebuild_begin: ReturnType<typeof vi.fn>;
     rebuild_batch: ReturnType<typeof vi.fn>;
     rebuild_finish: ReturnType<typeof vi.fn>;
-    subscribe_progress: ReturnType<typeof vi.fn>;
     upsert_note: ReturnType<typeof vi.fn>;
     remove_note: ReturnType<typeof vi.fn>;
   };
 } {
-  const mocks = {
+  const defaults = {
     exec: vi.fn().mockResolvedValue([]),
     rebuild_begin: vi.fn().mockResolvedValue(undefined),
     rebuild_batch: vi.fn().mockResolvedValue(undefined),
     rebuild_finish: vi.fn().mockResolvedValue(undefined),
-    subscribe_progress: vi.fn(() => () => undefined),
     upsert_note: vi.fn().mockResolvedValue(undefined),
     remove_note: vi.fn().mockResolvedValue(undefined),
   };
+  const merged = {
+    ...defaults,
+    ...overrides,
+  };
   return {
     search_db: {
-      ...mocks,
-      ...overrides,
+      ...merged,
+      subscribe_progress: vi.fn(() => () => undefined),
     } as unknown as SearchDbWeb,
-    mocks,
+    mocks: merged as {
+      exec: ReturnType<typeof vi.fn>;
+      rebuild_begin: ReturnType<typeof vi.fn>;
+      rebuild_batch: ReturnType<typeof vi.fn>;
+      rebuild_finish: ReturnType<typeof vi.fn>;
+      upsert_note: ReturnType<typeof vi.fn>;
+      remove_note: ReturnType<typeof vi.fn>;
+    },
   };
 }
 
+function create_deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flush_ticks(times = 8): Promise<void> {
+  for (let i = 0; i < times; i += 1) {
+    await Promise.resolve();
+  }
+}
+
 describe("workspace_index_web_adapter", () => {
-  it("falls back to full rebuild when index manifest is empty", async () => {
-    const docs = new Map<string, NoteDoc>();
-    for (let i = 0; i < 250; i += 1) {
-      const idx = String(i);
-      const meta = build_meta(
-        `notes/note-${idx}.md`,
-        `Note ${idx}`,
-        i,
-        100 + i,
-      );
-      docs.set(String(meta.id), build_doc(meta));
-    }
-
-    const { notes } = create_notes_port(docs);
-    const { search_db, mocks } = create_search_db({
-      exec: vi.fn().mockResolvedValue([]),
-    });
-
-    const adapter = create_workspace_index_web_adapter(notes, search_db);
-    const vault_id = as_vault_id("vault-rebuild");
-    const events: Array<{ status: string; total?: number; indexed?: number }> =
-      [];
-    adapter.subscribe_index_progress((event) => {
-      events.push(
-        event as { status: string; total?: number; indexed?: number },
-      );
-    });
-
-    await adapter.sync_index(vault_id);
-
-    expect(mocks.rebuild_begin).toHaveBeenCalledTimes(1);
-    expect(mocks.rebuild_batch).toHaveBeenCalledTimes(3);
-    expect(mocks.rebuild_finish).toHaveBeenCalledTimes(1);
-    expect(events[0]).toMatchObject({ status: "started", total: 250 });
-    expect(events.at(-1)).toMatchObject({ status: "completed", indexed: 250 });
-  });
-
-  it("skips all writes when manifest matches disk state", async () => {
-    const meta_a = build_meta("notes/a.md", "A", 10, 100);
-    const meta_b = build_meta("notes/b.md", "B", 20, 200);
-    const docs = new Map<string, NoteDoc>([
-      [String(meta_a.id), build_doc(meta_a)],
-      [String(meta_b.id), build_doc(meta_b)],
-    ]);
-    const { notes, mocks: note_mocks } = create_notes_port(docs);
-    const { search_db, mocks } = create_search_db({
-      exec: vi.fn().mockResolvedValue([
-        [String(meta_a.path), meta_a.mtime_ms, meta_a.size_bytes],
-        [String(meta_b.path), meta_b.mtime_ms, meta_b.size_bytes],
-      ]),
-    });
-    const adapter = create_workspace_index_web_adapter(notes, search_db);
-
-    const events: Array<{ status: string; total?: number; indexed?: number }> =
-      [];
-    adapter.subscribe_index_progress((event) => {
-      events.push(
-        event as { status: string; total?: number; indexed?: number },
-      );
-    });
-
-    await adapter.sync_index(as_vault_id("vault-noop"));
-
-    expect(mocks.remove_note).not.toHaveBeenCalled();
-    expect(mocks.upsert_note).not.toHaveBeenCalled();
-    expect(note_mocks.read_note).not.toHaveBeenCalled();
-    expect(events[0]).toMatchObject({ status: "started", total: 0 });
-    expect(events.at(-1)).toMatchObject({ status: "completed", indexed: 0 });
-  });
-
-  it("applies remove and upsert for delta changes", async () => {
-    const unchanged = build_meta("notes/unchanged.md", "Unchanged", 10, 100);
-    const modified = build_meta("notes/modified.md", "Modified", 30, 300);
-    const added = build_meta("notes/added.md", "Added", 40, 400);
-    const docs = new Map<string, NoteDoc>([
-      [String(unchanged.id), build_doc(unchanged)],
-      [String(modified.id), build_doc(modified)],
-      [String(added.id), build_doc(added)],
-    ]);
-    const { notes, mocks: note_mocks } = create_notes_port(docs);
-    const { search_db, mocks } = create_search_db({
-      exec: vi.fn().mockResolvedValue([
-        [String(unchanged.path), unchanged.mtime_ms, unchanged.size_bytes],
-        [String(modified.path), 10, 100],
-        ["notes/removed.md", 99, 999],
-      ]),
-    });
-
-    const adapter = create_workspace_index_web_adapter(notes, search_db);
-    await adapter.sync_index(as_vault_id("vault-delta"));
-
-    expect(mocks.remove_note).toHaveBeenCalledWith(
-      as_vault_id("vault-delta"),
-      as_note_path("notes/removed.md"),
-    );
-    expect(mocks.upsert_note).toHaveBeenCalledTimes(2);
-    expect(note_mocks.read_note).toHaveBeenCalledTimes(2);
-  });
-
-  it("falls back to full rebuild when manifest query fails", async () => {
+  it("sync_index triggers force_scan reconciliation", async () => {
     const meta = build_meta("notes/a.md", "A", 1, 100);
     const docs = new Map<string, NoteDoc>([[String(meta.id), build_doc(meta)]]);
     const { notes } = create_notes_port(docs);
     const { search_db, mocks } = create_search_db({
-      exec: vi.fn().mockRejectedValue(new Error("manifest error")),
+      exec: vi.fn().mockResolvedValue([[String(meta.path), 1, 100]]),
     });
 
     const adapter = create_workspace_index_web_adapter(notes, search_db);
-    await adapter.sync_index(as_vault_id("vault-fallback"));
+    const events: string[] = [];
+    adapter.subscribe_index_progress((event) => {
+      events.push(event.status);
+    });
 
-    expect(mocks.rebuild_begin).toHaveBeenCalledTimes(1);
-    expect(mocks.rebuild_batch).toHaveBeenCalledTimes(1);
-    expect(mocks.rebuild_finish).toHaveBeenCalledTimes(1);
+    await adapter.sync_index(as_vault_id("vault-sync"));
+    await flush_ticks();
+
+    expect(mocks.exec).toHaveBeenCalledWith(
+      as_vault_id("vault-sync"),
+      "SELECT path, mtime_ms, size_bytes FROM notes",
+    );
+    expect(events).toEqual(["started", "progress", "completed"]);
   });
 
-  it("rebuild_index always performs full rebuild", async () => {
-    const meta = build_meta("notes/rebuild.md", "Rebuild", 1, 100);
+  it("reduces dirty work so remove_path dominates upsert_path", async () => {
+    const meta = build_meta("notes/a.md", "A", 1, 100);
     const docs = new Map<string, NoteDoc>([[String(meta.id), build_doc(meta)]]);
     const { notes } = create_notes_port(docs);
     const { search_db, mocks } = create_search_db();
 
     const adapter = create_workspace_index_web_adapter(notes, search_db);
-    await adapter.rebuild_index(as_vault_id("vault-rebuild-manual"));
+    const vault_id = as_vault_id("vault-reduce");
 
-    expect(mocks.rebuild_begin).toHaveBeenCalledTimes(1);
-    expect(mocks.rebuild_batch).toHaveBeenCalledTimes(1);
-    expect(mocks.rebuild_finish).toHaveBeenCalledTimes(1);
+    const first = adapter.upsert_note(vault_id, as_note_path("notes/a.md"));
+    const second = adapter.remove_note(vault_id, as_note_path("notes/a.md"));
+    await first;
+    await second;
+    await flush_ticks();
+
+    expect(mocks.upsert_note).not.toHaveBeenCalled();
+    expect(mocks.remove_note).toHaveBeenCalledWith(
+      vault_id,
+      as_note_path("notes/a.md"),
+    );
+  });
+
+  it("handles bulk remove_prefix without per-file reads", async () => {
+    const docs = new Map<string, NoteDoc>();
+    const { notes, mocks: note_mocks } = create_notes_port(docs);
+    const { search_db, mocks } = create_search_db();
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    await adapter.remove_notes_by_prefix(as_vault_id("vault-prefix"), "docs/");
+    await flush_ticks();
+
+    expect(note_mocks.read_note).not.toHaveBeenCalled();
+    expect(mocks.exec).toHaveBeenCalledWith(
+      as_vault_id("vault-prefix"),
+      "BEGIN IMMEDIATE",
+    );
+    expect(mocks.exec).toHaveBeenCalledWith(
+      as_vault_id("vault-prefix"),
+      "DELETE FROM notes WHERE path LIKE ?1 ESCAPE '\\'",
+      ["docs/%"],
+    );
+  });
+
+  it("handles bulk rename_prefix without per-file reads", async () => {
+    const docs = new Map<string, NoteDoc>();
+    const { notes, mocks: note_mocks } = create_notes_port(docs);
+    const { search_db, mocks } = create_search_db();
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    await adapter.rename_folder_paths(
+      as_vault_id("vault-rename"),
+      "old/",
+      "new/",
+    );
+    await flush_ticks();
+
+    expect(note_mocks.read_note).not.toHaveBeenCalled();
+    expect(mocks.exec).toHaveBeenCalledWith(
+      as_vault_id("vault-rename"),
+      "BEGIN IMMEDIATE",
+    );
+    expect(mocks.exec).toHaveBeenCalledWith(
+      as_vault_id("vault-rename"),
+      expect.stringContaining("UPDATE notes SET path"),
+      ["new/", 4, "old/%"],
+    );
+  });
+
+  it("escapes sql like wildcards for prefix operations", async () => {
+    const docs = new Map<string, NoteDoc>();
+    const { notes } = create_notes_port(docs);
+    const { search_db, mocks } = create_search_db();
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    const vault_id = as_vault_id("vault-wildcards");
+
+    await adapter.remove_notes_by_prefix(vault_id, "docs_50%/");
+    await flush_ticks();
+
+    expect(mocks.exec).toHaveBeenCalledWith(
+      vault_id,
+      "DELETE FROM notes WHERE path LIKE ?1 ESCAPE '\\'",
+      ["docs\\_50\\%/%"],
+    );
+
+    await adapter.rename_folder_paths(vault_id, "old_50%/", "new/");
+    await flush_ticks();
+
+    expect(mocks.exec).toHaveBeenCalledWith(
+      vault_id,
+      expect.stringContaining("UPDATE notes SET path"),
+      ["new/", 8, "old\\_50\\%/%"],
+    );
+  });
+
+  it("processes follow-up dirty work without re-running full scan", async () => {
+    const meta = build_meta("notes/a.md", "A", 1, 100);
+    const docs = new Map<string, NoteDoc>([[String(meta.id), build_doc(meta)]]);
+    const { notes, mocks: note_mocks } = create_notes_port(docs);
+    const list_gate = create_deferred<NoteMeta[]>();
+
+    note_mocks.list_notes.mockImplementation(() => list_gate.promise);
+
+    const { search_db, mocks } = create_search_db({
+      exec: vi.fn().mockResolvedValue([[String(meta.path), 1, 100]]),
+    });
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    const vault_id = as_vault_id("vault-follow-up");
+
+    await adapter.sync_index(vault_id);
+    await adapter.upsert_note(vault_id, meta.id);
+
+    list_gate.resolve([meta]);
+    await flush_ticks(16);
+
+    expect(note_mocks.list_notes).toHaveBeenCalledTimes(1);
+    expect(mocks.upsert_note).toHaveBeenCalledWith(vault_id, build_doc(meta));
+  });
+
+  it("runs per-vault actors independently", async () => {
+    const meta_a = build_meta("notes/a.md", "A", 1, 100);
+    const meta_b = build_meta("notes/b.md", "B", 1, 100);
+    const docs = new Map<string, NoteDoc>([
+      [String(meta_a.id), build_doc(meta_a)],
+      [String(meta_b.id), build_doc(meta_b)],
+    ]);
+    const { notes, mocks: note_mocks } = create_notes_port(docs);
+    const vault_a = as_vault_id("vault-a");
+    const vault_b = as_vault_id("vault-b");
+    const list_gate = create_deferred<NoteMeta[]>();
+
+    note_mocks.list_notes.mockImplementation((requested_vault_id: string) => {
+      if (requested_vault_id === vault_a) {
+        return list_gate.promise;
+      }
+      return Promise.resolve([meta_b]);
+    });
+
+    const { search_db } = create_search_db({
+      exec: vi.fn().mockResolvedValue([["notes/b.md", 1, 100]]),
+    });
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+
+    await adapter.sync_index(vault_a);
+    await adapter.upsert_note(vault_b, meta_b.id);
+    await flush_ticks();
+
+    expect(note_mocks.read_note).toHaveBeenCalledWith(vault_b, meta_b.id);
+
+    list_gate.resolve([meta_a]);
+    await flush_ticks(8);
   });
 });

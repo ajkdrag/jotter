@@ -5,7 +5,7 @@ import type { WatcherPort } from "$lib/ports/watcher_port";
 import type { SettingsPort } from "$lib/ports/settings_port";
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { ThemePort } from "$lib/ports/theme_port";
-import type { VaultId, VaultPath } from "$lib/types/ids";
+import { as_note_path, type VaultId, type VaultPath } from "$lib/types/ids";
 import type { Vault } from "$lib/types/vault";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
@@ -29,6 +29,8 @@ import { error_message } from "$lib/utils/error_message";
 import { logger } from "$lib/utils/logger";
 import type { ThemeMode } from "$lib/types/theme";
 import { PAGE_SIZE } from "$lib/constants/pagination";
+import type { IndexChange } from "$lib/ports/workspace_index_port";
+import type { VaultFsEvent } from "$lib/types/watcher";
 
 export type AppMountConfig = {
   reset_app_state: boolean;
@@ -36,8 +38,6 @@ export type AppMountConfig = {
 };
 
 const RECENT_NOTES_KEY = "recent_notes";
-const WATCHER_SYNC_DEBOUNCE_MS = 500;
-
 class StaleVaultOpenError extends Error {
   constructor() {
     super("Stale vault-open request");
@@ -64,8 +64,6 @@ export class VaultService {
 
   private index_progress_unsubscribe: (() => void) | null = null;
   private watcher_event_unsubscribe: (() => void) | null = null;
-  private watcher_sync_timeout: ReturnType<typeof setTimeout> | null = null;
-  private watcher_is_dirty = false;
   private active_open_revision = 0;
 
   async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
@@ -294,11 +292,6 @@ export class VaultService {
     this.index_progress_unsubscribe = null;
     this.watcher_event_unsubscribe?.();
     this.watcher_event_unsubscribe = null;
-    if (this.watcher_sync_timeout) {
-      clearTimeout(this.watcher_sync_timeout);
-      this.watcher_sync_timeout = null;
-    }
-    this.watcher_is_dirty = false;
     this.vault_store.clear();
     this.notes_store.reset();
     this.editor_store.reset();
@@ -344,8 +337,7 @@ export class VaultService {
           if (event.vault_id !== target_vault_id) {
             return;
           }
-          this.watcher_is_dirty = true;
-          this.schedule_watcher_sync(target_vault_id, event_revision);
+          this.handle_watcher_event(target_vault_id, event, event_revision);
         },
       );
     } catch (error) {
@@ -450,11 +442,6 @@ export class VaultService {
     this.index_progress_unsubscribe = null;
     this.watcher_event_unsubscribe?.();
     this.watcher_event_unsubscribe = null;
-    if (this.watcher_sync_timeout) {
-      clearTimeout(this.watcher_sync_timeout);
-      this.watcher_sync_timeout = null;
-    }
-    this.watcher_is_dirty = false;
     try {
       await this.watcher_port.unwatch_vault();
     } catch (error) {
@@ -463,29 +450,39 @@ export class VaultService {
     return revision;
   }
 
-  private schedule_watcher_sync(vault_id: VaultId, revision: number): void {
-    if (this.watcher_sync_timeout) {
-      clearTimeout(this.watcher_sync_timeout);
+  private handle_watcher_event(
+    vault_id: VaultId,
+    event: VaultFsEvent,
+    revision: number,
+  ): void {
+    let change: IndexChange | null = null;
+    if (
+      event.type === "note_changed_externally" ||
+      event.type === "note_added"
+    ) {
+      if (event.note_path) {
+        change = { kind: "upsert_path", path: as_note_path(event.note_path) };
+      }
+    } else if (event.type === "note_removed") {
+      if (event.note_path) {
+        change = { kind: "remove_path", path: as_note_path(event.note_path) };
+      }
+    } else {
+      change = { kind: "force_scan" };
     }
 
-    this.watcher_sync_timeout = setTimeout(() => {
-      this.watcher_sync_timeout = null;
-      if (!this.watcher_is_dirty) {
-        return;
-      }
-      this.watcher_is_dirty = false;
+    if (!change) {
+      return;
+    }
+
+    this.index_port.touch_index(vault_id, change).catch((error: unknown) => {
       if (!this.is_current_open_revision(revision)) {
         return;
       }
-      this.index_port.sync_index(vault_id).catch((error: unknown) => {
-        if (!this.is_current_open_revision(revision)) {
-          return;
-        }
-        logger.error(
-          `Watcher-triggered index sync failed: ${error_message(error)}`,
-        );
-      });
-    }, WATCHER_SYNC_DEBOUNCE_MS);
+      logger.error(
+        `Watcher-triggered index sync failed: ${error_message(error)}`,
+      );
+    });
   }
 
   private is_current_open_revision(revision: number): boolean {

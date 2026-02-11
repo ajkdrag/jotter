@@ -1,58 +1,109 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { create_workspace_index_tauri_adapter } from "$lib/adapters/tauri/workspace_index_tauri_adapter";
-import type { IndexProgressEvent } from "$lib/types/search";
+import { as_note_path, as_vault_id } from "$lib/types/ids";
 
+const { tauri_invoke_mock } = vi.hoisted(() => ({
+  tauri_invoke_mock: vi.fn().mockResolvedValue(undefined),
+}));
 const { listen_mock } = vi.hoisted(() => ({
   listen_mock: vi.fn(),
 }));
 
+vi.mock("$lib/adapters/tauri/tauri_invoke", () => ({
+  tauri_invoke: tauri_invoke_mock,
+}));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: listen_mock,
 }));
 
-function create_deferred<T>() {
-  let resolve: (value: T) => void = () => {};
-  let reject: (error?: unknown) => void = () => {};
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
 describe("workspace_index_tauri_adapter", () => {
-  it("tears down listeners that resolve after early unsubscribe", async () => {
-    let event_handler:
-      | ((event: { payload: IndexProgressEvent }) => void)
-      | undefined;
-    const registration = create_deferred<() => void>();
+  let progress_handler:
+    | ((event: { payload: Record<string, unknown> }) => void)
+    | null = null;
 
+  beforeEach(() => {
+    tauri_invoke_mock.mockClear();
+    tauri_invoke_mock.mockResolvedValue(undefined);
+    progress_handler = null;
+    listen_mock.mockReset();
     listen_mock.mockImplementation(
       (
         _event_name: string,
-        handler: (event: { payload: IndexProgressEvent }) => void,
+        handler: (event: { payload: Record<string, unknown> }) => void,
       ) => {
-        event_handler = handler;
-        return registration.promise;
+        progress_handler = handler;
+        return Promise.resolve(() => undefined);
       },
     );
+  });
 
+  it("sync_index enqueues force_scan and emits lifecycle progress", async () => {
     const adapter = create_workspace_index_tauri_adapter();
-    const callback = vi.fn();
-
-    const unsubscribe = adapter.subscribe_index_progress(callback);
-    unsubscribe();
-
-    const unlisten = vi.fn();
-    registration.resolve(unlisten);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(unlisten).toHaveBeenCalledTimes(1);
-
-    event_handler?.({
-      payload: { status: "started", vault_id: "vault-1", total: 1 },
+    const events: string[] = [];
+    adapter.subscribe_index_progress((event) => {
+      events.push(event.status);
     });
-    expect(callback).not.toHaveBeenCalled();
+
+    await adapter.sync_index(as_vault_id("vault-1"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(progress_handler).not.toBeNull();
+
+    progress_handler?.({
+      payload: { status: "started", vault_id: "vault-1", total: 0 },
+    });
+    progress_handler?.({
+      payload: {
+        status: "completed",
+        vault_id: "vault-1",
+        indexed: 0,
+        elapsed_ms: 1,
+      },
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tauri_invoke_mock).toHaveBeenCalledWith("index_build", {
+      vaultId: "vault-1",
+    });
+    expect(events).toEqual(["started", "progress", "completed"]);
+  });
+
+  it("batches remove_paths through index_remove_notes", async () => {
+    const adapter = create_workspace_index_tauri_adapter();
+
+    await adapter.remove_notes(as_vault_id("vault-batch"), [
+      as_note_path("a.md"),
+      as_note_path("b.md"),
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tauri_invoke_mock).toHaveBeenCalledWith("index_remove_notes", {
+      vaultId: "vault-batch",
+      noteIds: ["a.md", "b.md"],
+    });
+  });
+
+  it("maps folder rename to rename_prefix touch", async () => {
+    const adapter = create_workspace_index_tauri_adapter();
+
+    await adapter.rename_folder_paths(
+      as_vault_id("vault-rename"),
+      "old/",
+      "new/",
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tauri_invoke_mock).toHaveBeenCalledWith("index_rename_folder", {
+      vaultId: "vault-rename",
+      oldPrefix: "old/",
+      newPrefix: "new/",
+    });
   });
 });

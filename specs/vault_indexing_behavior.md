@@ -20,25 +20,22 @@ This document defines the expected runtime behavior for vault indexing in Jotter
 
 ### 3. App-originated mutations
 
-- App write actions immediately update index state:
-- note save/create/rename triggers upsert or remove+upsert.
-- note delete triggers remove.
-- folder delete triggers remove-by-prefix.
-- folder rename triggers path rewrite.
+- App write actions enqueue index changes via a per-vault actor.
+- The actor reduces queued changes into a dirty workset.
+- Workset operations run in the background and converge to on-disk truth.
 
 ### 4. Mutations during sync
 
-- If an index mutation command arrives while sync/rebuild is active:
-- the active run is cancelled at a batch boundary.
-- the mutation command still executes.
-- a follow-up sync is queued automatically.
-- completion is reported as `completed` with partial indexed count, not `failed`.
+- If new index changes arrive while a run is active:
+- the active run completes its current checkpoint.
+- one follow-up run is queued automatically.
+- follow-up work is reduced to dirty paths/prefixes; unchanged files are not reindexed.
 
 ### 5. External filesystem changes
 
 - Watcher events are treated as dirty signals.
-- Any event for the active vault schedules a debounced sync.
-- Multiple events inside the debounce window coalesce into one sync.
+- Note-specific events map to path-level dirty changes.
+- Unknown or broad events map to `force_scan`.
 
 ### 6. Stale search hits
 
