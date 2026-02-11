@@ -39,6 +39,10 @@ const PATH_BATCH_SIZE = 200;
 
 export type { PrefixRename };
 
+function is_force_rebuild_change(change: IndexChange): boolean {
+  return (change as { kind: unknown }).kind === "force_rebuild";
+}
+
 function chunked<T>(items: T[], size: number): T[][] {
   if (items.length === 0) {
     return [];
@@ -149,12 +153,13 @@ export function create_index_actor(executor: IndexActorExecutor): {
     };
 
     if (workset.force_rebuild) {
-      let saw_rebuild_progress = false;
+      const before_rebuild_indexed = indexed;
+      let rebuild_progress_count = 0;
       await executor.rebuild_index(
         vault_id,
         (task_indexed, task_total) => {
           throw_if_aborted(signal);
-          saw_rebuild_progress = true;
+          rebuild_progress_count += 1;
           const safe_total = Math.max(1, task_total);
           total = safe_total;
           const normalized_indexed = Math.min(
@@ -166,8 +171,8 @@ export function create_index_actor(executor: IndexActorExecutor): {
         },
         signal,
       );
-      if (!saw_rebuild_progress) {
-        indexed = 1;
+      if (rebuild_progress_count === 0 && indexed <= before_rebuild_indexed) {
+        indexed = before_rebuild_indexed + 1;
       }
       emit_progress();
       emit({
@@ -219,12 +224,12 @@ export function create_index_actor(executor: IndexActorExecutor): {
 
     if (workset.force_scan) {
       const scan_base_indexed = indexed;
-      let saw_scan_progress = false;
+      let scan_progress_count = 0;
       await executor.sync_index(
         vault_id,
         (task_indexed, task_total) => {
           throw_if_aborted(signal);
-          saw_scan_progress = true;
+          scan_progress_count += 1;
           const safe_total = Math.max(1, task_total);
           total = Math.max(total, scan_base_indexed + safe_total);
           const normalized_scan_indexed = Math.min(
@@ -239,8 +244,8 @@ export function create_index_actor(executor: IndexActorExecutor): {
         },
         signal,
       );
-      if (!saw_scan_progress) {
-        indexed += 1;
+      if (scan_progress_count === 0 && indexed <= scan_base_indexed) {
+        indexed = scan_base_indexed + 1;
         emit_progress();
       }
     }
@@ -304,7 +309,7 @@ export function create_index_actor(executor: IndexActorExecutor): {
     touch_index(vault_id: VaultId, change: IndexChange): Promise<void> {
       const state = get_state(vault_id);
       if (
-        change.kind === "force_rebuild" &&
+        is_force_rebuild_change(change) &&
         (state.running ||
           state.start_scheduled ||
           state.pending_changes.length > 0)
