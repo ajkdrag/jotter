@@ -13,6 +13,7 @@ export type IndexChange =
 
 export interface WorkspaceIndexPort {
   touch_index(vault_id: VaultId, change: IndexChange): Promise<void>;
+  cancel_index(vault_id: VaultId): Promise<void>;
   sync_index(vault_id: VaultId): Promise<void>;
   rebuild_index(vault_id: VaultId): Promise<void>;
   upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void>;

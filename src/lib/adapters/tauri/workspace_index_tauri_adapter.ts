@@ -13,9 +13,18 @@ import { listen } from "@tauri-apps/api/event";
 
 type RunWaiter = {
   started: boolean;
+  on_progress: ((indexed: number, total: number) => void) | null;
+  latest_total: number;
+  latest_indexed: number;
   resolve: () => void;
   reject: (error: Error) => void;
 };
+
+function create_abort_error(): Error {
+  const error = new Error("Index run aborted");
+  error.name = "AbortError";
+  return error;
+}
 
 export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
   const run_waiters_by_vault = new Map<string, RunWaiter[]>();
@@ -58,11 +67,40 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
         if (!waiter.started) {
           if (payload.status === "started") {
             waiter.started = true;
+            waiter.latest_total = payload.total;
+            waiter.latest_indexed = 0;
+            waiter.on_progress?.(0, payload.total);
+            return;
+          }
+          if (payload.status === "failed") {
+            queue.shift();
+            if (queue.length === 0) {
+              run_waiters_by_vault.delete(payload.vault_id);
+            }
+            waiter.reject(new Error(payload.error));
           }
           return;
         }
 
+        if (payload.status === "progress") {
+          waiter.latest_total = payload.total;
+          waiter.latest_indexed = payload.indexed;
+          waiter.on_progress?.(payload.indexed, payload.total);
+          return;
+        }
+
         if (payload.status === "completed") {
+          const final_total = Math.max(waiter.latest_total, payload.indexed);
+          const final_indexed = Math.max(
+            waiter.latest_indexed,
+            payload.indexed,
+          );
+          if (
+            final_indexed !== waiter.latest_indexed ||
+            final_total !== waiter.latest_total
+          ) {
+            waiter.on_progress?.(final_indexed, final_total);
+          }
           queue.shift();
           if (queue.length === 0) {
             run_waiters_by_vault.delete(payload.vault_id);
@@ -86,6 +124,9 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
 
   function enqueue_run_wait(vault_id: VaultId): {
     done: Promise<void>;
+    set_progress: (
+      on_progress?: (indexed: number, total: number) => void,
+    ) => void;
     cancel: (error: Error) => void;
   } {
     let resolve_done: (() => void) | null = null;
@@ -97,6 +138,9 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
 
     const waiter: RunWaiter = {
       started: false,
+      on_progress: null,
+      latest_total: 0,
+      latest_indexed: 0,
       resolve: () => {
         const resolve = resolve_done;
         resolve_done = null;
@@ -118,6 +162,9 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
 
     return {
       done,
+      set_progress: (on_progress) => {
+        waiter.on_progress = on_progress ?? null;
+      },
       cancel: (error: Error) => {
         remove_waiter(key, waiter);
         waiter.reject(error);
@@ -126,27 +173,71 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
   }
 
   const actor = create_index_actor({
-    async sync_index(vault_id: VaultId): Promise<void> {
+    async sync_index(
+      vault_id: VaultId,
+      on_progress?: (indexed: number, total: number) => void,
+      signal?: AbortSignal,
+    ): Promise<void> {
       await ensure_progress_listener();
       const wait = enqueue_run_wait(vault_id);
+      wait.set_progress(on_progress);
+      const abort_error = create_abort_error();
+      const on_abort = () => {
+        void tauri_invoke<undefined>("index_cancel", {
+          vaultId: vault_id,
+        }).catch(() => undefined);
+        wait.cancel(abort_error);
+      };
+      if (signal?.aborted) {
+        on_abort();
+        throw abort_error;
+      }
+      signal?.addEventListener("abort", on_abort, { once: true });
       try {
         await tauri_invoke<undefined>("index_build", { vaultId: vault_id });
+        await wait.done;
       } catch (error) {
         wait.cancel(error instanceof Error ? error : new Error(String(error)));
         throw error;
+      } finally {
+        signal?.removeEventListener("abort", on_abort);
       }
-      await wait.done;
+      if (signal?.aborted) {
+        throw abort_error;
+      }
     },
-    async rebuild_index(vault_id: VaultId): Promise<void> {
+    async rebuild_index(
+      vault_id: VaultId,
+      on_progress?: (indexed: number, total: number) => void,
+      signal?: AbortSignal,
+    ): Promise<void> {
       await ensure_progress_listener();
       const wait = enqueue_run_wait(vault_id);
+      wait.set_progress(on_progress);
+      const abort_error = create_abort_error();
+      const on_abort = () => {
+        void tauri_invoke<undefined>("index_cancel", {
+          vaultId: vault_id,
+        }).catch(() => undefined);
+        wait.cancel(abort_error);
+      };
+      if (signal?.aborted) {
+        on_abort();
+        throw abort_error;
+      }
+      signal?.addEventListener("abort", on_abort, { once: true });
       try {
         await tauri_invoke<undefined>("index_rebuild", { vaultId: vault_id });
+        await wait.done;
       } catch (error) {
         wait.cancel(error instanceof Error ? error : new Error(String(error)));
         throw error;
+      } finally {
+        signal?.removeEventListener("abort", on_abort);
       }
-      await wait.done;
+      if (signal?.aborted) {
+        throw abort_error;
+      }
     },
     async upsert_paths(vault_id: VaultId, paths: string[]): Promise<void> {
       for (const path of paths) {
@@ -199,6 +290,12 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
   return {
     async touch_index(vault_id: VaultId, change: IndexChange): Promise<void> {
       await actor.touch_index(vault_id, change);
+    },
+    async cancel_index(vault_id: VaultId): Promise<void> {
+      await actor.cancel_index(vault_id);
+      await tauri_invoke<undefined>("index_cancel", {
+        vaultId: vault_id,
+      }).catch(() => undefined);
     },
     async sync_index(vault_id: VaultId): Promise<void> {
       await actor.touch_index(vault_id, { kind: "force_scan" });

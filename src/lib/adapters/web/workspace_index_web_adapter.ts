@@ -17,6 +17,19 @@ type IndexedMeta = {
   mtime_ms: number;
   size_bytes: number;
 };
+type ProgressCallback = (indexed: number, total: number) => void;
+
+function create_abort_error(): Error {
+  const error = new Error("Index run aborted");
+  error.name = "AbortError";
+  return error;
+}
+
+function throw_if_aborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw create_abort_error();
+  }
+}
 
 function to_number(value: unknown): number {
   if (typeof value === "number") return value;
@@ -70,11 +83,18 @@ async function run_full_rebuild(
   search_db: SearchDbWeb,
   vault_id: VaultId,
   metas?: NoteMeta[],
+  on_progress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<void> {
+  throw_if_aborted(signal);
   const targets = metas ?? (await notes.list_notes(vault_id));
+  const total = targets.length;
+  let indexed = 0;
+  on_progress?.(0, total);
   await search_db.rebuild_begin(vault_id, targets);
   try {
     for (let offset = 0; offset < targets.length; offset += INDEX_BATCH_SIZE) {
+      throw_if_aborted(signal);
       const batch = targets.slice(offset, offset + INDEX_BATCH_SIZE);
       const settled = await Promise.allSettled(
         batch.map((meta) => notes.read_note(vault_id, meta.id)),
@@ -91,6 +111,8 @@ async function run_full_rebuild(
       if (docs.length > 0) {
         await search_db.rebuild_batch(vault_id, docs);
       }
+      indexed += batch.length;
+      on_progress?.(Math.min(indexed, total), total);
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
   } finally {
@@ -102,18 +124,35 @@ async function run_manifest_sync(
   notes: NotesPort,
   search_db: SearchDbWeb,
   vault_id: VaultId,
+  on_progress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<void> {
+  throw_if_aborted(signal);
   const metas = await notes.list_notes(vault_id);
   let indexed_manifest: Map<string, IndexedMeta>;
   try {
     indexed_manifest = await read_index_manifest(search_db, vault_id);
   } catch {
-    await run_full_rebuild(notes, search_db, vault_id, metas);
+    await run_full_rebuild(
+      notes,
+      search_db,
+      vault_id,
+      metas,
+      on_progress,
+      signal,
+    );
     return;
   }
 
   if (indexed_manifest.size === 0) {
-    await run_full_rebuild(notes, search_db, vault_id, metas);
+    await run_full_rebuild(
+      notes,
+      search_db,
+      vault_id,
+      metas,
+      on_progress,
+      signal,
+    );
     return;
   }
 
@@ -134,21 +173,33 @@ async function run_manifest_sync(
   const removed = [...indexed_manifest.keys()].filter(
     (path) => !disk_manifest.has(path),
   );
+  const total = changed.length + removed.length;
+  let indexed = 0;
+  on_progress?.(0, total);
 
   for (const removed_path of removed) {
+    throw_if_aborted(signal);
     await search_db.remove_note(vault_id, as_note_path(removed_path));
+    indexed += 1;
+    on_progress?.(indexed, total);
   }
 
   for (let offset = 0; offset < changed.length; offset += INDEX_BATCH_SIZE) {
+    throw_if_aborted(signal);
     const batch = changed.slice(offset, offset + INDEX_BATCH_SIZE);
     const settled = await Promise.allSettled(
       batch.map((meta) => notes.read_note(vault_id, meta.id)),
     );
     for (const result of settled) {
+      throw_if_aborted(signal);
       if (result.status !== "fulfilled") {
+        indexed += 1;
+        on_progress?.(indexed, total);
         continue;
       }
       await search_db.upsert_note(vault_id, result.value);
+      indexed += 1;
+      on_progress?.(indexed, total);
     }
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
@@ -243,11 +294,26 @@ export function create_workspace_index_web_adapter(
   search_db: SearchDbWeb,
 ): WorkspaceIndexPort {
   const actor = create_index_actor({
-    async sync_index(vault_id: VaultId): Promise<void> {
-      await run_manifest_sync(notes, search_db, vault_id);
+    async sync_index(
+      vault_id: VaultId,
+      on_progress?: ProgressCallback,
+      signal?: AbortSignal,
+    ): Promise<void> {
+      await run_manifest_sync(notes, search_db, vault_id, on_progress, signal);
     },
-    async rebuild_index(vault_id: VaultId): Promise<void> {
-      await run_full_rebuild(notes, search_db, vault_id);
+    async rebuild_index(
+      vault_id: VaultId,
+      on_progress?: ProgressCallback,
+      signal?: AbortSignal,
+    ): Promise<void> {
+      await run_full_rebuild(
+        notes,
+        search_db,
+        vault_id,
+        undefined,
+        on_progress,
+        signal,
+      );
     },
     async upsert_paths(vault_id: VaultId, paths: string[]): Promise<void> {
       for (const path of paths) {
@@ -285,6 +351,9 @@ export function create_workspace_index_web_adapter(
   return {
     async touch_index(vault_id: VaultId, change: IndexChange): Promise<void> {
       await actor.touch_index(vault_id, change);
+    },
+    async cancel_index(vault_id: VaultId): Promise<void> {
+      await actor.cancel_index(vault_id);
     },
     async sync_index(vault_id: VaultId): Promise<void> {
       await actor.touch_index(vault_id, { kind: "force_scan" });

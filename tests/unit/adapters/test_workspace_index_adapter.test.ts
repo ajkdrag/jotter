@@ -19,6 +19,13 @@ describe("test_workspace_index_adapter", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("cancel_index resolves", async () => {
+    const adapter = create_test_workspace_index_adapter();
+    await expect(
+      adapter.cancel_index(as_vault_id("vault-1")),
+    ).resolves.toBeUndefined();
+  });
+
   it("rebuild_index resolves", async () => {
     const adapter = create_test_workspace_index_adapter();
     await expect(

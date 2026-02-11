@@ -154,6 +154,76 @@ describe("workspace_index_web_adapter", () => {
     expect(events).toEqual(["started", "progress", "completed"]);
   });
 
+  it("reports file-level progress totals during force_scan", async () => {
+    const changed_meta = build_meta("notes/changed.md", "Changed", 2, 200);
+    const same_meta = build_meta("notes/same.md", "Same", 1, 100);
+    const docs = new Map<string, NoteDoc>([
+      [String(changed_meta.id), build_doc(changed_meta)],
+      [String(same_meta.id), build_doc(same_meta)],
+    ]);
+    const { notes } = create_notes_port(docs);
+    const { search_db } = create_search_db({
+      exec: vi.fn().mockResolvedValue([
+        [String(changed_meta.path), 1, 100],
+        ["notes/removed.md", 1, 100],
+        [String(same_meta.path), 1, 100],
+      ]),
+    });
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    const progress_totals: number[] = [];
+    adapter.subscribe_index_progress((event) => {
+      if (event.status === "progress") {
+        progress_totals.push(event.total);
+      }
+    });
+
+    await adapter.sync_index(as_vault_id("vault-file-progress"));
+    await flush_ticks(16);
+
+    expect(progress_totals.some((value) => value >= 2)).toBe(true);
+  });
+
+  it("force_scan progress advances even if some note reads fail", async () => {
+    const meta_a = build_meta("notes/a.md", "A", 2, 200);
+    const meta_b = build_meta("notes/b.md", "B", 2, 200);
+    const docs = new Map<string, NoteDoc>([
+      [String(meta_a.id), build_doc(meta_a)],
+      [String(meta_b.id), build_doc(meta_b)],
+    ]);
+    const { notes, mocks: note_mocks } = create_notes_port(docs);
+    note_mocks.read_note.mockImplementation((_vault_id, note_id) => {
+      if (String(note_id) === String(meta_b.id)) {
+        return Promise.reject(new Error("unreadable"));
+      }
+      const doc = docs.get(String(note_id));
+      if (!doc) {
+        return Promise.reject(new Error("missing note"));
+      }
+      return Promise.resolve(doc);
+    });
+    const { search_db } = create_search_db({
+      exec: vi.fn().mockResolvedValue([
+        [String(meta_a.path), 1, 100],
+        [String(meta_b.path), 1, 100],
+      ]),
+    });
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    const indexed_points: number[] = [];
+    adapter.subscribe_index_progress((event) => {
+      if (event.status === "progress") {
+        indexed_points.push(event.indexed);
+      }
+    });
+
+    await adapter.sync_index(as_vault_id("vault-progress-errors"));
+    await flush_ticks(16);
+
+    expect(indexed_points.some((value) => value > 0)).toBe(true);
+    expect(indexed_points.at(-1)).toBeGreaterThanOrEqual(2);
+  });
+
   it("reduces dirty work so remove_path dominates upsert_path", async () => {
     const meta = build_meta("notes/a.md", "A", 1, 100);
     const docs = new Map<string, NoteDoc>([[String(meta.id), build_doc(meta)]]);

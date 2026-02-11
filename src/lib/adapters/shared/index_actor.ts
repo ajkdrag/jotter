@@ -11,8 +11,16 @@ import type {
 import type { VaultId } from "$lib/types/ids";
 
 type IndexActorExecutor = {
-  sync_index(vault_id: VaultId): Promise<void>;
-  rebuild_index(vault_id: VaultId): Promise<void>;
+  sync_index(
+    vault_id: VaultId,
+    on_progress?: (indexed: number, total: number) => void,
+    signal?: AbortSignal,
+  ): Promise<void>;
+  rebuild_index(
+    vault_id: VaultId,
+    on_progress?: (indexed: number, total: number) => void,
+    signal?: AbortSignal,
+  ): Promise<void>;
   upsert_paths(vault_id: VaultId, paths: string[]): Promise<void>;
   remove_paths(vault_id: VaultId, paths: string[]): Promise<void>;
   remove_prefixes(vault_id: VaultId, prefixes: string[]): Promise<void>;
@@ -24,6 +32,7 @@ type VaultActorState = {
   start_scheduled: boolean;
   run_id: number;
   pending_changes: IndexChange[];
+  run_abort_controller: AbortController | null;
 };
 
 const PATH_BATCH_SIZE = 200;
@@ -43,6 +52,7 @@ function chunked<T>(items: T[], size: number): T[][] {
 
 export function create_index_actor(executor: IndexActorExecutor): {
   touch_index(vault_id: VaultId, change: IndexChange): Promise<void>;
+  cancel_index(vault_id: VaultId): Promise<void>;
   subscribe_index_progress(
     callback: (event: IndexProgressEvent) => void,
   ): () => void;
@@ -67,9 +77,29 @@ export function create_index_actor(executor: IndexActorExecutor): {
       start_scheduled: false,
       run_id: 0,
       pending_changes: [],
+      run_abort_controller: null,
     };
     vault_states.set(key, initial);
     return initial;
+  }
+
+  function create_abort_error(): Error {
+    const error = new Error("Index run aborted");
+    error.name = "AbortError";
+    return error;
+  }
+
+  function throw_if_aborted(signal: AbortSignal | undefined): void {
+    if (signal?.aborted) {
+      throw create_abort_error();
+    }
+  }
+
+  function is_abort_error(error: unknown): boolean {
+    return (
+      error instanceof Error &&
+      (error.name === "AbortError" || error.message === "Index run aborted")
+    );
   }
 
   async function apply_workset(
@@ -77,8 +107,10 @@ export function create_index_actor(executor: IndexActorExecutor): {
     workset: ReducedIndexWorkset,
     run_id: number,
     queued_work_items: number,
+    signal?: AbortSignal,
   ): Promise<void> {
-    const total = count_index_workset_items(workset);
+    throw_if_aborted(signal);
+    let total = count_index_workset_items(workset);
     emit({
       status: "started",
       vault_id: String(vault_id),
@@ -117,8 +149,26 @@ export function create_index_actor(executor: IndexActorExecutor): {
     };
 
     if (workset.force_rebuild) {
-      await executor.rebuild_index(vault_id);
-      indexed = 1;
+      let saw_rebuild_progress = false;
+      await executor.rebuild_index(
+        vault_id,
+        (task_indexed, task_total) => {
+          throw_if_aborted(signal);
+          saw_rebuild_progress = true;
+          const safe_total = Math.max(1, task_total);
+          total = safe_total;
+          const normalized_indexed = Math.min(
+            Math.max(task_indexed, 0),
+            safe_total,
+          );
+          indexed = Math.max(indexed, normalized_indexed);
+          emit_progress();
+        },
+        signal,
+      );
+      if (!saw_rebuild_progress) {
+        indexed = 1;
+      }
       emit_progress();
       emit({
         status: "completed",
@@ -133,12 +183,14 @@ export function create_index_actor(executor: IndexActorExecutor): {
     }
 
     if (workset.rename_prefixes.length > 0) {
+      throw_if_aborted(signal);
       await executor.rename_prefixes(vault_id, workset.rename_prefixes);
       indexed += workset.rename_prefixes.length;
       emit_progress();
     }
 
     if (workset.remove_prefixes.size > 0) {
+      throw_if_aborted(signal);
       const prefixes = [...workset.remove_prefixes.values()];
       await executor.remove_prefixes(vault_id, prefixes);
       indexed += prefixes.length;
@@ -148,6 +200,7 @@ export function create_index_actor(executor: IndexActorExecutor): {
     if (workset.remove_paths.size > 0) {
       const paths = [...workset.remove_paths.values()];
       for (const batch of chunked(paths, PATH_BATCH_SIZE)) {
+        throw_if_aborted(signal);
         await executor.remove_paths(vault_id, batch);
         indexed += batch.length;
         emit_progress();
@@ -157,6 +210,7 @@ export function create_index_actor(executor: IndexActorExecutor): {
     if (workset.upsert_paths.size > 0) {
       const paths = [...workset.upsert_paths.values()];
       for (const batch of chunked(paths, PATH_BATCH_SIZE)) {
+        throw_if_aborted(signal);
         await executor.upsert_paths(vault_id, batch);
         indexed += batch.length;
         emit_progress();
@@ -164,9 +218,31 @@ export function create_index_actor(executor: IndexActorExecutor): {
     }
 
     if (workset.force_scan) {
-      await executor.sync_index(vault_id);
-      indexed += 1;
-      emit_progress();
+      const scan_base_indexed = indexed;
+      let saw_scan_progress = false;
+      await executor.sync_index(
+        vault_id,
+        (task_indexed, task_total) => {
+          throw_if_aborted(signal);
+          saw_scan_progress = true;
+          const safe_total = Math.max(1, task_total);
+          total = Math.max(total, scan_base_indexed + safe_total);
+          const normalized_scan_indexed = Math.min(
+            Math.max(task_indexed, 0),
+            safe_total,
+          );
+          indexed = Math.max(
+            indexed,
+            scan_base_indexed + normalized_scan_indexed,
+          );
+          emit_progress();
+        },
+        signal,
+      );
+      if (!saw_scan_progress) {
+        indexed += 1;
+        emit_progress();
+      }
     }
 
     emit({
@@ -193,9 +269,19 @@ export function create_index_actor(executor: IndexActorExecutor): {
         state.run_id += 1;
         const run_id = state.run_id;
         const queued_work_items = state.pending_changes.length;
+        state.run_abort_controller = new AbortController();
         try {
-          await apply_workset(vault_id, workset, run_id, queued_work_items);
+          await apply_workset(
+            vault_id,
+            workset,
+            run_id,
+            queued_work_items,
+            state.run_abort_controller.signal,
+          );
         } catch (error) {
+          if (is_abort_error(error)) {
+            continue;
+          }
           emit({
             status: "failed",
             vault_id: String(vault_id),
@@ -204,6 +290,8 @@ export function create_index_actor(executor: IndexActorExecutor): {
             run_id,
             queued_work_items,
           });
+        } finally {
+          state.run_abort_controller = null;
         }
       }
     } finally {
@@ -215,6 +303,14 @@ export function create_index_actor(executor: IndexActorExecutor): {
   return {
     touch_index(vault_id: VaultId, change: IndexChange): Promise<void> {
       const state = get_state(vault_id);
+      if (
+        change.kind === "force_rebuild" &&
+        (state.running ||
+          state.start_scheduled ||
+          state.pending_changes.length > 0)
+      ) {
+        return Promise.resolve();
+      }
       state.pending_changes.push(change);
       if (!state.running && !state.start_scheduled) {
         state.start_scheduled = true;
@@ -224,6 +320,12 @@ export function create_index_actor(executor: IndexActorExecutor): {
           void drain(vault_id);
         });
       }
+      return Promise.resolve();
+    },
+    cancel_index(vault_id: VaultId): Promise<void> {
+      const state = get_state(vault_id);
+      state.pending_changes = [];
+      state.run_abort_controller?.abort();
       return Promise.resolve();
     },
     subscribe_index_progress(callback: (event: IndexProgressEvent) => void) {

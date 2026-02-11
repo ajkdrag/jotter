@@ -78,4 +78,27 @@ describe("index_actor", () => {
       "notes/a.md",
     ]);
   });
+
+  it("drops force_rebuild requests while a run is already active", async () => {
+    const rebuild_gate = create_deferred<void>();
+    const executor = {
+      sync_index: vi.fn().mockResolvedValue(undefined),
+      rebuild_index: vi.fn(() => rebuild_gate.promise),
+      upsert_paths: vi.fn().mockResolvedValue(undefined),
+      remove_paths: vi.fn().mockResolvedValue(undefined),
+      remove_prefixes: vi.fn().mockResolvedValue(undefined),
+      rename_prefixes: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actor = create_index_actor(executor);
+    const vault_id = as_vault_id("vault-rebuild-dedupe");
+
+    await actor.touch_index(vault_id, { kind: "force_rebuild" });
+    await actor.touch_index(vault_id, { kind: "force_rebuild" });
+
+    rebuild_gate.resolve();
+    await flush_ticks(16);
+
+    expect(executor.rebuild_index).toHaveBeenCalledTimes(1);
+  });
 });

@@ -37,6 +37,7 @@ pub fn run() {
             watcher_service::watch_vault,
             watcher_service::unwatch_vault,
             index_service::index_build,
+            index_service::index_cancel,
             index_service::index_rebuild,
             index_service::index_search,
             index_service::index_suggest,

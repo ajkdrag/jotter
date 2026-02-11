@@ -38,6 +38,8 @@ export type AppMountConfig = {
 };
 
 const RECENT_NOTES_KEY = "recent_notes";
+const WATCHER_INDEX_FLUSH_DELAY_MS = 120;
+const WATCHER_BULK_FORCE_SCAN_THRESHOLD = 256;
 class StaleVaultOpenError extends Error {
   constructor() {
     super("Stale vault-open request");
@@ -65,6 +67,13 @@ export class VaultService {
   private index_progress_unsubscribe: (() => void) | null = null;
   private watcher_event_unsubscribe: (() => void) | null = null;
   private active_open_revision = 0;
+  private watcher_index_flush_timer: ReturnType<typeof setTimeout> | null =
+    null;
+  private watcher_index_buffer_vault_id: VaultId | null = null;
+  private watcher_index_buffer_revision = 0;
+  private watcher_force_scan_buffered = false;
+  private watcher_upsert_paths_buffer = new Set<string>();
+  private watcher_remove_paths_buffer = new Set<string>();
 
   async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
     const theme = this.get_theme();
@@ -226,6 +235,9 @@ export class VaultService {
   > {
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) {
+      return { status: "skipped" };
+    }
+    if (this.search_store.index_progress.status === "indexing") {
       return { status: "skipped" };
     }
 
@@ -436,12 +448,21 @@ export class VaultService {
   }
 
   private async begin_open_revision(): Promise<number> {
+    const current_vault_id = this.vault_store.vault?.id;
     this.active_open_revision += 1;
     const revision = this.active_open_revision;
     this.index_progress_unsubscribe?.();
     this.index_progress_unsubscribe = null;
     this.watcher_event_unsubscribe?.();
     this.watcher_event_unsubscribe = null;
+    this.reset_watcher_index_buffer();
+    if (current_vault_id) {
+      try {
+        await this.index_port.cancel_index(current_vault_id);
+      } catch (error) {
+        logger.error(`Cancel index failed: ${error_message(error)}`);
+      }
+    }
     try {
       await this.watcher_port.unwatch_vault();
     } catch (error) {
@@ -455,6 +476,10 @@ export class VaultService {
     event: VaultFsEvent,
     revision: number,
   ): void {
+    if (!this.is_current_open_revision(revision)) {
+      return;
+    }
+
     let change: IndexChange | null = null;
     if (
       event.type === "note_changed_externally" ||
@@ -475,14 +500,143 @@ export class VaultService {
       return;
     }
 
-    this.index_port.touch_index(vault_id, change).catch((error: unknown) => {
+    this.buffer_watcher_index_change(vault_id, revision, change);
+  }
+
+  private reset_watcher_index_buffer(): void {
+    if (this.watcher_index_flush_timer) {
+      clearTimeout(this.watcher_index_flush_timer);
+      this.watcher_index_flush_timer = null;
+    }
+    this.watcher_index_buffer_vault_id = null;
+    this.watcher_index_buffer_revision = 0;
+    this.watcher_force_scan_buffered = false;
+    this.watcher_upsert_paths_buffer.clear();
+    this.watcher_remove_paths_buffer.clear();
+  }
+
+  private schedule_watcher_index_flush(
+    vault_id: VaultId,
+    revision: number,
+  ): void {
+    if (this.watcher_index_flush_timer) {
+      return;
+    }
+    this.watcher_index_flush_timer = setTimeout(() => {
+      this.watcher_index_flush_timer = null;
+      void this.flush_watcher_index_buffer(vault_id, revision);
+    }, WATCHER_INDEX_FLUSH_DELAY_MS);
+  }
+
+  private buffer_watcher_index_change(
+    vault_id: VaultId,
+    revision: number,
+    change: IndexChange,
+  ): void {
+    if (
+      this.watcher_index_buffer_vault_id !== null &&
+      (this.watcher_index_buffer_vault_id !== vault_id ||
+        this.watcher_index_buffer_revision !== revision)
+    ) {
+      this.reset_watcher_index_buffer();
+    }
+
+    this.watcher_index_buffer_vault_id = vault_id;
+    this.watcher_index_buffer_revision = revision;
+
+    if (change.kind === "force_scan") {
+      this.watcher_force_scan_buffered = true;
+      this.watcher_upsert_paths_buffer.clear();
+      this.watcher_remove_paths_buffer.clear();
+      this.schedule_watcher_index_flush(vault_id, revision);
+      return;
+    }
+
+    if (this.watcher_force_scan_buffered) {
+      this.schedule_watcher_index_flush(vault_id, revision);
+      return;
+    }
+
+    if (change.kind === "remove_path") {
+      const path = String(change.path);
+      this.watcher_upsert_paths_buffer.delete(path);
+      this.watcher_remove_paths_buffer.add(path);
+    } else if (change.kind === "upsert_path") {
+      const path = String(change.path);
+      this.watcher_remove_paths_buffer.delete(path);
+      this.watcher_upsert_paths_buffer.add(path);
+    }
+
+    if (
+      this.watcher_upsert_paths_buffer.size +
+        this.watcher_remove_paths_buffer.size >=
+      WATCHER_BULK_FORCE_SCAN_THRESHOLD
+    ) {
+      this.watcher_force_scan_buffered = true;
+      this.watcher_upsert_paths_buffer.clear();
+      this.watcher_remove_paths_buffer.clear();
+    }
+
+    this.schedule_watcher_index_flush(vault_id, revision);
+  }
+
+  private async flush_watcher_index_buffer(
+    vault_id: VaultId,
+    revision: number,
+  ): Promise<void> {
+    if (
+      this.watcher_index_buffer_vault_id !== vault_id ||
+      this.watcher_index_buffer_revision !== revision
+    ) {
+      return;
+    }
+
+    const force_scan = this.watcher_force_scan_buffered;
+    const remove_paths = [...this.watcher_remove_paths_buffer];
+    const upsert_paths = [...this.watcher_upsert_paths_buffer];
+
+    this.watcher_force_scan_buffered = false;
+    this.watcher_upsert_paths_buffer.clear();
+    this.watcher_remove_paths_buffer.clear();
+
+    if (!this.is_current_open_revision(revision)) {
+      return;
+    }
+
+    try {
+      if (force_scan) {
+        await this.index_port.touch_index(vault_id, { kind: "force_scan" });
+        return;
+      }
+      if (remove_paths.length === 0 && upsert_paths.length === 0) {
+        return;
+      }
+      const tasks: Promise<void>[] = [];
+      for (const path of remove_paths) {
+        tasks.push(
+          this.index_port.touch_index(vault_id, {
+            kind: "remove_path",
+            path: as_note_path(path),
+          }),
+        );
+      }
+      for (const path of upsert_paths) {
+        tasks.push(
+          this.index_port.touch_index(vault_id, {
+            kind: "upsert_path",
+            path: as_note_path(path),
+          }),
+        );
+      }
+      await Promise.all(tasks);
+    } catch (error) {
       if (!this.is_current_open_revision(revision)) {
         return;
       }
       logger.error(
         `Watcher-triggered index sync failed: ${error_message(error)}`,
       );
-    });
+    }
   }
 
   private is_current_open_revision(revision: number): boolean {

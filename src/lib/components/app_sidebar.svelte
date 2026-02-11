@@ -23,6 +23,8 @@
     RefreshCw,
     FoldVertical,
     Copy,
+    Pencil,
+    Trash2,
   } from "@lucide/svelte";
 
   const { stores, action_registry } = use_app_context();
@@ -44,6 +46,10 @@
   );
   const word_count = $derived(
     stores.editor.open_note ? count_words(stores.editor.open_note.markdown) : 0,
+  );
+  const is_persisted_note = $derived(
+    stores.editor.open_note != null &&
+      stores.editor.open_note.meta.path.endsWith(".md"),
   );
 
   let details_dialog_open = $state(false);
@@ -282,6 +288,30 @@
                         <Copy class="mr-2 h-4 w-4" />
                         <span>Copy Markdown</span>
                       </ContextMenu.Item>
+                      {#if is_persisted_note}
+                        <ContextMenu.Separator />
+                        <ContextMenu.Item
+                          onclick={() =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_request_rename,
+                              stores.editor.open_note?.meta,
+                            )}
+                        >
+                          <Pencil class="mr-2 h-4 w-4" />
+                          <span>Rename</span>
+                        </ContextMenu.Item>
+                        <ContextMenu.Item
+                          class="text-destructive"
+                          onclick={() =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_request_delete,
+                              stores.editor.open_note?.meta,
+                            )}
+                        >
+                          <Trash2 class="mr-2 h-4 w-4" />
+                          <span>Delete</span>
+                        </ContextMenu.Item>
+                      {/if}
                     </ContextMenu.Content>
                   </ContextMenu.Portal>
                 </ContextMenu.Root>

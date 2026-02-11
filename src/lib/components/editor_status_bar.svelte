@@ -22,6 +22,9 @@
   const line = $derived(cursor_info?.line ?? null);
   const column = $derived(cursor_info?.column ?? null);
   const total_lines = $derived(cursor_info?.total_lines ?? null);
+  const show_index_counts = $derived(
+    index_progress.total > 1 || index_progress.indexed > 0,
+  );
 
   let show_completed = $state(false);
   let completed_timer: ReturnType<typeof setTimeout> | null = null;
@@ -59,7 +62,11 @@
     {#if index_progress.status === "indexing"}
       <span class="StatusBar__item StatusBar__item--indexing">
         <RefreshCw class="StatusBar__spinner" />
-        <span>Indexing {index_progress.indexed}/{index_progress.total}</span>
+        {#if show_index_counts}
+          <span>Indexing {index_progress.indexed}/{index_progress.total}</span>
+        {:else}
+          <span>Indexing...</span>
+        {/if}
       </span>
       <span class="StatusBar__separator" aria-hidden="true"></span>
     {:else if index_progress.status === "failed"}

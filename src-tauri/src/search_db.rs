@@ -391,6 +391,7 @@ pub fn rebuild_index(
             .map_err(|e| e.to_string())?;
 
         for abs in batch {
+            indexed += 1;
             let markdown = match std::fs::read_to_string(abs) {
                 Ok(s) => s,
                 Err(e) => {
@@ -410,7 +411,6 @@ pub fn rebuild_index(
             if !targets.is_empty() {
                 pending_links.push((meta.path.clone(), targets));
             }
-            indexed += 1;
         }
 
         conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
@@ -456,13 +456,17 @@ pub fn sync_index(
         plan.unchanged
     );
 
-    let total = plan.added.len() + plan.modified.len();
+    let total = plan.added.len() + plan.modified.len() + plan.removed.len();
     on_progress(0, total);
+    let mut indexed: usize = 0;
 
     if !plan.removed.is_empty() {
         for batch in plan.removed.chunks(BATCH_SIZE) {
             if cancel.load(Ordering::Relaxed) {
-                return Ok(IndexResult { total, indexed: 0 });
+                return Ok(IndexResult {
+                    total: total + plan.unchanged,
+                    indexed,
+                });
             }
             conn.execute_batch("BEGIN IMMEDIATE")
                 .map_err(|e| e.to_string())?;
@@ -470,14 +474,15 @@ pub fn sync_index(
                 remove_note(conn, path)?;
                 conn.execute("DELETE FROM outlinks WHERE source_path = ?1", params![path])
                     .map_err(|e| e.to_string())?;
+                indexed += 1;
             }
             conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+            on_progress(indexed, total);
             yield_fn();
         }
     }
 
     let upsert_files: Vec<&PathBuf> = plan.added.iter().chain(plan.modified.iter()).collect();
-    let mut indexed: usize = 0;
 
     for batch in upsert_files.chunks(BATCH_SIZE) {
         if cancel.load(Ordering::Relaxed) {
@@ -489,6 +494,7 @@ pub fn sync_index(
             .map_err(|e| e.to_string())?;
 
         for abs in batch {
+            indexed += 1;
             let markdown = match std::fs::read_to_string(abs) {
                 Ok(s) => s,
                 Err(e) => {
@@ -508,7 +514,6 @@ pub fn sync_index(
             if !targets.is_empty() {
                 pending_links.push((meta.path.clone(), targets));
             }
-            indexed += 1;
         }
 
         conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
@@ -777,6 +782,7 @@ pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
     use std::fs;
     use std::sync::atomic::AtomicBool;
     use tempfile::TempDir;
@@ -1008,6 +1014,90 @@ mod tests {
         assert!(manifest.contains_key("new/a.md"));
         assert!(manifest.contains_key("old_500/b.md"));
         assert!(!manifest.contains_key("old_50%/a.md"));
+    }
+
+    #[test]
+    fn rename_then_delete_prefix_leaves_no_stale_rows() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let notes = vec![
+            ("old/a.md", "A", "a", "[[keep/c]]"),
+            ("old/sub/b.md", "B", "b", "[[a]]"),
+            ("keep/c.md", "C", "c", "[[old/a]]"),
+        ];
+        for (path, title, name, body) in &notes {
+            let meta = IndexNoteMeta {
+                id: path.to_string(),
+                path: path.to_string(),
+                title: title.to_string(),
+                name: name.to_string(),
+                mtime_ms: 100,
+                size_bytes: 10,
+            };
+            upsert_note(&conn, &meta, body).unwrap();
+        }
+        set_outlinks(&conn, "old/a.md", &["keep/c.md".to_string()]).unwrap();
+        set_outlinks(&conn, "old/sub/b.md", &["old/a.md".to_string()]).unwrap();
+        set_outlinks(&conn, "keep/c.md", &["old/a.md".to_string()]).unwrap();
+
+        let renamed = rename_folder_paths(&conn, "old/", "new/").unwrap();
+        assert_eq!(renamed, 2);
+        remove_notes_by_prefix(&conn, "new/").unwrap();
+
+        let manifest = get_manifest(&conn).unwrap();
+        assert_eq!(manifest.len(), 1);
+        assert!(manifest.contains_key("keep/c.md"));
+
+        let stale_notes_fts: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM notes_fts WHERE path LIKE 'old/%' OR path LIKE 'new/%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(stale_notes_fts, 0);
+
+        let stale_outlinks: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM outlinks WHERE source_path LIKE 'old/%' OR source_path LIKE 'new/%' OR target_path LIKE 'old/%' OR target_path LIKE 'new/%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(stale_outlinks, 0);
+    }
+
+    #[test]
+    fn sync_progress_advances_when_some_files_are_unreadable() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        let conn = open_search_db(root).unwrap();
+
+        write_md(root, "ok.md", "# ok");
+        fs::write(root.join("bad.md"), [0xff, 0xfe, 0xfd]).unwrap();
+
+        let cancel = AtomicBool::new(false);
+        let progress_points: RefCell<Vec<(usize, usize)>> = RefCell::new(Vec::new());
+        let result = sync_index(
+            &conn,
+            root,
+            &cancel,
+            &|indexed, total| progress_points.borrow_mut().push((indexed, total)),
+            &mut || {},
+        )
+        .unwrap();
+
+        assert!(
+            progress_points
+                .borrow()
+                .iter()
+                .any(|(indexed, _)| *indexed > 0)
+        );
+        assert_eq!(result.indexed, 2);
+        assert_eq!(result.total, 2);
+        let manifest = get_manifest(&conn).unwrap();
+        assert!(manifest.contains_key("ok.md"));
     }
 
     #[test]

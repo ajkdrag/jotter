@@ -342,6 +342,7 @@ fn run_index_op(
     let vid = vault_id.to_string();
     let app = app_handle.clone();
     let deferred: RefCell<Vec<DbCommand>> = RefCell::new(Vec::new());
+    let started_emitted: RefCell<bool> = RefCell::new(false);
     let mut queued_sync_from_mutation = false;
 
     let result = {
@@ -393,7 +394,8 @@ fn run_index_op(
             vault_root,
             cancel,
             &|indexed, total| {
-                if indexed == 0 {
+                if !*started_emitted.borrow() {
+                    *started_emitted.borrow_mut() = true;
                     let _ = app.emit(
                         "index_progress",
                         IndexProgressEvent::Started {
@@ -566,6 +568,16 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
         vault_id: vault_id.clone(),
     };
     send_write(&app, &vault_id, cmd)
+}
+
+#[tauri::command]
+pub fn index_cancel(app: AppHandle, vault_id: String) -> Result<(), String> {
+    ensure_worker(&app, &vault_id)?;
+    let state = app.state::<SearchDbState>();
+    let map = state.workers.lock().map_err(|e| e.to_string())?;
+    let worker = map.get(&vault_id).ok_or("vault worker not found")?;
+    worker.cancel.store(true, Ordering::Relaxed);
+    Ok(())
 }
 
 #[tauri::command]
