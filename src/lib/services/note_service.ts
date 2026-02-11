@@ -90,6 +90,7 @@ export class NoteService {
   async open_note(
     note_path: string,
     create_if_missing: boolean = false,
+    options?: { from_search_result?: boolean },
   ): Promise<NoteOpenResult> {
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) {
@@ -102,12 +103,13 @@ export class NoteService {
 
     const op_key = `note.open:${note_path}`;
     this.op_store.start(op_key, this.now_ms());
+    let resolved_path: NotePath | null = null;
 
     try {
       const resolved_existing = create_if_missing
         ? resolve_existing_note_path(this.notes_store.notes, note_path)
         : null;
-      const resolved_path = as_note_path(resolved_existing ?? note_path);
+      resolved_path = as_note_path(resolved_existing ?? note_path);
 
       const current_open_id = this.editor_store.open_note?.meta.id ?? null;
       if (current_open_id && current_open_id === resolved_path) {
@@ -145,6 +147,24 @@ export class NoteService {
     } catch (error) {
       if (controller.signal.aborted) {
         return { status: "skipped" };
+      }
+      if (
+        options?.from_search_result &&
+        !create_if_missing &&
+        resolved_path &&
+        this.is_not_found_error(error)
+      ) {
+        await this.index_port
+          .remove_note(vault_id, resolved_path)
+          .catch((cleanup_error: unknown) => {
+            logger.error(
+              `Stale index cleanup failed (${String(resolved_path)}): ${error_message(cleanup_error)}`,
+            );
+          });
+        this.notes_store.remove_note(resolved_path);
+        this.notes_store.remove_recent_note(resolved_path);
+        this.op_store.succeed(op_key);
+        return { status: "not_found" };
       }
 
       const message = error_message(error);

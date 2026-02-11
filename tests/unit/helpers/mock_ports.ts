@@ -283,7 +283,8 @@ export function create_mock_notes_port(): NotesPort & {
 
 export function create_mock_index_port(): WorkspaceIndexPort & {
   _calls: {
-    build_index: VaultId[];
+    sync_index: VaultId[];
+    rebuild_index: VaultId[];
     upsert_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_notes: { vault_id: VaultId; note_ids: NoteId[] }[];
@@ -297,7 +298,8 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
 } {
   const mock = {
     _calls: {
-      build_index: [] as VaultId[],
+      sync_index: [] as VaultId[],
+      rebuild_index: [] as VaultId[],
       upsert_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_notes: [] as { vault_id: VaultId; note_ids: NoteId[] }[],
@@ -308,8 +310,12 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
         new_prefix: string;
       }[],
     },
-    build_index(vault_id: VaultId) {
-      mock._calls.build_index.push(vault_id);
+    sync_index(vault_id: VaultId) {
+      mock._calls.sync_index.push(vault_id);
+      return Promise.resolve();
+    },
+    rebuild_index(vault_id: VaultId) {
+      mock._calls.rebuild_index.push(vault_id);
       return Promise.resolve();
     },
     upsert_note(vault_id: VaultId, note_id: NoteId) {

@@ -22,4 +22,11 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     keywords: ["settings", "preferences", "config", "options", "configure"],
     icon: "settings",
   },
+  {
+    id: "reindex_vault",
+    label: "Reindex vault",
+    description: "Rebuild search index for the current vault",
+    keywords: ["index", "rebuild", "search", "vault", "reindex", "repair"],
+    icon: "settings",
+  },
 ];

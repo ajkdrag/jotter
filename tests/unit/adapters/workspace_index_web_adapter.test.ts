@@ -133,7 +133,7 @@ describe("workspace_index_web_adapter", () => {
       );
     });
 
-    await adapter.build_index(vault_id);
+    await adapter.sync_index(vault_id);
 
     expect(mocks.rebuild_begin).toHaveBeenCalledTimes(1);
     expect(mocks.rebuild_batch).toHaveBeenCalledTimes(3);
@@ -166,7 +166,7 @@ describe("workspace_index_web_adapter", () => {
       );
     });
 
-    await adapter.build_index(as_vault_id("vault-noop"));
+    await adapter.sync_index(as_vault_id("vault-noop"));
 
     expect(mocks.remove_note).not.toHaveBeenCalled();
     expect(mocks.upsert_note).not.toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe("workspace_index_web_adapter", () => {
     });
 
     const adapter = create_workspace_index_web_adapter(notes, search_db);
-    await adapter.build_index(as_vault_id("vault-delta"));
+    await adapter.sync_index(as_vault_id("vault-delta"));
 
     expect(mocks.remove_note).toHaveBeenCalledWith(
       as_vault_id("vault-delta"),
@@ -213,7 +213,21 @@ describe("workspace_index_web_adapter", () => {
     });
 
     const adapter = create_workspace_index_web_adapter(notes, search_db);
-    await adapter.build_index(as_vault_id("vault-fallback"));
+    await adapter.sync_index(as_vault_id("vault-fallback"));
+
+    expect(mocks.rebuild_begin).toHaveBeenCalledTimes(1);
+    expect(mocks.rebuild_batch).toHaveBeenCalledTimes(1);
+    expect(mocks.rebuild_finish).toHaveBeenCalledTimes(1);
+  });
+
+  it("rebuild_index always performs full rebuild", async () => {
+    const meta = build_meta("notes/rebuild.md", "Rebuild", 1, 100);
+    const docs = new Map<string, NoteDoc>([[String(meta.id), build_doc(meta)]]);
+    const { notes } = create_notes_port(docs);
+    const { search_db, mocks } = create_search_db();
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    await adapter.rebuild_index(as_vault_id("vault-rebuild-manual"));
 
     expect(mocks.rebuild_begin).toHaveBeenCalledTimes(1);
     expect(mocks.rebuild_batch).toHaveBeenCalledTimes(1);

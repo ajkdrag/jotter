@@ -20,9 +20,7 @@ pub fn load_settings(app: &AppHandle) -> Result<SettingsStore, String> {
     let path = settings_path(app)?;
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(SettingsStore::default())
-        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(SettingsStore::default()),
         Err(e) => return Err(e.to_string()),
     };
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())

@@ -9,6 +9,7 @@ import { create_theme_adapter } from "$lib/adapters/theme_adapter";
 import type { Ports } from "$lib/ports/ports";
 import { create_milkdown_editor_port } from "$lib/adapters/editor/milkdown_adapter";
 import { create_test_clipboard_adapter } from "$lib/adapters/test/test_clipboard_adapter";
+import { create_test_watcher_adapter } from "$lib/adapters/test/test_watcher_adapter";
 
 export function create_test_ports(): Ports {
   const assets = create_test_assets_adapter();
@@ -27,5 +28,6 @@ export function create_test_ports(): Ports {
     }),
     theme: create_theme_adapter(),
     clipboard: create_test_clipboard_adapter(),
+    watcher: create_test_watcher_adapter(),
   };
 }

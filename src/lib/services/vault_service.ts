@@ -1,6 +1,7 @@
 import type { VaultPort } from "$lib/ports/vault_port";
 import type { NotesPort } from "$lib/ports/notes_port";
 import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
+import type { WatcherPort } from "$lib/ports/watcher_port";
 import type { SettingsPort } from "$lib/ports/settings_port";
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { ThemePort } from "$lib/ports/theme_port";
@@ -35,6 +36,7 @@ export type AppMountConfig = {
 };
 
 const RECENT_NOTES_KEY = "recent_notes";
+const WATCHER_SYNC_DEBOUNCE_MS = 500;
 
 class StaleVaultOpenError extends Error {
   constructor() {
@@ -48,6 +50,7 @@ export class VaultService {
     private readonly vault_port: VaultPort,
     private readonly notes_port: NotesPort,
     private readonly index_port: WorkspaceIndexPort,
+    private readonly watcher_port: WatcherPort,
     private readonly settings_port: SettingsPort,
     private readonly vault_settings_port: VaultSettingsPort,
     private readonly theme_port: ThemePort,
@@ -60,6 +63,9 @@ export class VaultService {
   ) {}
 
   private index_progress_unsubscribe: (() => void) | null = null;
+  private watcher_event_unsubscribe: (() => void) | null = null;
+  private watcher_sync_timeout: ReturnType<typeof setTimeout> | null = null;
+  private watcher_is_dirty = false;
   private active_open_revision = 0;
 
   async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
@@ -77,7 +83,7 @@ export class VaultService {
       const has_vault = this.vault_store.vault !== null;
 
       if (!has_vault && config.bootstrap_default_vault_path) {
-        const open_revision = this.begin_open_revision();
+        const open_revision = await this.begin_open_revision();
         editor_settings = await this.open_vault_by_path(
           config.bootstrap_default_vault_path,
           open_revision,
@@ -136,7 +142,7 @@ export class VaultService {
   }
 
   async change_vault_by_path(vault_path: VaultPath): Promise<VaultOpenResult> {
-    const open_revision = this.begin_open_revision();
+    const open_revision = await this.begin_open_revision();
     this.op_store.start("vault.change", this.now_ms());
 
     try {
@@ -167,7 +173,7 @@ export class VaultService {
   }
 
   async change_vault_by_id(vault_id: VaultId): Promise<VaultOpenResult> {
-    const open_revision = this.begin_open_revision();
+    const open_revision = await this.begin_open_revision();
     this.op_store.start("vault.change", this.now_ms());
 
     try {
@@ -215,6 +221,33 @@ export class VaultService {
     }
   }
 
+  async rebuild_index(): Promise<
+    | { status: "started" }
+    | { status: "skipped" }
+    | { status: "failed"; error: string }
+  > {
+    const vault_id = this.vault_store.vault?.id;
+    if (!vault_id) {
+      return { status: "skipped" };
+    }
+
+    this.op_store.start("vault.reindex", this.now_ms());
+
+    try {
+      await this.index_port.rebuild_index(vault_id);
+      this.op_store.succeed("vault.reindex");
+      return { status: "started" };
+    } catch (error) {
+      const message = error_message(error);
+      logger.error(`Reindex vault failed: ${message}`);
+      this.op_store.fail("vault.reindex", message);
+      return {
+        status: "failed",
+        error: message,
+      };
+    }
+  }
+
   private async open_vault_by_path(
     vault_path: VaultPath,
     open_revision: number,
@@ -238,6 +271,12 @@ export class VaultService {
     open_revision: number,
   ): Promise<EditorSettings> {
     this.throw_if_stale(open_revision);
+    try {
+      await this.watcher_port.unwatch_vault();
+    } catch (error) {
+      logger.error(`Unwatch vault failed: ${error_message(error)}`);
+    }
+    this.throw_if_stale(open_revision);
     await this.vault_port.remember_last_vault(vault.id);
     this.throw_if_stale(open_revision);
 
@@ -253,6 +292,13 @@ export class VaultService {
 
     this.index_progress_unsubscribe?.();
     this.index_progress_unsubscribe = null;
+    this.watcher_event_unsubscribe?.();
+    this.watcher_event_unsubscribe = null;
+    if (this.watcher_sync_timeout) {
+      clearTimeout(this.watcher_sync_timeout);
+      this.watcher_sync_timeout = null;
+    }
+    this.watcher_is_dirty = false;
     this.vault_store.clear();
     this.notes_store.reset();
     this.editor_store.reset();
@@ -287,11 +333,30 @@ export class VaultService {
       },
     );
 
-    this.index_port.build_index(vault.id).catch((e: unknown) => {
+    try {
+      await this.watcher_port.watch_vault(vault.id);
+      this.throw_if_stale(open_revision);
+      this.watcher_event_unsubscribe = this.watcher_port.subscribe_fs_events(
+        (event) => {
+          if (!this.is_current_open_revision(event_revision)) {
+            return;
+          }
+          if (event.vault_id !== target_vault_id) {
+            return;
+          }
+          this.watcher_is_dirty = true;
+          this.schedule_watcher_sync(target_vault_id, event_revision);
+        },
+      );
+    } catch (error) {
+      logger.error(`Watch vault failed: ${error_message(error)}`);
+    }
+
+    this.index_port.sync_index(vault.id).catch((e: unknown) => {
       if (!this.is_current_open_revision(event_revision)) {
         return;
       }
-      logger.error(`Background index build failed: ${error_message(e)}`);
+      logger.error(`Background index sync failed: ${error_message(e)}`);
     });
 
     return editor_settings;
@@ -378,11 +443,49 @@ export class VaultService {
     this.op_store.reset("vault.change");
   }
 
-  private begin_open_revision(): number {
+  private async begin_open_revision(): Promise<number> {
     this.active_open_revision += 1;
+    const revision = this.active_open_revision;
     this.index_progress_unsubscribe?.();
     this.index_progress_unsubscribe = null;
-    return this.active_open_revision;
+    this.watcher_event_unsubscribe?.();
+    this.watcher_event_unsubscribe = null;
+    if (this.watcher_sync_timeout) {
+      clearTimeout(this.watcher_sync_timeout);
+      this.watcher_sync_timeout = null;
+    }
+    this.watcher_is_dirty = false;
+    try {
+      await this.watcher_port.unwatch_vault();
+    } catch (error) {
+      logger.error(`Unwatch vault failed: ${error_message(error)}`);
+    }
+    return revision;
+  }
+
+  private schedule_watcher_sync(vault_id: VaultId, revision: number): void {
+    if (this.watcher_sync_timeout) {
+      clearTimeout(this.watcher_sync_timeout);
+    }
+
+    this.watcher_sync_timeout = setTimeout(() => {
+      this.watcher_sync_timeout = null;
+      if (!this.watcher_is_dirty) {
+        return;
+      }
+      this.watcher_is_dirty = false;
+      if (!this.is_current_open_revision(revision)) {
+        return;
+      }
+      this.index_port.sync_index(vault_id).catch((error: unknown) => {
+        if (!this.is_current_open_revision(revision)) {
+          return;
+        }
+        logger.error(
+          `Watcher-triggered index sync failed: ${error_message(error)}`,
+        );
+      });
+    }, WATCHER_SYNC_DEBOUNCE_MS);
   }
 
   private is_current_open_revision(revision: number): boolean {

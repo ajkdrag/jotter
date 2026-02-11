@@ -89,6 +89,7 @@ export function create_app_context(input: {
     input.ports.vault,
     input.ports.notes,
     input.ports.index,
+    input.ports.watcher,
     input.ports.settings,
     input.ports.vault_settings,
     input.ports.theme,

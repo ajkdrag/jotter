@@ -3,4 +3,3 @@
 fn main() {
     jotter_lib::run()
 }
-

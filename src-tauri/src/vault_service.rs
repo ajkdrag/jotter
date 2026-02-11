@@ -42,7 +42,11 @@ fn upsert_vault(store: &mut VaultStore, vault: Vault) {
 #[tauri::command]
 pub fn open_vault(app: AppHandle, args: OpenVaultArgs) -> Result<Vault, String> {
     let vault_path = canonicalize_path(&args.vault_path).map_err(|e| {
-        log::error!("Failed to canonicalize vault path {}: {}", args.vault_path, e);
+        log::error!(
+            "Failed to canonicalize vault path {}: {}",
+            args.vault_path,
+            e
+        );
         e
     })?;
     let meta = std::fs::metadata(&vault_path).map_err(|e| {
@@ -116,4 +120,3 @@ pub fn get_last_vault_id(app: AppHandle) -> Result<Option<String>, String> {
     let store = storage::load_store(&app)?;
     Ok(store.last_vault_id)
 }
-

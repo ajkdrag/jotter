@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write as IoWrite};
-use std::path::{Path, PathBuf};
 use std::path::Component;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 use tauri::AppHandle;
@@ -39,10 +39,12 @@ fn parse_safe_relative_path(path: &str) -> Result<PathBuf, String> {
     if rel.is_absolute() {
         return Err("note path must be relative".to_string());
     }
-    if rel
-        .components()
-        .any(|c| matches!(c, Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir))
-    {
+    if rel.components().any(|c| {
+        matches!(
+            c,
+            Component::ParentDir | Component::CurDir | Component::Prefix(_) | Component::RootDir
+        )
+    }) {
         return Err("note path contains invalid segments".to_string());
     }
     Ok(rel)
@@ -76,7 +78,7 @@ fn resolve_under_vault_root(vault_root: &Path, rel: &Path) -> Result<PathBuf, St
     } else {
         nearest_existing_canon.join(suffix)
     };
-  
+
     if !resolved.starts_with(&base) {
         return Err("note path escapes vault".to_string());
     }
@@ -112,7 +114,9 @@ fn safe_vault_abs_for_write(vault_root: &Path, note_rel: &str) -> Result<PathBuf
 
 fn safe_vault_rename_target_abs(vault_root: &Path, target_rel: &str) -> Result<PathBuf, String> {
     let rel = parse_safe_relative_path(target_rel)?;
-    let leaf = rel.file_name().ok_or("note path must include a leaf name")?;
+    let leaf = rel
+        .file_name()
+        .ok_or("note path must include a leaf name")?;
     let parent_rel = rel.parent().unwrap_or_else(|| Path::new(""));
 
     let base = vault_root
@@ -142,7 +146,13 @@ fn name_from_rel_path(rel_path: &str) -> String {
 pub(crate) fn extract_title(path: &Path) -> String {
     let mut file = match File::open(path) {
         Ok(f) => f,
-        Err(_) => return path.file_stem().unwrap_or_default().to_string_lossy().to_string(),
+        Err(_) => {
+            return path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        }
     };
 
     let mut buf = vec![0u8; 8192];
@@ -167,7 +177,10 @@ pub(crate) fn extract_title(path: &Path) -> String {
         break;
     }
 
-    path.file_stem().unwrap_or_default().to_string_lossy().to_string()
+    path.file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string()
 }
 
 pub(crate) fn file_meta(path: &Path) -> Result<(i64, i64), String> {
@@ -264,7 +277,12 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
         e.to_string()
     })?;
     std::fs::rename(&tmp, path).map_err(|e| {
-        log::error!("Failed to rename {} -> {}: {}", tmp.display(), path.display(), e);
+        log::error!(
+            "Failed to rename {} -> {}: {}",
+            tmp.display(),
+            path.display(),
+            e
+        );
         e.to_string()
     })?;
     Ok(())
@@ -387,14 +405,15 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         .unwrap_or("image");
 
     let attachment_folder = args.attachment_folder.as_deref().unwrap_or(".assets");
-    if attachment_folder.contains('/') || attachment_folder.contains('\\') || attachment_folder.starts_with("..") {
+    if attachment_folder.contains('/')
+        || attachment_folder.contains('\\')
+        || attachment_folder.starts_with("..")
+    {
         return Err("invalid attachment folder name".to_string());
     }
 
     let filename = if let Some(custom_filename) = args.custom_filename {
-        let sanitized = custom_filename
-            .replace('/', "")
-            .replace('\\', "");
+        let sanitized = custom_filename.replace('/', "").replace('\\', "");
         let sanitized = sanitized.trim_start_matches('.');
         if sanitized.is_empty() {
             return Err("invalid custom filename".to_string());
@@ -408,7 +427,12 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
             .and_then(|stem| stem.to_str())
             .unwrap_or(note_stem);
         let ext = image_extension(&args.mime_type, args.file_name.as_deref());
-        format!("{}-{}.{}", sanitize_stem(source_stem), storage::now_ms(), ext)
+        format!(
+            "{}-{}.{}",
+            sanitize_stem(source_stem),
+            storage::now_ms(),
+            ext
+        )
     };
 
     let rel_path = if note_parent.as_os_str().is_empty() {
@@ -603,7 +627,10 @@ fn scan_folder_entries(target: &Path) -> Result<Vec<FolderEntry>, String> {
     Ok(items)
 }
 
-fn get_or_scan_folder_entries(cache_key: &str, target: &Path) -> Result<Arc<[FolderEntry]>, String> {
+fn get_or_scan_folder_entries(
+    cache_key: &str,
+    target: &Path,
+) -> Result<Arc<[FolderEntry]>, String> {
     {
         let mut cache = folder_cache().lock().map_err(|e| e.to_string())?;
         purge_expired_folder_cache(&mut cache);
@@ -672,7 +699,10 @@ pub fn list_folders(app: AppHandle, vault_id: String) -> Result<Vec<String>, Str
         if !entry.file_type().is_dir() || entry.path() == root.as_path() {
             continue;
         }
-        let rel = entry.path().strip_prefix(&root).map_err(|e| e.to_string())?;
+        let rel = entry
+            .path()
+            .strip_prefix(&root)
+            .map_err(|e| e.to_string())?;
         out.push(storage::normalize_relative_path(rel));
     }
 
@@ -698,7 +728,10 @@ pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), Strin
     if !parent.is_dir() {
         return Err("parent path is not a directory".to_string());
     }
-    if args.folder_name.contains('/') || args.folder_name.contains('\\') || args.folder_name.starts_with('.') {
+    if args.folder_name.contains('/')
+        || args.folder_name.contains('\\')
+        || args.folder_name.starts_with('.')
+    {
         return Err("invalid folder name".to_string());
     }
     let target = parent.join(&args.folder_name);
@@ -854,7 +887,9 @@ pub fn get_folder_stats(
             continue;
         }
 
-        if entry.file_type().is_file() && entry.path().extension().and_then(|e| e.to_str()) == Some("md") {
+        if entry.file_type().is_file()
+            && entry.path().extension().and_then(|e| e.to_str()) == Some("md")
+        {
             note_count += 1;
             continue;
         }
@@ -873,15 +908,16 @@ pub fn get_folder_stats(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU64, Ordering};
     #[cfg(unix)]
     use std::os::unix::fs as unix_fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn mk_temp_dir() -> PathBuf {
         let counter = TEST_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("jotter-test-{}-{}", storage::now_ms(), counter));
+        let dir =
+            std::env::temp_dir().join(format!("jotter-test-{}-{}", storage::now_ms(), counter));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }

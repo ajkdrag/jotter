@@ -20,22 +20,34 @@ struct WatcherRuntime {
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum VaultFsEvent {
-    NoteChangedExternally { vault_id: String, note_path: String },
-    NoteAdded { vault_id: String, note_path: String },
-    NoteRemoved { vault_id: String, note_path: String },
-    AssetChanged { vault_id: String, asset_path: String },
+    NoteChangedExternally {
+        vault_id: String,
+        note_path: String,
+    },
+    NoteAdded {
+        vault_id: String,
+        note_path: String,
+    },
+    NoteRemoved {
+        vault_id: String,
+        note_path: String,
+    },
+    AssetChanged {
+        vault_id: String,
+        asset_path: String,
+    },
 }
 
 fn rel_path(root: &Path, abs: &Path) -> Option<String> {
     let rel = abs.strip_prefix(root).ok()?;
     let rel = storage::normalize_relative_path(rel);
-    
+
     for excluded in constants::EXCLUDED_FOLDERS {
         if rel == *excluded || rel.starts_with(&format!("{}/", excluded)) {
             return None;
         }
     }
-    
+
     Some(rel)
 }
 
@@ -44,7 +56,11 @@ fn emit(app: &AppHandle, event: VaultFsEvent) {
 }
 
 #[tauri::command]
-pub fn watch_vault(app: AppHandle, state: State<WatcherState>, vault_id: String) -> Result<(), String> {
+pub fn watch_vault(
+    app: AppHandle,
+    state: State<WatcherState>,
+    vault_id: String,
+) -> Result<(), String> {
     {
         let mut guard = state.inner.lock().map_err(|_| "watcher lock poisoned")?;
         if let Some(rt) = guard.take() {

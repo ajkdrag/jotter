@@ -8,8 +8,11 @@ import { listen } from "@tauri-apps/api/event";
 
 export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
   return {
-    async build_index(vault_id: VaultId) {
+    async sync_index(vault_id: VaultId) {
       await tauri_invoke<undefined>("index_build", { vaultId: vault_id });
+    },
+    async rebuild_index(vault_id: VaultId) {
+      await tauri_invoke<undefined>("index_rebuild", { vaultId: vault_id });
     },
     async upsert_note(vault_id: VaultId, note_id: NoteId) {
       await tauri_invoke<undefined>("index_upsert_note", {

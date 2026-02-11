@@ -79,7 +79,7 @@ pub(crate) fn build_key_map(notes: &BTreeMap<String, IndexNoteMeta>) -> BTreeMap
 }
 
 pub(crate) fn list_markdown_files(root: &Path) -> Vec<PathBuf> {
-    WalkDir::new(root)
+    let mut files: Vec<PathBuf> = WalkDir::new(root)
         .follow_links(false)
         .into_iter()
         .filter_entry(|e| {
@@ -90,7 +90,9 @@ pub(crate) fn list_markdown_files(root: &Path) -> Vec<PathBuf> {
         .filter(|e| e.file_type().is_file())
         .filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("md"))
         .map(|e| e.path().to_path_buf())
-        .collect()
+        .collect();
+    files.sort();
+    files
 }
 
 fn file_stem_string(abs: &Path) -> String {
@@ -185,11 +187,8 @@ pub fn upsert_note(conn: &Connection, meta: &IndexNoteMeta, body: &str) -> Resul
     )
     .map_err(|e| e.to_string())?;
 
-    conn.execute(
-        "DELETE FROM notes_fts WHERE path = ?1",
-        params![meta.path],
-    )
-    .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM notes_fts WHERE path = ?1", params![meta.path])
+        .map_err(|e| e.to_string())?;
 
     conn.execute(
         "INSERT INTO notes_fts (title, name, path, body) VALUES (?1, ?2, ?3, ?4)",
@@ -265,7 +264,11 @@ pub fn get_manifest(conn: &Connection) -> Result<BTreeMap<String, (i64, i64)>, S
         .map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?, row.get::<_, i64>(2)?))
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
         })
         .map_err(|e| e.to_string())?;
     let mut map = BTreeMap::new();
@@ -297,18 +300,16 @@ pub fn compute_sync_plan(
 
         match manifest.get(&rel) {
             None => added.push(abs.clone()),
-            Some(&(db_mtime, db_size)) => {
-                match notes_service::file_meta(abs) {
-                    Ok((disk_mtime, disk_size)) => {
-                        if disk_mtime != db_mtime || disk_size != db_size {
-                            modified.push(abs.clone());
-                        } else {
-                            unchanged += 1;
-                        }
+            Some(&(db_mtime, db_size)) => match notes_service::file_meta(abs) {
+                Ok((disk_mtime, disk_size)) => {
+                    if disk_mtime != db_mtime || disk_size != db_size {
+                        modified.push(abs.clone());
+                    } else {
+                        unchanged += 1;
                     }
-                    Err(_) => modified.push(abs.clone()),
                 }
-            }
+                Err(_) => modified.push(abs.clone()),
+            },
         }
     }
 
@@ -318,10 +319,40 @@ pub fn compute_sync_plan(
         .cloned()
         .collect();
 
-    SyncPlan { added, modified, removed, unchanged }
+    SyncPlan {
+        added,
+        modified,
+        removed,
+        unchanged,
+    }
 }
 
 const BATCH_SIZE: usize = 100;
+
+fn resolve_batch_outlinks(
+    conn: &Connection,
+    pending_links: &[(String, Vec<String>)],
+    notes_cache: &BTreeMap<String, IndexNoteMeta>,
+) -> Result<(), String> {
+    if pending_links.is_empty() {
+        return Ok(());
+    }
+
+    let key_map = build_key_map(notes_cache);
+    for (source, targets) in pending_links {
+        let mut resolved: BTreeSet<String> = BTreeSet::new();
+        for token in targets {
+            if let Some(target) = resolve_wiki_target(token, &key_map) {
+                if target != *source {
+                    resolved.insert(target);
+                }
+            }
+        }
+        set_outlinks(conn, source, &resolved.into_iter().collect::<Vec<_>>())?;
+    }
+
+    Ok(())
+}
 
 pub fn rebuild_index(
     conn: &Connection,
@@ -342,12 +373,11 @@ pub fn rebuild_index(
     on_progress(0, total);
 
     let mut indexed: usize = 0;
-    let mut pending_links: Vec<(String, Vec<String>)> = Vec::new();
-
     for batch in paths.chunks(BATCH_SIZE) {
         if cancel.load(Ordering::Relaxed) {
             break;
         }
+        let mut pending_links: Vec<(String, Vec<String>)> = Vec::new();
 
         conn.execute_batch("BEGIN IMMEDIATE")
             .map_err(|e| e.to_string())?;
@@ -375,24 +405,11 @@ pub fn rebuild_index(
             indexed += 1;
         }
 
-        conn.execute_batch("COMMIT")
-            .map_err(|e| e.to_string())?;
+        conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+        let notes_cache = get_all_notes_from_db(conn)?;
+        resolve_batch_outlinks(conn, &pending_links, &notes_cache)?;
         on_progress(indexed, total);
         yield_fn();
-    }
-
-    let all_notes = get_all_notes_from_db(conn)?;
-    let key_map = build_key_map(&all_notes);
-    for (source, targets) in &pending_links {
-        let mut resolved: BTreeSet<String> = BTreeSet::new();
-        for token in targets {
-            if let Some(target) = resolve_wiki_target(token, &key_map) {
-                if target != *source {
-                    resolved.insert(target);
-                }
-            }
-        }
-        set_outlinks(conn, source, &resolved.into_iter().collect::<Vec<_>>())?;
     }
 
     Ok(IndexResult { total, indexed })
@@ -417,7 +434,10 @@ pub fn sync_index(
             plan.unchanged
         );
         on_progress(0, 0);
-        return Ok(IndexResult { total: plan.unchanged, indexed: 0 });
+        return Ok(IndexResult {
+            total: plan.unchanged,
+            indexed: 0,
+        });
     }
 
     log::info!(
@@ -440,26 +460,22 @@ pub fn sync_index(
                 .map_err(|e| e.to_string())?;
             for path in batch {
                 remove_note(conn, path)?;
-                conn.execute(
-                    "DELETE FROM outlinks WHERE source_path = ?1",
-                    params![path],
-                )
-                .map_err(|e| e.to_string())?;
+                conn.execute("DELETE FROM outlinks WHERE source_path = ?1", params![path])
+                    .map_err(|e| e.to_string())?;
             }
-            conn.execute_batch("COMMIT")
-                .map_err(|e| e.to_string())?;
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
             yield_fn();
         }
     }
 
     let upsert_files: Vec<&PathBuf> = plan.added.iter().chain(plan.modified.iter()).collect();
     let mut indexed: usize = 0;
-    let mut pending_links: Vec<(String, Vec<String>)> = Vec::new();
 
     for batch in upsert_files.chunks(BATCH_SIZE) {
         if cancel.load(Ordering::Relaxed) {
             break;
         }
+        let mut pending_links: Vec<(String, Vec<String>)> = Vec::new();
 
         conn.execute_batch("BEGIN IMMEDIATE")
             .map_err(|e| e.to_string())?;
@@ -487,27 +503,17 @@ pub fn sync_index(
             indexed += 1;
         }
 
-        conn.execute_batch("COMMIT")
-            .map_err(|e| e.to_string())?;
+        conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+        let notes_cache = get_all_notes_from_db(conn)?;
+        resolve_batch_outlinks(conn, &pending_links, &notes_cache)?;
         on_progress(indexed, total);
         yield_fn();
     }
 
-    let all_notes = get_all_notes_from_db(conn)?;
-    let key_map = build_key_map(&all_notes);
-    for (source, targets) in &pending_links {
-        let mut resolved: BTreeSet<String> = BTreeSet::new();
-        for token in targets {
-            if let Some(target) = resolve_wiki_target(token, &key_map) {
-                if target != *source {
-                    resolved.insert(target);
-                }
-            }
-        }
-        set_outlinks(conn, source, &resolved.into_iter().collect::<Vec<_>>())?;
-    }
-
-    Ok(IndexResult { total: total + plan.unchanged, indexed })
+    Ok(IndexResult {
+        total: total + plan.unchanged,
+        indexed,
+    })
 }
 
 pub fn get_all_notes_from_db(conn: &Connection) -> Result<BTreeMap<String, IndexNoteMeta>, String> {
@@ -607,11 +613,7 @@ pub fn search(
         .map_err(|e| e.to_string())
 }
 
-pub fn suggest(
-    conn: &Connection,
-    query: &str,
-    limit: usize,
-) -> Result<Vec<SuggestionHit>, String> {
+pub fn suggest(conn: &Connection, query: &str, limit: usize) -> Result<Vec<SuggestionHit>, String> {
     let trimmed = query.trim();
     if trimmed.is_empty() {
         return Ok(Vec::new());
@@ -738,8 +740,7 @@ pub fn rename_folder_paths(
 
     match result {
         Ok(_) => {
-            conn.execute_batch("COMMIT")
-                .map_err(|e| e.to_string())?;
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
             Ok(count)
         }
         Err(e) => {
@@ -769,6 +770,7 @@ pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::atomic::AtomicBool;
     use tempfile::TempDir;
 
     fn write_md(dir: &Path, rel: &str, content: &str) -> PathBuf {
@@ -781,10 +783,7 @@ mod tests {
     }
 
     fn set_mtime(path: &Path, secs_offset: i64) {
-        let t = filetime::FileTime::from_unix_time(
-            1_700_000_000 + secs_offset,
-            0,
-        );
+        let t = filetime::FileTime::from_unix_time(1_700_000_000 + secs_offset, 0);
         filetime::set_file_mtime(path, t).unwrap();
     }
 
@@ -937,5 +936,62 @@ mod tests {
             .map(|r| r.unwrap())
             .collect();
         assert!(outlinks.is_empty());
+    }
+
+    #[test]
+    fn rebuild_resolves_batch_outlinks_before_yield() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        let conn = open_search_db(root).unwrap();
+
+        write_md(root, "notes/000-target.md", "# target");
+        write_md(root, "notes/001-source.md", "[[target]]");
+        for i in 0..100 {
+            write_md(root, &format!("notes/{:03}-filler.md", i + 2), "# filler");
+        }
+
+        let cancel = AtomicBool::new(false);
+        let mut first_yield_checked = false;
+        rebuild_index(&conn, root, &cancel, &|_, _| {}, &mut || {
+            if first_yield_checked {
+                return;
+            }
+            let outlinks = get_outlinks(&conn, "notes/001-source.md").unwrap();
+            assert_eq!(outlinks.len(), 1);
+            assert_eq!(outlinks[0].path, "notes/000-target.md");
+            first_yield_checked = true;
+        })
+        .unwrap();
+
+        assert!(first_yield_checked);
+    }
+
+    #[test]
+    fn sync_resolves_batch_outlinks_before_yield() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+        let conn = open_search_db(root).unwrap();
+
+        write_md(root, "notes/target.md", "# target");
+        write_md(root, "notes/source.md", "# source");
+
+        let cancel = AtomicBool::new(false);
+        rebuild_index(&conn, root, &cancel, &|_, _| {}, &mut || {}).unwrap();
+
+        write_md(root, "notes/source.md", "# source\n[[target]]");
+
+        let mut checked = false;
+        sync_index(&conn, root, &cancel, &|_, _| {}, &mut || {
+            if checked {
+                return;
+            }
+            let outlinks = get_outlinks(&conn, "notes/source.md").unwrap();
+            assert_eq!(outlinks.len(), 1);
+            assert_eq!(outlinks[0].path, "notes/target.md");
+            checked = true;
+        })
+        .unwrap();
+
+        assert!(checked);
     }
 }

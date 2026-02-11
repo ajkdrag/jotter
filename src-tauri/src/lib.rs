@@ -1,12 +1,12 @@
 mod constants;
-mod notes_service;
 mod index_service;
+mod notes_service;
 mod search_db;
-mod watcher_service;
+mod settings_service;
 mod storage;
 mod vault_service;
-mod settings_service;
 mod vault_settings_service;
+mod watcher_service;
 
 include!(concat!(env!("OUT_DIR"), "/icon_stamp.rs"));
 

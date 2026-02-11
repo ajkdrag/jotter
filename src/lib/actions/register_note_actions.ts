@@ -70,6 +70,29 @@ function close_image_paste_dialog(input: ActionRegistrationInput) {
   };
 }
 
+function parse_note_open_input(input: unknown): {
+  note_path: string;
+  from_search_result: boolean;
+} {
+  if (
+    input &&
+    typeof input === "object" &&
+    "note_path" in input &&
+    typeof (input as Record<string, unknown>).note_path === "string"
+  ) {
+    return {
+      note_path: (input as { note_path: string }).note_path,
+      from_search_result:
+        (input as { from_search_result?: boolean }).from_search_result === true,
+    };
+  }
+
+  return {
+    note_path: String(input),
+    from_search_result: false,
+  };
+}
+
 export function register_note_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
 
@@ -92,10 +115,16 @@ export function register_note_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.note_open,
     label: "Open Note",
     when: () => stores.vault.vault !== null,
-    execute: async (note_path: unknown) => {
-      const result = await services.note.open_note(String(note_path), false);
+    execute: async (note_input: unknown) => {
+      const parsed = parse_note_open_input(note_input);
+      const result = await services.note.open_note(parsed.note_path, false, {
+        from_search_result: parsed.from_search_result,
+      });
       if (result.status === "opened") {
         stores.ui.set_selected_folder_path(result.selected_folder_path);
+      }
+      if (result.status === "not_found") {
+        toast.error("Note no longer exists");
       }
     },
   });

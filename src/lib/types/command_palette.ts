@@ -1,4 +1,8 @@
-export type CommandId = "create_new_note" | "change_vault" | "open_settings";
+export type CommandId =
+  | "create_new_note"
+  | "change_vault"
+  | "open_settings"
+  | "reindex_vault";
 
 export type CommandIcon = "file-plus" | "folder-open" | "settings";
 

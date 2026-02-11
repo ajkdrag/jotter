@@ -67,7 +67,12 @@ pub fn save_store(app: &AppHandle, store: &VaultStore) -> Result<(), String> {
         e.to_string()
     })?;
     std::fs::rename(&tmp, &path).map_err(|e| {
-        log::error!("Failed to rename vault store {} -> {}: {}", tmp.display(), path.display(), e);
+        log::error!(
+            "Failed to rename vault store {} -> {}: {}",
+            tmp.display(),
+            path.display(),
+            e
+        );
         e.to_string()
     })?;
     Ok(())

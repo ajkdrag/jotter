@@ -1,6 +1,7 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
 import type { EditorSettings } from "$lib/types/editor_settings";
+import { toast } from "svelte-sonner";
 
 async function apply_opened_vault(
   input: ActionRegistrationInput,
@@ -135,6 +136,18 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         is_loading: false,
         error: result.error,
       };
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.vault_reindex,
+    label: "Reindex Vault",
+    when: () => stores.vault.vault !== null,
+    execute: async () => {
+      const result = await services.vault.rebuild_index();
+      if (result.status === "failed") {
+        toast.error(result.error);
+      }
     },
   });
 }

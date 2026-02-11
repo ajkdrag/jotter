@@ -42,6 +42,9 @@ async function execute_command(
     case "open_settings":
       await registry.execute(ACTION_IDS.settings_open);
       break;
+    case "reindex_vault":
+      await registry.execute(ACTION_IDS.vault_reindex);
+      break;
   }
 }
 
@@ -50,6 +53,12 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
 
   switch (item.kind) {
     case "note":
+      close_omnibar(input);
+      await registry.execute(ACTION_IDS.note_open, {
+        note_path: item.note.id,
+        from_search_result: true,
+      });
+      break;
     case "recent_note":
       close_omnibar(input);
       await registry.execute(ACTION_IDS.note_open, item.note.id);

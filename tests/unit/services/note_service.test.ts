@@ -137,6 +137,72 @@ describe("NoteService", () => {
     expect(notes_store.recent_notes).toEqual([note_meta]);
   });
 
+  it("self-heals stale search hits when note is missing", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const stale_meta = {
+      id: as_note_path("docs/stale.md"),
+      path: as_note_path("docs/stale.md"),
+      name: "stale",
+      title: "stale",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    notes_store.set_notes([stale_meta]);
+    notes_store.add_recent_note(stale_meta);
+
+    const notes_port = create_mock_notes_port();
+    notes_port.read_note = vi
+      .fn()
+      .mockRejectedValue(new Error("No such file or directory"));
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.open_note("docs/stale.md", false, {
+      from_search_result: true,
+    });
+    const vault_id = vault_store.vault?.id;
+    if (!vault_id) {
+      throw new Error("vault id missing in test setup");
+    }
+
+    expect(result).toEqual({ status: "not_found" });
+    expect(index_port._calls.remove_note).toEqual([
+      {
+        vault_id: vault_id,
+        note_id: as_note_path("docs/stale.md"),
+      },
+    ]);
+    expect(notes_store.notes).toEqual([]);
+    expect(notes_store.recent_notes).toEqual([]);
+    expect(op_store.get("note.open:docs/stale.md").status).toBe("success");
+  });
+
   it("bumps recent note when reopening the active note", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();

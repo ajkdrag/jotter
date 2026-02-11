@@ -3,10 +3,10 @@ use crate::search_db;
 use crate::storage;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::cell::RefCell;
 use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -49,10 +49,24 @@ pub struct SearchQueryInput {
 #[derive(Clone, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum IndexProgressEvent {
-    Started { vault_id: String, total: usize },
-    Progress { vault_id: String, indexed: usize, total: usize },
-    Completed { vault_id: String, indexed: usize, elapsed_ms: u64 },
-    Failed { vault_id: String, error: String },
+    Started {
+        vault_id: String,
+        total: usize,
+    },
+    Progress {
+        vault_id: String,
+        indexed: usize,
+        total: usize,
+    },
+    Completed {
+        vault_id: String,
+        indexed: usize,
+        elapsed_ms: u64,
+    },
+    Failed {
+        vault_id: String,
+        error: String,
+    },
 }
 
 #[allow(dead_code)]
@@ -139,13 +153,14 @@ fn writer_thread_loop(rx: Receiver<DbCommand>, vault_root: &Path) {
         }
     };
 
-    let mut notes_cache: BTreeMap<String, IndexNoteMeta> = match search_db::get_all_notes_from_db(&conn) {
-        Ok(map) => map,
-        Err(e) => {
-            log::warn!("writer thread: failed to load notes cache: {e}");
-            BTreeMap::new()
-        }
-    };
+    let mut notes_cache: BTreeMap<String, IndexNoteMeta> =
+        match search_db::get_all_notes_from_db(&conn) {
+            Ok(map) => map,
+            Err(e) => {
+                log::warn!("writer thread: failed to load notes cache: {e}");
+                BTreeMap::new()
+            }
+        };
 
     for cmd in &rx {
         match dispatch_command(&conn, cmd, &mut notes_cache, &rx) {
@@ -167,7 +182,11 @@ fn dispatch_command(
     rx: &Receiver<DbCommand>,
 ) -> LoopAction {
     match cmd {
-        DbCommand::UpsertNote { vault_root, note_id, reply } => {
+        DbCommand::UpsertNote {
+            vault_root,
+            note_id,
+            reply,
+        } => {
             let result = handle_upsert(conn, &vault_root, &note_id, notes_cache);
             if let Err(ref e) = result {
                 log::warn!("writer: upsert failed for {note_id}: {e}");
@@ -210,7 +229,11 @@ fn dispatch_command(
             }
             let _ = reply.send(result);
         }
-        DbCommand::RenamePaths { old_prefix, new_prefix, reply } => {
+        DbCommand::RenamePaths {
+            old_prefix,
+            new_prefix,
+            reply,
+        } => {
             let result = search_db::rename_folder_paths(conn, &old_prefix, &new_prefix);
             if let Ok(count) = &result {
                 if *count > 0 {
@@ -221,7 +244,8 @@ fn dispatch_command(
                         .collect();
                     for old_key in old_keys {
                         if let Some(mut meta) = notes_cache.remove(&old_key) {
-                            let new_path = format!("{}{}", new_prefix, &old_key[old_prefix.len()..]);
+                            let new_path =
+                                format!("{}{}", new_prefix, &old_key[old_prefix.len()..]);
                             meta.id = new_path.clone();
                             meta.path = new_path;
                             notes_cache.insert(meta.id.clone(), meta);
@@ -231,11 +255,37 @@ fn dispatch_command(
             }
             let _ = reply.send(result);
         }
-        DbCommand::Rebuild { vault_root, cancel, app_handle, vault_id } => {
-            handle_rebuild(conn, &vault_root, &cancel, &app_handle, &vault_id, rx, notes_cache);
+        DbCommand::Rebuild {
+            vault_root,
+            cancel,
+            app_handle,
+            vault_id,
+        } => {
+            handle_rebuild(
+                conn,
+                &vault_root,
+                &cancel,
+                &app_handle,
+                &vault_id,
+                rx,
+                notes_cache,
+            );
         }
-        DbCommand::Sync { vault_root, cancel, app_handle, vault_id } => {
-            handle_sync(conn, &vault_root, &cancel, &app_handle, &vault_id, rx, notes_cache);
+        DbCommand::Sync {
+            vault_root,
+            cancel,
+            app_handle,
+            vault_id,
+        } => {
+            handle_sync(
+                conn,
+                &vault_root,
+                &cancel,
+                &app_handle,
+                &vault_id,
+                rx,
+                notes_cache,
+            );
         }
         DbCommand::Shutdown => {
             return LoopAction::Break;
@@ -291,21 +341,48 @@ fn run_index_op(
     let start = Instant::now();
     let vid = vault_id.to_string();
     let app = app_handle.clone();
-    let deferred: RefCell<Option<DbCommand>> = RefCell::new(None);
+    let deferred: RefCell<Vec<DbCommand>> = RefCell::new(Vec::new());
+    let mut queued_sync_from_mutation = false;
 
     let result = {
         let mut drain_pending = || {
             while let Ok(cmd) = rx.try_recv() {
                 match cmd {
                     DbCommand::Rebuild { .. } | DbCommand::Sync { .. } => {
-                        *deferred.borrow_mut() = Some(cmd);
+                        deferred.borrow_mut().push(cmd);
                     }
                     DbCommand::Shutdown => {
                         log::warn!("writer: deferring shutdown during {label}");
-                        *deferred.borrow_mut() = Some(cmd);
+                        deferred.borrow_mut().push(cmd);
                     }
-                    other => {
-                        dispatch_command(conn, other, notes_cache, rx);
+                    DbCommand::UpsertNote { .. }
+                    | DbCommand::RemoveNote { .. }
+                    | DbCommand::RemoveNotes { .. }
+                    | DbCommand::RemoveNotesByPrefix { .. }
+                    | DbCommand::RenamePaths { .. } => {
+                        cancel.store(true, Ordering::Relaxed);
+                        dispatch_command(conn, cmd, notes_cache, rx);
+
+                        if queued_sync_from_mutation {
+                            continue;
+                        }
+
+                        match create_next_sync_cancel_token(app_handle, vault_id) {
+                            Ok(next_cancel) => {
+                                deferred.borrow_mut().push(DbCommand::Sync {
+                                    vault_root: vault_root.to_path_buf(),
+                                    cancel: next_cancel,
+                                    app_handle: app_handle.clone(),
+                                    vault_id: vault_id.to_string(),
+                                });
+                                queued_sync_from_mutation = true;
+                            }
+                            Err(error) => {
+                                log::warn!(
+                                    "writer: failed to queue deferred sync after mutation: {error}"
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -319,12 +396,19 @@ fn run_index_op(
                 if indexed == 0 {
                     let _ = app.emit(
                         "index_progress",
-                        IndexProgressEvent::Started { vault_id: vid.clone(), total },
+                        IndexProgressEvent::Started {
+                            vault_id: vid.clone(),
+                            total,
+                        },
                     );
                 } else {
                     let _ = app.emit(
                         "index_progress",
-                        IndexProgressEvent::Progress { vault_id: vid.clone(), indexed, total },
+                        IndexProgressEvent::Progress {
+                            vault_id: vid.clone(),
+                            indexed,
+                            total,
+                        },
                     );
                 }
             },
@@ -348,7 +432,10 @@ fn run_index_op(
             log::error!("{label} failed: {e}");
             let _ = app_handle.emit(
                 "index_progress",
-                IndexProgressEvent::Failed { vault_id: vid.clone(), error: e },
+                IndexProgressEvent::Failed {
+                    vault_id: vid.clone(),
+                    error: e,
+                },
             );
         }
     }
@@ -358,9 +445,28 @@ fn run_index_op(
         Err(e) => log::warn!("writer: failed to reload notes cache after {label}: {e}"),
     }
 
-    if let Some(cmd) = deferred.into_inner() {
-        dispatch_command(conn, cmd, notes_cache, rx);
+    for cmd in deferred.into_inner() {
+        if matches!(
+            dispatch_command(conn, cmd, notes_cache, rx),
+            LoopAction::Break
+        ) {
+            break;
+        }
     }
+}
+
+fn create_next_sync_cancel_token(
+    app_handle: &AppHandle,
+    vault_id: &str,
+) -> Result<Arc<AtomicBool>, String> {
+    let next_cancel = Arc::new(AtomicBool::new(false));
+    let state = app_handle.state::<SearchDbState>();
+    let mut map = state.workers.lock().map_err(|e| e.to_string())?;
+    let Some(worker) = map.get_mut(vault_id) else {
+        return Err(format!("vault worker not found: {vault_id}"));
+    };
+    worker.cancel = Arc::clone(&next_cancel);
+    Ok(next_cancel)
 }
 
 fn handle_rebuild(
@@ -372,7 +478,17 @@ fn handle_rebuild(
     rx: &Receiver<DbCommand>,
     notes_cache: &mut BTreeMap<String, IndexNoteMeta>,
 ) {
-    run_index_op(conn, vault_root, cancel, app_handle, vault_id, rx, notes_cache, "rebuild", search_db::rebuild_index);
+    run_index_op(
+        conn,
+        vault_root,
+        cancel,
+        app_handle,
+        vault_id,
+        rx,
+        notes_cache,
+        "rebuild",
+        search_db::rebuild_index,
+    );
 }
 
 fn handle_sync(
@@ -384,7 +500,17 @@ fn handle_sync(
     rx: &Receiver<DbCommand>,
     notes_cache: &mut BTreeMap<String, IndexNoteMeta>,
 ) {
-    run_index_op(conn, vault_root, cancel, app_handle, vault_id, rx, notes_cache, "sync", search_db::sync_index);
+    run_index_op(
+        conn,
+        vault_root,
+        cancel,
+        app_handle,
+        vault_id,
+        rx,
+        notes_cache,
+        "sync",
+        search_db::sync_index,
+    );
 }
 
 fn with_read_conn<F, T>(app: &AppHandle, vault_id: &str, f: F) -> Result<T, String>
@@ -407,7 +533,11 @@ fn send_write(app: &AppHandle, vault_id: &str, cmd: DbCommand) -> Result<(), Str
     worker.write_tx.send(cmd).map_err(|e| e.to_string())
 }
 
-fn send_write_blocking(app: &AppHandle, vault_id: &str, make_cmd: impl FnOnce(SyncSender<Result<(), String>>) -> DbCommand) -> Result<(), String> {
+fn send_write_blocking(
+    app: &AppHandle,
+    vault_id: &str,
+    make_cmd: impl FnOnce(SyncSender<Result<(), String>>) -> DbCommand,
+) -> Result<(), String> {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
     let cmd = make_cmd(reply_tx);
     send_write(app, vault_id, cmd)?;
@@ -496,11 +626,7 @@ pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> R
 }
 
 #[tauri::command]
-pub fn index_remove_note(
-    app: AppHandle,
-    vault_id: String,
-    note_id: String,
-) -> Result<(), String> {
+pub fn index_remove_note(app: AppHandle, vault_id: String, note_id: String) -> Result<(), String> {
     send_write_blocking(&app, &vault_id, |reply| DbCommand::RemoveNote {
         note_id,
         reply,
@@ -550,11 +676,15 @@ pub fn index_rename_folder(
     new_prefix: String,
 ) -> Result<usize, String> {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
-    send_write(&app, &vault_id, DbCommand::RenamePaths {
-        old_prefix,
-        new_prefix,
-        reply: reply_tx,
-    })?;
+    send_write(
+        &app,
+        &vault_id,
+        DbCommand::RenamePaths {
+            old_prefix,
+            new_prefix,
+            reply: reply_tx,
+        },
+    )?;
     reply_rx.recv().map_err(|e| e.to_string())?
 }
 

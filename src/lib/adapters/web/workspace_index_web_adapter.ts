@@ -123,7 +123,7 @@ export function create_workspace_index_web_adapter(
   }
 
   return {
-    async build_index(vault_id: VaultId): Promise<void> {
+    async sync_index(vault_id: VaultId): Promise<void> {
       ensure_worker_progress_subscription();
       const metas = await notes.list_notes(vault_id);
       const started_at = Date.now();
@@ -212,6 +212,11 @@ export function create_workspace_index_web_adapter(
         });
         throw error;
       }
+    },
+    async rebuild_index(vault_id: VaultId): Promise<void> {
+      ensure_worker_progress_subscription();
+      const metas = await notes.list_notes(vault_id);
+      await full_rebuild(vault_id, metas, Date.now());
     },
     async upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void> {
       const doc = await notes.read_note(vault_id, note_id);

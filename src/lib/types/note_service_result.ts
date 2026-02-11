@@ -9,6 +9,9 @@ export type NoteOpenResult =
       status: "skipped";
     }
   | {
+      status: "not_found";
+    }
+  | {
       status: "failed";
       error: string;
     };

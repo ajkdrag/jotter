@@ -569,19 +569,43 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     },
   });
 
-  async function execute_rename_folder() {
+  function execute_rename_folder() {
     const folder_path = stores.ui.rename_folder_dialog.folder_path;
     const new_name = stores.ui.rename_folder_dialog.new_name.trim();
     if (!folder_path || !is_valid_folder_name(new_name)) return;
+    if (stores.op.is_pending("folder.rename")) return;
 
     const parent = parent_folder_path(folder_path);
     const new_path = build_folder_path_from_name(parent, new_name);
 
-    const result = await services.folder.rename_folder(folder_path, new_path);
-    if (result.status === "success") {
-      close_rename_dialog(input);
+    close_rename_dialog(input);
+
+    void handle_folder_rename_async(folder_path, new_name, new_path, parent);
+  }
+
+  async function handle_folder_rename_async(
+    folder_path: string,
+    new_name: string,
+    new_path: string,
+    parent: string,
+  ) {
+    try {
+      const result = await services.folder.rename_folder(folder_path, new_path);
+      if (result.status !== "success") {
+        stores.ui.rename_folder_dialog = {
+          open: true,
+          folder_path,
+          new_name,
+        };
+        return;
+      }
+
+      stores.vault.bump_generation();
       services.folder.apply_folder_rename(folder_path, new_path);
       remap_expanded_paths(input, folder_path, new_path);
+
+      clear_folder_filetree_state(input, folder_path);
+      clear_folder_filetree_state(input, new_path);
       clear_folder_filetree_state(input, parent);
       const new_parent = parent_folder_path(new_path);
       if (new_parent !== parent) {
@@ -597,6 +621,10 @@ export function register_folder_actions(input: ActionRegistrationInput) {
             `Background index rename failed for ${folder_path}: ${error_message(err)}`,
           );
         });
+    } catch (err) {
+      logger.error(
+        `Unexpected rename flow failure for ${folder_path}: ${error_message(err)}`,
+      );
     }
   }
 
