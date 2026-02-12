@@ -278,19 +278,47 @@ export function create_wiki_link_converter_prose_plugin(input: {
   });
 }
 
-export function create_wiki_link_click_prose_plugin(input: {
-  link_type: MarkType;
-  base_note_path: string;
-  on_wiki_link_click: (note_path: string) => void;
-}) {
-  function should_handle_event(event: MouseEvent): boolean {
-    if (event.button !== 0) return false;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
-      return false;
-    return true;
+function is_external_url(href: string): boolean {
+  try {
+    const url = new URL(href);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
   }
+}
 
-  function href_from_dom_event_target(event: MouseEvent): string | null {
+function parse_internal_href(href: string): string | null {
+  if (href.trim() === "" || is_external_url(href)) return null;
+
+  let path = href;
+  const hash = path.indexOf("#");
+  if (hash >= 0) path = path.slice(0, hash);
+  const query = path.indexOf("?");
+  if (query >= 0) path = path.slice(0, query);
+
+  try {
+    path = decodeURIComponent(path.trim());
+  } catch {
+    path = path.trim();
+  }
+  if (path === "") return null;
+
+  const slash = path.lastIndexOf("/");
+  const leaf = slash >= 0 ? path.slice(slash + 1) : path;
+  if (leaf === "") return null;
+
+  const has_dot = leaf.includes(".");
+  if (has_dot && !leaf.toLowerCase().endsWith(".md")) return null;
+
+  return path;
+}
+
+export function create_wiki_link_click_prose_plugin(input: {
+  base_note_path: string;
+  on_internal_link_click: (note_path: string) => void;
+  on_external_link_click: (url: string) => void;
+}) {
+  function anchor_href_from_event(event: MouseEvent): string | null {
     const target = event.target;
     if (!(target instanceof Element)) return null;
     const anchor = target.closest("a[href]");
@@ -298,101 +326,46 @@ export function create_wiki_link_click_prose_plugin(input: {
     return anchor.getAttribute("href");
   }
 
-  function is_external_href(href: string): boolean {
-    try {
-      new URL(href);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  function resolve_href(href: string): string | null {
+    const wiki_path = try_decode_wiki_link_href(href);
+    if (wiki_path) return wiki_path;
 
-  function strip_hash_and_query(value: string): string {
-    let end = value.length;
-    const hash_index = value.indexOf("#");
-    if (hash_index >= 0 && hash_index < end) end = hash_index;
-    const query_index = value.indexOf("?");
-    if (query_index >= 0 && query_index < end) end = query_index;
-    return value.slice(0, end);
-  }
+    const raw_path = parse_internal_href(href);
+    if (!raw_path) return null;
 
-  function safe_decode_uri_component(value: string): string {
-    try {
-      return decodeURIComponent(value);
-    } catch {
-      return value;
-    }
-  }
-
-  function try_resolve_markdown_href(
-    base_note_path: string,
-    href: string,
-  ): string | null {
-    if (href.trim() === "") return null;
-    if (is_external_href(href)) return null;
-
-    const raw_path = strip_hash_and_query(href).trim();
-    if (raw_path === "") return null;
-
-    const decoded_path = safe_decode_uri_component(raw_path);
-    const trimmed = decoded_path.trim();
-    if (trimmed === "") return null;
-
-    const last_slash_index = trimmed.lastIndexOf("/");
-    const leaf =
-      last_slash_index >= 0 ? trimmed.slice(last_slash_index + 1) : trimmed;
-    if (leaf === "") return null;
-
-    const has_dot = leaf.includes(".");
-    const is_md = leaf.toLowerCase().endsWith(".md");
-    if (has_dot && !is_md) return null;
-
-    return resolve_wiki_target_to_note_path({
-      base_note_path,
-      raw_target: trimmed,
-    });
-  }
-
-  function resolve_internal_href(href: string): string | null {
-    const decoded = try_decode_wiki_link_href(href);
-    if (decoded) return decoded;
-
-    return try_resolve_markdown_href(input.base_note_path, href);
-  }
-
-  function handle_internal_link_click(args: {
-    href: string;
-    event: MouseEvent;
-    stop_propagation: boolean;
-  }): boolean {
-    const resolved = resolve_internal_href(args.href);
-    if (!resolved) return false;
-
-    args.event.preventDefault();
-    if (args.stop_propagation) args.event.stopPropagation();
-    input.on_wiki_link_click(resolved);
-    return true;
+    return (
+      resolve_wiki_target_to_note_path({
+        base_note_path: input.base_note_path,
+        raw_target: raw_path,
+      }) ?? raw_path
+    );
   }
 
   return new Plugin({
     key: new PluginKey("wiki-link-click"),
     props: {
-      handleClick: (view, pos, event) => {
-        if (!should_handle_event(event)) return false;
+      handleDOMEvents: {
+        click: (_view, event) => {
+          if (event.button !== 0) return false;
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+            return false;
 
-        const $pos = view.state.doc.resolve(pos);
-        const marks = $pos.marks();
-        const link_mark = marks.find((m) => m.type === input.link_type);
-        const raw_href =
-          href_from_dom_event_target(event) ??
-          (link_mark?.attrs.href as unknown);
-        if (typeof raw_href !== "string") return false;
+          const href = anchor_href_from_event(event);
+          if (typeof href !== "string") return false;
 
-        return handle_internal_link_click({
-          href: raw_href,
-          event,
-          stop_propagation: false,
-        });
+          event.preventDefault();
+
+          if (is_external_url(href)) {
+            input.on_external_link_click(href);
+          } else {
+            const note_path = resolve_href(href);
+            if (note_path) {
+              input.on_internal_link_click(note_path);
+            }
+          }
+
+          return true;
+        },
       },
     },
   });
@@ -407,15 +380,8 @@ export const create_wiki_link_converter_plugin = (base_note_path: string) =>
     });
   });
 
-export const create_wiki_link_click_plugin = (
-  base_note_path: string,
-  on_wiki_link_click: (note_path: string) => void,
-) =>
-  $prose((ctx) => {
-    const link_type = linkSchema.type(ctx);
-    return create_wiki_link_click_prose_plugin({
-      link_type,
-      base_note_path,
-      on_wiki_link_click,
-    });
-  });
+export const create_wiki_link_click_plugin = (input: {
+  base_note_path: string;
+  on_internal_link_click: (note_path: string) => void;
+  on_external_link_click: (url: string) => void;
+}) => $prose(() => create_wiki_link_click_prose_plugin(input));

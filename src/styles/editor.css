@@ -947,11 +947,8 @@
   white-space: nowrap;
   font-size: var(--text-sm);
   color: var(--editor-link);
-  cursor: pointer;
-}
-
-.milkdown-link-preview > .link-preview > .link-display:hover {
-  text-decoration: underline;
+  pointer-events: none;
+  cursor: default;
 }
 
 .milkdown-link-preview > .link-preview > .button {

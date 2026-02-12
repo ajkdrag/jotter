@@ -184,6 +184,7 @@ export function create_milkdown_editor_port(args?: {
         on_dirty_state_change,
         on_cursor_change,
         on_internal_link_click,
+        on_external_link_click,
         on_image_paste_requested,
         on_wiki_suggest_query,
       } = events;
@@ -392,7 +393,11 @@ export function create_milkdown_editor_port(args?: {
 
       if (on_internal_link_click) {
         builder = builder.use(
-          create_wiki_link_click_plugin(note_path, on_internal_link_click),
+          create_wiki_link_click_plugin({
+            base_note_path: note_path,
+            on_internal_link_click,
+            on_external_link_click: on_external_link_click ?? (() => {}),
+          }),
         );
       }
 

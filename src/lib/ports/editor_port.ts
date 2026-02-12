@@ -20,6 +20,7 @@ export type EditorEventHandlers = {
   on_dirty_state_change: (is_dirty: boolean) => void;
   on_cursor_change?: (info: CursorInfo) => void;
   on_internal_link_click?: (note_path: string) => void;
+  on_external_link_click?: (url: string) => void;
   on_image_paste_requested?: (payload: PastedImagePayload) => void;
   on_wiki_suggest_query?: (query: string) => void;
 };
