@@ -5,6 +5,10 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { search_vaults } from "$lib/domain/search_vaults";
+  import {
+    clamp_vault_selection,
+    move_vault_selection,
+  } from "$lib/domain/vault_switcher";
   import { Plus, Check, Star, X } from "@lucide/svelte";
 
   interface Props {
@@ -35,9 +39,17 @@
     hide_choose_vault_button = false,
   }: Props = $props();
   let vault_query = $state("");
+  let selected_vault_index = $state(0);
   const filtered_recent_vaults = $derived(
     search_vaults(recent_vaults, vault_query),
   );
+
+  $effect(() => {
+    selected_vault_index = clamp_vault_selection(
+      selected_vault_index,
+      filtered_recent_vaults.length,
+    );
+  });
 
   function handle_choose_vault(event?: MouseEvent) {
     if (event) {
@@ -59,6 +71,50 @@
     event.stopPropagation();
     event.preventDefault();
     on_toggle_pin_vault(vault_id);
+  }
+
+  function open_selected_vault() {
+    if (selected_vault_index < 0) {
+      return;
+    }
+    const selected_vault = filtered_recent_vaults[selected_vault_index];
+    if (!selected_vault) {
+      return;
+    }
+    if (is_loading || selected_vault.id === current_vault_id) {
+      return;
+    }
+    on_select_vault(selected_vault.id);
+  }
+
+  function handle_search_keydown(event: KeyboardEvent) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      selected_vault_index = move_vault_selection(
+        selected_vault_index,
+        filtered_recent_vaults.length,
+        1,
+      );
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      selected_vault_index = move_vault_selection(
+        selected_vault_index,
+        filtered_recent_vaults.length,
+        -1,
+      );
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      open_selected_vault();
+      return;
+    }
+    if (event.key === "Escape" && on_close) {
+      event.preventDefault();
+      on_close();
+    }
   }
 
   function format_path(path: string): string {
@@ -142,22 +198,29 @@
           value={vault_query}
           oninput={(event: Event & { currentTarget: HTMLInputElement }) => {
             vault_query = event.currentTarget.value;
+            selected_vault_index = 0;
           }}
+          onkeydown={handle_search_keydown}
           placeholder="Search vaults..."
           aria-label="Search vaults"
         />
       </div>
       <div class="VaultPanel__list">
-        {#each filtered_recent_vaults as vault (vault.id)}
+        {#each filtered_recent_vaults as vault, index (vault.id)}
           <div
             class="VaultPanel__vault-item"
             class:VaultPanel__vault-item--active={current_vault_id === vault.id}
+            class:VaultPanel__vault-item--highlighted={index ===
+              selected_vault_index}
             data-disabled={is_loading || current_vault_id === vault.id}
           >
             <button
               type="button"
               onclick={(e) => {
                 handle_select_vault(vault, e);
+              }}
+              onmouseenter={() => {
+                selected_vault_index = index;
               }}
               disabled={is_loading || current_vault_id === vault.id}
               class="VaultPanel__vault-select-btn"
@@ -277,6 +340,11 @@
   .VaultPanel__vault-item--active {
     background-color: var(--interactive-bg);
     border-color: color-mix(in oklch, var(--interactive) 30%, transparent);
+  }
+
+  .VaultPanel__vault-item--highlighted:not(.VaultPanel__vault-item--active) {
+    border-color: color-mix(in oklch, var(--interactive) 20%, transparent);
+    background-color: color-mix(in oklch, var(--muted) 80%, transparent);
   }
 
   .VaultPanel__vault-item--active:not([data-disabled="true"]):hover {
