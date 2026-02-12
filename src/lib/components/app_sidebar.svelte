@@ -681,6 +681,9 @@
       {word_count}
       has_note={!!stores.editor.open_note}
       index_progress={stores.search.index_progress}
+      vault_name={stores.vault.vault?.name ?? null}
+      on_vault_click={() =>
+        void action_registry.execute(ACTION_IDS.vault_request_change)}
       on_info_click={() => (details_dialog_open = true)}
     />
   </div>

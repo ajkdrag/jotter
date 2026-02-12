@@ -8,6 +8,8 @@
     word_count: number;
     has_note: boolean;
     index_progress: IndexProgress;
+    vault_name: string | null;
+    on_vault_click: () => void;
     on_info_click: () => void;
   }
 
@@ -16,6 +18,8 @@
     word_count,
     has_note,
     index_progress,
+    vault_name,
+    on_vault_click,
     on_info_click,
   }: Props = $props();
 
@@ -80,10 +84,16 @@
       </span>
       <span class="StatusBar__separator" aria-hidden="true"></span>
     {/if}
-    <span class="StatusBar__item StatusBar__item--muted">
+    <button
+      type="button"
+      class="StatusBar__vault-action"
+      onclick={on_vault_click}
+      disabled={!vault_name}
+      aria-label="Switch vault"
+    >
       <GitBranch />
-      <span>--</span>
-    </span>
+      <span>{vault_name ?? "--"}</span>
+    </button>
     <button
       type="button"
       class="StatusBar__action"
@@ -123,10 +133,6 @@
     gap: var(--space-1);
   }
 
-  .StatusBar__item--muted {
-    opacity: 0.5;
-  }
-
   .StatusBar__item--indexing {
     color: var(--primary);
   }
@@ -144,6 +150,40 @@
     height: 0.625rem;
     background-color: currentColor;
     opacity: 0.2;
+  }
+
+  .StatusBar__vault-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    max-width: 14rem;
+    border-radius: var(--radius-sm);
+    opacity: 0.7;
+    transition:
+      opacity var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+
+  .StatusBar__vault-action > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .StatusBar__vault-action:hover:not(:disabled) {
+    opacity: 1;
+    color: var(--interactive);
+  }
+
+  .StatusBar__vault-action:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .StatusBar__vault-action:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
 
   .StatusBar__action {
