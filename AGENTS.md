@@ -65,16 +65,7 @@ For adding/updating any feature, always refer to the decision tree in the archit
 
 **IMPORTANT: Proactive Skill Usage**
 
-You MUST proactively invoke relevant skills when the user asks for:
-
-- Adding or updating UI components → Use `/design-engineer` or `/shadcn-svelte-integration`
-- Adding new features → Use `/feature-dev`
-- Styling or design system work → Use `/design-system-principles` or `/tailwind-bem-naming`
-- Component organization → Use `/component-organization`
-- Performance optimization → Use `/rendering-performance`
-- Svelte 5 reactivity patterns → Use `/svelte5-reactivity`
-
-Do NOT ask for permission to use these skills. Invoke them immediately as your FIRST action when the request matches the skill's domain. The skills are designed to guide implementation with best practices and consistency.
+You MUST proactively invoke relevant skills. Do NOT ask for permission to use these skills. Invoke them immediately as your FIRST action when the request matches the skill's domain. The skills are designed to guide implementation with best practices and consistency.
 
 <!-- Source: .ruler/design_token_usage.md -->
 
