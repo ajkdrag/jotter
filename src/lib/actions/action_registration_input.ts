@@ -7,6 +7,7 @@ import type { SettingsService } from "$lib/services/settings_service";
 import type { SearchService } from "$lib/services/search_service";
 import type { EditorService } from "$lib/services/editor_service";
 import type { ClipboardService } from "$lib/services/clipboard_service";
+import type { ShellService } from "$lib/services/shell_service";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
@@ -32,6 +33,7 @@ export type ActionRegistrationInput = {
     search: SearchService;
     editor: EditorService;
     clipboard: ClipboardService;
+    shell: ShellService;
   };
   default_mount_config: AppMountConfig;
 };

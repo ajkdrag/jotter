@@ -55,6 +55,8 @@ export const ACTION_IDS = {
   folder_retry_rename: "folder.retry_rename",
   folder_toggle_star: "folder.toggle_star",
 
+  shell_open_url: "shell.open_url",
+
   ui_toggle_sidebar: "ui.toggle_sidebar",
   ui_select_folder: "ui.select_folder",
   ui_set_sidebar_view: "ui.set_sidebar_view",

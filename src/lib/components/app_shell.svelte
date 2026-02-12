@@ -4,6 +4,7 @@
   import AppSidebar from "$lib/components/app_sidebar.svelte";
   import VaultSelectionPanel from "$lib/components/vault_selection_panel.svelte";
   import { use_keyboard_shortcuts } from "$lib/hooks/use_keyboard_shortcuts.svelte";
+  import { use_external_links } from "$lib/hooks/use_external_links.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { VaultId } from "$lib/types/ids";
@@ -15,6 +16,10 @@
   let { hide_choose_vault_button = false }: Props = $props();
 
   const { stores, action_registry } = use_app_context();
+
+  const external_links = use_external_links({
+    open_url: (url) => action_registry.execute(ACTION_IDS.shell_open_url, url),
+  });
 
   const has_vault = $derived(stores.vault.vault !== null);
   const omnibar_open = $derived(stores.ui.omnibar.open);
@@ -95,6 +100,7 @@
 <AppShellDialogs {hide_choose_vault_button} />
 
 <svelte:window
+  onclick={external_links.handle_click}
   onkeydowncapture={keyboard.handle_keydown_capture}
   onkeydown={keyboard.handle_keydown}
 />

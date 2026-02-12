@@ -10,6 +10,16 @@ export function register_ui_actions(input: ActionRegistrationInput) {
   }
 
   registry.register({
+    id: ACTION_IDS.shell_open_url,
+    label: "Open External URL",
+    execute: (url: unknown) => {
+      if (typeof url === "string") {
+        void services.shell.open_url(url);
+      }
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.ui_toggle_sidebar,
     label: "Toggle Sidebar",
     shortcut: "CmdOrCtrl+B",

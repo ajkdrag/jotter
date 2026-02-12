@@ -11,6 +11,7 @@ import { SettingsService } from "$lib/services/settings_service";
 import { SearchService } from "$lib/services/search_service";
 import { EditorService } from "$lib/services/editor_service";
 import { ClipboardService } from "$lib/services/clipboard_service";
+import { ShellService } from "$lib/services/shell_service";
 import { mount_reactors } from "$lib/reactors";
 
 export type AppContext = ReturnType<typeof create_app_context>;
@@ -78,6 +79,8 @@ export function create_app_context(input: {
     now_ms,
   );
 
+  const shell_service = new ShellService(input.ports.shell);
+
   const clipboard_service = new ClipboardService(
     input.ports.clipboard,
     stores.editor,
@@ -119,6 +122,7 @@ export function create_app_context(input: {
       search: search_service,
       editor: editor_service,
       clipboard: clipboard_service,
+      shell: shell_service,
     },
     default_mount_config: input.default_mount_config,
   });

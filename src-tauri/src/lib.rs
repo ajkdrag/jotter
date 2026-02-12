@@ -16,6 +16,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(watcher_service::WatcherState::default())
         .manage(index_service::SearchDbState::default())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()

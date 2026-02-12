@@ -36,6 +36,7 @@
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-log": "^2.8.0",
+    "@tauri-apps/plugin-opener": "^2.5.3",
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
     "formsnap": "^2.0.1",

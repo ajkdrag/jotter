@@ -3,5 +3,10 @@
   "identifier": "default",
   "description": "Default capability",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:default", "log:default"]
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "log:default",
+    "opener:default"
+  ]
 }
