@@ -11,7 +11,10 @@
   import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
   import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
   import ThemeToggle from "$lib/components/theme_toggle.svelte";
+  import { SvelteSet } from "svelte/reactivity";
+  import { build_filetree, sort_tree } from "$lib/domain/filetree";
   import { flatten_filetree } from "$lib/domain/flatten_filetree";
+  import { as_note_path } from "$lib/types/ids";
   import { count_words } from "$lib/utils/count_words";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
@@ -30,6 +33,12 @@
 
   const { stores, action_registry } = use_app_context();
 
+  let starred_expanded_node_ids = $state(new SvelteSet<string>());
+
+  function starred_node_id(root_path: string, relative_path: string): string {
+    return `starred:${root_path}:${relative_path}`;
+  }
+
   function is_note_path(path: string): boolean {
     return path.endsWith(".md");
   }
@@ -40,6 +49,24 @@
       return;
     }
     void action_registry.execute(ACTION_IDS.folder_toggle_star, path);
+  }
+
+  function toggle_starred_folder_node(node: {
+    id: string;
+    path: string;
+    is_folder: boolean;
+  }) {
+    if (!node.is_folder) {
+      return;
+    }
+
+    if (starred_expanded_node_ids.has(node.id)) {
+      starred_expanded_node_ids.delete(node.id);
+      return;
+    }
+
+    starred_expanded_node_ids.add(node.id);
+    void action_registry.execute(ACTION_IDS.folder_retry_load, node.path);
   }
 
   const flat_nodes = $derived(
@@ -108,40 +135,133 @@
         continue;
       }
 
-      const folder_notes = stores.notes.notes.filter(
-        (note) =>
-          note.path === root_path || note.path.startsWith(`${root_path}/`),
-      );
-      const folder_paths = stores.notes.folder_paths.filter(
-        (path) => path === root_path || path.startsWith(`${root_path}/`),
-      );
+      const root_id = starred_node_id(root_path, "");
+      const root_load_state =
+        stores.ui.filetree.load_states.get(root_path) ?? "unloaded";
+      const root_is_expanded = starred_expanded_node_ids.has(root_id);
 
-      const segment_nodes = flatten_filetree({
-        notes: folder_notes,
-        folder_paths,
-        expanded_paths: stores.ui.filetree.expanded_paths,
-        load_states: stores.ui.filetree.load_states,
-        error_messages: stores.ui.filetree.error_messages,
-        show_hidden_files: stores.ui.editor_settings.show_hidden_files,
-        pagination: stores.ui.filetree.pagination,
-      }).filter(
-        (node) =>
-          node.path === root_path ||
-          node.path.startsWith(`${root_path}/`) ||
-          (node.is_load_more && node.parent_path?.startsWith(root_path)),
-      );
+      result.push({
+        id: root_id,
+        path: root_path,
+        name: root_path.split("/").at(-1) ?? root_path,
+        depth: 0,
+        is_folder: true,
+        is_expanded: root_is_expanded,
+        is_loading: root_load_state === "loading",
+        has_error: root_load_state === "error",
+        error_message: stores.ui.filetree.error_messages.get(root_path) ?? null,
+        note: null,
+        parent_path: null,
+        is_load_more: false,
+      });
 
-      for (const node of segment_nodes) {
-        const relative_depth = node.path === root_path ? 0 : node.depth;
-        result.push({
-          ...node,
-          id: `starred:${root_path}:${node.id}`,
-          depth: relative_depth,
-        });
+      if (!root_is_expanded) {
+        continue;
       }
+
+      const relative_notes = stores.notes.notes
+        .filter((note) => note.path.startsWith(`${root_path}/`))
+        .map((note) => {
+          const relative_path = note.path.slice(root_path.length + 1);
+          return {
+            ...note,
+            id: as_note_path(relative_path),
+            path: as_note_path(relative_path),
+          };
+        });
+      const relative_folders = stores.notes.folder_paths
+        .filter((path) => path.startsWith(`${root_path}/`))
+        .map((path) => path.slice(root_path.length + 1));
+
+      const tree = sort_tree(build_filetree(relative_notes, relative_folders));
+
+      function visit(
+        tree_node: ReturnType<typeof build_filetree>,
+        parent_actual_path: string,
+        depth: number,
+      ) {
+        for (const [, child] of tree_node.children) {
+          if (
+            !stores.ui.editor_settings.show_hidden_files &&
+            child.name.startsWith(".")
+          ) {
+            continue;
+          }
+
+          const actual_path = `${root_path}/${child.path}`;
+          const node_id = starred_node_id(root_path, child.path);
+          const load_state =
+            stores.ui.filetree.load_states.get(actual_path) ?? "unloaded";
+          const is_expanded =
+            child.is_folder && starred_expanded_node_ids.has(node_id);
+
+          result.push({
+            id: node_id,
+            path: actual_path,
+            name: child.name,
+            depth,
+            is_folder: child.is_folder,
+            is_expanded,
+            is_loading: load_state === "loading",
+            has_error: load_state === "error",
+            error_message:
+              stores.ui.filetree.error_messages.get(actual_path) ?? null,
+            note: child.note
+              ? ({
+                  ...child.note,
+                  id: actual_path,
+                  path: actual_path,
+                } as NoteMeta)
+              : null,
+            parent_path: parent_actual_path,
+            is_load_more: false,
+          });
+
+          if (child.is_folder && is_expanded) {
+            visit(child, actual_path, depth + 1);
+          }
+        }
+
+        const pagination_state =
+          stores.ui.filetree.pagination.get(parent_actual_path);
+        if (
+          pagination_state &&
+          pagination_state.loaded_count < pagination_state.total_count
+        ) {
+          const load_more_id = starred_node_id(
+            root_path,
+            `__load_more__:${parent_actual_path || "root"}`,
+          );
+          result.push({
+            id: load_more_id,
+            path: load_more_id,
+            name: "",
+            depth,
+            is_folder: false,
+            is_expanded: false,
+            is_loading: pagination_state.load_state === "loading",
+            has_error: pagination_state.load_state === "error",
+            error_message: pagination_state.error_message,
+            note: null,
+            parent_path: parent_actual_path,
+            is_load_more: true,
+          });
+        }
+      }
+
+      visit(tree, root_path, 1);
     }
 
     return result;
+  });
+
+  $effect(() => {
+    const valid_ids = new Set(starred_nodes.map((node) => node.id));
+    for (const id of starred_expanded_node_ids) {
+      if (!valid_ids.has(id)) {
+        starred_expanded_node_ids.delete(id);
+      }
+    }
   });
 
   const open_note_title = $derived(
@@ -318,6 +438,7 @@
                               ACTION_IDS.folder_toggle,
                               path,
                             )}
+                          on_toggle_folder_node={toggle_starred_folder_node}
                           on_select_note={(note_path: string) =>
                             void action_registry.execute(
                               ACTION_IDS.note_open,
@@ -328,24 +449,14 @@
                               ACTION_IDS.ui_select_folder,
                               path,
                             )}
-                          on_request_delete={(note: NoteMeta) =>
+                          on_request_create_note={(folder_path: string) =>
                             void action_registry.execute(
-                              ACTION_IDS.note_request_delete,
-                              note,
-                            )}
-                          on_request_rename={(note: NoteMeta) =>
-                            void action_registry.execute(
-                              ACTION_IDS.note_request_rename,
-                              note,
-                            )}
-                          on_request_delete_folder={(folder_path: string) =>
-                            void action_registry.execute(
-                              ACTION_IDS.folder_request_delete,
+                              ACTION_IDS.note_create,
                               folder_path,
                             )}
-                          on_request_rename_folder={(folder_path: string) =>
+                          on_request_create_folder={(folder_path: string) =>
                             void action_registry.execute(
-                              ACTION_IDS.folder_request_rename,
+                              ACTION_IDS.folder_request_create,
                               folder_path,
                             )}
                           on_toggle_star={toggle_star_for_path}

@@ -23,6 +23,7 @@
     is_selected: boolean;
     is_starred?: boolean;
     on_toggle_folder: (path: string) => void;
+    on_toggle_folder_node?: ((node: FlatTreeNode) => void) | undefined;
     on_select_note: (path: string) => void;
     on_select_folder: (path: string) => void;
     on_request_delete?: ((note: NoteMeta) => void) | undefined;
@@ -41,6 +42,7 @@
     is_selected,
     is_starred = false,
     on_toggle_folder,
+    on_toggle_folder_node,
     on_select_note,
     on_select_folder,
     on_request_delete,
@@ -56,7 +58,11 @@
 
   function handle_click() {
     if (node.is_folder) {
-      on_toggle_folder(node.path);
+      if (on_toggle_folder_node) {
+        on_toggle_folder_node(node);
+      } else {
+        on_toggle_folder(node.path);
+      }
       on_select_folder(node.path);
     } else if (node.note) {
       on_select_note(node.path);
@@ -65,7 +71,11 @@
 
   function handle_toggle(e: MouseEvent) {
     e.stopPropagation();
-    on_toggle_folder(node.path);
+    if (on_toggle_folder_node) {
+      on_toggle_folder_node(node);
+    } else {
+      on_toggle_folder(node.path);
+    }
     on_select_folder(node.path);
   }
 
@@ -88,7 +98,11 @@
   function handle_toggle_keydown(e: KeyboardEvent) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      on_toggle_folder(node.path);
+      if (on_toggle_folder_node) {
+        on_toggle_folder_node(node);
+      } else {
+        on_toggle_folder(node.path);
+      }
       on_select_folder(node.path);
     }
   }
@@ -227,27 +241,29 @@
             <span>Star</span>
           {/if}
         </ContextMenu.Item>
-        <ContextMenu.Separator />
-        <ContextMenu.Item
-          onclick={() => {
-            if (on_request_rename_folder) {
-              on_request_rename_folder(node.path);
-            }
-          }}
-        >
-          <Pencil class="mr-2 h-4 w-4" />
-          <span>Rename</span>
-        </ContextMenu.Item>
-        <ContextMenu.Item
-          onclick={() => {
-            if (on_request_delete_folder) {
-              on_request_delete_folder(node.path);
-            }
-          }}
-        >
-          <Trash2 class="mr-2 h-4 w-4" />
-          <span>Delete</span>
-        </ContextMenu.Item>
+        {#if on_request_rename_folder || on_request_delete_folder}
+          <ContextMenu.Separator />
+          {#if on_request_rename_folder}
+            <ContextMenu.Item
+              onclick={() => {
+                on_request_rename_folder(node.path);
+              }}
+            >
+              <Pencil class="mr-2 h-4 w-4" />
+              <span>Rename</span>
+            </ContextMenu.Item>
+          {/if}
+          {#if on_request_delete_folder}
+            <ContextMenu.Item
+              onclick={() => {
+                on_request_delete_folder(node.path);
+              }}
+            >
+              <Trash2 class="mr-2 h-4 w-4" />
+              <span>Delete</span>
+            </ContextMenu.Item>
+          {/if}
+        {/if}
       </ContextMenu.Content>
     </ContextMenu.Portal>
   </ContextMenu.Root>
@@ -273,27 +289,33 @@
             <span>Star</span>
           {/if}
         </ContextMenu.Item>
-        <ContextMenu.Separator />
-        <ContextMenu.Item
-          onclick={() => {
-            if (node.note && on_request_rename) {
-              on_request_rename(node.note);
-            }
-          }}
-        >
-          <Pencil class="mr-2 h-4 w-4" />
-          <span>Rename</span>
-        </ContextMenu.Item>
-        <ContextMenu.Item
-          onclick={() => {
-            if (node.note && on_request_delete) {
-              on_request_delete(node.note);
-            }
-          }}
-        >
-          <Trash2 class="mr-2 h-4 w-4" />
-          <span>Delete</span>
-        </ContextMenu.Item>
+        {#if on_request_rename || on_request_delete}
+          <ContextMenu.Separator />
+          {#if on_request_rename}
+            <ContextMenu.Item
+              onclick={() => {
+                if (node.note) {
+                  on_request_rename(node.note);
+                }
+              }}
+            >
+              <Pencil class="mr-2 h-4 w-4" />
+              <span>Rename</span>
+            </ContextMenu.Item>
+          {/if}
+          {#if on_request_delete}
+            <ContextMenu.Item
+              onclick={() => {
+                if (node.note) {
+                  on_request_delete(node.note);
+                }
+              }}
+            >
+              <Trash2 class="mr-2 h-4 w-4" />
+              <span>Delete</span>
+            </ContextMenu.Item>
+          {/if}
+        {/if}
       </ContextMenu.Content>
     </ContextMenu.Portal>
   </ContextMenu.Root>

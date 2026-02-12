@@ -10,6 +10,7 @@
     open_note_path: string;
     starred_paths?: string[];
     on_toggle_folder: (path: string) => void;
+    on_toggle_folder_node?: ((node: FlatTreeNode) => void) | undefined;
     on_select_note: (path: string) => void;
     on_select_folder: (path: string) => void;
     on_request_delete?: ((note: NoteMeta) => void) | undefined;
@@ -30,6 +31,7 @@
     open_note_path,
     starred_paths = [],
     on_toggle_folder,
+    on_toggle_folder_node,
     on_select_note,
     on_select_folder,
     on_request_delete,
@@ -169,6 +171,7 @@
               : open_note_path === node.path}
             is_starred={starred_paths.includes(node.path)}
             {on_toggle_folder}
+            {on_toggle_folder_node}
             {on_select_note}
             {on_select_folder}
             {on_request_delete}
