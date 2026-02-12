@@ -55,6 +55,9 @@
     on_open_omnibar_notes: () => {
       void action_registry.execute(ACTION_IDS.omnibar_open);
     },
+    on_open_vault_switcher: () => {
+      void action_registry.execute(ACTION_IDS.vault_request_change);
+    },
     on_select_pinned_vault: (slot) => {
       void action_registry.execute(ACTION_IDS.vault_select_pinned_slot, slot);
     },

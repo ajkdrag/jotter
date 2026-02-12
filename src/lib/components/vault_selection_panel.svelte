@@ -3,6 +3,8 @@
   import type { VaultId } from "$lib/types/ids";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
+  import { search_vaults } from "$lib/domain/search_vaults";
   import { Plus, Check, Star, X } from "@lucide/svelte";
 
   interface Props {
@@ -32,6 +34,10 @@
     is_dialog = false,
     hide_choose_vault_button = false,
   }: Props = $props();
+  let vault_query = $state("");
+  const filtered_recent_vaults = $derived(
+    search_vaults(recent_vaults, vault_query),
+  );
 
   function handle_choose_vault(event?: MouseEvent) {
     if (event) {
@@ -130,8 +136,19 @@
   {#if recent_vaults.length > 0}
     <div class="VaultPanel__recent">
       <h3 class="VaultPanel__section-title">Recent Vaults</h3>
+      <div class="VaultPanel__search">
+        <Input
+          type="text"
+          value={vault_query}
+          oninput={(event: Event & { currentTarget: HTMLInputElement }) => {
+            vault_query = event.currentTarget.value;
+          }}
+          placeholder="Search vaults..."
+          aria-label="Search vaults"
+        />
+      </div>
       <div class="VaultPanel__list">
-        {#each recent_vaults as vault (vault.id)}
+        {#each filtered_recent_vaults as vault (vault.id)}
           <div
             class="VaultPanel__vault-item"
             class:VaultPanel__vault-item--active={current_vault_id === vault.id}
@@ -176,6 +193,9 @@
           </div>
         {/each}
       </div>
+      {#if filtered_recent_vaults.length === 0}
+        <div class="VaultPanel__empty-filter">No vaults match your search</div>
+      {/if}
     </div>
   {:else}
     <div class="VaultPanel__empty">
@@ -218,6 +238,16 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+  }
+
+  .VaultPanel__search {
+    margin-bottom: var(--space-3);
+  }
+
+  .VaultPanel__empty-filter {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
   }
 
   .VaultPanel__vault-item {

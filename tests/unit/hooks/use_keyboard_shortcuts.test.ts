@@ -14,6 +14,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -46,6 +47,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar,
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -76,6 +78,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes,
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -108,6 +111,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar,
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes,
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -126,6 +130,36 @@ describe("use_keyboard_shortcuts", () => {
     expect(on_open_omnibar_notes).toHaveBeenCalledTimes(0);
   });
 
+  it("opens vault switcher on mod+shift+o", () => {
+    const on_open_vault_switcher = vi.fn();
+    const on_open_omnibar_notes = vi.fn();
+    const shortcuts = use_keyboard_shortcuts({
+      is_enabled: () => true,
+      is_blocked: () => false,
+      is_omnibar_open: () => false,
+      on_toggle_omnibar: vi.fn(),
+      on_open_omnibar_commands: vi.fn(),
+      on_open_omnibar_notes,
+      on_open_vault_switcher,
+      on_select_pinned_vault: vi.fn(),
+      on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
+      on_save: vi.fn(),
+    });
+
+    shortcuts.handle_keydown_capture({
+      metaKey: true,
+      ctrlKey: false,
+      shiftKey: true,
+      key: "o",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent);
+
+    expect(on_open_vault_switcher).toHaveBeenCalledTimes(1);
+    expect(on_open_omnibar_notes).not.toHaveBeenCalled();
+  });
+
   it("requests save on mod+s (case-insensitive)", () => {
     const on_save = vi.fn();
     const prevent_default = vi.fn();
@@ -138,6 +172,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -170,6 +205,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar,
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -202,6 +238,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar,
       on_toggle_find_in_file: vi.fn(),
@@ -233,6 +270,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -264,6 +302,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault,
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
@@ -294,6 +333,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_open_vault_switcher: vi.fn(),
       on_select_pinned_vault,
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),

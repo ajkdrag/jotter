@@ -10,6 +10,7 @@ export function use_keyboard_shortcuts(input: {
   on_toggle_omnibar: () => void;
   on_open_omnibar_commands: () => void;
   on_open_omnibar_notes: () => void;
+  on_open_vault_switcher: () => void;
   on_select_pinned_vault: (slot: number) => void;
   on_toggle_sidebar: () => void;
   on_toggle_find_in_file: () => void;
@@ -22,6 +23,7 @@ export function use_keyboard_shortcuts(input: {
     on_toggle_omnibar,
     on_open_omnibar_commands,
     on_open_omnibar_notes,
+    on_open_vault_switcher,
     on_select_pinned_vault,
     on_toggle_sidebar,
     on_toggle_find_in_file,
@@ -69,6 +71,11 @@ export function use_keyboard_shortcuts(input: {
       event.preventDefault();
       event.stopPropagation();
       if (is_blocked() && !is_omnibar_open()) return;
+      if (event.shiftKey) {
+        if (is_blocked()) return;
+        on_open_vault_switcher();
+        return;
+      }
       if (is_omnibar_open()) {
         on_toggle_omnibar();
       } else {
