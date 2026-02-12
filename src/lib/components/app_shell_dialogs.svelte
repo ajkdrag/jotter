@@ -79,6 +79,7 @@
       }
     }}
     recent_vaults={stores.vault.recent_vaults}
+    pinned_vault_ids={stores.vault.pinned_vault_ids}
     current_vault_id={stores.vault.vault?.id ?? null}
     is_loading={stores.ui.change_vault.is_loading}
     error={stores.ui.change_vault.error}
@@ -86,6 +87,8 @@
       void action_registry.execute(ACTION_IDS.vault_choose)}
     on_select_vault={(vault_id: VaultId) =>
       void action_registry.execute(ACTION_IDS.vault_select, vault_id)}
+    on_toggle_pin_vault={(vault_id: VaultId) =>
+      void action_registry.execute(ACTION_IDS.vault_toggle_pin, vault_id)}
     {hide_choose_vault_button}
   />
 {/if}

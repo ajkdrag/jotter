@@ -280,7 +280,7 @@ describe("VaultService", () => {
       {
         touch_index: vi.fn(),
         cancel_index: vi.fn(),
-        sync_index: vi.fn(),
+        sync_index: vi.fn().mockResolvedValue(undefined),
         rebuild_index: vi.fn(),
         upsert_note: vi.fn(),
         remove_note: vi.fn(),
@@ -321,6 +321,174 @@ describe("VaultService", () => {
       "starred_paths",
       ["docs", "docs/a.md"],
     );
+  });
+
+  it("toggles vault pin and persists pinned IDs", async () => {
+    const vault_a: Vault = {
+      id: as_vault_id("vault-a"),
+      name: "Vault A",
+      path: as_vault_path("/vault/a"),
+      created_at: 1,
+    };
+    const vault_b: Vault = {
+      id: as_vault_id("vault-b"),
+      name: "Vault B",
+      path: as_vault_path("/vault/b"),
+      created_at: 1,
+    };
+
+    const settings_port = {
+      get_setting: vi.fn().mockResolvedValue([vault_b.id]),
+      set_setting: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const service = new VaultService(
+      {
+        choose_vault: vi.fn(),
+        open_vault: vi.fn().mockResolvedValue(vault_a),
+        open_vault_by_id: vi.fn(),
+        list_vaults: vi.fn().mockResolvedValue([vault_a, vault_b]),
+        remember_last_vault: vi.fn(),
+        get_last_vault_id: vi.fn(),
+      } as never,
+      {
+        list_folder_contents: vi.fn().mockResolvedValue({
+          notes: [],
+          subfolders: [],
+          total_count: 0,
+          has_more: false,
+        }),
+      } as never,
+      {
+        touch_index: vi.fn(),
+        cancel_index: vi.fn(),
+        sync_index: vi.fn().mockResolvedValue(undefined),
+        rebuild_index: vi.fn(),
+        upsert_note: vi.fn(),
+        remove_note: vi.fn(),
+        remove_notes: vi.fn(),
+        remove_notes_by_prefix: vi.fn(),
+        rename_folder_paths: vi.fn(),
+        subscribe_index_progress: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        watch_vault: vi.fn(),
+        unwatch_vault: vi.fn(),
+        subscribe_fs_events: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      settings_port as never,
+      {
+        get_vault_setting: vi.fn().mockResolvedValue(null),
+        set_vault_setting: vi.fn().mockResolvedValue(undefined),
+        delete_vault_setting: vi.fn(),
+      } as never,
+      {
+        get_theme: vi.fn().mockReturnValue("system"),
+        set_theme: vi.fn(),
+      } as never,
+      new VaultStore(),
+      new NotesStore(),
+      new EditorStore(),
+      new OpStore(),
+      new SearchStore(),
+      () => 1,
+    );
+
+    const open_result = await service.change_vault_by_path(vault_a.path);
+    expect(open_result.status).toBe("opened");
+
+    const toggle_result = await service.toggle_vault_pin(vault_a.id);
+    expect(toggle_result.status).toBe("success");
+    expect(settings_port.set_setting).toHaveBeenLastCalledWith(
+      "pinned_vault_ids",
+      [vault_b.id, vault_a.id],
+    );
+
+    const untoggle_result = await service.toggle_vault_pin(vault_b.id);
+    expect(untoggle_result.status).toBe("success");
+    expect(settings_port.set_setting).toHaveBeenLastCalledWith(
+      "pinned_vault_ids",
+      [vault_a.id],
+    );
+  });
+
+  it("selects pinned vault by slot and skips missing slots", async () => {
+    const vault_a: Vault = {
+      id: as_vault_id("vault-a"),
+      name: "Vault A",
+      path: as_vault_path("/vault/a"),
+      created_at: 1,
+    };
+    const vault_b: Vault = {
+      id: as_vault_id("vault-b"),
+      name: "Vault B",
+      path: as_vault_path("/vault/b"),
+      created_at: 1,
+    };
+
+    const service = new VaultService(
+      {
+        choose_vault: vi.fn(),
+        open_vault: vi.fn().mockResolvedValue(vault_a),
+        open_vault_by_id: vi.fn().mockResolvedValue(vault_b),
+        list_vaults: vi.fn().mockResolvedValue([vault_a, vault_b]),
+        remember_last_vault: vi.fn(),
+        get_last_vault_id: vi.fn(),
+      } as never,
+      {
+        list_folder_contents: vi.fn().mockResolvedValue({
+          notes: [],
+          subfolders: [],
+          total_count: 0,
+          has_more: false,
+        }),
+      } as never,
+      {
+        touch_index: vi.fn(),
+        cancel_index: vi.fn(),
+        sync_index: vi.fn().mockResolvedValue(undefined),
+        rebuild_index: vi.fn(),
+        upsert_note: vi.fn(),
+        remove_note: vi.fn(),
+        remove_notes: vi.fn(),
+        remove_notes_by_prefix: vi.fn(),
+        rename_folder_paths: vi.fn(),
+        subscribe_index_progress: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        watch_vault: vi.fn(),
+        unwatch_vault: vi.fn(),
+        subscribe_fs_events: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        get_setting: vi.fn().mockResolvedValue([vault_b.id]),
+        set_setting: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      {
+        get_vault_setting: vi.fn().mockResolvedValue(null),
+        set_vault_setting: vi.fn().mockResolvedValue(undefined),
+        delete_vault_setting: vi.fn(),
+      } as never,
+      {
+        get_theme: vi.fn().mockReturnValue("system"),
+        set_theme: vi.fn(),
+      } as never,
+      new VaultStore(),
+      new NotesStore(),
+      new EditorStore(),
+      new OpStore(),
+      new SearchStore(),
+      () => 1,
+    );
+
+    const open_result = await service.change_vault_by_path(vault_a.path);
+    expect(open_result.status).toBe("opened");
+
+    const selected = await service.select_pinned_vault_by_slot(0);
+    expect(selected.status).toBe("opened");
+
+    const skipped = await service.select_pinned_vault_by_slot(1);
+    expect(skipped).toEqual({ status: "skipped" });
   });
 
   it("unsubscribes previous watcher subscription when vault changes", async () => {

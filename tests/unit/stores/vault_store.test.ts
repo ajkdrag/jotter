@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { create_test_vault } from "../helpers/test_fixtures";
+import { as_vault_id } from "$lib/types/ids";
 
 describe("VaultStore", () => {
   it("sets and clears vault while updating generation", () => {
@@ -36,5 +37,35 @@ describe("VaultStore", () => {
 
     expect(store.generation).toBe(initial_generation + 1);
     expect(store.vault).toBeNull();
+  });
+
+  it("keeps pinned vaults at the top in pinned order", () => {
+    const store = new VaultStore();
+    const vault_a = create_test_vault({ id: as_vault_id("vault-a") });
+    const vault_b = create_test_vault({ id: as_vault_id("vault-b") });
+    const vault_c = create_test_vault({ id: as_vault_id("vault-c") });
+
+    store.set_recent_vaults([vault_c, vault_b, vault_a]);
+    store.set_pinned_vault_ids([vault_b.id, vault_a.id]);
+
+    expect(store.recent_vaults.map((vault) => vault.id)).toEqual([
+      vault_b.id,
+      vault_a.id,
+      vault_c.id,
+    ]);
+    expect(store.get_pinned_vault_id_by_slot(0)).toBe(vault_b.id);
+    expect(store.get_pinned_vault_id_by_slot(1)).toBe(vault_a.id);
+    expect(store.get_pinned_vault_id_by_slot(2)).toBeNull();
+  });
+
+  it("prunes stale pinned ids when recent vaults update", () => {
+    const store = new VaultStore();
+    const vault_a = create_test_vault({ id: as_vault_id("vault-a") });
+
+    store.set_recent_vaults([vault_a]);
+    store.set_pinned_vault_ids([vault_a.id, as_vault_id("vault-missing")]);
+    store.set_recent_vaults([vault_a]);
+
+    expect(store.pinned_vault_ids).toEqual([vault_a.id]);
   });
 });

@@ -14,6 +14,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
@@ -45,6 +46,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar,
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
@@ -74,6 +76,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes,
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
@@ -105,6 +108,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar,
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes,
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
@@ -134,6 +138,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save,
@@ -165,6 +170,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar,
       on_open_omnibar_commands,
       on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
@@ -196,6 +202,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar,
       on_toggle_find_in_file: vi.fn(),
       on_save: vi.fn(),
@@ -226,6 +233,7 @@ describe("use_keyboard_shortcuts", () => {
       on_toggle_omnibar: vi.fn(),
       on_open_omnibar_commands: vi.fn(),
       on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
       on_toggle_sidebar: vi.fn(),
       on_toggle_find_in_file: vi.fn(),
       on_save,
@@ -242,5 +250,66 @@ describe("use_keyboard_shortcuts", () => {
     expect(prevent_default).toHaveBeenCalledTimes(1);
     expect(stop_propagation).toHaveBeenCalledTimes(1);
     expect(on_save).toHaveBeenCalledTimes(0);
+  });
+
+  it("selects pinned vault slot on mod+1", () => {
+    const on_select_pinned_vault = vi.fn();
+    const prevent_default = vi.fn();
+    const stop_propagation = vi.fn();
+
+    const shortcuts = use_keyboard_shortcuts({
+      is_enabled: () => true,
+      is_blocked: () => false,
+      is_omnibar_open: () => false,
+      on_toggle_omnibar: vi.fn(),
+      on_open_omnibar_commands: vi.fn(),
+      on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault,
+      on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
+      on_save: vi.fn(),
+    });
+
+    shortcuts.handle_keydown_capture({
+      metaKey: true,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      key: "1",
+      preventDefault: prevent_default,
+      stopPropagation: stop_propagation,
+    } as unknown as KeyboardEvent);
+
+    expect(prevent_default).toHaveBeenCalledTimes(1);
+    expect(stop_propagation).toHaveBeenCalledTimes(1);
+    expect(on_select_pinned_vault).toHaveBeenCalledWith(0);
+  });
+
+  it("blocks pinned vault shortcut while blocked", () => {
+    const on_select_pinned_vault = vi.fn();
+    const shortcuts = use_keyboard_shortcuts({
+      is_enabled: () => true,
+      is_blocked: () => true,
+      is_omnibar_open: () => false,
+      on_toggle_omnibar: vi.fn(),
+      on_open_omnibar_commands: vi.fn(),
+      on_open_omnibar_notes: vi.fn(),
+      on_select_pinned_vault,
+      on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
+      on_save: vi.fn(),
+    });
+
+    shortcuts.handle_keydown_capture({
+      metaKey: true,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      key: "2",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent);
+
+    expect(on_select_pinned_vault).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,12 @@ import type { WatcherPort } from "$lib/ports/watcher_port";
 import type { SettingsPort } from "$lib/ports/settings_port";
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { ThemePort } from "$lib/ports/theme_port";
-import { as_note_path, type VaultId, type VaultPath } from "$lib/types/ids";
+import {
+  as_note_path,
+  as_vault_id,
+  type VaultId,
+  type VaultPath,
+} from "$lib/types/ids";
 import type { Vault } from "$lib/types/vault";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
@@ -39,6 +44,7 @@ export type AppMountConfig = {
 
 const RECENT_NOTES_KEY = "recent_notes";
 const STARRED_PATHS_KEY = "starred_paths";
+const PINNED_VAULT_IDS_KEY = "pinned_vault_ids";
 const WATCHER_INDEX_FLUSH_DELAY_MS = 120;
 const WATCHER_BULK_FORCE_SCAN_THRESHOLD = 256;
 class StaleVaultOpenError extends Error {
@@ -98,8 +104,12 @@ export class VaultService {
           open_revision,
         );
       } else {
-        const recent_vaults = await this.vault_port.list_vaults();
+        const [recent_vaults, pinned_vault_ids] = await Promise.all([
+          this.vault_port.list_vaults(),
+          this.load_pinned_vault_ids(),
+        ]);
         this.vault_store.set_recent_vaults(recent_vaults);
+        this.vault_store.set_pinned_vault_ids(pinned_vault_ids);
 
         const current_vault_id = this.vault_store.vault?.id;
         if (current_vault_id) {
@@ -187,6 +197,43 @@ export class VaultService {
     }
   }
 
+  async toggle_vault_pin(
+    vault_id: VaultId,
+  ): Promise<{ status: "success" } | { status: "failed"; error: string }> {
+    const exists = this.vault_store.recent_vaults.some(
+      (vault) => vault.id === vault_id,
+    );
+    if (!exists) {
+      return { status: "failed", error: "Vault not found in recent list" };
+    }
+
+    const previous_pinned_ids = [...this.vault_store.pinned_vault_ids];
+    this.op_store.start("vault.pin", this.now_ms());
+    this.vault_store.toggle_pinned_vault(vault_id);
+
+    try {
+      await this.save_pinned_vault_ids(this.vault_store.pinned_vault_ids);
+      this.op_store.succeed("vault.pin");
+      return { status: "success" };
+    } catch (error) {
+      this.vault_store.set_pinned_vault_ids(previous_pinned_ids);
+      const message = error_message(error);
+      logger.error(`Toggle vault pin failed: ${message}`);
+      this.op_store.fail("vault.pin", message);
+      return { status: "failed", error: message };
+    }
+  }
+
+  async select_pinned_vault_by_slot(
+    slot: number,
+  ): Promise<VaultOpenResult | { status: "skipped" }> {
+    const vault_id = this.vault_store.get_pinned_vault_id_by_slot(slot);
+    if (!vault_id) {
+      return { status: "skipped" };
+    }
+    return this.change_vault_by_id(vault_id);
+  }
+
   async rebuild_index(): Promise<
     | { status: "started" }
     | { status: "skipped" }
@@ -265,9 +312,10 @@ export class VaultService {
     await this.vault_port.remember_last_vault(vault.id);
     this.throw_if_stale(open_revision);
 
-    const [root_contents, recent_vaults] = await Promise.all([
+    const [root_contents, recent_vaults, pinned_vault_ids] = await Promise.all([
       this.notes_port.list_folder_contents(vault.id, "", 0, PAGE_SIZE),
       this.vault_port.list_vaults(),
+      this.load_pinned_vault_ids(),
     ]);
     this.throw_if_stale(open_revision);
 
@@ -288,6 +336,7 @@ export class VaultService {
     this.vault_store.set_vault(vault);
     this.notes_store.merge_folder_contents("", root_contents);
     this.vault_store.set_recent_vaults(recent_vaults);
+    this.vault_store.set_pinned_vault_ids(pinned_vault_ids);
     this.notes_store.set_recent_notes(loaded_recent_notes);
     this.notes_store.set_starred_paths(loaded_starred_paths);
 
@@ -442,6 +491,26 @@ export class VaultService {
       );
     } catch (error) {
       logger.error(`Load starred paths failed: ${error_message(error)}`);
+      return [];
+    }
+  }
+
+  private async save_pinned_vault_ids(vault_ids: VaultId[]): Promise<void> {
+    await this.settings_port.set_setting(PINNED_VAULT_IDS_KEY, vault_ids);
+  }
+
+  private async load_pinned_vault_ids(): Promise<VaultId[]> {
+    try {
+      const stored =
+        await this.settings_port.get_setting<unknown>(PINNED_VAULT_IDS_KEY);
+      if (!stored || !Array.isArray(stored)) {
+        return [];
+      }
+      return stored
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((vault_id) => as_vault_id(vault_id));
+    } catch (error) {
+      logger.error(`Load pinned vault IDs failed: ${error_message(error)}`);
       return [];
     }
   }

@@ -55,6 +55,9 @@
     on_open_omnibar_notes: () => {
       void action_registry.execute(ACTION_IDS.omnibar_open);
     },
+    on_select_pinned_vault: (slot) => {
+      void action_registry.execute(ACTION_IDS.vault_select_pinned_slot, slot);
+    },
     on_toggle_sidebar: () => {
       void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
     },
@@ -83,11 +86,15 @@
   <div class="mx-auto max-w-[65ch] p-8">
     <VaultSelectionPanel
       recent_vaults={stores.vault.recent_vaults}
+      pinned_vault_ids={stores.vault.pinned_vault_ids}
       current_vault_id={null}
       is_loading={vault_selection_loading}
       error={stores.ui.startup.error ?? stores.ui.change_vault.error}
       on_choose_vault_dir={handle_choose_vault_dir}
       on_select_vault={handle_select_vault}
+      on_toggle_pin_vault={(vault_id) => {
+        void action_registry.execute(ACTION_IDS.vault_toggle_pin, vault_id);
+      }}
       {hide_choose_vault_button}
     />
   </div>

@@ -1,6 +1,7 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
 import type { EditorSettings } from "$lib/types/editor_settings";
+import type { VaultId } from "$lib/types/ids";
 import { toast } from "svelte-sonner";
 
 async function apply_opened_vault(
@@ -20,6 +21,39 @@ async function apply_opened_vault(
 export function register_vault_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
   let change_vault_request_revision = 0;
+
+  const handle_open_result = async (
+    request_revision: number,
+    result:
+      | Awaited<ReturnType<typeof services.vault.change_vault_by_id>>
+      | Awaited<ReturnType<typeof services.vault.select_pinned_vault_by_slot>>,
+  ) => {
+    if (request_revision !== change_vault_request_revision) {
+      return;
+    }
+    if (result.status === "opened") {
+      await apply_opened_vault(input, result.editor_settings);
+      return;
+    }
+    if (result.status === "stale") {
+      return;
+    }
+    if (result.status === "skipped") {
+      stores.ui.change_vault = {
+        ...stores.ui.change_vault,
+        is_loading: false,
+        error: null,
+      };
+      services.vault.reset_change_operation();
+      return;
+    }
+
+    stores.ui.change_vault = {
+      ...stores.ui.change_vault,
+      is_loading: false,
+      error: result.error,
+    };
+  };
 
   registry.register({
     id: ACTION_IDS.vault_request_change,
@@ -86,22 +120,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
       const result = await services.vault.change_vault_by_path(
         path_result.path,
       );
-      if (request_revision !== change_vault_request_revision) {
-        return;
-      }
-      if (result.status === "opened") {
-        await apply_opened_vault(input, result.editor_settings);
-        return;
-      }
-      if (result.status === "stale") {
-        return;
-      }
-
-      stores.ui.change_vault = {
-        ...stores.ui.change_vault,
-        is_loading: false,
-        error: result.error,
-      };
+      await handle_open_result(request_revision, result);
     },
   });
 
@@ -120,22 +139,41 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         typeof services.vault.change_vault_by_id
       >[0];
       const result = await services.vault.change_vault_by_id(selected_vault_id);
-      if (request_revision !== change_vault_request_revision) {
-        return;
-      }
-      if (result.status === "opened") {
-        await apply_opened_vault(input, result.editor_settings);
-        return;
-      }
-      if (result.status === "stale") {
+      await handle_open_result(request_revision, result);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.vault_select_pinned_slot,
+    label: "Select Pinned Vault Slot",
+    execute: async (slot: unknown) => {
+      if (typeof slot !== "number" || !Number.isInteger(slot) || slot < 0) {
         return;
       }
 
       stores.ui.change_vault = {
         ...stores.ui.change_vault,
-        is_loading: false,
-        error: result.error,
+        is_loading: true,
+        error: null,
       };
+
+      const request_revision = ++change_vault_request_revision;
+      const result = await services.vault.select_pinned_vault_by_slot(slot);
+      await handle_open_result(request_revision, result);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.vault_toggle_pin,
+    label: "Toggle Vault Pin",
+    execute: async (vault_id: unknown) => {
+      if (typeof vault_id !== "string") {
+        return;
+      }
+      const result = await services.vault.toggle_vault_pin(vault_id as VaultId);
+      if (result.status === "failed") {
+        toast.error(result.error);
+      }
     },
   });
 

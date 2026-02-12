@@ -8,11 +8,13 @@
     open: boolean;
     on_open_change: (open: boolean) => void;
     recent_vaults: Vault[];
+    pinned_vault_ids: VaultId[];
     current_vault_id: VaultId | null;
     is_loading?: boolean;
     error?: string | null;
     on_choose_vault_dir: () => void;
     on_select_vault: (vault_id: VaultId) => void;
+    on_toggle_pin_vault: (vault_id: VaultId) => void;
     hide_choose_vault_button?: boolean;
   }
 
@@ -20,11 +22,13 @@
     open,
     on_open_change,
     recent_vaults,
+    pinned_vault_ids,
     current_vault_id,
     is_loading = false,
     error = null,
     on_choose_vault_dir,
     on_select_vault,
+    on_toggle_pin_vault,
     hide_choose_vault_button = false,
   }: Props = $props();
 </script>
@@ -34,11 +38,13 @@
     <VaultSelectionPanel
       is_dialog={true}
       {recent_vaults}
+      {pinned_vault_ids}
       {current_vault_id}
       {is_loading}
       {error}
       {on_choose_vault_dir}
       {on_select_vault}
+      {on_toggle_pin_vault}
       on_close={() => {
         on_open_change(false);
       }}
