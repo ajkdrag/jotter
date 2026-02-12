@@ -67,14 +67,12 @@
   function is_valid(): boolean {
     return filename.trim().length > 0;
   }
-
-  const is_busy = $derived(is_saving);
 </script>
 
 <Dialog.Root
   {open}
   onOpenChange={(value: boolean) => {
-    if (!value && !is_busy) on_cancel();
+    if (!value && !is_saving) on_cancel();
   }}
 >
   <Dialog.Content class="max-w-md">
@@ -119,7 +117,7 @@
             on_update_filename(e.currentTarget.value);
           }}
           placeholder="e.g., image-1234567890.png"
-          disabled={is_busy}
+          disabled={is_saving}
         />
       </div>
     {/if}
@@ -133,15 +131,15 @@
           Retry
         </Button>
       {:else}
-        <Button variant="outline" onclick={on_cancel} disabled={is_busy}>
+        <Button variant="outline" onclick={on_cancel} disabled={is_saving}>
           Cancel
         </Button>
         <Button
           variant="default"
           onclick={on_confirm}
-          disabled={!is_valid() || is_busy}
+          disabled={!is_valid() || is_saving}
         >
-          {#if is_busy}
+          {#if is_saving}
             Saving...
           {:else}
             Save

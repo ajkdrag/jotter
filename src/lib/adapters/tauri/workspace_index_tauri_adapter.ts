@@ -241,10 +241,17 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
     },
     async upsert_paths(vault_id: VaultId, paths: string[]): Promise<void> {
       for (const path of paths) {
-        await tauri_invoke<undefined>("index_upsert_note", {
-          vaultId: vault_id,
-          noteId: path,
-        });
+        try {
+          await tauri_invoke<undefined>("index_upsert_note", {
+            vaultId: vault_id,
+            noteId: path,
+          });
+        } catch {
+          await tauri_invoke<undefined>("index_remove_note", {
+            vaultId: vault_id,
+            noteId: path,
+          }).catch(() => undefined);
+        }
       }
     },
     async remove_paths(vault_id: VaultId, paths: string[]): Promise<void> {

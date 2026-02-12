@@ -9,6 +9,18 @@ function normalized_note_path(path: NotePath): NotePath {
 
 const RECENT_NOTES_LIMIT = 10;
 
+function normalize_starred_paths(paths: string[]): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const raw_path of paths) {
+    const path = raw_path.trim();
+    if (!path || seen.has(path)) continue;
+    seen.add(path);
+    normalized.push(path);
+  }
+  return normalized;
+}
+
 function normalize_recent_notes(notes: NoteMeta[]): NoteMeta[] {
   const seen = new Set<NoteId>();
   const normalized: NoteMeta[] = [];
@@ -25,6 +37,7 @@ export class NotesStore {
   notes = $state<NoteMeta[]>([]);
   folder_paths = $state<string[]>([]);
   recent_notes = $state<NoteMeta[]>([]);
+  starred_paths = $state<string[]>([]);
 
   set_notes(notes: NoteMeta[]) {
     this.notes = [...notes].sort((a, b) => a.path.localeCompare(b.path));
@@ -40,6 +53,7 @@ export class NotesStore {
 
   remove_note(note_id: NoteId) {
     this.notes = this.notes.filter((note) => note.id !== note_id);
+    this.remove_starred_path(note_id);
   }
 
   rename_note(old_path: NotePath, new_path: NotePath) {
@@ -61,6 +75,8 @@ export class NotesStore {
         };
       })
       .sort((a, b) => a.path.localeCompare(b.path));
+
+    this.rename_starred_path(old_path, normalized_new);
   }
 
   set_recent_notes(notes: NoteMeta[]) {
@@ -112,6 +128,56 @@ export class NotesStore {
     this.folder_paths = [...folder_paths].sort((a, b) => a.localeCompare(b));
   }
 
+  set_starred_paths(paths: string[]) {
+    this.starred_paths = normalize_starred_paths(paths);
+  }
+
+  toggle_star_path(path: string) {
+    const normalized = path.trim();
+    if (!normalized) return;
+    if (this.starred_paths.includes(normalized)) {
+      this.starred_paths = this.starred_paths.filter((p) => p !== normalized);
+    } else {
+      this.starred_paths = [...this.starred_paths, normalized];
+    }
+  }
+
+  is_starred_path(path: string): boolean {
+    return this.starred_paths.includes(path);
+  }
+
+  remove_starred_path(path: string) {
+    this.starred_paths = this.starred_paths.filter((p) => p !== path);
+  }
+
+  remove_starred_paths_by_prefix(prefix_path: string) {
+    const prefix = `${prefix_path}/`;
+    this.starred_paths = this.starred_paths.filter(
+      (path) => path !== prefix_path && !path.startsWith(prefix),
+    );
+  }
+
+  rename_starred_path(old_path: string, new_path: string) {
+    this.starred_paths = normalize_starred_paths(
+      this.starred_paths.map((p) => (p === old_path ? new_path : p)),
+    );
+  }
+
+  rename_starred_paths_by_prefix(
+    old_prefix_path: string,
+    new_prefix_path: string,
+  ) {
+    const old_prefix = `${old_prefix_path}/`;
+    const new_prefix = `${new_prefix_path}/`;
+    this.starred_paths = normalize_starred_paths(
+      this.starred_paths.map((path) => {
+        if (path === old_prefix_path) return new_prefix_path;
+        if (!path.startsWith(old_prefix)) return path;
+        return `${new_prefix}${path.slice(old_prefix.length)}`;
+      }),
+    );
+  }
+
   add_folder_path(path: string) {
     if (this.folder_paths.includes(path)) return;
     this.folder_paths = [...this.folder_paths, path].sort((a, b) =>
@@ -125,6 +191,7 @@ export class NotesStore {
     this.folder_paths = this.folder_paths.filter(
       (folder_path) => folder_path !== path && !folder_path.startsWith(prefix),
     );
+    this.remove_starred_paths_by_prefix(path);
   }
 
   rename_folder(old_path: string, new_path: string) {
@@ -149,6 +216,8 @@ export class NotesStore {
       }
       return folder_path;
     });
+
+    this.rename_starred_paths_by_prefix(old_path, new_path);
   }
 
   merge_folder_contents(folder_path: string, contents: FolderContents) {
@@ -228,5 +297,6 @@ export class NotesStore {
     this.notes = [];
     this.folder_paths = [];
     this.recent_notes = [];
+    this.starred_paths = [];
   }
 }

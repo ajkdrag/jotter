@@ -48,18 +48,6 @@ function remap_set(
   return remapped;
 }
 
-function remap_prefix_set(
-  prefixes: Set<string>,
-  old_prefix: string,
-  new_prefix: string,
-): Set<string> {
-  const remapped = new Set<string>();
-  for (const prefix of prefixes) {
-    remapped.add(remap_prefix(prefix, old_prefix, new_prefix));
-  }
-  return remapped;
-}
-
 function compact_renames(renames: PrefixRename[]): PrefixRename[] {
   const compacted: PrefixRename[] = [];
   for (const rename of renames) {
@@ -149,7 +137,7 @@ export function reduce_index_changes(
       change.old_prefix,
       change.new_prefix,
     );
-    workset.remove_prefixes = remap_prefix_set(
+    workset.remove_prefixes = remap_set(
       workset.remove_prefixes,
       change.old_prefix,
       change.new_prefix,

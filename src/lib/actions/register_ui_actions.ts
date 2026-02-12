@@ -5,6 +5,10 @@ import type { ThemeMode } from "$lib/types/theme";
 export function register_ui_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
 
+  function parse_sidebar_view(input_view: unknown): "explorer" | "starred" {
+    return String(input_view) === "starred" ? "starred" : "explorer";
+  }
+
   registry.register({
     id: ACTION_IDS.ui_toggle_sidebar,
     label: "Toggle Sidebar",
@@ -19,6 +23,14 @@ export function register_ui_actions(input: ActionRegistrationInput) {
     label: "Select Folder",
     execute: (path: unknown) => {
       stores.ui.set_selected_folder_path(String(path));
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.ui_set_sidebar_view,
+    label: "Set Sidebar View",
+    execute: (view: unknown) => {
+      stores.ui.set_sidebar_view(parse_sidebar_view(view));
     },
   });
 

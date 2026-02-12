@@ -27,6 +27,7 @@ export const ACTION_IDS = {
   note_confirm_save_overwrite: "note.confirm_save_overwrite",
   note_retry_save: "note.retry_save",
   note_cancel_save: "note.cancel_save",
+  note_toggle_star: "note.toggle_star",
 
   vault_request_change: "vault.request_change",
   vault_close_change: "vault.close_change",
@@ -52,9 +53,11 @@ export const ACTION_IDS = {
   folder_confirm_rename: "folder.confirm_rename",
   folder_cancel_rename: "folder.cancel_rename",
   folder_retry_rename: "folder.retry_rename",
+  folder_toggle_star: "folder.toggle_star",
 
   ui_toggle_sidebar: "ui.toggle_sidebar",
   ui_select_folder: "ui.select_folder",
+  ui_set_sidebar_view: "ui.set_sidebar_view",
   ui_set_theme: "ui.set_theme",
 
   settings_open: "settings.open",

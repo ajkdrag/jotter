@@ -32,6 +32,11 @@ import {
   resolve_wiki_target,
   wiki_link_targets,
 } from "$lib/adapters/web/wiki_links_web";
+import {
+  to_number,
+  to_string,
+  to_nullable_string,
+} from "$lib/adapters/shared/coerce";
 
 const BATCH_SIZE = 100;
 const SQLITE_OPEN_FLAGS =
@@ -79,30 +84,6 @@ const rebuild_state_by_vault = new Map<string, RebuildState>();
 function as_error_message(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
-}
-
-function to_number(value: unknown): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "bigint") return Number(value);
-  if (typeof value === "string") return Number(value);
-  return 0;
-}
-
-function to_string(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (
-    typeof value === "number" ||
-    typeof value === "bigint" ||
-    typeof value === "boolean"
-  ) {
-    return String(value);
-  }
-  return "";
-}
-
-function to_nullable_string(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  return to_string(value);
 }
 
 function file_stem(path: string): string {
@@ -531,6 +512,10 @@ function is_unreachable_runtime_abort(error: unknown): boolean {
   );
 }
 
+function post_result(id: number, data: unknown): void {
+  post_message({ type: "result", id, data });
+}
+
 async function handle_request_once(
   request: SearchWorkerRequest,
 ): Promise<void> {
@@ -543,11 +528,7 @@ async function handle_request_once(
       vault_id: request.vault_id,
       storage: runtime.storage,
     });
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
@@ -560,100 +541,60 @@ async function handle_request_once(
         string | number | bigint | Uint8Array | null
       >,
     );
-    post_message({
-      type: "result",
-      id: request.id,
-      data: rows,
-    });
+    post_result(request.id, rows);
     return;
   }
 
   if (request.type === "rebuild_begin") {
     await begin_rebuild(request.vault_id, request.notes, request.total);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
   if (request.type === "rebuild_batch") {
     await rebuild_batch(request.vault_id, request.docs);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
   if (request.type === "rebuild_finish") {
     finish_rebuild(request.vault_id);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
   if (request.type === "rebuild_index") {
     await rebuild_index(request.vault_id, request.docs);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
   if (request.type === "upsert_note") {
     await upsert_note(request.vault_id, request.doc);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
   if (request.type === "remove_note") {
     await remove_note(request.vault_id, request.note_id);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: null,
-    });
+    post_result(request.id, null);
     return;
   }
 
   if (request.type === "search") {
     const hits = await search(request.vault_id, request);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: hits,
-    });
+    post_result(request.id, hits);
     return;
   }
 
   if (request.type === "suggest") {
     const hits = await suggest(request.vault_id, request);
-    post_message({
-      type: "result",
-      id: request.id,
-      data: hits,
-    });
+    post_result(request.id, hits);
     return;
   }
 
   await close_all();
-  post_message({
-    type: "result",
-    id: request.id,
-    data: null,
-  });
+  post_result(request.id, null);
 }
 
 async function handle_request(request: SearchWorkerRequest): Promise<void> {

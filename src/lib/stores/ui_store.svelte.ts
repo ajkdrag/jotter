@@ -11,6 +11,7 @@ import type { PastedImagePayload } from "$lib/types/editor";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 type AsyncStatus = "idle" | "loading" | "error";
+type SidebarView = "explorer" | "starred";
 
 const INITIAL_DELETE_NOTE_DIALOG = { open: false, note: null } as const;
 
@@ -94,6 +95,7 @@ function initial_settings_dialog(settings: EditorSettings) {
 export class UIStore {
   theme = $state<ThemeMode>("system");
   sidebar_open = $state(true);
+  sidebar_view = $state<SidebarView>("explorer");
   selected_folder_path = $state("");
   editor_settings = $state<EditorSettings>({ ...DEFAULT_EDITOR_SETTINGS });
   system_dialog_open = $state(false);
@@ -196,6 +198,11 @@ export class UIStore {
 
   toggle_sidebar() {
     this.sidebar_open = !this.sidebar_open;
+  }
+
+  set_sidebar_view(view: SidebarView) {
+    this.sidebar_view = view;
+    this.sidebar_open = true;
   }
 
   set_selected_folder_path(path: string) {

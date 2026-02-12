@@ -62,6 +62,9 @@
   /* Selection highlight */
   --selection-bg: oklch(0.92 0.04 var(--accent-hue));
 
+  /* Warning semantic color */
+  --warning: oklch(0.8 0.14 85);
+
   /* ----------------------------------------
      DEPTH SYSTEM
      ----------------------------------------
@@ -237,6 +240,8 @@
   --focus-ring-offset: oklch(0.145 0 0);
 
   --selection-bg: oklch(0.3 0.05 var(--accent-hue));
+
+  --warning: oklch(0.86 0.12 90);
 
   /* Shadows are more subtle in dark mode */
   --shadow-color: oklch(0 0 0);

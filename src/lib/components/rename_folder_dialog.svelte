@@ -62,9 +62,8 @@
     );
   }
 
-  function handle_input(event: Event) {
-    const target = event.target as HTMLInputElement;
-    on_update_name(target.value);
+  function handle_input(event: Event & { currentTarget: HTMLInputElement }) {
+    on_update_name(event.currentTarget.value);
   }
 
   function handle_open_change(next_open: boolean) {

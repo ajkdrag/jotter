@@ -38,6 +38,7 @@ export type AppMountConfig = {
 };
 
 const RECENT_NOTES_KEY = "recent_notes";
+const STARRED_PATHS_KEY = "starred_paths";
 const WATCHER_INDEX_FLUSH_DELAY_MS = 120;
 const WATCHER_BULK_FORCE_SCAN_THRESHOLD = 256;
 class StaleVaultOpenError extends Error {
@@ -90,9 +91,10 @@ export class VaultService {
       const has_vault = this.vault_store.vault !== null;
 
       if (!has_vault && config.bootstrap_default_vault_path) {
+        const default_path = config.bootstrap_default_vault_path;
         const open_revision = await this.begin_open_revision();
-        editor_settings = await this.open_vault_by_path(
-          config.bootstrap_default_vault_path,
+        editor_settings = await this.open_vault(
+          () => this.vault_port.open_vault(default_path),
           open_revision,
         );
       } else {
@@ -149,65 +151,22 @@ export class VaultService {
   }
 
   async change_vault_by_path(vault_path: VaultPath): Promise<VaultOpenResult> {
-    const open_revision = await this.begin_open_revision();
-    this.op_store.start("vault.change", this.now_ms());
-
-    try {
-      const editor_settings = await this.open_vault_by_path(
-        vault_path,
-        open_revision,
-      );
-      if (!this.is_current_open_revision(open_revision)) {
-        return { status: "stale" };
-      }
-      this.op_store.succeed("vault.change");
-      return {
-        status: "opened",
-        editor_settings,
-      };
-    } catch (error) {
-      if (error instanceof StaleVaultOpenError) {
-        return { status: "stale" };
-      }
-      const message = error_message(error);
-      logger.error(`Choose vault failed: ${message}`);
-      this.op_store.fail("vault.change", message);
-      return {
-        status: "failed",
-        error: message,
-      };
-    }
+    return this.change_vault(
+      (revision) =>
+        this.open_vault(() => this.vault_port.open_vault(vault_path), revision),
+      "Choose vault failed",
+    );
   }
 
   async change_vault_by_id(vault_id: VaultId): Promise<VaultOpenResult> {
-    const open_revision = await this.begin_open_revision();
-    this.op_store.start("vault.change", this.now_ms());
-
-    try {
-      const editor_settings = await this.open_vault_by_id(
-        vault_id,
-        open_revision,
-      );
-      if (!this.is_current_open_revision(open_revision)) {
-        return { status: "stale" };
-      }
-      this.op_store.succeed("vault.change");
-      return {
-        status: "opened",
-        editor_settings,
-      };
-    } catch (error) {
-      if (error instanceof StaleVaultOpenError) {
-        return { status: "stale" };
-      }
-      const message = error_message(error);
-      logger.error(`Select vault failed: ${message}`);
-      this.op_store.fail("vault.change", message);
-      return {
-        status: "failed",
-        error: message,
-      };
-    }
+    return this.change_vault(
+      (revision) =>
+        this.open_vault(
+          () => this.vault_port.open_vault_by_id(vault_id),
+          revision,
+        ),
+      "Select vault failed",
+    );
   }
 
   set_theme(theme: ThemeMode): ThemeSetResult {
@@ -258,20 +217,36 @@ export class VaultService {
     }
   }
 
-  private async open_vault_by_path(
-    vault_path: VaultPath,
-    open_revision: number,
-  ): Promise<EditorSettings> {
-    const vault = await this.vault_port.open_vault(vault_path);
-    this.throw_if_stale(open_revision);
-    return this.finish_open_vault(vault, open_revision);
+  private async change_vault(
+    open_fn: (revision: number) => Promise<EditorSettings>,
+    error_label: string,
+  ): Promise<VaultOpenResult> {
+    const open_revision = await this.begin_open_revision();
+    this.op_store.start("vault.change", this.now_ms());
+
+    try {
+      const editor_settings = await open_fn(open_revision);
+      if (!this.is_current_open_revision(open_revision)) {
+        return { status: "stale" };
+      }
+      this.op_store.succeed("vault.change");
+      return { status: "opened", editor_settings };
+    } catch (error) {
+      if (error instanceof StaleVaultOpenError) {
+        return { status: "stale" };
+      }
+      const message = error_message(error);
+      logger.error(`${error_label}: ${message}`);
+      this.op_store.fail("vault.change", message);
+      return { status: "failed", error: message };
+    }
   }
 
-  private async open_vault_by_id(
-    vault_id: VaultId,
+  private async open_vault(
+    open_fn: () => Promise<Vault>,
     open_revision: number,
   ): Promise<EditorSettings> {
-    const vault = await this.vault_port.open_vault_by_id(vault_id);
+    const vault = await open_fn();
     this.throw_if_stale(open_revision);
     return this.finish_open_vault(vault, open_revision);
   }
@@ -297,6 +272,7 @@ export class VaultService {
     this.throw_if_stale(open_revision);
 
     const loaded_recent_notes = await this.load_recent_notes(vault.id);
+    const loaded_starred_paths = await this.load_starred_paths(vault.id);
     const editor_settings = await this.load_editor_settings(vault.id);
     this.throw_if_stale(open_revision);
 
@@ -313,6 +289,7 @@ export class VaultService {
     this.notes_store.merge_folder_contents("", root_contents);
     this.vault_store.set_recent_vaults(recent_vaults);
     this.notes_store.set_recent_notes(loaded_recent_notes);
+    this.notes_store.set_starred_paths(loaded_starred_paths);
 
     const ensured_note = ensure_open_note({
       vault,
@@ -432,6 +409,39 @@ export class VaultService {
       return parsed;
     } catch (error) {
       logger.error(`Load recent notes failed: ${error_message(error)}`);
+      return [];
+    }
+  }
+
+  async save_starred_paths(
+    vault_id: VaultId,
+    starred_paths: string[],
+  ): Promise<void> {
+    try {
+      await this.vault_settings_port.set_vault_setting(
+        vault_id,
+        STARRED_PATHS_KEY,
+        starred_paths,
+      );
+    } catch (error) {
+      logger.error(`Save starred paths failed: ${error_message(error)}`);
+    }
+  }
+
+  private async load_starred_paths(vault_id: VaultId): Promise<string[]> {
+    try {
+      const stored = await this.vault_settings_port.get_vault_setting<unknown>(
+        vault_id,
+        STARRED_PATHS_KEY,
+      );
+      if (!stored || !Array.isArray(stored)) {
+        return [];
+      }
+      return stored.filter(
+        (entry): entry is string => typeof entry === "string",
+      );
+    } catch (error) {
+      logger.error(`Load starred paths failed: ${error_message(error)}`);
       return [];
     }
   }

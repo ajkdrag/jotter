@@ -4,6 +4,7 @@ import {
   type PrefixRename,
   type ReducedIndexWorkset,
 } from "$lib/domain/index_workset";
+import { is_abort_error, throw_if_aborted } from "$lib/adapters/shared/abort";
 import type {
   IndexChange,
   IndexProgressEvent,
@@ -85,25 +86,6 @@ export function create_index_actor(executor: IndexActorExecutor): {
     };
     vault_states.set(key, initial);
     return initial;
-  }
-
-  function create_abort_error(): Error {
-    const error = new Error("Index run aborted");
-    error.name = "AbortError";
-    return error;
-  }
-
-  function throw_if_aborted(signal: AbortSignal | undefined): void {
-    if (signal?.aborted) {
-      throw create_abort_error();
-    }
-  }
-
-  function is_abort_error(error: unknown): boolean {
-    return (
-      error instanceof Error &&
-      (error.name === "AbortError" || error.message === "Index run aborted")
-    );
   }
 
   async function apply_workset(

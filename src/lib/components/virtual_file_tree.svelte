@@ -8,6 +8,7 @@
     nodes: FlatTreeNode[];
     selected_path: string;
     open_note_path: string;
+    starred_paths?: string[];
     on_toggle_folder: (path: string) => void;
     on_select_note: (path: string) => void;
     on_select_folder: (path: string) => void;
@@ -17,6 +18,7 @@
     on_request_rename_folder?: ((folder_path: string) => void) | undefined;
     on_request_create_note?: ((folder_path: string) => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
+    on_toggle_star?: ((path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
     on_load_more: (folder_path: string) => void;
     on_retry_load_more: (folder_path: string) => void;
@@ -26,6 +28,7 @@
     nodes,
     selected_path,
     open_note_path,
+    starred_paths = [],
     on_toggle_folder,
     on_select_note,
     on_select_folder,
@@ -35,6 +38,7 @@
     on_request_rename_folder,
     on_request_create_note,
     on_request_create_folder,
+    on_toggle_star,
     on_retry_load,
     on_load_more,
     on_retry_load_more,
@@ -163,6 +167,7 @@
             is_selected={node.is_folder
               ? selected_path === node.path
               : open_note_path === node.path}
+            is_starred={starred_paths.includes(node.path)}
             {on_toggle_folder}
             {on_select_note}
             {on_select_folder}
@@ -172,6 +177,7 @@
             {on_request_rename_folder}
             {on_request_create_note}
             {on_request_create_folder}
+            {on_toggle_star}
             {on_retry_load}
             {on_retry_load_more}
           />

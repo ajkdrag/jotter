@@ -281,3 +281,47 @@ describe("NotesStore recent notes", () => {
     expect(store.recent_notes).toHaveLength(2);
   });
 });
+
+describe("NotesStore starred paths", () => {
+  it("toggles starred paths with normalization and dedupe", () => {
+    const store = new NotesStore();
+
+    store.set_starred_paths(["docs", "docs", " docs/guide.md ", ""]);
+    expect(store.starred_paths).toEqual(["docs", "docs/guide.md"]);
+
+    store.toggle_star_path("docs");
+    expect(store.starred_paths).toEqual(["docs/guide.md"]);
+
+    store.toggle_star_path(" docs ");
+    expect(store.starred_paths).toEqual(["docs/guide.md", "docs"]);
+  });
+
+  it("updates starred paths when note is renamed or deleted", () => {
+    const store = new NotesStore();
+    store.set_notes([note("docs/guide.md")]);
+    store.set_starred_paths(["docs/guide.md"]);
+
+    store.rename_note("docs/guide.md" as NotePath, "docs/new.md" as NotePath);
+    expect(store.starred_paths).toEqual(["docs/new.md"]);
+
+    store.remove_note("docs/new.md" as NoteId);
+    expect(store.starred_paths).toEqual([]);
+  });
+
+  it("updates starred descendants for folder rename and delete", () => {
+    const store = new NotesStore();
+    store.set_folder_paths(["docs", "docs/sub"]);
+    store.set_notes([note("docs/readme.md"), note("docs/sub/guide.md")]);
+    store.set_starred_paths(["docs", "docs/sub/guide.md", "misc.md"]);
+
+    store.rename_folder("docs", "archive");
+    expect(store.starred_paths).toEqual([
+      "archive",
+      "archive/sub/guide.md",
+      "misc.md",
+    ]);
+
+    store.remove_folder("archive");
+    expect(store.starred_paths).toEqual(["misc.md"]);
+  });
+});

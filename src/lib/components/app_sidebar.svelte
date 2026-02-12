@@ -25,9 +25,22 @@
     Copy,
     Pencil,
     Trash2,
+    Star,
   } from "@lucide/svelte";
 
   const { stores, action_registry } = use_app_context();
+
+  function is_note_path(path: string): boolean {
+    return path.endsWith(".md");
+  }
+
+  function toggle_star_for_path(path: string) {
+    if (is_note_path(path)) {
+      void action_registry.execute(ACTION_IDS.note_toggle_star, path);
+      return;
+    }
+    void action_registry.execute(ACTION_IDS.folder_toggle_star, path);
+  }
 
   const flat_nodes = $derived(
     flatten_filetree({
@@ -40,6 +53,96 @@
       pagination: stores.ui.filetree.pagination,
     }),
   );
+
+  const starred_nodes = $derived.by(() => {
+    const starred_paths = stores.notes.starred_paths;
+    if (starred_paths.length === 0) {
+      return [];
+    }
+
+    const root_paths = [...starred_paths].sort((a, b) => {
+      const a_is_folder = !is_note_path(a);
+      const b_is_folder = !is_note_path(b);
+      if (a_is_folder !== b_is_folder) {
+        return a_is_folder ? -1 : 1;
+      }
+      return a.localeCompare(b);
+    });
+
+    const result = [];
+    for (const root_path of root_paths) {
+      const is_folder = !is_note_path(root_path);
+
+      if (!is_folder) {
+        const note_meta =
+          stores.notes.notes.find((note) => note.path === root_path) ??
+          ({
+            id: root_path,
+            path: root_path,
+            name: (root_path.split("/").at(-1) ?? root_path).replace(
+              /\.md$/i,
+              "",
+            ),
+            title: (root_path.split("/").at(-1) ?? root_path).replace(
+              /\.md$/i,
+              "",
+            ),
+            mtime_ms: 0,
+            size_bytes: 0,
+          } as NoteMeta);
+
+        result.push({
+          id: `starred:${root_path}`,
+          path: root_path,
+          name: note_meta.name,
+          depth: 0,
+          is_folder: false,
+          is_expanded: false,
+          is_loading: false,
+          has_error: false,
+          error_message: null,
+          note: note_meta,
+          parent_path: null,
+          is_load_more: false,
+        });
+        continue;
+      }
+
+      const folder_notes = stores.notes.notes.filter(
+        (note) =>
+          note.path === root_path || note.path.startsWith(`${root_path}/`),
+      );
+      const folder_paths = stores.notes.folder_paths.filter(
+        (path) => path === root_path || path.startsWith(`${root_path}/`),
+      );
+
+      const segment_nodes = flatten_filetree({
+        notes: folder_notes,
+        folder_paths,
+        expanded_paths: stores.ui.filetree.expanded_paths,
+        load_states: stores.ui.filetree.load_states,
+        error_messages: stores.ui.filetree.error_messages,
+        show_hidden_files: stores.ui.editor_settings.show_hidden_files,
+        pagination: stores.ui.filetree.pagination,
+      }).filter(
+        (node) =>
+          node.path === root_path ||
+          node.path.startsWith(`${root_path}/`) ||
+          (node.is_load_more && node.parent_path?.startsWith(root_path)),
+      );
+
+      for (const node of segment_nodes) {
+        const relative_depth = node.path === root_path ? 0 : node.depth;
+        result.push({
+          ...node,
+          id: `starred:${root_path}:${node.id}`,
+          depth: relative_depth,
+        });
+      }
+    }
+
+    return result;
+  });
 
   const open_note_title = $derived(
     stores.editor.open_note?.meta.title ?? "Notes",
@@ -57,6 +160,62 @@
   function handle_theme_change(theme: "light" | "dark" | "system") {
     void action_registry.execute(ACTION_IDS.ui_set_theme, theme);
   }
+
+  type HeaderAction = {
+    icon: typeof FilePlus;
+    label: string;
+    onclick: () => void;
+  };
+
+  const explorer_header_actions: HeaderAction[] = [
+    {
+      icon: FilePlus,
+      label: "New Note",
+      onclick: () => void action_registry.execute(ACTION_IDS.note_create),
+    },
+    {
+      icon: FolderPlus,
+      label: "New Folder",
+      onclick: () =>
+        void action_registry.execute(
+          ACTION_IDS.folder_request_create,
+          stores.ui.selected_folder_path,
+        ),
+    },
+    {
+      icon: RefreshCw,
+      label: "Refresh",
+      onclick: () =>
+        void action_registry.execute(ACTION_IDS.folder_refresh_tree),
+    },
+    {
+      icon: FoldVertical,
+      label: "Collapse All",
+      onclick: () =>
+        void action_registry.execute(ACTION_IDS.folder_collapse_all),
+    },
+  ];
+
+  const starred_header_actions: HeaderAction[] = [
+    {
+      icon: RefreshCw,
+      label: "Refresh",
+      onclick: () =>
+        void action_registry.execute(ACTION_IDS.folder_refresh_tree),
+    },
+    {
+      icon: FoldVertical,
+      label: "Collapse All",
+      onclick: () =>
+        void action_registry.execute(ACTION_IDS.folder_collapse_all),
+    },
+  ];
+
+  const sidebar_header_actions = $derived(
+    stores.ui.sidebar_view === "starred"
+      ? starred_header_actions
+      : explorer_header_actions,
+  );
 </script>
 
 {#if stores.vault.vault}
@@ -64,8 +223,27 @@
     <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <ActivityBar
         sidebar_open={stores.ui.sidebar_open}
-        on_toggle_sidebar={() =>
-          void action_registry.execute(ACTION_IDS.ui_toggle_sidebar)}
+        active_view={stores.ui.sidebar_view}
+        on_open_explorer={() => {
+          if (stores.ui.sidebar_open && stores.ui.sidebar_view === "explorer") {
+            void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
+            return;
+          }
+          void action_registry.execute(
+            ACTION_IDS.ui_set_sidebar_view,
+            "explorer",
+          );
+        }}
+        on_open_starred={() => {
+          if (stores.ui.sidebar_open && stores.ui.sidebar_view === "starred") {
+            void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
+            return;
+          }
+          void action_registry.execute(
+            ACTION_IDS.ui_set_sidebar_view,
+            "starred",
+          );
+        }}
         on_open_settings={() =>
           void action_registry.execute(ACTION_IDS.settings_open)}
       />
@@ -83,110 +261,125 @@
                   <div
                     class="flex w-full items-center justify-between gap-2 px-4 py-2"
                   >
-                    <button
-                      type="button"
-                      class="min-w-0 truncate text-left font-semibold transition-colors hover:text-foreground/90"
-                      onclick={() => {
-                        void action_registry.execute(
-                          ACTION_IDS.ui_select_folder,
-                          "",
-                        );
-                      }}
-                      aria-label="Select vault root"
-                    >
-                      {stores.vault.vault.name}
-                    </button>
+                    {#if stores.ui.sidebar_view === "starred"}
+                      <span class="min-w-0 truncate text-left font-semibold">
+                        Starred
+                      </span>
+                    {:else}
+                      <button
+                        type="button"
+                        class="min-w-0 truncate text-left font-semibold transition-colors hover:text-foreground/90"
+                        onclick={() => {
+                          void action_registry.execute(
+                            ACTION_IDS.ui_select_folder,
+                            "",
+                          );
+                        }}
+                        aria-label="Select vault root"
+                      >
+                        {stores.vault.vault.name}
+                      </button>
+                    {/if}
                     <div class="flex shrink-0 items-center">
-                      <Tooltip.Root>
-                        <Tooltip.Trigger>
-                          {#snippet child({ props })}
-                            <Button
-                              {...props}
-                              variant="ghost"
-                              size="icon"
-                              class="SidebarHeaderButton h-7 w-7"
-                              onclick={() =>
-                                void action_registry.execute(
-                                  ACTION_IDS.note_create,
-                                )}
-                            >
-                              <FilePlus class="SidebarHeaderIcon" />
-                            </Button>
-                          {/snippet}
-                        </Tooltip.Trigger>
-                        <Tooltip.Content>New Note</Tooltip.Content>
-                      </Tooltip.Root>
-                      <Tooltip.Root>
-                        <Tooltip.Trigger>
-                          {#snippet child({ props })}
-                            <Button
-                              {...props}
-                              variant="ghost"
-                              size="icon"
-                              class="SidebarHeaderButton h-7 w-7"
-                              onclick={() => {
-                                void action_registry.execute(
-                                  ACTION_IDS.folder_request_create,
-                                  stores.ui.selected_folder_path,
-                                );
-                              }}
-                            >
-                              <FolderPlus class="SidebarHeaderIcon" />
-                            </Button>
-                          {/snippet}
-                        </Tooltip.Trigger>
-                        <Tooltip.Content>New Folder</Tooltip.Content>
-                      </Tooltip.Root>
-                      <Tooltip.Root>
-                        <Tooltip.Trigger>
-                          {#snippet child({ props })}
-                            <Button
-                              {...props}
-                              variant="ghost"
-                              size="icon"
-                              class="SidebarHeaderButton h-7 w-7"
-                              onclick={() =>
-                                void action_registry.execute(
-                                  ACTION_IDS.folder_refresh_tree,
-                                )}
-                            >
-                              <RefreshCw class="SidebarHeaderIcon" />
-                            </Button>
-                          {/snippet}
-                        </Tooltip.Trigger>
-                        <Tooltip.Content>Refresh</Tooltip.Content>
-                      </Tooltip.Root>
-                      <Tooltip.Root>
-                        <Tooltip.Trigger>
-                          {#snippet child({ props })}
-                            <Button
-                              {...props}
-                              variant="ghost"
-                              size="icon"
-                              class="SidebarHeaderButton h-7 w-7"
-                              onclick={() =>
-                                void action_registry.execute(
-                                  ACTION_IDS.folder_collapse_all,
-                                )}
-                            >
-                              <FoldVertical class="SidebarHeaderIcon" />
-                            </Button>
-                          {/snippet}
-                        </Tooltip.Trigger>
-                        <Tooltip.Content>Collapse All</Tooltip.Content>
-                      </Tooltip.Root>
+                      {#each sidebar_header_actions as action (action.label)}
+                        <Tooltip.Root>
+                          <Tooltip.Trigger>
+                            {#snippet child({ props })}
+                              <Button
+                                {...props}
+                                variant="ghost"
+                                size="icon"
+                                class="SidebarHeaderButton h-7 w-7"
+                                onclick={action.onclick}
+                              >
+                                <action.icon class="SidebarHeaderIcon" />
+                              </Button>
+                            {/snippet}
+                          </Tooltip.Trigger>
+                          <Tooltip.Content>{action.label}</Tooltip.Content>
+                        </Tooltip.Root>
+                      {/each}
                     </div>
                   </div>
                 </Sidebar.Header>
 
                 <Sidebar.Content class="overflow-hidden">
-                  <Sidebar.Group class="h-full">
+                  {#if stores.ui.sidebar_view === "starred"}
+                    <Sidebar.Group class="h-full">
+                      <Sidebar.GroupContent class="h-full">
+                        <VirtualFileTree
+                          nodes={starred_nodes}
+                          selected_path={stores.ui.selected_folder_path}
+                          open_note_path={stores.editor.open_note?.meta.path ??
+                            ""}
+                          starred_paths={stores.notes.starred_paths}
+                          on_toggle_folder={(path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.folder_toggle,
+                              path,
+                            )}
+                          on_select_note={(note_path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_open,
+                              note_path,
+                            )}
+                          on_select_folder={(path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.ui_select_folder,
+                              path,
+                            )}
+                          on_request_delete={(note: NoteMeta) =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_request_delete,
+                              note,
+                            )}
+                          on_request_rename={(note: NoteMeta) =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_request_rename,
+                              note,
+                            )}
+                          on_request_delete_folder={(folder_path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.folder_request_delete,
+                              folder_path,
+                            )}
+                          on_request_rename_folder={(folder_path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.folder_request_rename,
+                              folder_path,
+                            )}
+                          on_toggle_star={toggle_star_for_path}
+                          on_retry_load={(path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.folder_retry_load,
+                              path,
+                            )}
+                          on_load_more={(path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.folder_load_more,
+                              path,
+                            )}
+                          on_retry_load_more={(path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.folder_load_more,
+                              path,
+                            )}
+                        />
+                      </Sidebar.GroupContent>
+                    </Sidebar.Group>
+                  {/if}
+
+                  <Sidebar.Group
+                    class="h-full"
+                    hidden={stores.ui.sidebar_view === "starred"}
+                  >
                     <Sidebar.GroupContent class="h-full">
                       <VirtualFileTree
                         nodes={flat_nodes}
                         selected_path={stores.ui.selected_folder_path}
                         open_note_path={stores.editor.open_note?.meta.path ??
                           ""}
+                        starred_paths={stores.notes.starred_paths}
                         on_toggle_folder={(path: string) =>
                           void action_registry.execute(
                             ACTION_IDS.folder_toggle,
@@ -232,6 +425,7 @@
                             ACTION_IDS.folder_request_create,
                             folder_path,
                           )}
+                        on_toggle_star={toggle_star_for_path}
                         on_retry_load={(path: string) =>
                           void action_registry.execute(
                             ACTION_IDS.folder_retry_load,
@@ -289,6 +483,29 @@
                         <span>Copy Markdown</span>
                       </ContextMenu.Item>
                       {#if is_persisted_note}
+                        <ContextMenu.Separator />
+                        <ContextMenu.Item
+                          onclick={() => {
+                            const note_path =
+                              stores.editor.open_note?.meta.path;
+                            if (!note_path) {
+                              return;
+                            }
+                            void action_registry.execute(
+                              ACTION_IDS.note_toggle_star,
+                              note_path,
+                            );
+                          }}
+                        >
+                          <Star class="mr-2 h-4 w-4" />
+                          <span>
+                            {stores.notes.is_starred_path(
+                              stores.editor.open_note?.meta.path ?? "",
+                            )
+                              ? "Unstar"
+                              : "Star"}
+                          </span>
+                        </ContextMenu.Item>
                         <ContextMenu.Separator />
                         <ContextMenu.Item
                           onclick={() =>
@@ -379,5 +596,17 @@
   :global(.SidebarHeaderIcon) {
     width: var(--size-icon-sm);
     height: var(--size-icon-sm);
+  }
+
+  :global(.StarredGroupLabel) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-inline: var(--space-4);
+  }
+
+  :global(.StarredGroupLabel__icon) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
   }
 </style>

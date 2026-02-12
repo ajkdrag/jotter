@@ -14,11 +14,14 @@
     RefreshCw,
     FilePlus,
     FolderPlus,
+    Star,
+    StarOff,
   } from "@lucide/svelte";
 
   type Props = {
     node: FlatTreeNode;
     is_selected: boolean;
+    is_starred?: boolean;
     on_toggle_folder: (path: string) => void;
     on_select_note: (path: string) => void;
     on_select_folder: (path: string) => void;
@@ -28,6 +31,7 @@
     on_request_rename_folder?: ((folder_path: string) => void) | undefined;
     on_request_create_note?: ((folder_path: string) => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
+    on_toggle_star?: ((path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
     on_retry_load_more: (folder_path: string) => void;
   };
@@ -35,6 +39,7 @@
   let {
     node,
     is_selected,
+    is_starred = false,
     on_toggle_folder,
     on_select_note,
     on_select_folder,
@@ -44,6 +49,7 @@
     on_request_rename_folder,
     on_request_create_note,
     on_request_create_folder,
+    on_toggle_star,
     on_retry_load,
     on_retry_load_more,
   }: Props = $props();
@@ -130,6 +136,9 @@
       {/if}
       <Folder class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
+      {#if is_starred}
+        <Star class="TreeRow__star-icon" />
+      {/if}
       {#if node.has_error}
         <button
           type="button"
@@ -144,6 +153,9 @@
       <span class="TreeRow__spacer"></span>
       <File class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
+      {#if is_starred}
+        <Star class="TreeRow__star-icon" />
+      {/if}
     {/if}
   </div>
 {/snippet}
@@ -202,6 +214,22 @@
         <ContextMenu.Separator />
         <ContextMenu.Item
           onclick={() => {
+            if (on_toggle_star) {
+              on_toggle_star(node.path);
+            }
+          }}
+        >
+          {#if is_starred}
+            <StarOff class="mr-2 h-4 w-4" />
+            <span>Unstar</span>
+          {:else}
+            <Star class="mr-2 h-4 w-4" />
+            <span>Star</span>
+          {/if}
+        </ContextMenu.Item>
+        <ContextMenu.Separator />
+        <ContextMenu.Item
+          onclick={() => {
             if (on_request_rename_folder) {
               on_request_rename_folder(node.path);
             }
@@ -230,6 +258,22 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
+        <ContextMenu.Item
+          onclick={() => {
+            if (on_toggle_star) {
+              on_toggle_star(node.path);
+            }
+          }}
+        >
+          {#if is_starred}
+            <StarOff class="mr-2 h-4 w-4" />
+            <span>Unstar</span>
+          {:else}
+            <Star class="mr-2 h-4 w-4" />
+            <span>Star</span>
+          {/if}
+        </ContextMenu.Item>
+        <ContextMenu.Separator />
         <ContextMenu.Item
           onclick={() => {
             if (node.note && on_request_rename) {
@@ -380,6 +424,16 @@
     height: var(--size-icon);
     flex-shrink: 0;
     opacity: 0.7;
+  }
+
+  :global(.TreeRow__star-icon) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
+    flex-shrink: 0;
+    color: var(--warning);
+    fill: currentColor;
+    margin-inline-start: var(--space-1);
+    opacity: 0.8;
   }
 
   :global(.TreeRow__action svg) {

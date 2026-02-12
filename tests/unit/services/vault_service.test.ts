@@ -92,7 +92,11 @@ describe("VaultService", () => {
     };
 
     const vault_settings_port = {
-      get_vault_setting: vi.fn().mockResolvedValue(null),
+      get_vault_setting: vi
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(["vault-b/alpha.md"])
+        .mockResolvedValue(null),
       set_vault_setting: vi.fn().mockResolvedValue(undefined),
       delete_vault_setting: vi.fn(),
     };
@@ -131,6 +135,7 @@ describe("VaultService", () => {
     const second_result = await second;
     expect(second_result.status).toBe("opened");
     expect(vault_store.vault?.id).toBe(vault_b.id);
+    expect(notes_store.starred_paths).toEqual(["vault-b/alpha.md"]);
 
     open_a.resolve(vault_a);
     const first_result = await first;
@@ -257,6 +262,65 @@ describe("VaultService", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("saves starred paths to vault settings", async () => {
+    const vault_id = as_vault_id("vault-a");
+
+    const service = new VaultService(
+      {
+        choose_vault: vi.fn(),
+        open_vault: vi.fn(),
+        open_vault_by_id: vi.fn(),
+        list_vaults: vi.fn(),
+        remember_last_vault: vi.fn(),
+        get_last_vault_id: vi.fn(),
+      } as never,
+      { list_folder_contents: vi.fn() } as never,
+      {
+        touch_index: vi.fn(),
+        cancel_index: vi.fn(),
+        sync_index: vi.fn(),
+        rebuild_index: vi.fn(),
+        upsert_note: vi.fn(),
+        remove_note: vi.fn(),
+        remove_notes: vi.fn(),
+        remove_notes_by_prefix: vi.fn(),
+        rename_folder_paths: vi.fn(),
+        subscribe_index_progress: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        watch_vault: vi.fn(),
+        unwatch_vault: vi.fn(),
+        subscribe_fs_events: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      { get_setting: vi.fn(), set_setting: vi.fn() } as never,
+      {
+        get_vault_setting: vi.fn(),
+        set_vault_setting: vi.fn().mockResolvedValue(undefined),
+        delete_vault_setting: vi.fn(),
+      } as never,
+      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+      new VaultStore(),
+      new NotesStore(),
+      new EditorStore(),
+      new OpStore(),
+      new SearchStore(),
+      () => 1,
+    );
+
+    await service.save_starred_paths(vault_id, ["docs", "docs/a.md"]);
+
+    const mock_port = (
+      service as unknown as {
+        vault_settings_port: { set_vault_setting: ReturnType<typeof vi.fn> };
+      }
+    ).vault_settings_port;
+    expect(mock_port.set_vault_setting).toHaveBeenCalledWith(
+      vault_id,
+      "starred_paths",
+      ["docs", "docs/a.md"],
+    );
   });
 
   it("unsubscribes previous watcher subscription when vault changes", async () => {

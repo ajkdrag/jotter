@@ -236,24 +236,17 @@ export function create_notes_web_adapter(): NotesPort {
 
     async read_note(vault_id: VaultId, note_id: NoteId): Promise<NoteDoc> {
       const root = await get_vault_handle(vault_id);
-      const { handle, name } = await resolve_note_path(root, note_id);
+      const normalized = normalize_note_path(note_id);
+      const { handle } = await resolve_note_path(root, note_id);
       const file_handle = handle as FileSystemFileHandle;
       const file = await file_handle.getFile();
       const markdown = as_markdown_text(await file.text());
 
-      const parts = note_id.split("/").filter(Boolean);
-      const last_part = parts[parts.length - 1] || "";
-      const full_name = last_part.endsWith(".md")
-        ? last_part
-        : `${last_part}.md`;
-      parts[parts.length - 1] = full_name;
-      const note_path = as_note_path(parts.join("/"));
-
       const meta: NoteMeta = {
-        id: note_path,
-        path: note_path,
-        name: name.replace(/\.md$/, ""),
-        title: extract_note_title(markdown, note_path),
+        id: normalized.full_path,
+        path: normalized.full_path,
+        name: normalized.leaf.replace(/\.md$/, ""),
+        title: extract_note_title(markdown, normalized.full_path),
         mtime_ms: file.lastModified,
         size_bytes: file.size,
       };

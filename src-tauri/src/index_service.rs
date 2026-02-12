@@ -301,7 +301,15 @@ fn handle_upsert(
     notes_cache: &mut BTreeMap<String, IndexNoteMeta>,
 ) -> Result<(), String> {
     let abs = notes_service::safe_vault_abs(vault_root, note_id)?;
-    let markdown = std::fs::read_to_string(&abs).map_err(|e| e.to_string())?;
+    let markdown = match std::fs::read_to_string(&abs) {
+        Ok(content) => content,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let _ = search_db::remove_note(conn, note_id);
+            notes_cache.remove(note_id);
+            return Ok(());
+        }
+        Err(e) => return Err(e.to_string()),
+    };
     let meta = search_db::extract_meta(&abs, vault_root)?;
 
     search_db::upsert_note(conn, &meta, &markdown)?;

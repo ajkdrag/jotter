@@ -13,6 +13,23 @@ import type { FolderContents } from "$lib/types/filetree";
 const TEST_FILES_BASE = "/test/files";
 const TEST_FILES_INDEX = "/test/files/index.json";
 
+function derive_note_meta(
+  note_path: NotePath,
+  data: { markdown: MarkdownText; mtime_ms: number },
+): NoteMeta {
+  const parts = note_path.split("/").filter(Boolean);
+  const last_part = parts[parts.length - 1] || "";
+  const title = last_part.replace(/\.md$/, "");
+  return {
+    id: note_path,
+    path: note_path,
+    name: title,
+    title,
+    mtime_ms: data.mtime_ms,
+    size_bytes: new Blob([data.markdown]).size,
+  };
+}
+
 const FALLBACK_TEST_NOTES = new Map<
   NotePath,
   { markdown: MarkdownText; mtime_ms: number }
@@ -114,18 +131,7 @@ export function create_test_notes_adapter(): NotesPort {
       const result: NoteMeta[] = [];
 
       for (const [note_path, data] of notes.entries()) {
-        const parts = note_path.split("/").filter(Boolean);
-        const last_part = parts[parts.length - 1] || "";
-        const title = last_part.replace(/\.md$/, "");
-
-        result.push({
-          id: note_path,
-          path: note_path,
-          name: title,
-          title,
-          mtime_ms: data.mtime_ms,
-          size_bytes: new Blob([data.markdown]).size,
-        });
+        result.push(derive_note_meta(note_path, data));
       }
 
       return result.sort((a, b) => a.path.localeCompare(b.path));
@@ -158,20 +164,10 @@ export function create_test_notes_adapter(): NotesPort {
         throw new Error(`Note not found: ${note_id}`);
       }
 
-      const parts = note_path.split("/").filter(Boolean);
-      const last_part = parts[parts.length - 1] || "";
-      const title = last_part.replace(/\.md$/, "");
-
-      const meta: NoteMeta = {
-        id: note_path,
-        path: note_path,
-        name: title,
-        title,
-        mtime_ms: note_data.mtime_ms,
-        size_bytes: new Blob([note_data.markdown]).size,
+      return {
+        meta: derive_note_meta(note_path, note_data),
+        markdown: as_markdown_text(note_data.markdown),
       };
-
-      return { meta, markdown: as_markdown_text(note_data.markdown) };
     },
 
     write_note(
@@ -192,22 +188,10 @@ export function create_test_notes_adapter(): NotesPort {
       const full_path = note_path.endsWith(".md")
         ? as_note_path(note_path)
         : as_note_path(`${note_path}.md`);
-      user_notes.set(full_path, {
-        markdown: initial_markdown,
-        mtime_ms: Date.now(),
-      });
-      const parts = full_path.split("/").filter(Boolean);
-      const last_part = parts[parts.length - 1] || "";
-      const title = last_part.replace(/\.md$/, "");
+      const data = { markdown: initial_markdown, mtime_ms: Date.now() };
+      user_notes.set(full_path, data);
 
-      return Promise.resolve({
-        id: full_path,
-        path: full_path,
-        name: title,
-        title,
-        mtime_ms: Date.now(),
-        size_bytes: new Blob([initial_markdown]).size,
-      });
+      return Promise.resolve(derive_note_meta(full_path, data));
     },
 
     create_folder(
@@ -252,18 +236,7 @@ export function create_test_notes_adapter(): NotesPort {
         const slash_index = remaining.indexOf("/");
 
         if (slash_index === -1) {
-          const parts = note_path.split("/").filter(Boolean);
-          const last_part = parts[parts.length - 1] || "";
-          const title = last_part.replace(/\.md$/, "");
-
-          result_notes.push({
-            id: note_path,
-            path: note_path,
-            name: title,
-            title,
-            mtime_ms: data.mtime_ms,
-            size_bytes: new Blob([data.markdown]).size,
-          });
+          result_notes.push(derive_note_meta(note_path, data));
         } else {
           const subfolder_name = remaining.slice(0, slash_index);
           const subfolder_path = folder_path

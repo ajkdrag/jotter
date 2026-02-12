@@ -2,8 +2,8 @@ import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
 import { clear_folder_filetree_state } from "$lib/actions/filetree_state";
 import type { NoteMeta } from "$lib/types/note";
-import { as_note_path, type NotePath } from "$lib/types/ids";
-import type { ImagePasteRequest } from "$lib/types/editor";
+import { as_note_path, type NoteId, type NotePath } from "$lib/types/ids";
+import type { ImagePasteRequest, PastedImagePayload } from "$lib/types/editor";
 import { sanitize_note_name } from "$lib/domain/sanitize_note_name";
 import { to_markdown_asset_target } from "$lib/domain/asset_markdown_path";
 import { note_name_from_path, parent_folder_path } from "$lib/utils/path";
@@ -74,23 +74,44 @@ function parse_note_open_input(input: unknown): {
   note_path: string;
   cleanup_if_missing: boolean;
 } {
-  if (
-    input &&
-    typeof input === "object" &&
-    "note_path" in input &&
-    typeof (input as Record<string, unknown>).note_path === "string"
-  ) {
-    return {
-      note_path: (input as { note_path: string }).note_path,
-      cleanup_if_missing:
-        (input as { cleanup_if_missing?: boolean }).cleanup_if_missing === true,
-    };
+  if (input && typeof input === "object" && "note_path" in input) {
+    const record = input as Record<string, unknown>;
+    if (typeof record.note_path === "string") {
+      return {
+        note_path: record.note_path,
+        cleanup_if_missing: record.cleanup_if_missing === true,
+      };
+    }
   }
 
   return {
     note_path: String(input),
     cleanup_if_missing: false,
   };
+}
+
+async function save_and_insert_image(
+  input: ActionRegistrationInput,
+  note_id: NoteId,
+  note_path: NotePath,
+  image: PastedImagePayload,
+  options?: { custom_filename?: string; attachment_folder?: string },
+): Promise<void> {
+  const { stores, services } = input;
+
+  const write_result = await services.note.save_pasted_image(
+    note_path,
+    image,
+    options,
+  );
+  if (write_result.status !== "saved") return;
+
+  const latest_open_note = stores.editor.open_note;
+  if (!latest_open_note || latest_open_note.meta.id !== note_id) return;
+
+  const target = to_markdown_asset_target(note_path, write_result.asset_path);
+  const alt = image_alt_text(image.file_name);
+  services.editor.insert_text(`![${alt}](${target})`);
 }
 
 export function register_note_actions(input: ActionRegistrationInput) {
@@ -160,25 +181,14 @@ export function register_note_actions(input: ActionRegistrationInput) {
     execute: async (request: unknown) => {
       const payload = request as ImagePasteRequest;
       const open_note = stores.editor.open_note;
-      if (!open_note) return;
-      if (open_note.meta.id !== payload.note_id) return;
+      if (!open_note || open_note.meta.id !== payload.note_id) return;
 
-      const write_result = await services.note.save_pasted_image(
+      await save_and_insert_image(
+        input,
+        payload.note_id,
         payload.note_path,
         payload.image,
       );
-      if (write_result.status !== "saved") return;
-
-      const latest_open_note = stores.editor.open_note;
-      if (!latest_open_note) return;
-      if (latest_open_note.meta.id !== payload.note_id) return;
-
-      const target = to_markdown_asset_target(
-        payload.note_path,
-        write_result.asset_path,
-      );
-      const alt = image_alt_text(payload.image.file_name);
-      services.editor.insert_text(`![${alt}](${target})`);
     },
   });
 
@@ -233,13 +243,15 @@ export function register_note_actions(input: ActionRegistrationInput) {
         return;
 
       const open_note = stores.editor.open_note;
-      if (!open_note) return;
-      if (open_note.meta.id !== dialog.note_id) return;
+      if (!open_note || open_note.meta.id !== dialog.note_id) return;
 
       const attachment_folder =
         stores.ui.editor_settings.attachment_folder || ".assets";
       const custom_filename = dialog.filename.trim();
-      const write_result = await services.note.save_pasted_image(
+
+      await save_and_insert_image(
+        input,
+        dialog.note_id,
         dialog.note_path,
         dialog.image,
         {
@@ -247,19 +259,6 @@ export function register_note_actions(input: ActionRegistrationInput) {
           attachment_folder,
         },
       );
-
-      if (write_result.status !== "saved") return;
-
-      const latest_open_note = stores.editor.open_note;
-      if (!latest_open_note) return;
-      if (latest_open_note.meta.id !== dialog.note_id) return;
-
-      const target = to_markdown_asset_target(
-        dialog.note_path,
-        write_result.asset_path,
-      );
-      const alt = image_alt_text(dialog.image.file_name);
-      services.editor.insert_text(`![${alt}](${target})`);
 
       close_image_paste_dialog(input);
     },
@@ -517,6 +516,19 @@ export function register_note_actions(input: ActionRegistrationInput) {
     execute: () => {
       close_save_dialog(input);
       services.note.reset_save_operation();
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.note_toggle_star,
+    label: "Toggle Star",
+    execute: (note: unknown) => {
+      const note_path =
+        typeof note === "string"
+          ? note
+          : (note as NoteMeta | null | undefined)?.path;
+      if (!note_path) return;
+      stores.notes.toggle_star_path(note_path);
     },
   });
 }

@@ -2,11 +2,11 @@ import {
   create_index_actor,
   type PrefixRename,
 } from "$lib/adapters/shared/index_actor";
-import type {
-  IndexChange,
-  WorkspaceIndexPort,
-} from "$lib/ports/workspace_index_port";
-import { as_note_path, type NoteId, type VaultId } from "$lib/types/ids";
+import { wrap_index_actor_as_port } from "$lib/adapters/shared/workspace_index_facade";
+import { throw_if_aborted } from "$lib/adapters/shared/abort";
+import { to_number, to_string } from "$lib/adapters/shared/coerce";
+import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
+import { as_note_path, type VaultId } from "$lib/types/ids";
 import type { NotesPort } from "$lib/ports/notes_port";
 import type { SearchDbWeb } from "$lib/adapters/web/search_db_web";
 import type { NoteMeta } from "$lib/types/note";
@@ -18,37 +18,6 @@ type IndexedMeta = {
   size_bytes: number;
 };
 type ProgressCallback = (indexed: number, total: number) => void;
-
-function create_abort_error(): Error {
-  const error = new Error("Index run aborted");
-  error.name = "AbortError";
-  return error;
-}
-
-function throw_if_aborted(signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    throw create_abort_error();
-  }
-}
-
-function to_number(value: unknown): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "bigint") return Number(value);
-  if (typeof value === "string") return Number(value);
-  return 0;
-}
-
-function to_string(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (
-    typeof value === "number" ||
-    typeof value === "bigint" ||
-    typeof value === "boolean"
-  ) {
-    return String(value);
-  }
-  return "";
-}
 
 function build_sql_like_prefix_pattern(prefix: string): string {
   const escaped = prefix
@@ -348,62 +317,5 @@ export function create_workspace_index_web_adapter(
     },
   });
 
-  return {
-    async touch_index(vault_id: VaultId, change: IndexChange): Promise<void> {
-      await actor.touch_index(vault_id, change);
-    },
-    async cancel_index(vault_id: VaultId): Promise<void> {
-      await actor.cancel_index(vault_id);
-    },
-    async sync_index(vault_id: VaultId): Promise<void> {
-      await actor.touch_index(vault_id, { kind: "force_scan" });
-    },
-    async rebuild_index(vault_id: VaultId): Promise<void> {
-      await actor.touch_index(vault_id, { kind: "force_rebuild" });
-    },
-    async upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void> {
-      await actor.touch_index(vault_id, {
-        kind: "upsert_path",
-        path: note_id,
-      });
-    },
-    async remove_note(vault_id: VaultId, note_id: NoteId): Promise<void> {
-      await actor.touch_index(vault_id, {
-        kind: "remove_path",
-        path: note_id,
-      });
-    },
-    async remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void> {
-      for (const note_id of note_ids) {
-        void actor.touch_index(vault_id, {
-          kind: "remove_path",
-          path: note_id,
-        });
-      }
-      await Promise.resolve();
-    },
-    async remove_notes_by_prefix(
-      vault_id: VaultId,
-      prefix: string,
-    ): Promise<void> {
-      await actor.touch_index(vault_id, {
-        kind: "remove_prefix",
-        prefix,
-      });
-    },
-    async rename_folder_paths(
-      vault_id: VaultId,
-      old_prefix: string,
-      new_prefix: string,
-    ): Promise<void> {
-      await actor.touch_index(vault_id, {
-        kind: "rename_prefix",
-        old_prefix,
-        new_prefix,
-      });
-    },
-    subscribe_index_progress(callback) {
-      return actor.subscribe_index_progress(callback);
-    },
-  };
+  return wrap_index_actor_as_port(actor);
 }

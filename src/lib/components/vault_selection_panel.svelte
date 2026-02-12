@@ -91,7 +91,6 @@
         >
       </Card.Header>
       <Card.Content class="space-y-6">
-        <!-- eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -->
         {@render content()}
       </Card.Content>
     </Card.Root>

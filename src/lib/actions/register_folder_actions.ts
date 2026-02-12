@@ -105,42 +105,42 @@ function is_valid_folder_name(name: string): boolean {
   );
 }
 
-function remove_expanded_paths(
+function transform_filetree_paths(
   input: ActionRegistrationInput,
-  folder_path: string,
+  transform: (path: string) => string | null,
 ) {
-  const prefix = `${folder_path}/`;
+  const filetree = input.stores.ui.filetree;
 
   const expanded_paths = new SvelteSet<string>();
-  for (const path of input.stores.ui.filetree.expanded_paths) {
-    if (path === folder_path || path.startsWith(prefix)) {
-      continue;
+  for (const path of filetree.expanded_paths) {
+    const result = transform(path);
+    if (result !== null) {
+      expanded_paths.add(result);
     }
-    expanded_paths.add(path);
   }
 
   const load_states = new SvelteMap<string, FolderLoadState>();
-  for (const [path, state] of input.stores.ui.filetree.load_states) {
-    if (path === folder_path || path.startsWith(prefix)) {
-      continue;
+  for (const [path, state] of filetree.load_states) {
+    const result = transform(path);
+    if (result !== null) {
+      load_states.set(result, state);
     }
-    load_states.set(path, state);
   }
 
   const error_messages = new SvelteMap<string, string>();
-  for (const [path, message] of input.stores.ui.filetree.error_messages) {
-    if (path === folder_path || path.startsWith(prefix)) {
-      continue;
+  for (const [path, message] of filetree.error_messages) {
+    const result = transform(path);
+    if (result !== null) {
+      error_messages.set(result, message);
     }
-    error_messages.set(path, message);
   }
 
   const pagination = new SvelteMap<string, FolderPaginationState>();
-  for (const [path, state] of input.stores.ui.filetree.pagination) {
-    if (path === folder_path || path.startsWith(prefix)) {
-      continue;
+  for (const [path, state] of filetree.pagination) {
+    const result = transform(path);
+    if (result !== null) {
+      pagination.set(result, state);
     }
-    pagination.set(path, state);
   }
 
   input.stores.ui.filetree = {
@@ -149,6 +149,16 @@ function remove_expanded_paths(
     error_messages,
     pagination,
   };
+}
+
+function remove_expanded_paths(
+  input: ActionRegistrationInput,
+  folder_path: string,
+) {
+  const prefix = `${folder_path}/`;
+  transform_filetree_paths(input, (path) =>
+    path === folder_path || path.startsWith(prefix) ? null : path,
+  );
 }
 
 function remap_path(path: string, old_path: string, new_path: string): string {
@@ -169,32 +179,9 @@ function remap_expanded_paths(
   old_path: string,
   new_path: string,
 ) {
-  const expanded_paths = new SvelteSet<string>();
-  for (const path of input.stores.ui.filetree.expanded_paths) {
-    expanded_paths.add(remap_path(path, old_path, new_path));
-  }
-
-  const load_states = new SvelteMap<string, FolderLoadState>();
-  for (const [path, state] of input.stores.ui.filetree.load_states) {
-    load_states.set(remap_path(path, old_path, new_path), state);
-  }
-
-  const error_messages = new SvelteMap<string, string>();
-  for (const [path, message] of input.stores.ui.filetree.error_messages) {
-    error_messages.set(remap_path(path, old_path, new_path), message);
-  }
-
-  const pagination = new SvelteMap<string, FolderPaginationState>();
-  for (const [path, state] of input.stores.ui.filetree.pagination) {
-    pagination.set(remap_path(path, old_path, new_path), state);
-  }
-
-  input.stores.ui.filetree = {
-    expanded_paths,
-    load_states,
-    error_messages,
-    pagination,
-  };
+  transform_filetree_paths(input, (path) =>
+    remap_path(path, old_path, new_path),
+  );
 }
 
 async function load_folder(
@@ -407,41 +394,9 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       await Promise.all(non_root.map((path) => load_folder(input, path)));
 
       const fresh_folder_paths = new Set(stores.notes.folder_paths);
-
-      const expanded_paths = new SvelteSet<string>();
-      for (const path of stores.ui.filetree.expanded_paths) {
-        if (path === "" || fresh_folder_paths.has(path)) {
-          expanded_paths.add(path);
-        }
-      }
-
-      const load_states = new SvelteMap<string, FolderLoadState>();
-      for (const [path, state] of stores.ui.filetree.load_states) {
-        if (path === "" || fresh_folder_paths.has(path)) {
-          load_states.set(path, state);
-        }
-      }
-
-      const error_messages = new SvelteMap<string, string>();
-      for (const [path, message] of stores.ui.filetree.error_messages) {
-        if (path === "" || fresh_folder_paths.has(path)) {
-          error_messages.set(path, message);
-        }
-      }
-
-      const pagination = new SvelteMap<string, FolderPaginationState>();
-      for (const [path, state] of stores.ui.filetree.pagination) {
-        if (path === "" || fresh_folder_paths.has(path)) {
-          pagination.set(path, state);
-        }
-      }
-
-      stores.ui.filetree = {
-        expanded_paths,
-        load_states,
-        error_messages,
-        pagination,
-      };
+      transform_filetree_paths(input, (path) =>
+        path === "" || fresh_folder_paths.has(path) ? path : null,
+      );
     },
   });
 
@@ -647,5 +602,15 @@ export function register_folder_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.folder_retry_rename,
     label: "Retry Rename Folder",
     execute: execute_rename_folder,
+  });
+
+  registry.register({
+    id: ACTION_IDS.folder_toggle_star,
+    label: "Toggle Star",
+    execute: (folder_path: unknown) => {
+      const path = String(folder_path);
+      if (!path) return;
+      stores.notes.toggle_star_path(path);
+    },
   });
 }

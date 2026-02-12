@@ -37,47 +37,18 @@
   let font_size_value = $derived(editor_settings.font_size);
   let line_height_value = $derived(editor_settings.line_height);
 
-  function handle_font_size_change(value: number) {
-    on_update_settings({ ...editor_settings, font_size: value });
+  function update<K extends keyof EditorSettings>(
+    key: K,
+    value: EditorSettings[K],
+  ) {
+    on_update_settings({ ...editor_settings, [key]: value });
   }
 
-  function handle_line_height_change(value: number) {
-    on_update_settings({ ...editor_settings, line_height: value });
-  }
-
-  function handle_heading_color_change(value: string | undefined) {
-    if (value) {
-      on_update_settings({
-        ...editor_settings,
-        heading_color: value as EditorSettings["heading_color"],
-      });
-    }
-  }
-
-  function handle_spacing_change(value: string | undefined) {
-    if (value) {
-      on_update_settings({
-        ...editor_settings,
-        spacing: value as EditorSettings["spacing"],
-      });
-    }
-  }
-
-  function handle_link_syntax_change(value: string | undefined) {
-    if (value) {
-      on_update_settings({
-        ...editor_settings,
-        link_syntax: value as EditorSettings["link_syntax"],
-      });
-    }
-  }
-
-  function handle_attachment_folder_change(value: string) {
-    on_update_settings({ ...editor_settings, attachment_folder: value });
-  }
-
-  function handle_show_hidden_files_change(checked: boolean) {
-    on_update_settings({ ...editor_settings, show_hidden_files: checked });
+  function update_select<K extends keyof EditorSettings>(
+    key: K,
+    value: string | undefined,
+  ) {
+    if (value) update(key, value as EditorSettings[K]);
   }
 
   const heading_color_options = [
@@ -134,7 +105,9 @@
             <Slider.Root
               type="single"
               value={font_size_value}
-              onValueChange={handle_font_size_change}
+              onValueChange={(v: number) => {
+                update("font_size", v);
+              }}
               min={0.875}
               max={1.25}
               step={0.0625}
@@ -153,7 +126,9 @@
             <Slider.Root
               type="single"
               value={line_height_value}
-              onValueChange={handle_line_height_change}
+              onValueChange={(v: number) => {
+                update("line_height", v);
+              }}
               min={1.5}
               max={2.0}
               step={0.05}
@@ -166,7 +141,9 @@
             <Select.Root
               type="single"
               value={editor_settings.heading_color}
-              onValueChange={handle_heading_color_change}
+              onValueChange={(v: string | undefined) => {
+                update_select("heading_color", v);
+              }}
             >
               <Select.Trigger class="w-32">
                 <span data-slot="select-value">
@@ -202,7 +179,9 @@
             <Select.Root
               type="single"
               value={editor_settings.spacing}
-              onValueChange={handle_spacing_change}
+              onValueChange={(v: string | undefined) => {
+                update_select("spacing", v);
+              }}
             >
               <Select.Trigger class="w-32">
                 <span data-slot="select-value">
@@ -238,7 +217,9 @@
             <Select.Root
               type="single"
               value={editor_settings.link_syntax}
-              onValueChange={handle_link_syntax_change}
+              onValueChange={(v: string | undefined) => {
+                update_select("link_syntax", v);
+              }}
             >
               <Select.Trigger class="w-56">
                 <span data-slot="select-value">
@@ -275,10 +256,10 @@
               type="text"
               value={editor_settings.attachment_folder}
               onchange={(e: Event & { currentTarget: HTMLInputElement }) => {
-                handle_attachment_folder_change(e.currentTarget.value);
+                update("attachment_folder", e.currentTarget.value);
               }}
               oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-                handle_attachment_folder_change(e.currentTarget.value);
+                update("attachment_folder", e.currentTarget.value);
               }}
               class="w-48"
               placeholder=".assets"
@@ -293,7 +274,9 @@
             </div>
             <Switch.Root
               checked={editor_settings.show_hidden_files}
-              onCheckedChange={handle_show_hidden_files_change}
+              onCheckedChange={(v: boolean) => {
+                update("show_hidden_files", v);
+              }}
             />
           </div>
         </div>

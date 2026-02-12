@@ -3,6 +3,7 @@ import { create_editor_styles_reactor } from "$lib/reactors/editor_styles.reacto
 import { create_autosave_reactor } from "$lib/reactors/autosave.reactor.svelte";
 import { create_op_toast_reactor } from "$lib/reactors/op_toast.reactor.svelte";
 import { create_recent_notes_persist_reactor } from "$lib/reactors/recent_notes_persist.reactor.svelte";
+import { create_starred_persist_reactor } from "$lib/reactors/starred_persist.reactor.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
@@ -34,6 +35,11 @@ export function mount_reactors(context: ReactorContext): () => void {
     create_editor_styles_reactor(context.ui_store),
     create_op_toast_reactor(context.op_store),
     create_recent_notes_persist_reactor(
+      context.notes_store,
+      context.vault_store,
+      context.vault_service,
+    ),
+    create_starred_persist_reactor(
       context.notes_store,
       context.vault_store,
       context.vault_service,
