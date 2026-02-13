@@ -27,6 +27,7 @@
   const any_blocking_dialog_open = $derived(
     stores.ui.system_dialog_open ||
       stores.ui.change_vault.open ||
+      stores.ui.change_vault.confirm_discard_open ||
       stores.ui.delete_note_dialog.open ||
       stores.ui.rename_note_dialog.open ||
       stores.ui.save_note_dialog.open ||

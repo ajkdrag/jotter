@@ -107,10 +107,12 @@ export class UIStore {
 
   change_vault = $state<{
     open: boolean;
+    confirm_discard_open: boolean;
     is_loading: boolean;
     error: string | null;
   }>({
     open: false,
+    confirm_discard_open: false,
     is_loading: false,
     error: null,
   });

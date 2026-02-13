@@ -5,6 +5,7 @@
   import DeleteFolderDialog from "$lib/components/delete_folder_dialog.svelte";
   import RenameFolderDialog from "$lib/components/rename_folder_dialog.svelte";
   import SaveNoteDialog from "$lib/components/save_note_dialog.svelte";
+  import ConfirmVaultSwitchDialog from "$lib/components/confirm_vault_switch_dialog.svelte";
   import SettingsDialog from "$lib/components/settings_dialog.svelte";
   import CreateFolderDialog from "$lib/components/create_folder_dialog.svelte";
   import Omnibar from "$lib/components/omnibar.svelte";
@@ -92,6 +93,15 @@
     {hide_choose_vault_button}
   />
 {/if}
+
+<ConfirmVaultSwitchDialog
+  open={stores.ui.change_vault.confirm_discard_open}
+  is_switching={stores.ui.change_vault.is_loading}
+  on_confirm={() =>
+    void action_registry.execute(ACTION_IDS.vault_confirm_discard_change)}
+  on_cancel={() =>
+    void action_registry.execute(ACTION_IDS.vault_cancel_discard_change)}
+/>
 
 <DeleteNoteDialog
   open={stores.ui.delete_note_dialog.open}

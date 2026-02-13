@@ -33,6 +33,8 @@ export const ACTION_IDS = {
   vault_close_change: "vault.close_change",
   vault_choose: "vault.choose",
   vault_select: "vault.select",
+  vault_confirm_discard_change: "vault.confirm_discard_change",
+  vault_cancel_discard_change: "vault.cancel_discard_change",
   vault_select_pinned_slot: "vault.select_pinned_slot",
   vault_toggle_pin: "vault.toggle_pin",
   vault_reindex: "vault.reindex",

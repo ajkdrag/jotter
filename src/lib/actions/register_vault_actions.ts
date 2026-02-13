@@ -12,6 +12,7 @@ async function apply_opened_vault(
   input.stores.ui.set_editor_settings(editor_settings);
   input.stores.ui.change_vault = {
     open: false,
+    confirm_discard_open: false,
     is_loading: false,
     error: null,
   };
@@ -21,6 +22,32 @@ async function apply_opened_vault(
 export function register_vault_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
   let change_vault_request_revision = 0;
+  let pending_discard_confirm_change: (() => Promise<void>) | null = null;
+
+  const has_unsaved_editor_changes = (): boolean =>
+    stores.editor.open_note?.is_dirty === true;
+
+  const clear_discard_confirm_state = () => {
+    pending_discard_confirm_change = null;
+    stores.ui.change_vault = {
+      ...stores.ui.change_vault,
+      confirm_discard_open: false,
+    };
+  };
+
+  const run_with_unsaved_confirm = async (run_change: () => Promise<void>) => {
+    if (!has_unsaved_editor_changes()) {
+      await run_change();
+      return;
+    }
+
+    pending_discard_confirm_change = run_change;
+    stores.ui.change_vault = {
+      ...stores.ui.change_vault,
+      confirm_discard_open: true,
+      error: null,
+    };
+  };
 
   const handle_open_result = async (
     request_revision: number,
@@ -71,6 +98,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.vault_close_change,
     label: "Close Change Vault Dialog",
     execute: () => {
+      clear_discard_confirm_state();
       stores.ui.change_vault = {
         ...stores.ui.change_vault,
         open: false,
@@ -84,43 +112,45 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.vault_choose,
     label: "Choose Vault",
     execute: async () => {
-      const request_revision = ++change_vault_request_revision;
-      stores.ui.change_vault = {
-        ...stores.ui.change_vault,
-        is_loading: true,
-        error: null,
-      };
-
-      stores.ui.set_system_dialog_open(true);
-      const path_result = await services.vault.choose_vault_path();
-      stores.ui.set_system_dialog_open(false);
-
-      if (request_revision !== change_vault_request_revision) {
-        return;
-      }
-
-      if (path_result.status === "cancelled") {
+      await run_with_unsaved_confirm(async () => {
+        const request_revision = ++change_vault_request_revision;
         stores.ui.change_vault = {
           ...stores.ui.change_vault,
-          is_loading: false,
+          is_loading: true,
+          error: null,
         };
-        services.vault.reset_change_operation();
-        return;
-      }
 
-      if (path_result.status === "failed") {
-        stores.ui.change_vault = {
-          ...stores.ui.change_vault,
-          is_loading: false,
-          error: path_result.error,
-        };
-        return;
-      }
+        stores.ui.set_system_dialog_open(true);
+        const path_result = await services.vault.choose_vault_path();
+        stores.ui.set_system_dialog_open(false);
 
-      const result = await services.vault.change_vault_by_path(
-        path_result.path,
-      );
-      await handle_open_result(request_revision, result);
+        if (request_revision !== change_vault_request_revision) {
+          return;
+        }
+
+        if (path_result.status === "cancelled") {
+          stores.ui.change_vault = {
+            ...stores.ui.change_vault,
+            is_loading: false,
+          };
+          services.vault.reset_change_operation();
+          return;
+        }
+
+        if (path_result.status === "failed") {
+          stores.ui.change_vault = {
+            ...stores.ui.change_vault,
+            is_loading: false,
+            error: path_result.error,
+          };
+          return;
+        }
+
+        const result = await services.vault.change_vault_by_path(
+          path_result.path,
+        );
+        await handle_open_result(request_revision, result);
+      });
     },
   });
 
@@ -128,18 +158,21 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.vault_select,
     label: "Select Vault",
     execute: async (vault_id: unknown) => {
-      const request_revision = ++change_vault_request_revision;
-      stores.ui.change_vault = {
-        ...stores.ui.change_vault,
-        is_loading: true,
-        error: null,
-      };
-
       const selected_vault_id = vault_id as Parameters<
         typeof services.vault.change_vault_by_id
       >[0];
-      const result = await services.vault.change_vault_by_id(selected_vault_id);
-      await handle_open_result(request_revision, result);
+      await run_with_unsaved_confirm(async () => {
+        const request_revision = ++change_vault_request_revision;
+        stores.ui.change_vault = {
+          ...stores.ui.change_vault,
+          is_loading: true,
+          error: null,
+        };
+
+        const result =
+          await services.vault.change_vault_by_id(selected_vault_id);
+        await handle_open_result(request_revision, result);
+      });
     },
   });
 
@@ -151,15 +184,38 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         return;
       }
 
-      stores.ui.change_vault = {
-        ...stores.ui.change_vault,
-        is_loading: true,
-        error: null,
-      };
+      await run_with_unsaved_confirm(async () => {
+        stores.ui.change_vault = {
+          ...stores.ui.change_vault,
+          is_loading: true,
+          error: null,
+        };
 
-      const request_revision = ++change_vault_request_revision;
-      const result = await services.vault.select_pinned_vault_by_slot(slot);
-      await handle_open_result(request_revision, result);
+        const request_revision = ++change_vault_request_revision;
+        const result = await services.vault.select_pinned_vault_by_slot(slot);
+        await handle_open_result(request_revision, result);
+      });
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.vault_confirm_discard_change,
+    label: "Confirm Discard and Change Vault",
+    execute: async () => {
+      const run_change = pending_discard_confirm_change;
+      clear_discard_confirm_state();
+      if (!run_change) {
+        return;
+      }
+      await run_change();
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.vault_cancel_discard_change,
+    label: "Cancel Discard and Change Vault",
+    execute: () => {
+      clear_discard_confirm_state();
     },
   });
 
