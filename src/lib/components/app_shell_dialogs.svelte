@@ -12,7 +12,7 @@
   import ImagePasteDialog from "$lib/components/image_paste_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
-  import type { OmnibarItem } from "$lib/types/search";
+  import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
   import type { EditorSettings } from "$lib/types/editor_settings";
   import type { VaultId } from "$lib/types/ids";
 
@@ -27,6 +27,8 @@
   const has_vault = $derived(stores.vault.vault !== null);
 
   const recent_notes_for_display = $derived(stores.notes.recent_notes);
+
+  const has_multiple_vaults = $derived(stores.vault.recent_vaults.length > 1);
 
   const delete_note_error = $derived(stores.op.get("note.delete").error);
   const rename_note_error = $derived(stores.op.get("note.rename").error);
@@ -214,8 +216,10 @@
   query={stores.ui.omnibar.query}
   selected_index={stores.ui.omnibar.selected_index}
   is_searching={stores.ui.omnibar.is_searching}
+  scope={stores.ui.omnibar.scope}
   items={stores.search.omnibar_items}
   recent_notes={recent_notes_for_display}
+  {has_multiple_vaults}
   on_open_change={(open) => {
     if (open) {
       void action_registry.execute(ACTION_IDS.omnibar_open);
@@ -227,6 +231,8 @@
     void action_registry.execute(ACTION_IDS.omnibar_set_query, query)}
   on_selected_index_change={(index: number) =>
     void action_registry.execute(ACTION_IDS.omnibar_set_selected_index, index)}
+  on_scope_change={(scope: OmnibarScope) =>
+    void action_registry.execute(ACTION_IDS.omnibar_set_scope, scope)}
   on_confirm={(item: OmnibarItem) =>
     void action_registry.execute(ACTION_IDS.omnibar_confirm_item, item)}
 />

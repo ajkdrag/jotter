@@ -8,6 +8,7 @@ import type {
   FolderPaginationState,
 } from "$lib/types/filetree";
 import type { PastedImagePayload } from "$lib/types/editor";
+import type { OmnibarScope } from "$lib/types/search";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 type AsyncStatus = "idle" | "loading" | "error";
@@ -56,6 +57,7 @@ const INITIAL_OMNIBAR = {
   query: "",
   selected_index: 0,
   is_searching: false,
+  scope: "current_vault",
 } as const;
 
 const INITIAL_FIND_IN_FILE = {
@@ -169,6 +171,7 @@ export class UIStore {
     query: string;
     selected_index: number;
     is_searching: boolean;
+    scope: OmnibarScope;
   }>({ ...INITIAL_OMNIBAR });
 
   find_in_file = $state<{

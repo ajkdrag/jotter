@@ -77,6 +77,7 @@ export const ACTION_IDS = {
   omnibar_close: "omnibar.close",
   omnibar_set_query: "omnibar.set_query",
   omnibar_set_selected_index: "omnibar.set_selected_index",
+  omnibar_set_scope: "omnibar.set_scope",
   omnibar_confirm_item: "omnibar.confirm_item",
 
   find_in_file_toggle: "find_in_file.toggle",

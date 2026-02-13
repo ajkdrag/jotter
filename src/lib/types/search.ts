@@ -4,6 +4,7 @@ import type { SettingDefinition } from "$lib/types/settings_registry";
 
 export type SearchScope = "all" | "path" | "title" | "content";
 export type SearchDomain = "notes" | "commands";
+export type OmnibarScope = "current_vault" | "all_vaults";
 
 export type SearchQuery = {
   raw: string;
@@ -56,6 +57,14 @@ export type OmnibarItem =
   | {
       kind: "note";
       note: NoteMeta;
+      score: number;
+      snippet?: string | undefined;
+    }
+  | {
+      kind: "cross_vault_note";
+      note: NoteMeta;
+      vault_id: string;
+      vault_name: string;
       score: number;
       snippet?: string | undefined;
     }

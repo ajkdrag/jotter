@@ -146,7 +146,9 @@
   --size-dialog-sm: 24rem;
   --size-dialog-md: 28rem;
   --size-dialog-lg: 32rem;
+  --size-dialog-xl: 40rem;
   --size-dialog-list-height: 20rem;
+  --size-dialog-list-height-lg: 28rem;
 
   /* Tree dimensions */
   --size-tree-indent: 1rem;

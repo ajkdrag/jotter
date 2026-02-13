@@ -8,6 +8,8 @@ import type {
   SearchNotesResult,
   WikiSuggestionsResult,
   OmnibarSearchResult,
+  CrossVaultSearchResult,
+  CrossVaultSearchGroup,
 } from "$lib/types/search_service_result";
 import { parse_search_query } from "$lib/domain/search_query_parser";
 import { search_within_text } from "$lib/domain/search_within_text";
@@ -15,6 +17,7 @@ import { COMMANDS_REGISTRY } from "$lib/domain/search_commands";
 import { SETTINGS_REGISTRY } from "$lib/types/settings_registry";
 import { error_message } from "$lib/utils/error_message";
 import { logger } from "$lib/utils/logger";
+import type { Vault } from "$lib/types/vault";
 
 function score_command(query: string, command: CommandDefinition): number {
   const label = command.label.toLowerCase();
@@ -38,6 +41,7 @@ function score_setting(query: string, setting: SettingDefinition): number {
 export class SearchService {
   private active_search_revision = 0;
   private active_wiki_suggest_revision = 0;
+  private active_cross_vault_search_revision = 0;
 
   constructor(
     private readonly search_port: SearchPort,
@@ -45,6 +49,33 @@ export class SearchService {
     private readonly op_store: OpStore,
     private readonly now_ms: () => number,
   ) {}
+
+  private list_searchable_vaults(): Vault[] {
+    const ordered_vaults: Vault[] = [];
+    const seen_ids = new Set<string>();
+
+    for (const vault of this.vault_store.recent_vaults) {
+      if (vault.is_available === false) {
+        continue;
+      }
+      const key = String(vault.id);
+      if (seen_ids.has(key)) {
+        continue;
+      }
+      seen_ids.add(key);
+      ordered_vaults.push(vault);
+    }
+
+    const active_vault = this.vault_store.vault;
+    if (active_vault && active_vault.is_available !== false) {
+      const key = String(active_vault.id);
+      if (!seen_ids.has(key)) {
+        ordered_vaults.unshift(active_vault);
+      }
+    }
+
+    return ordered_vaults;
+  }
 
   async search_notes(query: string): Promise<SearchNotesResult> {
     const trimmed = query.trim();
@@ -114,6 +145,92 @@ export class SearchService {
     }
   }
 
+  async search_notes_all_vaults(
+    query: string,
+  ): Promise<CrossVaultSearchResult> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      this.op_store.reset("search.notes.all_vaults");
+      return { status: "empty", groups: [] };
+    }
+
+    const searchable_vaults = this.list_searchable_vaults();
+    if (searchable_vaults.length === 0) {
+      this.op_store.reset("search.notes.all_vaults");
+      return { status: "skipped", groups: [] };
+    }
+
+    const revision = ++this.active_cross_vault_search_revision;
+    this.op_store.start("search.notes.all_vaults", this.now_ms());
+
+    try {
+      const parsed = parse_search_query(query);
+      const parsed_query = {
+        ...parsed,
+        domain: "notes" as const,
+      };
+      const settled = await Promise.allSettled(
+        searchable_vaults.map((vault) =>
+          this.search_port.search_notes(vault.id, parsed_query, 20),
+        ),
+      );
+
+      if (revision !== this.active_cross_vault_search_revision) {
+        return { status: "stale", groups: [] };
+      }
+
+      const groups: CrossVaultSearchGroup[] = [];
+      let first_error: string | null = null;
+
+      for (let index = 0; index < settled.length; index += 1) {
+        const result = settled[index];
+        const vault = searchable_vaults[index];
+        if (!vault || !result) {
+          continue;
+        }
+
+        if (result.status === "rejected") {
+          const message = error_message(result.reason);
+          if (!first_error) {
+            first_error = message;
+          }
+          logger.error(
+            `Cross-vault search failed for ${vault.name}: ${message}`,
+          );
+          continue;
+        }
+
+        if (result.value.length === 0) {
+          continue;
+        }
+
+        groups.push({
+          vault_id: vault.id,
+          vault_name: vault.name,
+          vault_path: vault.path,
+          results: result.value,
+        });
+      }
+
+      if (groups.length === 0 && first_error) {
+        this.op_store.fail("search.notes.all_vaults", first_error);
+        return { status: "failed", error: first_error, groups: [] };
+      }
+
+      this.op_store.succeed("search.notes.all_vaults");
+      return { status: "success", groups };
+    } catch (error) {
+      if (revision !== this.active_cross_vault_search_revision) {
+        return { status: "stale", groups: [] };
+      }
+
+      const message = error_message(error);
+      logger.error(`Cross-vault search failed: ${message}`);
+      this.op_store.fail("search.notes.all_vaults", message);
+      return { status: "failed", error: message, groups: [] };
+    }
+  }
+
   search_commands(query: string): OmnibarItem[] {
     const q = query.toLowerCase().trim();
     if (!q) {
@@ -173,5 +290,6 @@ export class SearchService {
 
   reset_search_notes_operation() {
     this.op_store.reset("search.notes");
+    this.op_store.reset("search.notes.all_vaults");
   }
 }

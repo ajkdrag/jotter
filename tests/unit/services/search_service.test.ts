@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SearchService } from "$lib/services/search_service";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
-import { as_note_path } from "$lib/types/ids";
+import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
 import type { WikiSuggestion } from "$lib/types/search";
 import { create_test_vault } from "../helpers/test_fixtures";
 
@@ -181,5 +181,153 @@ describe("SearchService", () => {
     ]);
     const result = await inflight;
     expect(result).toEqual({ status: "stale", results: [] });
+  });
+
+  it("searches across available vaults and groups results by vault", async () => {
+    const search_port = {
+      suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      search_notes: vi.fn().mockImplementation((vault_id: string) => {
+        if (vault_id === "vault-work") {
+          return Promise.resolve([
+            {
+              note: {
+                id: as_note_path("work/ml.md"),
+                path: as_note_path("work/ml.md"),
+                name: "ml",
+                title: "Machine Learning",
+                mtime_ms: 0,
+                size_bytes: 0,
+              },
+              score: 0.9,
+              snippet: "ml",
+            },
+          ]);
+        }
+        return Promise.resolve([
+          {
+            note: {
+              id: as_note_path("research/ml.md"),
+              path: as_note_path("research/ml.md"),
+              name: "ml",
+              title: "ML Notes",
+              mtime_ms: 0,
+              size_bytes: 0,
+            },
+            score: 0.8,
+            snippet: "ml",
+          },
+        ]);
+      }),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_recent_vaults([
+      {
+        id: as_vault_id("vault-work"),
+        name: "Work",
+        path: as_vault_path("/vault/work"),
+        created_at: 1,
+        is_available: true,
+      },
+      {
+        id: as_vault_id("vault-research"),
+        name: "Research",
+        path: as_vault_path("/vault/research"),
+        created_at: 1,
+        is_available: true,
+      },
+      {
+        id: as_vault_id("vault-offline"),
+        name: "Offline",
+        path: as_vault_path("/vault/offline"),
+        created_at: 1,
+        is_available: false,
+      },
+    ]);
+
+    const op_store = new OpStore();
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
+
+    const result = await service.search_notes_all_vaults("machine learning");
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") {
+      throw new Error("expected success");
+    }
+    expect(result.groups.map((group) => group.vault_name)).toEqual([
+      "Work",
+      "Research",
+    ]);
+    expect(search_port.search_notes).toHaveBeenCalledTimes(2);
+    expect(op_store.get("search.notes.all_vaults").status).toBe("success");
+  });
+
+  it("returns failed when all cross-vault searches fail", async () => {
+    const search_port = {
+      suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      search_notes: vi.fn().mockRejectedValue(new Error("index unavailable")),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_recent_vaults([
+      {
+        id: as_vault_id("vault-a"),
+        name: "A",
+        path: as_vault_path("/vault/a"),
+        created_at: 1,
+        is_available: true,
+      },
+    ]);
+
+    const op_store = new OpStore();
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
+
+    const result = await service.search_notes_all_vaults("ml");
+
+    expect(result.status).toBe("failed");
+    expect(op_store.get("search.notes.all_vaults").status).toBe("error");
+  });
+
+  it("includes active vault even when not in recent list", async () => {
+    const search_port = {
+      suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      search_notes: vi.fn().mockResolvedValue([]),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_vault({
+      id: as_vault_id("vault-active"),
+      name: "Active",
+      path: as_vault_path("/vault/active"),
+      created_at: 1,
+      is_available: true,
+    });
+    vault_store.set_recent_vaults([]);
+
+    const op_store = new OpStore();
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
+
+    await service.search_notes_all_vaults("ml");
+
+    expect(search_port.search_notes).toHaveBeenCalledWith(
+      as_vault_id("vault-active"),
+      expect.objectContaining({ domain: "notes" }),
+      20,
+    );
   });
 });

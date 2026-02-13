@@ -3,6 +3,7 @@ import type {
   WikiSuggestion,
   OmnibarItem,
 } from "$lib/types/search";
+import type { VaultId, VaultPath } from "$lib/types/ids";
 
 export type SearchNotesResult =
   | {
@@ -39,3 +40,33 @@ export type OmnibarSearchResult = {
   items: OmnibarItem[];
   status?: string;
 };
+
+export type CrossVaultSearchGroup = {
+  vault_id: VaultId;
+  vault_name: string;
+  vault_path: VaultPath;
+  results: NoteSearchHit[];
+};
+
+export type CrossVaultSearchResult =
+  | {
+      status: "success";
+      groups: CrossVaultSearchGroup[];
+    }
+  | {
+      status: "empty";
+      groups: [];
+    }
+  | {
+      status: "stale";
+      groups: [];
+    }
+  | {
+      status: "skipped";
+      groups: [];
+    }
+  | {
+      status: "failed";
+      error: string;
+      groups: [];
+    };

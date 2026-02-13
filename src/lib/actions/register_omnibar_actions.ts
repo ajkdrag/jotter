@@ -1,7 +1,8 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
-import type { OmnibarItem } from "$lib/types/search";
+import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
 import type { CommandId } from "$lib/types/command_palette";
+import type { VaultId } from "$lib/types/ids";
 
 function open_omnibar(input: ActionRegistrationInput) {
   input.stores.ui.omnibar = {
@@ -21,6 +22,7 @@ function close_omnibar(input: ActionRegistrationInput) {
     query: "",
     selected_index: 0,
     is_searching: false,
+    scope: "current_vault",
   };
   input.stores.search.clear_omnibar();
   input.services.search.reset_search_notes_operation();
@@ -55,6 +57,22 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
     case "note":
     case "recent_note":
       close_omnibar(input);
+      await registry.execute(ACTION_IDS.note_open, {
+        note_path: item.note.id,
+        cleanup_if_missing: true,
+      });
+      break;
+    case "cross_vault_note":
+      close_omnibar(input);
+      if (input.stores.vault.vault?.id !== item.vault_id) {
+        await registry.execute(
+          ACTION_IDS.vault_select,
+          item.vault_id as VaultId,
+        );
+      }
+      if (input.stores.vault.vault?.id !== item.vault_id) {
+        return;
+      }
       await registry.execute(ACTION_IDS.note_open, {
         note_path: item.note.id,
         cleanup_if_missing: true,
@@ -122,12 +140,35 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       }
 
       stores.ui.omnibar = { ...stores.ui.omnibar, is_searching: true };
-      const result = await services.search.search_omnibar(normalized_query);
-      if (stores.ui.omnibar.query !== normalized_query) return;
-      stores.search.set_omnibar_items(result.items);
+
+      if (stores.ui.omnibar.scope === "all_vaults") {
+        const result =
+          await services.search.search_notes_all_vaults(normalized_query);
+        if (stores.ui.omnibar.query !== normalized_query) return;
+        if (stores.ui.omnibar.scope !== "all_vaults") return;
+        const items: OmnibarItem[] = result.groups.flatMap((group) =>
+          group.results.map((r) => ({
+            kind: "cross_vault_note" as const,
+            note: r.note,
+            vault_id: group.vault_id,
+            vault_name: group.vault_name,
+            score: r.score,
+            snippet: r.snippet,
+          })),
+        );
+        stores.search.set_omnibar_items(items);
+      } else {
+        const result = await services.search.search_omnibar(normalized_query);
+        if (stores.ui.omnibar.query !== normalized_query) return;
+        stores.search.set_omnibar_items(result.items);
+      }
+
       const clamped_index =
-        result.items.length > 0
-          ? Math.min(stores.ui.omnibar.selected_index, result.items.length - 1)
+        stores.search.omnibar_items.length > 0
+          ? Math.min(
+              stores.ui.omnibar.selected_index,
+              stores.search.omnibar_items.length - 1,
+            )
           : 0;
       stores.ui.omnibar = {
         ...stores.ui.omnibar,
@@ -144,6 +185,61 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       stores.ui.omnibar = {
         ...stores.ui.omnibar,
         selected_index: Number(index),
+      };
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.omnibar_set_scope,
+    label: "Set Omnibar Scope",
+    execute: async (scope: unknown) => {
+      const new_scope = scope as OmnibarScope;
+      stores.ui.omnibar = {
+        ...stores.ui.omnibar,
+        scope: new_scope,
+        selected_index: 0,
+      };
+      stores.search.clear_omnibar();
+
+      const current_query = stores.ui.omnibar.query.trim();
+      if (!current_query) return;
+
+      stores.ui.omnibar = { ...stores.ui.omnibar, is_searching: true };
+
+      if (new_scope === "all_vaults") {
+        const result =
+          await services.search.search_notes_all_vaults(current_query);
+        if (stores.ui.omnibar.scope !== "all_vaults") return;
+        if (stores.ui.omnibar.query.trim() !== current_query) return;
+        const items: OmnibarItem[] = result.groups.flatMap((group) =>
+          group.results.map((r) => ({
+            kind: "cross_vault_note" as const,
+            note: r.note,
+            vault_id: group.vault_id,
+            vault_name: group.vault_name,
+            score: r.score,
+            snippet: r.snippet,
+          })),
+        );
+        stores.search.set_omnibar_items(items);
+      } else {
+        const result = await services.search.search_omnibar(current_query);
+        if (stores.ui.omnibar.scope !== "current_vault") return;
+        if (stores.ui.omnibar.query.trim() !== current_query) return;
+        stores.search.set_omnibar_items(result.items);
+      }
+
+      const clamped =
+        stores.search.omnibar_items.length > 0
+          ? Math.min(
+              stores.ui.omnibar.selected_index,
+              stores.search.omnibar_items.length - 1,
+            )
+          : 0;
+      stores.ui.omnibar = {
+        ...stores.ui.omnibar,
+        is_searching: false,
+        selected_index: clamped,
       };
     },
   });
