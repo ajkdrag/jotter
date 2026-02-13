@@ -29,4 +29,37 @@ describe("search_vaults", () => {
   it("matches by vault path", () => {
     expect(search_vaults(vaults, "research")).toEqual([vaults[1]]);
   });
+
+  it("matches non-contiguous query terms by fuzzy subsequence", () => {
+    expect(search_vaults(vaults, "dvj")).toEqual([vaults[0]]);
+  });
+
+  it("ranks stronger name matches before path-only matches", () => {
+    const ranked = search_vaults(
+      [
+        {
+          id: as_vault_id("vault-alpha"),
+          name: "Knowledge Base",
+          path: as_vault_path("/Users/a/vaults/machine-learning"),
+          created_at: 1,
+        },
+        {
+          id: as_vault_id("vault-beta"),
+          name: "Machine Learning",
+          path: as_vault_path("/Users/a/vaults/notes"),
+          created_at: 1,
+        },
+      ],
+      "machine learning",
+    );
+
+    expect(ranked.map((vault) => vault.id)).toEqual([
+      as_vault_id("vault-beta"),
+      as_vault_id("vault-alpha"),
+    ]);
+  });
+
+  it("requires all query terms to match", () => {
+    expect(search_vaults(vaults, "dev missing")).toEqual([]);
+  });
 });
