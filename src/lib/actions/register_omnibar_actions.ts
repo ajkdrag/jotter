@@ -46,6 +46,24 @@ function is_unavailable_vault_error(message: string): boolean {
   );
 }
 
+function mark_vault_unavailable(
+  input: ActionRegistrationInput,
+  vault_id: VaultId,
+) {
+  input.stores.vault.set_vault_availability(vault_id, false);
+  input.stores.search.set_omnibar_items(
+    input.stores.search.omnibar_items.map((item) => {
+      if (item.kind !== "cross_vault_note" || item.vault_id !== vault_id) {
+        return item;
+      }
+      return {
+        ...item,
+        vault_is_available: false,
+      };
+    }),
+  );
+}
+
 async function execute_command(
   input: ActionRegistrationInput,
   command_id: CommandId,
@@ -81,6 +99,15 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
       });
       break;
     case "cross_vault_note":
+      if (
+        input.stores.vault.recent_vaults.some(
+          (vault) => vault.id === item.vault_id && vault.is_available === false,
+        )
+      ) {
+        mark_vault_unavailable(input, item.vault_id as VaultId);
+        return;
+      }
+
       close_omnibar(input);
       if (input.stores.vault.vault?.id !== item.vault_id) {
         input.stores.ui.cross_vault_open_confirm = {
@@ -299,7 +326,7 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
           vault_change_error &&
           is_unavailable_vault_error(vault_change_error)
         ) {
-          stores.vault.set_vault_availability(target_vault_id, false);
+          mark_vault_unavailable(input, target_vault_id);
         }
         return;
       }

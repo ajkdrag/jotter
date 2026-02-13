@@ -8,7 +8,7 @@ import { NotesStore } from "$lib/stores/notes_store.svelte";
 import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
-import { as_note_path, as_vault_id } from "$lib/types/ids";
+import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
 import { create_test_note, create_test_vault } from "../helpers/test_fixtures";
 
 function create_omnibar_actions_harness() {
@@ -206,5 +206,34 @@ describe("register_omnibar_actions", () => {
       target_vault_name: "",
       note_path: null,
     });
+  });
+
+  it("does not prompt switch for vault already marked unavailable", async () => {
+    const { registry, stores, execute_vault_select, execute_note_open } =
+      create_omnibar_actions_harness();
+    const target_vault_id = as_vault_id("vault-b");
+    stores.vault.set_recent_vaults([
+      {
+        id: target_vault_id,
+        name: "Vault B",
+        path: as_vault_path("/vault/b"),
+        created_at: 1,
+        is_available: false,
+      },
+    ]);
+
+    await registry.execute(ACTION_IDS.omnibar_confirm_item, {
+      kind: "cross_vault_note",
+      note: create_test_note("docs/alpha", "Alpha"),
+      vault_id: target_vault_id,
+      vault_name: "Vault B",
+      vault_is_available: false,
+      score: 1,
+      snippet: "alpha",
+    });
+
+    expect(stores.ui.cross_vault_open_confirm.open).toBe(false);
+    expect(execute_vault_select).not.toHaveBeenCalled();
+    expect(execute_note_open).not.toHaveBeenCalled();
   });
 });
