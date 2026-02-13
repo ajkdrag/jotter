@@ -216,6 +216,19 @@ describe("NotesStore recent notes", () => {
     expect(store.recent_notes[0]?.id).toBe("note-11.md");
   });
 
+  it("deduplicates recent notes case-insensitively", () => {
+    const store = new NotesStore();
+
+    store.add_recent_note(note("docs/alpha.md"));
+    store.add_recent_note(note("docs/beta.md"));
+    store.add_recent_note(note("DOCS/ALPHA.md"));
+
+    expect(store.recent_notes.map((entry) => entry.id)).toEqual([
+      "DOCS/ALPHA.md",
+      "docs/beta.md",
+    ]);
+  });
+
   it("removes recent notes by id", () => {
     const store = new NotesStore();
 
@@ -239,6 +252,23 @@ describe("NotesStore recent notes", () => {
       "c.md",
       "renamed.md",
       "a.md",
+    ]);
+  });
+
+  it("renames recent notes case-insensitively", () => {
+    const store = new NotesStore();
+
+    store.add_recent_note(note("docs/alpha.md"));
+    store.add_recent_note(note("docs/beta.md"));
+
+    store.rename_recent_note(
+      "DOCS/ALPHA.md" as NoteId,
+      note("docs/RENAMED.md"),
+    );
+
+    expect(store.recent_notes.map((entry) => entry.id)).toEqual([
+      "docs/beta.md",
+      "docs/RENAMED.md",
     ]);
   });
 
@@ -294,6 +324,37 @@ describe("NotesStore starred paths", () => {
 
     store.toggle_star_path(" docs ");
     expect(store.starred_paths).toEqual(["docs/guide.md", "docs"]);
+  });
+
+  it("deduplicates starred paths case-insensitively", () => {
+    const store = new NotesStore();
+
+    store.set_starred_paths(["Docs", "DOCS", "docs/guide.md"]);
+    expect(store.starred_paths).toEqual(["Docs", "docs/guide.md"]);
+  });
+
+  it("checks starred paths case-insensitively", () => {
+    const store = new NotesStore();
+
+    store.set_starred_paths(["docs/guide.md"]);
+
+    expect(store.is_starred_path("docs/guide.md")).toBe(true);
+    expect(store.is_starred_path("DOCS/GUIDE.md")).toBe(true);
+    expect(store.is_starred_path("Docs/Guide.md")).toBe(true);
+    expect(store.is_starred_path("docs/other.md")).toBe(false);
+  });
+
+  it("toggles starred paths case-insensitively", () => {
+    const store = new NotesStore();
+
+    store.toggle_star_path("docs/guide.md");
+    expect(store.starred_paths).toEqual(["docs/guide.md"]);
+
+    store.toggle_star_path("DOCS/GUIDE.md");
+    expect(store.starred_paths).toEqual([]);
+
+    store.toggle_star_path("Docs/Guide.md");
+    expect(store.starred_paths).toEqual(["Docs/Guide.md"]);
   });
 
   it("updates starred paths when note is renamed or deleted", () => {

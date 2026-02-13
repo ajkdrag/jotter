@@ -284,9 +284,11 @@ export class NoteService {
       return { status: "skipped" };
     }
 
-    const target_exists =
-      note.path !== new_path &&
-      note_path_exists(this.notes_store.notes, new_path);
+    const target_exists = note_path_exists(
+      this.notes_store.notes,
+      new_path,
+      note.path,
+    );
     if (target_exists && !overwrite) {
       return { status: "conflict" };
     }

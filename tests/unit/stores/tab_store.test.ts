@@ -48,6 +48,16 @@ describe("TabStore", () => {
       expect(returned.id).toBe("docs/a.md");
     });
 
+    it("deduplicates tabs case-insensitively", () => {
+      const store = new TabStore();
+      store.open_tab(np("docs/alpha.md"), "alpha");
+      const returned = store.open_tab(np("DOCS/ALPHA.md"), "ALPHA");
+
+      expect(store.tabs).toHaveLength(1);
+      expect(store.active_tab_id).toBe("docs/alpha.md");
+      expect(returned.id).toBe("docs/alpha.md");
+    });
+
     it("appends new tabs at the end", () => {
       const store = new TabStore();
       store.open_tab(np("a.md"), "a");
@@ -400,6 +410,21 @@ describe("TabStore", () => {
         "other/c.md",
       ]);
       expect(store.active_tab_id).toBe("notes/a.md");
+    });
+
+    it("matches prefix case-insensitively", () => {
+      const store = new TabStore();
+      store.open_tab(np("Docs/a.md"), "a");
+      store.open_tab(np("DOCS/b.md"), "b");
+      store.open_tab(np("other/c.md"), "c");
+
+      store.update_tab_path_prefix("docs/", "notes/");
+
+      expect(store.tabs.map((t) => t.note_path)).toEqual([
+        "notes/a.md",
+        "notes/b.md",
+        "other/c.md",
+      ]);
     });
 
     it("migrates note cache on prefix change", () => {

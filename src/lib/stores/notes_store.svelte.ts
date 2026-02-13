@@ -1,6 +1,7 @@
 import type { NoteId, NotePath } from "$lib/types/ids";
 import type { NoteMeta } from "$lib/types/note";
 import type { FolderContents } from "$lib/types/filetree";
+import { paths_equal_ignore_case } from "$lib/utils/path";
 
 function normalized_note_path(path: NotePath): NotePath {
   if (path.endsWith(".md")) return path;
@@ -10,23 +11,25 @@ function normalized_note_path(path: NotePath): NotePath {
 const RECENT_NOTES_LIMIT = 10;
 
 function normalize_starred_paths(paths: string[]): string[] {
-  const seen = new Set<string>();
+  const seen_lower = new Set<string>();
   const normalized: string[] = [];
   for (const raw_path of paths) {
     const path = raw_path.trim();
-    if (!path || seen.has(path)) continue;
-    seen.add(path);
+    const lower_path = path.toLowerCase();
+    if (!path || seen_lower.has(lower_path)) continue;
+    seen_lower.add(lower_path);
     normalized.push(path);
   }
   return normalized;
 }
 
 function normalize_recent_notes(notes: NoteMeta[]): NoteMeta[] {
-  const seen = new Set<NoteId>();
+  const seen_lower = new Set<string>();
   const normalized: NoteMeta[] = [];
   for (const note of notes) {
-    if (seen.has(note.id)) continue;
-    seen.add(note.id);
+    const lower_id = note.id.toLowerCase();
+    if (seen_lower.has(lower_id)) continue;
+    seen_lower.add(lower_id);
     normalized.push(note);
     if (normalized.length >= RECENT_NOTES_LIMIT) break;
   }
@@ -84,7 +87,9 @@ export class NotesStore {
   }
 
   add_recent_note(note: NoteMeta) {
-    const filtered = this.recent_notes.filter((item) => item.id !== note.id);
+    const filtered = this.recent_notes.filter(
+      (item) => !paths_equal_ignore_case(item.id, note.id),
+    );
     this.recent_notes = normalize_recent_notes([note, ...filtered]);
   }
 
@@ -99,10 +104,14 @@ export class NotesStore {
   }
 
   rename_recent_note(old_id: NoteId, next_note: NoteMeta) {
-    const index = this.recent_notes.findIndex((note) => note.id === old_id);
+    const index = this.recent_notes.findIndex((note) =>
+      paths_equal_ignore_case(note.id, old_id),
+    );
     if (index < 0) return;
     const filtered = this.recent_notes.filter(
-      (note) => note.id !== old_id && note.id !== next_note.id,
+      (note) =>
+        !paths_equal_ignore_case(note.id, old_id) &&
+        !paths_equal_ignore_case(note.id, next_note.id),
     );
     filtered.splice(index, 0, next_note);
     this.recent_notes = normalize_recent_notes(filtered);
@@ -135,15 +144,20 @@ export class NotesStore {
   toggle_star_path(path: string) {
     const normalized = path.trim();
     if (!normalized) return;
-    if (this.starred_paths.includes(normalized)) {
-      this.starred_paths = this.starred_paths.filter((p) => p !== normalized);
+    const existing_index = this.starred_paths.findIndex((p) =>
+      paths_equal_ignore_case(p, normalized),
+    );
+    if (existing_index >= 0) {
+      this.starred_paths = this.starred_paths.filter(
+        (_, i) => i !== existing_index,
+      );
     } else {
       this.starred_paths = [...this.starred_paths, normalized];
     }
   }
 
   is_starred_path(path: string): boolean {
-    return this.starred_paths.includes(path);
+    return this.starred_paths.some((p) => paths_equal_ignore_case(p, path));
   }
 
   remove_starred_path(path: string) {

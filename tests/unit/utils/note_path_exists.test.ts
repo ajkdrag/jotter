@@ -28,4 +28,47 @@ describe("note_path_exists", () => {
       false,
     );
   });
+
+  it("matches case-insensitively", () => {
+    expect(note_path_exists(notes, as_note_path("docs/ALPHA.md"))).toBe(true);
+    expect(note_path_exists(notes, as_note_path("DOCS/alpha.md"))).toBe(true);
+    expect(note_path_exists(notes, as_note_path("Docs/Alpha.md"))).toBe(true);
+  });
+
+  it("excludes exact path when exclude_path provided", () => {
+    expect(
+      note_path_exists(
+        notes,
+        as_note_path("docs/alpha.md"),
+        as_note_path("docs/alpha.md"),
+      ),
+    ).toBe(false);
+  });
+
+  it("excludes path case-insensitively when exclude_path provided", () => {
+    expect(
+      note_path_exists(
+        notes,
+        as_note_path("docs/ALPHA.md"),
+        as_note_path("docs/alpha.md"),
+      ),
+    ).toBe(false);
+    expect(
+      note_path_exists(
+        notes,
+        as_note_path("docs/alpha.md"),
+        as_note_path("DOCS/ALPHA.md"),
+      ),
+    ).toBe(false);
+  });
+
+  it("does not exclude unrelated paths", () => {
+    expect(
+      note_path_exists(
+        notes,
+        as_note_path("docs/alpha.md"),
+        as_note_path("docs/beta.md"),
+      ),
+    ).toBe(true);
+  });
 });

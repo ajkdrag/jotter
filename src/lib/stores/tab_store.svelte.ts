@@ -6,7 +6,7 @@ import type {
   ClosedTabEntry,
 } from "$lib/types/tab";
 import type { OpenNoteState } from "$lib/types/editor";
-import { note_name_from_path } from "$lib/utils/path";
+import { note_name_from_path, paths_equal_ignore_case } from "$lib/utils/path";
 
 const MAX_CLOSED_HISTORY = 10;
 
@@ -32,7 +32,10 @@ export class TabStore {
   }
 
   find_tab_by_path(note_path: NotePath): Tab | null {
-    return this.tabs.find((t) => t.note_path === note_path) ?? null;
+    return (
+      this.tabs.find((t) => paths_equal_ignore_case(t.note_path, note_path)) ??
+      null
+    );
   }
 
   open_tab(note_path: NotePath, title: string): Tab {
@@ -234,7 +237,9 @@ export class TabStore {
     const snapshot_renames: [string, string][] = [];
 
     this.tabs = this.tabs.map((t) => {
-      if (!t.note_path.startsWith(old_prefix)) return t;
+      const lower_path = t.note_path.toLowerCase();
+      const lower_prefix = old_prefix.toLowerCase();
+      if (!lower_path.startsWith(lower_prefix)) return t;
       const new_path =
         `${new_prefix}${t.note_path.slice(old_prefix.length)}` as NotePath;
       const new_title = note_name_from_path(new_path);

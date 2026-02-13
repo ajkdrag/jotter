@@ -990,3 +990,121 @@ describe("NoteService", () => {
     expect(create_note).not.toHaveBeenCalled();
   });
 });
+
+describe("NoteService rename case-insensitive handling", () => {
+  it("allows case-only rename without conflict", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/alpha.md"),
+      path: as_note_path("docs/alpha.md"),
+      name: "alpha",
+      title: "alpha",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    notes_store.set_notes([note_meta]);
+
+    const notes_port = create_mock_notes_port();
+    const rename_note = vi.fn().mockResolvedValue(undefined);
+    notes_port.rename_note = rename_note;
+
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.rename_note(
+      note_meta,
+      as_note_path("docs/ALPHA.md"),
+      false,
+    );
+
+    expect(result.status).toBe("renamed");
+    expect(rename_note).toHaveBeenCalled();
+  });
+
+  it("detects conflict case-insensitively for different note", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+
+    vault_store.set_vault(create_test_vault());
+
+    const alpha_note = {
+      id: as_note_path("docs/alpha.md"),
+      path: as_note_path("docs/alpha.md"),
+      name: "alpha",
+      title: "alpha",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+
+    const beta_note = {
+      id: as_note_path("docs/beta.md"),
+      path: as_note_path("docs/beta.md"),
+      name: "beta",
+      title: "beta",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+
+    notes_store.set_notes([alpha_note, beta_note]);
+
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.rename_note(
+      alpha_note,
+      as_note_path("docs/BETA.md"),
+      false,
+    );
+
+    expect(result.status).toBe("conflict");
+  });
+});
