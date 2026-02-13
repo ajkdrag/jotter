@@ -11,7 +11,8 @@
     duplicate_vault_names,
     move_vault_selection,
   } from "$lib/domain/vault_switcher";
-  import { Plus, Check, Star, Trash2, X } from "@lucide/svelte";
+  import { onMount } from "svelte";
+  import { Plus, Check, Pin, Trash2, X } from "@lucide/svelte";
 
   interface Props {
     recent_vaults: Vault[];
@@ -44,6 +45,7 @@
   }: Props = $props();
   let vault_query = $state("");
   let selected_vault_index = $state(0);
+  let search_input_ref: HTMLInputElement | null = $state(null);
   const filtered_recent_vaults = $derived(
     search_vaults(recent_vaults, vault_query),
   );
@@ -54,6 +56,12 @@
       selected_vault_index,
       filtered_recent_vaults.length,
     );
+  });
+
+  onMount(() => {
+    if (is_dialog && search_input_ref) {
+      setTimeout(() => search_input_ref?.focus(), 0);
+    }
   });
 
   function handle_choose_vault(event?: MouseEvent) {
@@ -234,6 +242,7 @@
       <h3 class="VaultPanel__section-title">Recent Vaults</h3>
       <div class="VaultPanel__search">
         <Input
+          bind:ref={search_input_ref}
           type="text"
           value={vault_query}
           oninput={(event: Event & { currentTarget: HTMLInputElement }) => {
@@ -299,8 +308,8 @@
             <div class="VaultPanel__vault-actions">
               <button
                 type="button"
-                class="VaultPanel__pin-btn"
-                class:VaultPanel__pin-btn--active={pinned_vault_ids.includes(
+                class="VaultPanel__icon-btn"
+                class:VaultPanel__icon-btn--active={pinned_vault_ids.includes(
                   vault.id,
                 )}
                 onclick={(event) => {
@@ -311,11 +320,11 @@
                   ? "Unpin vault"
                   : "Pin vault"}
               >
-                <Star />
+                <Pin />
               </button>
               <button
                 type="button"
-                class="VaultPanel__pin-btn"
+                class="VaultPanel__icon-btn"
                 onclick={(event) => {
                   handle_remove_vault(vault.id, event);
                 }}
@@ -408,8 +417,13 @@
   }
 
   .VaultPanel__vault-item[data-disabled="true"] {
-    cursor: default;
-    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .VaultPanel__vault-item[data-disabled="true"]:not(
+      .VaultPanel__vault-item--active
+    ) {
+    opacity: 0.5;
   }
 
   .VaultPanel__vault-item--unavailable {
@@ -458,7 +472,7 @@
     margin-left: var(--space-4);
   }
 
-  .VaultPanel__pin-btn {
+  .VaultPanel__icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -473,31 +487,31 @@
       border-color var(--duration-fast) var(--ease-default);
   }
 
-  .VaultPanel__pin-btn:hover:not(:disabled) {
+  .VaultPanel__icon-btn:hover:not(:disabled) {
     color: var(--foreground);
     background-color: var(--muted);
   }
 
-  .VaultPanel__pin-btn:focus-visible {
+  .VaultPanel__icon-btn:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
-  .VaultPanel__pin-btn--active {
+  .VaultPanel__icon-btn--active {
     color: var(--interactive);
     background-color: var(--interactive-bg);
     border-color: color-mix(in oklch, var(--interactive) 30%, transparent);
   }
 
-  .VaultPanel__pin-btn--active:hover:not(:disabled) {
+  .VaultPanel__icon-btn--active:hover:not(:disabled) {
     background-color: var(--interactive-bg-hover);
   }
 
-  .VaultPanel__pin-btn:disabled {
-    opacity: 0.6;
+  .VaultPanel__icon-btn:disabled {
+    opacity: 0.5;
   }
 
-  :global(.VaultPanel__pin-btn svg) {
+  :global(.VaultPanel__icon-btn svg) {
     width: var(--size-icon);
     height: var(--size-icon);
   }
@@ -510,7 +524,7 @@
   }
 
   .VaultPanel__vault-path {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     color: var(--muted-foreground);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -521,7 +535,7 @@
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
-    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   .VaultPanel__vault-meta {
@@ -542,12 +556,12 @@
   }
 
   .VaultPanel__vault-unavailable {
-    color: var(--destructive);
+    color: var(--muted-foreground);
     font-weight: 500;
+    font-style: italic;
   }
 
   :global(.VaultPanel__check-icon) {
-    margin-left: var(--space-4);
     flex-shrink: 0;
     width: var(--size-icon-md);
     height: var(--size-icon-md);
