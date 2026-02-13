@@ -32,6 +32,8 @@ export function create_test_vault_adapter(): VaultPort {
           path: TEST_VAULT_PATH,
           name: TEST_VAULT_NAME,
           created_at: Date.now(),
+          last_opened_at: Date.now(),
+          note_count: 12,
         });
       }
 
@@ -41,6 +43,8 @@ export function create_test_vault_adapter(): VaultPort {
           path: TEST_VAULT_2_PATH,
           name: TEST_VAULT_2_NAME,
           created_at: Date.now(),
+          last_opened_at: Date.now(),
+          note_count: 8,
         });
       }
 
@@ -58,6 +62,8 @@ export function create_test_vault_adapter(): VaultPort {
           path: TEST_VAULT_PATH,
           name: TEST_VAULT_NAME,
           created_at: Date.now(),
+          last_opened_at: Date.now(),
+          note_count: 12,
         });
       }
 
@@ -67,6 +73,8 @@ export function create_test_vault_adapter(): VaultPort {
           path: TEST_VAULT_2_PATH,
           name: TEST_VAULT_2_NAME,
           created_at: Date.now(),
+          last_opened_at: Date.now(),
+          note_count: 8,
         });
       }
 
@@ -84,12 +92,16 @@ export function create_test_vault_adapter(): VaultPort {
           path: TEST_VAULT_PATH,
           name: TEST_VAULT_NAME,
           created_at: Date.now(),
+          last_opened_at: Date.now(),
+          note_count: 12,
         },
         {
           id: TEST_VAULT_2_ID,
           path: TEST_VAULT_2_PATH,
           name: TEST_VAULT_2_NAME,
           created_at: Date.now(),
+          last_opened_at: Date.now(),
+          note_count: 8,
         },
       ]);
     },

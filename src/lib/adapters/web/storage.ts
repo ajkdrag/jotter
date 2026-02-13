@@ -9,11 +9,13 @@ export type VaultRecord = {
   handle: FileSystemDirectoryHandle;
   created_at: number;
   last_accessed: number;
+  note_count: number | null;
 };
 
 type StoreVaultOptions = {
   created_at?: number;
   last_accessed?: number;
+  note_count?: number | null;
 };
 
 async function open_db(): Promise<IDBDatabase> {
@@ -58,6 +60,7 @@ export async function store_vault(
     handle,
     created_at: options.created_at ?? Date.now(),
     last_accessed: options.last_accessed ?? Date.now(),
+    note_count: options.note_count ?? null,
   };
 
   return new Promise<void>((resolve, reject) => {
@@ -99,12 +102,20 @@ export async function get_vault(id: string): Promise<VaultRecord | null> {
     request.onsuccess = () => {
       const result = request.result as VaultRecord | undefined;
       if (result) {
+        const normalized: VaultRecord = {
+          ...result,
+          note_count:
+            typeof result.note_count === "number" ? result.note_count : null,
+        };
         void store_vault(result.id, result.name, result.path, result.handle, {
-          created_at: result.created_at,
+          created_at: normalized.created_at,
           last_accessed: Date.now(),
+          note_count: normalized.note_count,
         });
+        resolve(normalized);
+        return;
       }
-      resolve(result ?? null);
+      resolve(null);
     };
   });
 }
@@ -125,7 +136,12 @@ export async function list_vaults(): Promise<VaultRecord[]> {
     };
     request.onsuccess = () => {
       const results = request.result as VaultRecord[];
-      resolve(results.sort((a, b) => b.last_accessed - a.last_accessed));
+      const normalized = results.map((record) => ({
+        ...record,
+        note_count:
+          typeof record.note_count === "number" ? record.note_count : null,
+      }));
+      resolve(normalized.sort((a, b) => b.last_accessed - a.last_accessed));
     };
   });
 }

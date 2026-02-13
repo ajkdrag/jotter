@@ -10,6 +10,10 @@ pub struct Vault {
     pub path: String,
     pub name: String,
     pub created_at: i64,
+    #[serde(default)]
+    pub last_opened_at: Option<i64>,
+    #[serde(default)]
+    pub note_count: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

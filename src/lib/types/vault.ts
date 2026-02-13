@@ -5,4 +5,6 @@ export type Vault = {
   path: VaultPath;
   name: string;
   created_at: number;
+  last_opened_at?: number | null;
+  note_count?: number | null;
 };

@@ -5,6 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { search_vaults } from "$lib/domain/search_vaults";
+  import { format_relative_time } from "$lib/utils/relative_time";
   import {
     clamp_vault_selection,
     move_vault_selection,
@@ -124,6 +125,21 @@
     }
     return path;
   }
+
+  function format_last_opened(vault: Vault): string {
+    if (!vault.last_opened_at) {
+      return "--";
+    }
+    return format_relative_time(vault.last_opened_at, Date.now());
+  }
+
+  function format_note_count(vault: Vault): string {
+    if (typeof vault.note_count !== "number") {
+      return "-- notes";
+    }
+    const suffix = vault.note_count === 1 ? "note" : "notes";
+    return `${vault.note_count} ${suffix}`;
+  }
 </script>
 
 {#if is_dialog}
@@ -229,6 +245,12 @@
                 <div class="VaultPanel__vault-name">{vault.name}</div>
                 <div class="VaultPanel__vault-path">
                   {format_path(vault.path)}
+                </div>
+                <div class="VaultPanel__vault-meta">
+                  <span>Opened {format_last_opened(vault)}</span>
+                  <span class="VaultPanel__vault-count">
+                    {format_note_count(vault)}
+                  </span>
                 </div>
               </div>
             </button>
@@ -436,6 +458,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .VaultPanel__vault-meta {
+    margin-top: var(--space-1);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+
+  .VaultPanel__vault-count {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-1-5);
   }
 
   :global(.VaultPanel__check-icon) {

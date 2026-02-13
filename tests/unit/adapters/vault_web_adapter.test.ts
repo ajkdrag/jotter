@@ -52,6 +52,7 @@ describe("vault_web_adapter", () => {
         handle: stored_handle as unknown as FileSystemDirectoryHandle,
         created_at: 1234,
         last_accessed: 4567,
+        note_count: null,
       },
     ]);
     const store_vault = vi
@@ -69,8 +70,13 @@ describe("vault_web_adapter", () => {
       "notes",
       "notes",
       picked_handle,
-      { created_at: 1234 },
+      expect.objectContaining({
+        created_at: 1234,
+        note_count: null,
+      }),
     );
+    expect(vault.last_opened_at).toBeTypeOf("number");
+    expect(vault.note_count).toBeNull();
   });
 
   it("creates a new vault identity when no stored vault matches", async () => {
@@ -100,7 +106,43 @@ describe("vault_web_adapter", () => {
       "notes",
       "notes",
       picked_handle,
-      { created_at: vault.created_at },
+      expect.objectContaining({
+        created_at: vault.created_at,
+        note_count: null,
+      }),
     );
+    expect(vault.last_opened_at).toBeTypeOf("number");
+    expect(vault.note_count).toBeNull();
+  });
+
+  it("maps last opened and note count from storage", async () => {
+    vi.spyOn(storage, "list_vaults").mockResolvedValue([
+      {
+        id: "web_existing",
+        name: "notes",
+        path: "notes",
+        handle: new MockDirectoryHandle(
+          "notes",
+          "same",
+        ) as unknown as FileSystemDirectoryHandle,
+        created_at: 1234,
+        last_accessed: 4321,
+        note_count: 7,
+      },
+    ]);
+
+    const adapter = create_vault_web_adapter();
+    const vaults = await adapter.list_vaults();
+
+    expect(vaults).toEqual([
+      {
+        id: as_vault_id("web_existing"),
+        name: "notes",
+        path: as_vault_path("notes"),
+        created_at: 1234,
+        last_opened_at: 4321,
+        note_count: 7,
+      },
+    ]);
   });
 });

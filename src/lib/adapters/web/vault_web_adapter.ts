@@ -6,6 +6,7 @@ import {
   type VaultPath,
 } from "$lib/types/ids";
 import type { Vault } from "$lib/types/vault";
+import { is_excluded_folder } from "$lib/constants/special_folders";
 import {
   store_vault,
   get_vault,
@@ -60,7 +61,11 @@ async function is_same_entry(
 async function find_existing_vault_record(
   handle: FileSystemDirectoryHandle,
   path: string,
-): Promise<{ id: VaultId; created_at: number } | null> {
+): Promise<{
+  id: VaultId;
+  created_at: number;
+  note_count: number | null;
+} | null> {
   const records = await list_stored_vaults();
   for (const record of records) {
     const same = await is_same_entry(handle, record.handle);
@@ -68,6 +73,7 @@ async function find_existing_vault_record(
       return {
         id: as_vault_id(record.id),
         created_at: record.created_at,
+        note_count: record.note_count,
       };
     }
   }
@@ -77,7 +83,39 @@ async function find_existing_vault_record(
   return {
     id: as_vault_id(by_path.id),
     created_at: by_path.created_at,
+    note_count: by_path.note_count,
   };
+}
+
+async function count_markdown_notes(
+  handle: FileSystemDirectoryHandle,
+): Promise<number | null> {
+  if (typeof handle.values !== "function") {
+    return null;
+  }
+  let count = 0;
+  try {
+    for await (const entry of handle.values()) {
+      if (entry.kind === "file") {
+        if (entry.name.toLowerCase().endsWith(".md")) {
+          count += 1;
+        }
+        continue;
+      }
+      if (is_excluded_folder(entry.name)) {
+        continue;
+      }
+      const nested = await count_markdown_notes(
+        entry as FileSystemDirectoryHandle,
+      );
+      if (nested !== null) {
+        count += nested;
+      }
+    }
+    return count;
+  } catch {
+    return null;
+  }
 }
 
 export function create_vault_web_adapter(): VaultPort {
@@ -126,14 +164,23 @@ export function create_vault_web_adapter(): VaultPort {
       const existing = await find_existing_vault_record(handle, path);
       const vault_id = existing?.id ?? generate_vault_id();
       const created_at = existing?.created_at ?? Date.now();
+      const last_opened_at = Date.now();
+      const counted_notes = await count_markdown_notes(handle);
+      const note_count = counted_notes ?? existing?.note_count ?? null;
 
-      await store_vault(vault_id, name, path, handle, { created_at });
+      await store_vault(vault_id, name, path, handle, {
+        created_at,
+        last_accessed: last_opened_at,
+        note_count,
+      });
 
       return {
         id: vault_id,
         path: as_vault_path(path),
         name,
         created_at,
+        last_opened_at,
+        note_count,
       };
     },
 
@@ -144,6 +191,7 @@ export function create_vault_web_adapter(): VaultPort {
       }
 
       const { name, path, handle, created_at } = record;
+      const last_opened_at = Date.now();
 
       if (
         "requestPermission" in handle &&
@@ -164,11 +212,21 @@ export function create_vault_web_adapter(): VaultPort {
         }
       }
 
+      const counted_notes = await count_markdown_notes(handle);
+      const note_count = counted_notes ?? record.note_count ?? null;
+      await store_vault(vault_id, name, path, handle, {
+        created_at,
+        last_accessed: last_opened_at,
+        note_count,
+      });
+
       return {
         id: vault_id,
         path: as_vault_path(path),
         name,
         created_at,
+        last_opened_at,
+        note_count,
       };
     },
 
@@ -179,6 +237,8 @@ export function create_vault_web_adapter(): VaultPort {
         path: as_vault_path(r.path),
         name: r.name,
         created_at: r.created_at,
+        last_opened_at: r.last_accessed,
+        note_count: r.note_count,
       }));
     },
 

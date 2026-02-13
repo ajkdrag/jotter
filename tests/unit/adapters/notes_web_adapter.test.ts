@@ -248,6 +248,7 @@ describe("notes_web_adapter", () => {
       handle: mock_fs.root as unknown as FileSystemDirectoryHandle,
       created_at: 1,
       last_accessed: 1,
+      note_count: null,
     });
 
     const adapter = create_notes_web_adapter();
@@ -274,6 +275,7 @@ describe("notes_web_adapter", () => {
       handle: mock_fs.root as unknown as FileSystemDirectoryHandle,
       created_at: 1,
       last_accessed: 1,
+      note_count: null,
     });
 
     const adapter = create_notes_web_adapter();
@@ -302,6 +304,7 @@ describe("notes_web_adapter", () => {
       handle: mock_fs.root as unknown as FileSystemDirectoryHandle,
       created_at: 1,
       last_accessed: 1,
+      note_count: null,
     });
 
     const adapter = create_notes_web_adapter();
@@ -326,6 +329,7 @@ describe("notes_web_adapter", () => {
       handle: mock_fs.root as unknown as FileSystemDirectoryHandle,
       created_at: 1,
       last_accessed: 1,
+      note_count: null,
     });
 
     const adapter = create_notes_web_adapter();
@@ -349,6 +353,7 @@ describe("notes_web_adapter", () => {
       handle: mock_fs.root as unknown as FileSystemDirectoryHandle,
       created_at: 1,
       last_accessed: 1,
+      note_count: null,
     });
 
     const adapter = create_notes_web_adapter();
