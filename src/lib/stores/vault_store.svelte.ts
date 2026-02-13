@@ -83,10 +83,6 @@ export class VaultStore {
     pinned_ids.forEach((vault_id, index) => {
       pin_priority.set(vault_id, index);
     });
-    const recency_priority = new Map<VaultId, number>();
-    vaults.forEach((vault, index) => {
-      recency_priority.set(vault.id, index);
-    });
 
     return [...vaults].sort((left, right) => {
       const left_pin = pin_priority.get(left.id);
@@ -100,10 +96,7 @@ export class VaultStore {
       if (left_pinned) return -1;
       if (right_pinned) return 1;
 
-      return (
-        (recency_priority.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
-        (recency_priority.get(right.id) ?? Number.MAX_SAFE_INTEGER)
-      );
+      return (right.last_opened_at ?? 0) - (left.last_opened_at ?? 0);
     });
   }
 }

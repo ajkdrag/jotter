@@ -97,11 +97,12 @@ export function create_index_actor(executor: IndexActorExecutor): {
   ): Promise<void> {
     throw_if_aborted(signal);
     let total = count_index_workset_items(workset);
+    const mode = workset.force_rebuild || workset.force_scan ? "dumb" : "smart";
     emit({
       status: "started",
       vault_id: String(vault_id),
       total,
-      mode: "dumb",
+      mode,
       run_id,
       queued_work_items,
     });
@@ -128,7 +129,7 @@ export function create_index_actor(executor: IndexActorExecutor): {
         vault_id: String(vault_id),
         indexed,
         total,
-        mode: "dumb",
+        mode,
         run_id,
         queued_work_items,
       });
@@ -255,7 +256,7 @@ export function create_index_actor(executor: IndexActorExecutor): {
         const workset = reduce_index_changes(snapshot);
         state.run_id += 1;
         const run_id = state.run_id;
-        const queued_work_items = state.pending_changes.length;
+        const queued_work_items = snapshot.length;
         state.run_abort_controller = new AbortController();
         try {
           await apply_workset(

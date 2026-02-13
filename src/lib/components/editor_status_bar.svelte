@@ -215,7 +215,8 @@
   }
 
   :global(.StatusBar__item svg),
-  :global(.StatusBar__action svg) {
+  :global(.StatusBar__action svg),
+  :global(.StatusBar__vault-action svg) {
     width: var(--size-icon-xs);
     height: var(--size-icon-xs);
   }

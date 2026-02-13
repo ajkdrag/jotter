@@ -15,4 +15,5 @@ devlog/
 .design-engineer/
 .ignore
 .ralph/
+opencode.json
 .eslintcache

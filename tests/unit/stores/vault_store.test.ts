@@ -41,9 +41,18 @@ describe("VaultStore", () => {
 
   it("keeps pinned vaults at the top in pinned order", () => {
     const store = new VaultStore();
-    const vault_a = create_test_vault({ id: as_vault_id("vault-a") });
-    const vault_b = create_test_vault({ id: as_vault_id("vault-b") });
-    const vault_c = create_test_vault({ id: as_vault_id("vault-c") });
+    const vault_a = create_test_vault({
+      id: as_vault_id("vault-a"),
+      last_opened_at: 100,
+    });
+    const vault_b = create_test_vault({
+      id: as_vault_id("vault-b"),
+      last_opened_at: 200,
+    });
+    const vault_c = create_test_vault({
+      id: as_vault_id("vault-c"),
+      last_opened_at: 300,
+    });
 
     store.set_recent_vaults([vault_c, vault_b, vault_a]);
     store.set_pinned_vault_ids([vault_b.id, vault_a.id]);
@@ -67,5 +76,37 @@ describe("VaultStore", () => {
     store.set_recent_vaults([vault_a]);
 
     expect(store.pinned_vault_ids).toEqual([vault_a.id]);
+  });
+
+  it("restores recency order after unpinning a vault", () => {
+    const store = new VaultStore();
+    const vault_a = create_test_vault({
+      id: as_vault_id("vault-a"),
+      last_opened_at: 300,
+    });
+    const vault_b = create_test_vault({
+      id: as_vault_id("vault-b"),
+      last_opened_at: 200,
+    });
+    const vault_c = create_test_vault({
+      id: as_vault_id("vault-c"),
+      last_opened_at: 100,
+    });
+
+    store.set_recent_vaults([vault_a, vault_b, vault_c]);
+
+    store.toggle_pinned_vault(vault_c.id);
+    expect(store.recent_vaults.map((v) => v.id)).toEqual([
+      vault_c.id,
+      vault_a.id,
+      vault_b.id,
+    ]);
+
+    store.toggle_pinned_vault(vault_c.id);
+    expect(store.recent_vaults.map((v) => v.id)).toEqual([
+      vault_a.id,
+      vault_b.id,
+      vault_c.id,
+    ]);
   });
 });
