@@ -12,7 +12,7 @@ import type { OmnibarScope } from "$lib/types/search";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 type AsyncStatus = "idle" | "loading" | "error";
-type SidebarView = "explorer" | "starred";
+type SidebarView = "explorer" | "dashboard" | "starred";
 
 const INITIAL_DELETE_NOTE_DIALOG = { open: false, note: null } as const;
 

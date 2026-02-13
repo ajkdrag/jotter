@@ -6,6 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import ActivityBar from "$lib/components/activity_bar.svelte";
   import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
+  import VaultDashboardPanel from "$lib/components/vault_dashboard_panel.svelte";
   import NoteEditor from "$lib/components/note_editor.svelte";
   import FindInFileBar from "$lib/components/find_in_file_bar.svelte";
   import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
@@ -331,11 +332,21 @@
     },
   ];
 
-  const sidebar_header_actions = $derived(
-    stores.ui.sidebar_view === "starred"
-      ? starred_header_actions
-      : explorer_header_actions,
-  );
+  const dashboard_header_actions: HeaderAction[] = [
+    {
+      icon: RefreshCw,
+      label: "Refresh",
+      onclick: () =>
+        void action_registry.execute(ACTION_IDS.folder_refresh_tree),
+    },
+  ];
+
+  const sidebar_header_actions = $derived.by(() => {
+    const view = stores.ui.sidebar_view;
+    if (view === "starred") return starred_header_actions;
+    if (view === "dashboard") return dashboard_header_actions;
+    return explorer_header_actions;
+  });
 </script>
 
 {#if stores.vault.vault}
@@ -364,6 +375,19 @@
             "starred",
           );
         }}
+        on_open_dashboard={() => {
+          if (
+            stores.ui.sidebar_open &&
+            stores.ui.sidebar_view === "dashboard"
+          ) {
+            void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
+            return;
+          }
+          void action_registry.execute(
+            ACTION_IDS.ui_set_sidebar_view,
+            "dashboard",
+          );
+        }}
         on_open_settings={() =>
           void action_registry.execute(ACTION_IDS.settings_open)}
       />
@@ -384,6 +408,10 @@
                     {#if stores.ui.sidebar_view === "starred"}
                       <span class="min-w-0 truncate text-left font-semibold">
                         Starred
+                      </span>
+                    {:else if stores.ui.sidebar_view === "dashboard"}
+                      <span class="min-w-0 truncate text-left font-semibold">
+                        Dashboard
                       </span>
                     {:else}
                       <button
@@ -480,9 +508,40 @@
                     </Sidebar.Group>
                   {/if}
 
+                  {#if stores.ui.sidebar_view === "dashboard"}
+                    <Sidebar.Group class="h-full">
+                      <Sidebar.GroupContent class="h-full">
+                        <VaultDashboardPanel
+                          note_count={stores.notes.notes.length}
+                          folder_count={stores.notes.folder_paths.length}
+                          recent_notes={stores.notes.recent_notes}
+                          vault_name={stores.vault.vault.name}
+                          vault_path={stores.vault.vault.path}
+                          on_note_click={(note_path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_open,
+                              note_path,
+                            )}
+                          on_new_note={() =>
+                            void action_registry.execute(
+                              ACTION_IDS.note_create,
+                            )}
+                          on_search={() =>
+                            void action_registry.execute(
+                              ACTION_IDS.omnibar_open,
+                            )}
+                          on_reindex={() =>
+                            void action_registry.execute(
+                              ACTION_IDS.vault_reindex,
+                            )}
+                        />
+                      </Sidebar.GroupContent>
+                    </Sidebar.Group>
+                  {/if}
+
                   <Sidebar.Group
                     class="h-full"
-                    hidden={stores.ui.sidebar_view === "starred"}
+                    hidden={stores.ui.sidebar_view !== "explorer"}
                   >
                     <Sidebar.GroupContent class="h-full">
                       <VirtualFileTree

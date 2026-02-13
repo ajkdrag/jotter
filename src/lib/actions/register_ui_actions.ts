@@ -5,8 +5,13 @@ import type { ThemeMode } from "$lib/types/theme";
 export function register_ui_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
 
-  function parse_sidebar_view(input_view: unknown): "explorer" | "starred" {
-    return String(input_view) === "starred" ? "starred" : "explorer";
+  function parse_sidebar_view(
+    input_view: unknown,
+  ): "explorer" | "dashboard" | "starred" {
+    const value = String(input_view);
+    if (value === "starred") return "starred";
+    if (value === "dashboard") return "dashboard";
+    return "explorer";
   }
 
   registry.register({

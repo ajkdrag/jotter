@@ -54,6 +54,7 @@ export function create_app_context(input: {
 
   const settings_service = new SettingsService(
     input.ports.vault_settings,
+    input.ports.settings,
     stores.vault,
     stores.op,
     now_ms,

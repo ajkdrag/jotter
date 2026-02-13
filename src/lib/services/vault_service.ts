@@ -45,6 +45,7 @@ export type AppMountConfig = {
 const RECENT_NOTES_KEY = "recent_notes";
 const STARRED_PATHS_KEY = "starred_paths";
 const PINNED_VAULT_IDS_KEY = "pinned_vault_ids";
+const GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY = "show_vault_dashboard_on_open";
 const WATCHER_INDEX_FLUSH_DELAY_MS = 120;
 const WATCHER_BULK_FORCE_SCAN_THRESHOLD = 256;
 class StaleVaultOpenError extends Error {
@@ -437,13 +438,28 @@ export class VaultService {
         SETTINGS_KEY,
       );
     if (stored) {
-      return { ...DEFAULT_EDITOR_SETTINGS, ...stored };
+      const global_show_dashboard_on_open =
+        await this.settings_port.get_setting<unknown>(
+          GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY,
+        );
+      const merged = { ...DEFAULT_EDITOR_SETTINGS, ...stored };
+      if (typeof global_show_dashboard_on_open === "boolean") {
+        merged.show_vault_dashboard_on_open = global_show_dashboard_on_open;
+      }
+      return merged;
     }
 
     const legacy =
       await this.settings_port.get_setting<EditorSettings>(SETTINGS_KEY);
     if (legacy) {
       const migrated = { ...DEFAULT_EDITOR_SETTINGS, ...legacy };
+      const global_show_dashboard_on_open =
+        await this.settings_port.get_setting<unknown>(
+          GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY,
+        );
+      if (typeof global_show_dashboard_on_open === "boolean") {
+        migrated.show_vault_dashboard_on_open = global_show_dashboard_on_open;
+      }
       await this.vault_settings_port.set_vault_setting(
         vault_id,
         SETTINGS_KEY,
