@@ -279,6 +279,20 @@
               }}
             />
           </div>
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-1">
+              <span class="text-sm font-medium">Autosave</span>
+              <span class="text-xs text-muted-foreground"
+                >Automatically save Markdown notes after edits</span
+              >
+            </div>
+            <Switch.Root
+              checked={editor_settings.autosave_enabled}
+              onCheckedChange={(v: boolean) => {
+                update("autosave_enabled", v);
+              }}
+            />
+          </div>
         </div>
       </section>
     </div>

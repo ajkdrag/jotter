@@ -5,11 +5,26 @@
   interface Props {
     open: boolean;
     is_switching: boolean;
-    on_confirm: () => void;
+    unsaved_note_label?: string | null;
+    error?: string | null;
+    on_save_and_switch: () => void;
+    on_discard_and_switch: () => void;
     on_cancel: () => void;
   }
 
-  let { open, is_switching, on_confirm, on_cancel }: Props = $props();
+  let {
+    open,
+    is_switching,
+    unsaved_note_label = null,
+    error = null,
+    on_save_and_switch,
+    on_discard_and_switch,
+    on_cancel,
+  }: Props = $props();
+
+  const note_display = $derived(
+    unsaved_note_label ? `"${unsaved_note_label}"` : "the current note",
+  );
 </script>
 
 <Dialog.Root
@@ -20,21 +35,30 @@
 >
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
-      <Dialog.Title>Switch Vault?</Dialog.Title>
+      <Dialog.Title>Unsaved Changes</Dialog.Title>
       <Dialog.Description>
-        You have unsaved changes. Switching vault now will discard unsaved edits
-        in the current note.
+        {note_display} has unsaved changes. Do you want to save before switching vaults?
       </Dialog.Description>
     </Dialog.Header>
+    {#if error}
+      <p class="text-sm text-destructive">{error}</p>
+    {/if}
     <Dialog.Footer>
       <Button variant="outline" onclick={on_cancel} disabled={is_switching}>
         Cancel
       </Button>
-      <Button onclick={on_confirm} disabled={is_switching}>
+      <Button
+        variant="destructive"
+        onclick={on_discard_and_switch}
+        disabled={is_switching}
+      >
+        Don't Save
+      </Button>
+      <Button onclick={on_save_and_switch} disabled={is_switching}>
         {#if is_switching}
-          Switching...
+          Saving...
         {:else}
-          Switch Vault
+          Save & Switch
         {/if}
       </Button>
     </Dialog.Footer>

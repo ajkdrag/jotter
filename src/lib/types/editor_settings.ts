@@ -6,6 +6,7 @@ export type EditorSettings = {
   link_syntax: "wikilink" | "markdown";
   attachment_folder: string;
   show_hidden_files: boolean;
+  autosave_enabled: boolean;
 };
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
@@ -16,6 +17,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   link_syntax: "wikilink",
   attachment_folder: ".assets",
   show_hidden_files: false,
+  autosave_enabled: true,
 };
 
 export const SETTINGS_KEY = "editor" as const;

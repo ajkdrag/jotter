@@ -104,7 +104,11 @@
 <ConfirmVaultSwitchDialog
   open={stores.ui.change_vault.confirm_discard_open}
   is_switching={stores.ui.change_vault.is_loading}
-  on_confirm={() =>
+  unsaved_note_label={stores.editor.open_note?.meta.title ?? null}
+  error={stores.ui.change_vault.error}
+  on_save_and_switch={() =>
+    void action_registry.execute(ACTION_IDS.vault_confirm_save_change)}
+  on_discard_and_switch={() =>
     void action_registry.execute(ACTION_IDS.vault_confirm_discard_change)}
   on_cancel={() =>
     void action_registry.execute(ACTION_IDS.vault_cancel_discard_change)}

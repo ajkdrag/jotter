@@ -89,4 +89,18 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
       "hide",
     ],
   },
+  {
+    key: "autosave_enabled",
+    label: "Autosave",
+    description: "Automatically save markdown notes after edits",
+    category: "Files",
+    keywords: [
+      "autosave",
+      "auto save",
+      "save",
+      "automatic",
+      "draft",
+      "unsaved",
+    ],
+  },
 ];

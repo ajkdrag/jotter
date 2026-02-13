@@ -11,6 +11,7 @@ describe("apply_editor_styles", () => {
     link_syntax: "wikilink",
     attachment_folder: ".assets",
     show_hidden_files: false,
+    autosave_enabled: true,
   };
 
   const original_document = globalThis.document;

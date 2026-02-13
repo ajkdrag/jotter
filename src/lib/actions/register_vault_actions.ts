@@ -32,6 +32,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     stores.ui.change_vault = {
       ...stores.ui.change_vault,
       confirm_discard_open: false,
+      error: null,
     };
   };
 
@@ -44,6 +45,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     pending_discard_confirm_change = run_change;
     stores.ui.change_vault = {
       ...stores.ui.change_vault,
+      open: false,
       confirm_discard_open: true,
       error: null,
     };
@@ -199,6 +201,42 @@ export function register_vault_actions(input: ActionRegistrationInput) {
   });
 
   registry.register({
+    id: ACTION_IDS.vault_confirm_save_change,
+    label: "Confirm Save and Change Vault",
+    execute: async () => {
+      const run_change = pending_discard_confirm_change;
+      if (!run_change) {
+        clear_discard_confirm_state();
+        return;
+      }
+
+      stores.ui.change_vault = {
+        ...stores.ui.change_vault,
+        is_loading: true,
+        error: null,
+      };
+
+      const save_result = await services.note.save_note(null, true);
+      if (save_result.status !== "saved") {
+        const error =
+          save_result.status === "failed"
+            ? save_result.error
+            : "Could not save current note before switching vault.";
+        stores.ui.change_vault = {
+          ...stores.ui.change_vault,
+          is_loading: false,
+          error,
+          confirm_discard_open: true,
+        };
+        return;
+      }
+
+      clear_discard_confirm_state();
+      await run_change();
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.vault_confirm_discard_change,
     label: "Confirm Discard and Change Vault",
     execute: async () => {
@@ -216,6 +254,12 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     label: "Cancel Discard and Change Vault",
     execute: () => {
       clear_discard_confirm_state();
+      stores.ui.change_vault = {
+        ...stores.ui.change_vault,
+        open: true,
+        is_loading: false,
+        error: null,
+      };
     },
   });
 

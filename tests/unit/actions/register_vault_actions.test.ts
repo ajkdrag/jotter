@@ -39,7 +39,12 @@ function create_vault_actions_harness() {
       rebuild_index: vi.fn(),
       reset_change_operation: vi.fn(),
     },
-    note: {},
+    note: {
+      save_note: vi.fn().mockResolvedValue({
+        status: "saved",
+        saved_path: "docs/current.md",
+      }),
+    },
     folder: {},
     settings: {},
     search: {},
@@ -69,9 +74,11 @@ describe("register_vault_actions", () => {
     stores.editor.set_dirty(note.id, true);
 
     const target_vault_id = as_vault_id("vault-next");
+    stores.ui.change_vault.open = true;
     await registry.execute(ACTION_IDS.vault_select, target_vault_id);
 
     expect(stores.ui.change_vault.confirm_discard_open).toBe(true);
+    expect(stores.ui.change_vault.open).toBe(false);
     expect(services.vault.change_vault_by_id).not.toHaveBeenCalled();
 
     await registry.execute(ACTION_IDS.vault_confirm_discard_change);
@@ -88,13 +95,51 @@ describe("register_vault_actions", () => {
     stores.editor.set_open_note(create_open_note_state(note));
     stores.editor.set_dirty(note.id, true);
 
+    stores.ui.change_vault.open = true;
     await registry.execute(ACTION_IDS.vault_select, as_vault_id("vault-next"));
     expect(stores.ui.change_vault.confirm_discard_open).toBe(true);
 
     await registry.execute(ACTION_IDS.vault_cancel_discard_change);
     expect(stores.ui.change_vault.confirm_discard_open).toBe(false);
+    expect(stores.ui.change_vault.open).toBe(true);
 
     await registry.execute(ACTION_IDS.vault_confirm_discard_change);
     expect(services.vault.change_vault_by_id).not.toHaveBeenCalled();
+  });
+
+  it("saves before switching when save-and-switch is confirmed", async () => {
+    const { registry, stores, services } = create_vault_actions_harness();
+    const note = create_test_note("docs/current", "Current");
+    stores.editor.set_open_note(create_open_note_state(note));
+    stores.editor.set_dirty(note.id, true);
+
+    const target_vault_id = as_vault_id("vault-next");
+    await registry.execute(ACTION_IDS.vault_select, target_vault_id);
+    await registry.execute(ACTION_IDS.vault_confirm_save_change);
+
+    expect(services.note.save_note).toHaveBeenCalledWith(null, true);
+    expect(services.vault.change_vault_by_id).toHaveBeenCalledWith(
+      target_vault_id,
+    );
+    expect(stores.ui.change_vault.confirm_discard_open).toBe(false);
+  });
+
+  it("keeps confirm dialog open with error when save fails", async () => {
+    const { registry, stores, services } = create_vault_actions_harness();
+    const note = create_test_note("docs/current", "Current");
+    stores.editor.set_open_note(create_open_note_state(note));
+    stores.editor.set_dirty(note.id, true);
+    services.note.save_note = vi.fn().mockResolvedValue({
+      status: "failed",
+      error: "disk full",
+    });
+
+    await registry.execute(ACTION_IDS.vault_select, as_vault_id("vault-next"));
+    await registry.execute(ACTION_IDS.vault_confirm_save_change);
+
+    expect(services.vault.change_vault_by_id).not.toHaveBeenCalled();
+    expect(stores.ui.change_vault.confirm_discard_open).toBe(true);
+    expect(stores.ui.change_vault.error).toBe("disk full");
+    expect(stores.ui.change_vault.is_loading).toBe(false);
   });
 });
