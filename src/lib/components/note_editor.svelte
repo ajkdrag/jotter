@@ -2,6 +2,7 @@
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OpenNoteState } from "$lib/types/editor";
+  import FileTextIcon from "@lucide/svelte/icons/file-text";
 
   const { stores, action_registry } = use_app_context();
 
@@ -28,25 +29,74 @@
     <div use:mount_editor={open_note} class="NoteEditor__content"></div>
   {:else}
     <div class="NoteEditor__empty">
-      <p class="text-muted-foreground text-sm">Open a note to start editing</p>
+      <div class="NoteEditor__empty-content">
+        <div class="NoteEditor__empty-icon">
+          <FileTextIcon />
+        </div>
+        <p class="NoteEditor__empty-title">No note open</p>
+        <p class="NoteEditor__empty-hint">
+          Select a note from the sidebar or create a new one
+        </p>
+      </div>
     </div>
   {/if}
 </div>
 
 <style>
   .NoteEditor {
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
+    height: 100%;
   }
 
   .NoteEditor__content {
     max-width: 65ch;
-    padding: 1.5rem;
+    padding: var(--space-6);
   }
 
   .NoteEditor__empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .NoteEditor__empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    text-align: center;
+    padding: var(--space-6);
+  }
+
+  .NoteEditor__empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--size-icon-lg) * 2);
+    height: calc(var(--size-icon-lg) * 2);
+    border-radius: var(--radius-md);
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  :global(.NoteEditor__empty-icon svg) {
+    width: var(--size-icon-lg);
+    height: var(--size-icon-lg);
+  }
+
+  .NoteEditor__empty-title {
+    font-size: var(--text-base);
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  .NoteEditor__empty-hint {
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
+    max-width: calc(var(--space-6) * 10);
   }
 </style>

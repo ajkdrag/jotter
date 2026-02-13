@@ -312,6 +312,7 @@ export async function capture_active_tab_snapshot(
   const open_note = stores.editor.open_note;
   if (open_note) {
     stores.tab.set_cached_note(active_id, open_note);
+    stores.tab.set_dirty(active_id, open_note.is_dirty);
     if (open_note.is_dirty && stores.ui.editor_settings.autosave_enabled) {
       await services.note.save_note(null, true);
     }
