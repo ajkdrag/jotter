@@ -307,10 +307,19 @@
       {#if error}
         <span class="text-destructive text-sm mr-auto">{error}</span>
       {/if}
-      <Button variant="outline" onclick={on_close} disabled={is_saving}>
+      <Button
+        variant="outline"
+        class="transition-colors"
+        onclick={on_close}
+        disabled={is_saving}
+      >
         Cancel
       </Button>
-      <Button onclick={on_save} disabled={!has_unsaved_changes || is_saving}>
+      <Button
+        class="transition-colors"
+        onclick={on_save}
+        disabled={!has_unsaved_changes || is_saving}
+      >
         {is_saving
           ? "Saving..."
           : has_unsaved_changes
