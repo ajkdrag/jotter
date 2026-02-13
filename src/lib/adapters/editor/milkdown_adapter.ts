@@ -482,6 +482,13 @@ export function create_milkdown_editor_port(args?: {
         };
       }
 
+      function sync_runtime_dirty_from_state(state: EditorState) {
+        const dirty_state = dirty_state_plugin_key.getState(state) as
+          | { is_dirty?: boolean }
+          | undefined;
+        current_is_dirty = Boolean(dirty_state?.is_dirty ?? false);
+      }
+
       function save_current_buffer() {
         run_editor_action((ctx) => {
           const view = ctx.get(editorViewCtx);
@@ -490,6 +497,38 @@ export function create_milkdown_editor_port(args?: {
             get_buffer_entry_from_view_state(view.state),
           );
         });
+      }
+
+      function dispatch_editor_context_update(view: {
+        state: EditorState;
+        dispatch: (tr: EditorState["tr"]) => void;
+      }) {
+        const context_tr = view.state.tr.setMeta(editor_context_plugin_key, {
+          action: "update",
+          note_path: current_note_path,
+          link_syntax: current_link_syntax,
+        });
+        view.dispatch(context_tr);
+      }
+
+      function dispatch_full_scan(view: {
+        state: EditorState;
+        dispatch: (tr: EditorState["tr"]) => void;
+      }) {
+        const full_scan_tr = view.state.tr.setMeta(wiki_link_plugin_key, {
+          action: "full_scan",
+        });
+        view.dispatch(full_scan_tr);
+      }
+
+      function dispatch_mark_clean(view: {
+        state: EditorState;
+        dispatch: (tr: EditorState["tr"]) => void;
+      }) {
+        const clean_tr = view.state.tr.setMeta(dirty_state_plugin_key, {
+          action: "mark_clean",
+        });
+        view.dispatch(clean_tr);
       }
 
       if (!is_large_note) {
@@ -589,7 +628,6 @@ export function create_milkdown_editor_port(args?: {
             if (saved_entry) {
               view.updateState(saved_entry.state);
               current_markdown = saved_entry.markdown;
-              current_is_dirty = saved_entry.is_dirty;
               is_large_note = is_large_markdown(current_markdown);
             } else {
               let parsed_doc: ProseNode;
@@ -611,32 +649,17 @@ export function create_milkdown_editor_port(args?: {
               current_markdown = normalize_markdown(
                 next_config.initial_markdown,
               );
-              current_is_dirty = false;
               is_large_note = is_large_markdown(current_markdown);
             }
 
-            const context_tr = view.state.tr.setMeta(
-              editor_context_plugin_key,
-              {
-                action: "update",
-                note_path: current_note_path,
-                link_syntax: current_link_syntax,
-              },
-            );
-            view.dispatch(context_tr);
+            dispatch_editor_context_update(view);
 
             if (!saved_entry && !is_large_note) {
-              const full_scan_tr = view.state.tr.setMeta(wiki_link_plugin_key, {
-                action: "full_scan",
-              });
-              view.dispatch(full_scan_tr);
-
-              const clean_tr = view.state.tr.setMeta(dirty_state_plugin_key, {
-                action: "mark_clean",
-              });
-              view.dispatch(clean_tr);
-              current_is_dirty = false;
+              dispatch_full_scan(view);
+              dispatch_mark_clean(view);
             }
+
+            sync_runtime_dirty_from_state(view.state);
 
             buffer_map.set(
               current_note_path,

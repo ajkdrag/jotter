@@ -114,6 +114,50 @@ describe("register_tab_actions", () => {
       expect(stores.tab.get_cached_note("b.md")).not.toBeNull();
     });
 
+    it("switching away from a dirty tab saves the note", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.activate_tab("a.md");
+
+      const dirty_note = { ...mock_open_note("a.md"), is_dirty: true };
+      stores.editor.set_open_note(dirty_note);
+
+      await registry.execute(ACTION_IDS.tab_activate, "b.md");
+
+      expect(services.note.save_note).toHaveBeenCalledWith(null, true);
+    });
+
+    it("switching away from a dirty tab does not save when autosave is disabled", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.ui.editor_settings = {
+        ...stores.ui.editor_settings,
+        autosave_enabled: false,
+      };
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.activate_tab("a.md");
+
+      const dirty_note = { ...mock_open_note("a.md"), is_dirty: true };
+      stores.editor.set_open_note(dirty_note);
+
+      await registry.execute(ACTION_IDS.tab_activate, "b.md");
+
+      expect(services.note.save_note).not.toHaveBeenCalled();
+    });
+
+    it("switching away from a clean tab does not save", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.activate_tab("a.md");
+      stores.editor.set_open_note(mock_open_note("a.md"));
+
+      await registry.execute(ACTION_IDS.tab_activate, "b.md");
+
+      expect(services.note.save_note).not.toHaveBeenCalled();
+    });
+
     it("tab switch uses cached note instead of hitting disk", async () => {
       const { registry, stores, services } = create_tab_actions_harness();
       stores.tab.open_tab(np("a.md"), "a");

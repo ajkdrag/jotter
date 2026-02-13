@@ -16,7 +16,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       const tab = stores.tab.tabs.find((t) => t.id === id);
       if (!tab) return;
 
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
       stores.tab.activate_tab(id);
       await open_active_tab_note(input);
     },
@@ -32,7 +32,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       if (!tab) return;
       if (stores.tab.active_tab_id === tab.id) return;
 
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
       stores.tab.activate_tab(tab.id);
       await open_active_tab_note(input);
     },
@@ -114,7 +114,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       const next_index = (current_index + 1) % tabs.length;
       const next_tab = tabs[next_index];
       if (!next_tab) return;
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
       stores.tab.activate_tab(next_tab.id);
       await open_active_tab_note(input);
     },
@@ -132,7 +132,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       const prev_index = (current_index - 1 + tabs.length) % tabs.length;
       const prev_tab = tabs[prev_index];
       if (!prev_tab) return;
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
       stores.tab.activate_tab(prev_tab.id);
       await open_active_tab_note(input);
     },
@@ -147,7 +147,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       const entry = stores.tab.pop_closed_history();
       if (!entry) return;
 
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
       stores.tab.open_tab(entry.note_path, entry.title);
 
       const result = await services.note.open_note(entry.note_path, false);
@@ -249,7 +249,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       if (!tab) return;
 
       if (stores.tab.active_tab_id !== tab_id) {
-        capture_active_tab_snapshot(input);
+        await capture_active_tab_snapshot(input);
         stores.tab.activate_tab(tab_id);
         await open_active_tab_note(input);
       }
@@ -291,7 +291,9 @@ export function register_tab_actions(input: ActionRegistrationInput) {
   });
 }
 
-export function capture_active_tab_snapshot(input: ActionRegistrationInput) {
+export async function capture_active_tab_snapshot(
+  input: ActionRegistrationInput,
+) {
   const { stores, services } = input;
   const active_id = stores.tab.active_tab_id;
   if (!active_id) return;
@@ -310,6 +312,9 @@ export function capture_active_tab_snapshot(input: ActionRegistrationInput) {
   const open_note = stores.editor.open_note;
   if (open_note) {
     stores.tab.set_cached_note(active_id, open_note);
+    if (open_note.is_dirty && stores.ui.editor_settings.autosave_enabled) {
+      await services.note.save_note(null, true);
+    }
   }
 }
 

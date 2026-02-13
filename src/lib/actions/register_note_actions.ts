@@ -123,13 +123,13 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: "Create Note",
     shortcut: "CmdOrCtrl+N",
     when: () => stores.vault.vault !== null,
-    execute: (folder_prefix?: unknown) => {
+    execute: async (folder_prefix?: unknown) => {
       const folder_path =
         typeof folder_prefix === "string" && folder_prefix.length > 0
           ? folder_prefix
           : stores.ui.selected_folder_path;
 
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
 
       services.note.create_new_note(folder_path);
       stores.ui.set_selected_folder_path(folder_path);
@@ -156,7 +156,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       const existing_tab = stores.tab.find_tab_by_path(note_path as NotePath);
       if (existing_tab) {
         if (stores.tab.active_tab_id !== existing_tab.id) {
-          capture_active_tab_snapshot(input);
+          await capture_active_tab_snapshot(input);
           stores.tab.activate_tab(existing_tab.id);
         }
         const result = await services.note.open_note(note_path, false, {
@@ -168,7 +168,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
         return;
       }
 
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
 
       const result = await services.note.open_note(note_path, false, {
         cleanup_if_missing: parsed.cleanup_if_missing,
@@ -195,7 +195,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
     execute: async (note_path: unknown) => {
       const path_str = String(note_path);
 
-      capture_active_tab_snapshot(input);
+      await capture_active_tab_snapshot(input);
 
       const result = await services.note.open_wiki_link(path_str);
       if (result.status === "opened") {

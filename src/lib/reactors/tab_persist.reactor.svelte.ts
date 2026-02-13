@@ -15,12 +15,13 @@ export function create_tab_persist_reactor(
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function schedule_persist() {
-    const serialized = JSON.stringify(
-      tab_store.tabs.map((t) => ({
+    const serialized = JSON.stringify({
+      tabs: tab_store.tabs.map((t) => ({
         p: t.note_path,
         pin: t.is_pinned,
       })),
-    );
+      active: tab_store.active_tab_id,
+    });
     if (serialized === last_saved_serialized) return;
 
     if (timer) {

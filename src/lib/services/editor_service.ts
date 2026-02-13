@@ -152,6 +152,21 @@ export class EditorService {
 
     const get_active_note_id = () => this.active_note?.meta.id ?? null;
     const get_active_note_path = () => this.active_note?.meta.path ?? null;
+    const with_active_note_id = (fn: (id: NoteId) => void) => {
+      if (!this.is_generation_current(generation)) return;
+      const id = get_active_note_id();
+      if (!id) return;
+      fn(id);
+    };
+    const with_active_note_identity = (
+      fn: (id: NoteId, path: NotePath) => void,
+    ) => {
+      if (!this.is_generation_current(generation)) return;
+      const id = get_active_note_id();
+      const path = get_active_note_path();
+      if (!id || !path) return;
+      fn(id, path);
+    };
 
     const next_session = await this.editor_port.start_session({
       root: host_root,
@@ -161,22 +176,19 @@ export class EditorService {
       link_syntax: this.active_link_syntax,
       events: {
         on_markdown_change: (markdown: string) => {
-          if (!this.is_generation_current(generation)) return;
-          const id = get_active_note_id();
-          if (!id) return;
-          this.editor_store.set_markdown(id, as_markdown_text(markdown));
+          with_active_note_id((id) => {
+            this.editor_store.set_markdown(id, as_markdown_text(markdown));
+          });
         },
         on_dirty_state_change: (is_dirty: boolean) => {
-          if (!this.is_generation_current(generation)) return;
-          const id = get_active_note_id();
-          if (!id) return;
-          this.editor_store.set_dirty(id, is_dirty);
+          with_active_note_id((id) => {
+            this.editor_store.set_dirty(id, is_dirty);
+          });
         },
         on_cursor_change: (cursor: CursorInfo) => {
-          if (!this.is_generation_current(generation)) return;
-          const id = get_active_note_id();
-          if (!id) return;
-          this.editor_store.set_cursor(id, cursor);
+          with_active_note_id((id) => {
+            this.editor_store.set_cursor(id, cursor);
+          });
         },
         on_internal_link_click: (note_path: string) => {
           if (!this.is_generation_current(generation)) return;
@@ -187,11 +199,9 @@ export class EditorService {
           this.callbacks.on_external_link_click(url);
         },
         on_image_paste_requested: (image: PastedImagePayload) => {
-          if (!this.is_generation_current(generation)) return;
-          const id = get_active_note_id();
-          const path = get_active_note_path();
-          if (!id || !path) return;
-          this.callbacks.on_image_paste_requested(id, path, image);
+          with_active_note_identity((id, path) => {
+            this.callbacks.on_image_paste_requested(id, path, image);
+          });
         },
         ...(this.search_service
           ? {
