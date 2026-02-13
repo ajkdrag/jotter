@@ -16,7 +16,8 @@
         "title": "jotter",
         "width": 1200,
         "height": 820,
-        "resizable": true
+        "resizable": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
