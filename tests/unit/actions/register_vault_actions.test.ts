@@ -16,6 +16,7 @@ import {
 
 function create_vault_actions_harness() {
   const registry = new ActionRegistry();
+  const execute_open_dashboard = vi.fn();
   const stores = {
     ui: new UIStore(),
     vault: new VaultStore(),
@@ -63,7 +64,19 @@ function create_vault_actions_harness() {
     },
   });
 
-  return { registry, stores, services };
+  registry.register({
+    id: ACTION_IDS.ui_open_vault_dashboard,
+    label: "Open Vault Dashboard",
+    execute: execute_open_dashboard,
+  });
+
+  registry.register({
+    id: ACTION_IDS.folder_refresh_tree,
+    label: "Refresh Folder Tree",
+    execute: async () => {},
+  });
+
+  return { registry, stores, services, execute_open_dashboard };
 }
 
 describe("register_vault_actions", () => {
@@ -165,5 +178,41 @@ describe("register_vault_actions", () => {
     await registry.execute(ACTION_IDS.vault_select, target_vault_id);
 
     expect(stores.vault.recent_vaults[0]?.is_available).toBe(false);
+  });
+
+  it("opens vault dashboard after successful switch when enabled", async () => {
+    const { registry, stores, services, execute_open_dashboard } =
+      create_vault_actions_harness();
+
+    services.vault.change_vault_by_id = vi.fn().mockResolvedValue({
+      status: "opened",
+      editor_settings: {
+        ...stores.ui.editor_settings,
+        show_vault_dashboard_on_open: true,
+      },
+      opened_from_vault_switch: true,
+    });
+
+    await registry.execute(ACTION_IDS.vault_select, as_vault_id("vault-next"));
+
+    expect(execute_open_dashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open vault dashboard after successful switch when disabled", async () => {
+    const { registry, stores, services, execute_open_dashboard } =
+      create_vault_actions_harness();
+
+    services.vault.change_vault_by_id = vi.fn().mockResolvedValue({
+      status: "opened",
+      editor_settings: {
+        ...stores.ui.editor_settings,
+        show_vault_dashboard_on_open: false,
+      },
+      opened_from_vault_switch: true,
+    });
+
+    await registry.execute(ACTION_IDS.vault_select, as_vault_id("vault-next"));
+
+    expect(execute_open_dashboard).not.toHaveBeenCalled();
   });
 });

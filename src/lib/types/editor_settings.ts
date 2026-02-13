@@ -7,6 +7,7 @@ export type EditorSettings = {
   attachment_folder: string;
   show_hidden_files: boolean;
   autosave_enabled: boolean;
+  show_vault_dashboard_on_open: boolean;
 };
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   attachment_folder: ".assets",
   show_hidden_files: false,
   autosave_enabled: true,
+  show_vault_dashboard_on_open: true,
 };
 
 export const SETTINGS_KEY = "editor" as const;

@@ -16,6 +16,7 @@ describe("apply_editor_styles (no document)", () => {
       attachment_folder: ".assets",
       show_hidden_files: false,
       autosave_enabled: true,
+      show_vault_dashboard_on_open: true,
     };
 
     expect(() => {

@@ -63,6 +63,9 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     }
     if (result.status === "opened") {
       await apply_opened_vault(input, result.editor_settings);
+      if (result.editor_settings.show_vault_dashboard_on_open) {
+        await registry.execute(ACTION_IDS.ui_open_vault_dashboard);
+      }
       return;
     }
     if (result.status === "stale") {

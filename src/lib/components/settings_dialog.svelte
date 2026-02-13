@@ -5,11 +5,11 @@
   import * as Switch from "$lib/components/ui/switch/index.js";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Separator } from "$lib/components/ui/separator";
   import TypeIcon from "@lucide/svelte/icons/type";
   import LayoutIcon from "@lucide/svelte/icons/layout-template";
   import Link2Icon from "@lucide/svelte/icons/link-2";
   import FolderIcon from "@lucide/svelte/icons/folder";
+  import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import type { EditorSettings } from "$lib/types/editor_settings";
 
   type Props = {
@@ -75,7 +75,7 @@
     if (!value && !is_saving) on_close();
   }}
 >
-  <Dialog.Content class="max-w-md">
+  <Dialog.Content class="SettingsDialog">
     <Dialog.Header>
       <Dialog.Title class="text-lg font-semibold">Settings</Dialog.Title>
       <Dialog.Description class="text-sm text-muted-foreground">
@@ -83,22 +83,18 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="flex flex-col gap-6 py-2">
-      <section class="flex flex-col gap-4">
-        <div class="flex items-center gap-2">
+    <div class="SettingsDialog__body">
+      <section class="SettingsDialog__section">
+        <div class="SettingsDialog__section-header">
           <TypeIcon class="size-4 text-muted-foreground" />
-          <span
-            class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-            >Typography</span
-          >
+          <span>Typography</span>
         </div>
 
-        <div class="flex flex-col gap-5">
-          <div class="flex flex-col gap-3">
+        <div class="SettingsDialog__section-content">
+          <div class="SettingsDialog__row--stacked">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium">Font Size</span>
-              <span
-                class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded"
+              <span class="SettingsDialog__label">Font Size</span>
+              <span class="SettingsDialog__badge"
                 >{editor_settings.font_size.toFixed(2)}rem</span
               >
             </div>
@@ -115,11 +111,10 @@
             />
           </div>
 
-          <div class="flex flex-col gap-3">
+          <div class="SettingsDialog__row--stacked">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium">Line Height</span>
-              <span
-                class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded"
+              <span class="SettingsDialog__label">Line Height</span>
+              <span class="SettingsDialog__badge"
                 >{editor_settings.line_height.toFixed(2)}</span
               >
             </div>
@@ -136,8 +131,8 @@
             />
           </div>
 
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium">Heading Color</span>
+          <div class="SettingsDialog__row">
+            <span class="SettingsDialog__label">Heading Color</span>
             <Select.Root
               type="single"
               value={editor_settings.heading_color}
@@ -162,20 +157,15 @@
         </div>
       </section>
 
-      <Separator />
-
-      <section class="flex flex-col gap-4">
-        <div class="flex items-center gap-2">
+      <section class="SettingsDialog__section">
+        <div class="SettingsDialog__section-header">
           <LayoutIcon class="size-4 text-muted-foreground" />
-          <span
-            class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-            >Layout</span
-          >
+          <span>Layout</span>
         </div>
 
-        <div class="flex flex-col gap-5">
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium">Content Spacing</span>
+        <div class="SettingsDialog__section-content">
+          <div class="SettingsDialog__row">
+            <span class="SettingsDialog__label">Content Spacing</span>
             <Select.Root
               type="single"
               value={editor_settings.spacing}
@@ -200,20 +190,15 @@
         </div>
       </section>
 
-      <Separator />
-
-      <section class="flex flex-col gap-4">
-        <div class="flex items-center gap-2">
+      <section class="SettingsDialog__section">
+        <div class="SettingsDialog__section-header">
           <Link2Icon class="size-4 text-muted-foreground" />
-          <span
-            class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-            >Links</span
-          >
+          <span>Links</span>
         </div>
 
-        <div class="flex flex-col gap-5">
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium">Save Link Syntax</span>
+        <div class="SettingsDialog__section-content">
+          <div class="SettingsDialog__row">
+            <span class="SettingsDialog__label">Save Link Syntax</span>
             <Select.Root
               type="single"
               value={editor_settings.link_syntax}
@@ -238,20 +223,15 @@
         </div>
       </section>
 
-      <Separator />
-
-      <section class="flex flex-col gap-4">
-        <div class="flex items-center gap-2">
+      <section class="SettingsDialog__section">
+        <div class="SettingsDialog__section-header">
           <FolderIcon class="size-4 text-muted-foreground" />
-          <span
-            class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-            >Files</span
-          >
+          <span>Files</span>
         </div>
 
-        <div class="flex flex-col gap-5">
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium">Attachment Folder</span>
+        <div class="SettingsDialog__section-content">
+          <div class="SettingsDialog__row">
+            <span class="SettingsDialog__label">Attachment Folder</span>
             <Input
               type="text"
               value={editor_settings.attachment_folder}
@@ -265,10 +245,10 @@
               placeholder=".assets"
             />
           </div>
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex flex-col gap-1">
-              <span class="text-sm font-medium">Show Hidden Files</span>
-              <span class="text-xs text-muted-foreground"
+          <div class="SettingsDialog__row">
+            <div class="SettingsDialog__label-group">
+              <span class="SettingsDialog__label">Show Hidden Files</span>
+              <span class="SettingsDialog__description"
                 >Show dot-prefixed files and folders in the file tree</span
               >
             </div>
@@ -279,10 +259,10 @@
               }}
             />
           </div>
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex flex-col gap-1">
-              <span class="text-sm font-medium">Autosave</span>
-              <span class="text-xs text-muted-foreground"
+          <div class="SettingsDialog__row">
+            <div class="SettingsDialog__label-group">
+              <span class="SettingsDialog__label">Autosave</span>
+              <span class="SettingsDialog__description"
                 >Automatically save Markdown notes after edits</span
               >
             </div>
@@ -290,6 +270,32 @@
               checked={editor_settings.autosave_enabled}
               onCheckedChange={(v: boolean) => {
                 update("autosave_enabled", v);
+              }}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="SettingsDialog__section">
+        <div class="SettingsDialog__section-header">
+          <SlidersIcon class="size-4 text-muted-foreground" />
+          <span>Misc</span>
+        </div>
+
+        <div class="SettingsDialog__section-content">
+          <div class="SettingsDialog__row">
+            <div class="SettingsDialog__label-group">
+              <span class="SettingsDialog__label"
+                >Show Vault Dashboard on Open</span
+              >
+              <span class="SettingsDialog__description"
+                >Open the vault dashboard automatically when a vault is opened</span
+              >
+            </div>
+            <Switch.Root
+              checked={editor_settings.show_vault_dashboard_on_open}
+              onCheckedChange={(v: boolean) => {
+                update("show_vault_dashboard_on_open", v);
               }}
             />
           </div>
@@ -314,3 +320,91 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
+<style>
+  :global(.SettingsDialog) {
+    max-width: var(--size-dialog-lg);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .SettingsDialog__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    min-height: 0;
+  }
+
+  .SettingsDialog__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+  }
+
+  .SettingsDialog__section + .SettingsDialog__section {
+    border-top: 1px solid var(--border);
+  }
+
+  .SettingsDialog__section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+  }
+
+  .SettingsDialog__section-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding-left: var(--space-6);
+  }
+
+  .SettingsDialog__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .SettingsDialog__row--stacked {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .SettingsDialog__label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  .SettingsDialog__label-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+  }
+
+  .SettingsDialog__description {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    line-height: 1.4;
+  }
+
+  .SettingsDialog__badge {
+    font-size: var(--text-xs);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    color: var(--muted-foreground);
+    background-color: var(--muted);
+    padding: var(--space-0-5) var(--space-2);
+    border-radius: var(--radius-sm, 4px);
+  }
+</style>

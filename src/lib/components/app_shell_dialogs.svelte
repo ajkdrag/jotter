@@ -1,5 +1,6 @@
 <script lang="ts">
   import VaultDialog from "$lib/components/vault_dialog.svelte";
+  import VaultDashboardDialog from "$lib/components/vault_dashboard_dialog.svelte";
   import DeleteNoteDialog from "$lib/components/delete_note_dialog.svelte";
   import RenameNoteDialog from "$lib/components/rename_note_dialog.svelte";
   import DeleteFolderDialog from "$lib/components/delete_folder_dialog.svelte";
@@ -13,7 +14,8 @@
   import ConfirmCrossVaultOpenDialog from "$lib/components/confirm_cross_vault_open_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
-  import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
+  import type { OmnibarItem } from "$lib/types/search";
+  import type { OmnibarScope } from "$lib/types/search";
   import type { EditorSettings } from "$lib/types/editor_settings";
   import type { VaultId } from "$lib/types/ids";
 
@@ -26,6 +28,15 @@
   const { stores, action_registry } = use_app_context();
 
   const has_vault = $derived(stores.vault.vault !== null);
+
+  const vault_dashboard_open = $derived(stores.ui.vault_dashboard.open);
+  const vault_dashboard_recent = $derived(
+    stores.notes.recent_notes.map((n) => ({
+      id: n.id,
+      title: n.title,
+      path: n.path,
+    })),
+  );
 
   const recent_notes_for_display = $derived(stores.notes.recent_notes);
 
@@ -99,6 +110,40 @@
         vault_id,
       )}
     {hide_choose_vault_button}
+  />
+
+  <VaultDashboardDialog
+    open={vault_dashboard_open}
+    vault_name={stores.vault.vault?.name ?? null}
+    vault_path={stores.vault.vault?.path ?? null}
+    note_count={stores.notes.notes.length}
+    folder_count={stores.notes.folder_paths.length}
+    recent_notes={vault_dashboard_recent}
+    created_at={stores.vault.vault?.created_at ?? null}
+    last_opened_at={stores.vault.vault?.last_opened_at ?? null}
+    is_available={stores.vault.vault?.is_available ?? null}
+    on_open_change={(open) => {
+      if (!open) {
+        void action_registry.execute(ACTION_IDS.ui_close_vault_dashboard);
+      }
+    }}
+    on_open_note={(note_path) =>
+      void action_registry.execute(ACTION_IDS.note_open, {
+        note_path,
+        cleanup_if_missing: true,
+      })}
+    on_new_note={() => void action_registry.execute(ACTION_IDS.note_create)}
+    on_search_vault={() =>
+      void action_registry.execute(ACTION_IDS.omnibar_open)}
+    on_open_recent={() => {
+      const recent_note = stores.notes.recent_notes[0];
+      if (recent_note) {
+        void action_registry.execute(ACTION_IDS.note_open, recent_note.id);
+        return;
+      }
+      void action_registry.execute(ACTION_IDS.omnibar_open);
+    }}
+    on_view_all_tags={() => {}}
   />
 {/if}
 

@@ -29,4 +29,11 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     keywords: ["index", "rebuild", "search", "vault", "reindex", "repair"],
     icon: "settings",
   },
+  {
+    id: "show_vault_dashboard",
+    label: "Show vault dashboard",
+    description: "Open vault dashboard overview",
+    keywords: ["dashboard", "vault", "overview", "stats", "activity"],
+    icon: "folder-open",
+  },
 ];

@@ -76,6 +76,9 @@
     on_toggle_find_in_file: () => {
       void action_registry.execute(ACTION_IDS.find_in_file_toggle);
     },
+    on_open_vault_dashboard: () => {
+      void action_registry.execute(ACTION_IDS.ui_open_vault_dashboard);
+    },
     on_save: () => {
       void action_registry.execute(ACTION_IDS.note_request_save);
     },

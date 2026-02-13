@@ -55,4 +55,21 @@ export function register_ui_actions(input: ActionRegistrationInput) {
       }
     },
   });
+
+  registry.register({
+    id: ACTION_IDS.ui_open_vault_dashboard,
+    label: "Open Vault Dashboard",
+    shortcut: "CmdOrCtrl+Shift+D",
+    execute: () => {
+      stores.ui.vault_dashboard = { open: true };
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.ui_close_vault_dashboard,
+    label: "Close Vault Dashboard",
+    execute: () => {
+      stores.ui.vault_dashboard = { open: false };
+    },
+  });
 }

@@ -17,6 +17,7 @@ export function use_keyboard_shortcuts(input: {
   on_select_pinned_vault: (slot: number) => void;
   on_toggle_sidebar: () => void;
   on_toggle_find_in_file: () => void;
+  on_open_vault_dashboard?: () => void;
   on_save: () => void;
 }): KeyboardShortcuts {
   const {
@@ -33,6 +34,7 @@ export function use_keyboard_shortcuts(input: {
     on_select_pinned_vault,
     on_toggle_sidebar,
     on_toggle_find_in_file,
+    on_open_vault_dashboard = () => {},
     on_save,
   } = input;
 
@@ -110,6 +112,15 @@ export function use_keyboard_shortcuts(input: {
       }
       if (is_blocked()) return;
       on_toggle_find_in_file();
+      return;
+    }
+
+    if (is_mod_combo(event, "d") && event.shiftKey) {
+      if (!is_enabled()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (is_blocked()) return;
+      on_open_vault_dashboard();
       return;
     }
 

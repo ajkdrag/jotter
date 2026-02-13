@@ -83,6 +83,9 @@ async function execute_command(
     case "reindex_vault":
       await registry.execute(ACTION_IDS.vault_reindex);
       break;
+    case "show_vault_dashboard":
+      await registry.execute(ACTION_IDS.ui_open_vault_dashboard);
+      break;
   }
 }
 

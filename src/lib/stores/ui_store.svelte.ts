@@ -83,6 +83,10 @@ const INITIAL_CROSS_VAULT_OPEN_CONFIRM = {
   note_path: null,
 } as const;
 
+const INITIAL_VAULT_DASHBOARD = {
+  open: false,
+} as const;
+
 function initial_filetree() {
   return {
     expanded_paths: new SvelteSet<string>(),
@@ -211,6 +215,10 @@ export class UIStore {
     note_path: NotePath | null;
   }>({ ...INITIAL_CROSS_VAULT_OPEN_CONFIRM });
 
+  vault_dashboard = $state<{
+    open: boolean;
+  }>({ ...INITIAL_VAULT_DASHBOARD });
+
   set_theme(theme: ThemeMode) {
     this.theme = theme;
   }
@@ -251,5 +259,6 @@ export class UIStore {
     this.filetree = initial_filetree();
     this.image_paste_dialog = { ...INITIAL_IMAGE_PASTE_DIALOG };
     this.cross_vault_open_confirm = { ...INITIAL_CROSS_VAULT_OPEN_CONFIRM };
+    this.vault_dashboard = { ...INITIAL_VAULT_DASHBOARD };
   }
 }

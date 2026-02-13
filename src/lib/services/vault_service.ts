@@ -309,7 +309,11 @@ export class VaultService {
         return { status: "stale" };
       }
       this.op_store.succeed("vault.change");
-      return { status: "opened", editor_settings };
+      return {
+        status: "opened",
+        editor_settings,
+        opened_from_vault_switch: true,
+      };
     } catch (error) {
       if (error instanceof StaleVaultOpenError) {
         return { status: "stale" };
