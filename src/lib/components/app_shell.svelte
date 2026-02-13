@@ -57,6 +57,10 @@
     on_open_omnibar_notes: () => {
       void action_registry.execute(ACTION_IDS.omnibar_open);
     },
+    on_open_omnibar_all_vaults: () => {
+      void action_registry.execute(ACTION_IDS.omnibar_open);
+      void action_registry.execute(ACTION_IDS.omnibar_set_scope, "all_vaults");
+    },
     on_open_vault_switcher: () => {
       void action_registry.execute(ACTION_IDS.vault_request_change);
     },

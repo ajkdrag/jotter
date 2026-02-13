@@ -403,4 +403,40 @@ describe("use_keyboard_shortcuts", () => {
 
     expect(on_select_pinned_vault).not.toHaveBeenCalled();
   });
+
+  it("opens all-vault omnibar on mod+shift+f", () => {
+    const on_open_omnibar_all_vaults = vi.fn();
+    const prevent_default = vi.fn();
+    const stop_propagation = vi.fn();
+
+    const shortcuts = use_keyboard_shortcuts({
+      is_enabled: () => true,
+      is_blocked: () => false,
+      is_omnibar_open: () => false,
+      is_vault_switcher_open: () => false,
+      on_toggle_omnibar: vi.fn(),
+      on_open_omnibar_commands: vi.fn(),
+      on_open_omnibar_notes: vi.fn(),
+      on_open_omnibar_all_vaults,
+      on_open_vault_switcher: vi.fn(),
+      on_close_vault_switcher: vi.fn(),
+      on_select_pinned_vault: vi.fn(),
+      on_toggle_sidebar: vi.fn(),
+      on_toggle_find_in_file: vi.fn(),
+      on_save: vi.fn(),
+    });
+
+    shortcuts.handle_keydown_capture({
+      metaKey: true,
+      ctrlKey: false,
+      shiftKey: true,
+      key: "f",
+      preventDefault: prevent_default,
+      stopPropagation: stop_propagation,
+    } as unknown as KeyboardEvent);
+
+    expect(prevent_default).toHaveBeenCalledTimes(1);
+    expect(stop_propagation).toHaveBeenCalledTimes(1);
+    expect(on_open_omnibar_all_vaults).toHaveBeenCalledTimes(1);
+  });
 });
