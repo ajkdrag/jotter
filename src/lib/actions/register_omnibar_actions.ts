@@ -37,6 +37,15 @@ function clear_cross_vault_open_confirm(input: ActionRegistrationInput) {
   };
 }
 
+function is_unavailable_vault_error(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("vault unavailable") ||
+    normalized.includes("could not be found") ||
+    normalized.includes("no such file or directory")
+  );
+}
+
 async function execute_command(
   input: ActionRegistrationInput,
   command_id: CommandId,
@@ -161,6 +170,9 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
             note: r.note,
             vault_id: group.vault_id,
             vault_name: group.vault_name,
+            vault_note_count: group.vault_note_count,
+            vault_last_opened_at: group.vault_last_opened_at,
+            vault_is_available: group.vault_is_available,
             score: r.score,
             snippet: r.snippet,
           })),
@@ -226,6 +238,9 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
             note: r.note,
             vault_id: group.vault_id,
             vault_name: group.vault_name,
+            vault_note_count: group.vault_note_count,
+            vault_last_opened_at: group.vault_last_opened_at,
+            vault_is_available: group.vault_is_available,
             score: r.score,
             snippet: r.snippet,
           })),
@@ -279,6 +294,13 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
         await registry.execute(ACTION_IDS.vault_select, target_vault_id);
       }
       if (stores.vault.vault?.id !== target_vault_id) {
+        const vault_change_error = stores.ui.change_vault.error;
+        if (
+          vault_change_error &&
+          is_unavailable_vault_error(vault_change_error)
+        ) {
+          stores.vault.set_vault_availability(target_vault_id, false);
+        }
         return;
       }
 

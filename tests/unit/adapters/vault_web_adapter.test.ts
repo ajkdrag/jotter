@@ -149,6 +149,36 @@ describe("vault_web_adapter", () => {
     ]);
   });
 
+  it("marks vault unavailable when stored handle cannot be accessed", async () => {
+    const inaccessible_handle = {
+      kind: "directory",
+      name: "notes",
+      values: vi.fn().mockImplementation(function () {
+        throw new Error("NotFoundError");
+      }),
+    } as unknown as FileSystemDirectoryHandle;
+
+    vi.spyOn(storage, "list_vaults").mockResolvedValue([
+      {
+        id: "web_missing",
+        name: "Missing Vault",
+        path: "missing-vault",
+        handle: inaccessible_handle,
+        created_at: 1234,
+        last_accessed: 4321,
+        note_count: 3,
+      },
+    ]);
+
+    const adapter = create_vault_web_adapter();
+    const vaults = await adapter.list_vaults();
+
+    expect(vaults[0]).toMatchObject({
+      id: as_vault_id("web_missing"),
+      is_available: false,
+    });
+  });
+
   it("removes vault from storage and clears last vault id", async () => {
     vi.spyOn(storage, "remove_vault").mockResolvedValue(undefined);
     const entries = new Map<string, string>();

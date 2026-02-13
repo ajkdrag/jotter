@@ -45,6 +45,9 @@ export type CrossVaultSearchGroup = {
   vault_id: VaultId;
   vault_name: string;
   vault_path: VaultPath;
+  vault_note_count: number | null;
+  vault_last_opened_at: number | null;
+  vault_is_available: boolean;
   results: NoteSearchHit[];
 };
 

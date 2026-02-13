@@ -119,6 +119,35 @@ async function count_markdown_notes(
   }
 }
 
+async function check_vault_availability(
+  handle: FileSystemDirectoryHandle,
+): Promise<boolean> {
+  try {
+    if (
+      "queryPermission" in handle &&
+      typeof handle.queryPermission === "function"
+    ) {
+      const permission = await (
+        handle as {
+          queryPermission: (opts: { mode: string }) => Promise<PermissionState>;
+        }
+      ).queryPermission({ mode: "read" });
+      if (permission === "denied") {
+        return false;
+      }
+    }
+
+    if (typeof handle.values === "function") {
+      for await (const _entry of handle.values()) {
+        break;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function create_vault_web_adapter(): VaultPort {
   return {
     async choose_vault(): Promise<VaultPath | null> {
@@ -235,15 +264,17 @@ export function create_vault_web_adapter(): VaultPort {
 
     async list_vaults(): Promise<Vault[]> {
       const records = await list_stored_vaults();
-      return records.map((r) => ({
-        id: as_vault_id(r.id),
-        path: as_vault_path(r.path),
-        name: r.name,
-        created_at: r.created_at,
-        last_opened_at: r.last_accessed,
-        note_count: r.note_count,
-        is_available: true,
-      }));
+      return await Promise.all(
+        records.map(async (r) => ({
+          id: as_vault_id(r.id),
+          path: as_vault_path(r.path),
+          name: r.name,
+          created_at: r.created_at,
+          last_opened_at: r.last_accessed,
+          note_count: r.note_count,
+          is_available: await check_vault_availability(r.handle),
+        })),
+      );
     },
 
     async remove_vault(vault_id: VaultId): Promise<void> {

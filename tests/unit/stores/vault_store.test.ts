@@ -109,4 +109,16 @@ describe("VaultStore", () => {
       vault_c.id,
     ]);
   });
+
+  it("updates vault availability in recent and active vault", () => {
+    const store = new VaultStore();
+    const vault = create_test_vault({ id: as_vault_id("vault-a") });
+    store.set_recent_vaults([vault]);
+    store.set_vault(vault);
+
+    store.set_vault_availability(vault.id, false);
+
+    expect(store.recent_vaults[0]?.is_available).toBe(false);
+    expect(store.vault?.is_available).toBe(false);
+  });
 });

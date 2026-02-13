@@ -208,6 +208,9 @@ export class SearchService {
           vault_id: vault.id,
           vault_name: vault.name,
           vault_path: vault.path,
+          vault_note_count: vault.note_count ?? null,
+          vault_last_opened_at: vault.last_opened_at ?? null,
+          vault_is_available: vault.is_available !== false,
           results: result.value,
         });
       }

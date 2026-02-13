@@ -72,7 +72,27 @@
     vault_name: string;
     vault_id: string;
     items: OmnibarItem[];
+    vault_note_count: number | null;
+    vault_last_opened_at: number | null;
+    vault_is_available: boolean;
   };
+
+  function format_relative_time(timestamp_ms: number): string {
+    const delta = Date.now() - timestamp_ms;
+    const seconds = Math.floor(delta / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const months = Math.floor(days / 30);
+    const years = Math.floor(days / 365);
+
+    if (years > 0) return `${years}y ago`;
+    if (months > 0) return `${months}mo ago`;
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return "just now";
+  }
 
   const vault_groups: VaultGroup[] = $derived.by(() => {
     if (!is_all_vaults || !has_query) return [];
@@ -86,6 +106,9 @@
           vault_name: item.vault_name,
           vault_id: item.vault_id,
           items: [],
+          vault_note_count: item.vault_note_count ?? null,
+          vault_last_opened_at: item.vault_last_opened_at ?? null,
+          vault_is_available: item.vault_is_available !== false,
         };
         groups.set(item.vault_id, group);
       }
@@ -290,20 +313,42 @@
             <button
               class="Omnibar__vault-facet"
               class:Omnibar__vault-facet--bordered={group_idx > 0}
+              class:Omnibar__vault-facet--unavailable={!group.vault_is_available}
               onclick={() => toggle_vault_group(group.vault_id)}
               aria-expanded={!is_collapsed}
             >
-              <span
-                class="Omnibar__vault-facet-chevron"
-                class:Omnibar__vault-facet-chevron--open={!is_collapsed}
-              >
-                <ChevronRightIcon />
-              </span>
-              <LibraryIcon />
-              <span class="Omnibar__vault-facet-name">{group.vault_name}</span>
-              <span class="Omnibar__vault-facet-count"
-                >{group.items.length}</span
-              >
+              <div class="Omnibar__vault-facet-header">
+                <span
+                  class="Omnibar__vault-facet-chevron"
+                  class:Omnibar__vault-facet-chevron--open={!is_collapsed}
+                >
+                  <ChevronRightIcon />
+                </span>
+                <LibraryIcon />
+                <span class="Omnibar__vault-facet-name">{group.vault_name}</span
+                >
+                {#if !group.vault_is_available}
+                  <span class="Omnibar__vault-facet-unavailable"
+                    >Unavailable</span
+                  >
+                {/if}
+                <span class="Omnibar__vault-facet-count"
+                  >{group.items.length}</span
+                >
+              </div>
+              <div class="Omnibar__vault-facet-meta">
+                <span class="Omnibar__vault-facet-chip"
+                  >{group.vault_note_count != null
+                    ? `${group.vault_note_count} notes`
+                    : "-- notes"}</span
+                >
+                <span class="Omnibar__vault-facet-sep">·</span>
+                <span class="Omnibar__vault-facet-chip"
+                  >{group.vault_last_opened_at != null
+                    ? `Opened ${format_relative_time(group.vault_last_opened_at)}`
+                    : "Opened --"}</span
+                >
+              </div>
             </button>
             {#if !is_collapsed}
               {#each group.items as item (get_item_id(item))}
@@ -571,15 +616,10 @@
 
   .Omnibar__vault-facet {
     display: flex;
-    align-items: center;
-    gap: var(--space-1-5);
+    flex-direction: column;
+    gap: var(--space-0-5);
     width: 100%;
     padding: var(--space-1-5) var(--space-3);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--interactive);
     text-align: left;
     cursor: pointer;
     transition: background-color var(--duration-fast) var(--ease-default);
@@ -595,7 +635,26 @@
     border-top: 1px solid var(--border);
   }
 
-  :global(.Omnibar__vault-facet svg) {
+  .Omnibar__vault-facet--unavailable {
+    opacity: 0.6;
+  }
+
+  .Omnibar__vault-facet-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--interactive);
+  }
+
+  .Omnibar__vault-facet--unavailable .Omnibar__vault-facet-header {
+    color: var(--muted-foreground);
+  }
+
+  :global(.Omnibar__vault-facet-header svg) {
     width: var(--size-icon-xs);
     height: var(--size-icon-xs);
     flex-shrink: 0;
@@ -635,6 +694,45 @@
     color: var(--interactive);
     text-transform: none;
     letter-spacing: normal;
+  }
+
+  .Omnibar__vault-facet--unavailable .Omnibar__vault-facet-count {
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  .Omnibar__vault-facet-unavailable {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    padding: var(--space-0-5) var(--space-1-5);
+    border-radius: var(--radius-sm);
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .Omnibar__vault-facet-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    padding-left: calc(
+      var(--size-icon-xs) + var(--size-icon-xs) + var(--space-1-5) * 2
+    );
+  }
+
+  .Omnibar__vault-facet-chip {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    letter-spacing: normal;
+    text-transform: none;
+    font-weight: 400;
+  }
+
+  .Omnibar__vault-facet-sep {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
   }
 
   .Omnibar__vault-badge {

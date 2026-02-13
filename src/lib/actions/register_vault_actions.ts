@@ -56,6 +56,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     result:
       | Awaited<ReturnType<typeof services.vault.change_vault_by_id>>
       | Awaited<ReturnType<typeof services.vault.select_pinned_vault_by_slot>>,
+    attempted_vault_id?: VaultId,
   ) => {
     if (request_revision !== change_vault_request_revision) {
       return;
@@ -82,6 +83,10 @@ export function register_vault_actions(input: ActionRegistrationInput) {
       is_loading: false,
       error: result.error,
     };
+
+    if (attempted_vault_id && is_unavailable_vault_error(result.error)) {
+      stores.vault.set_vault_availability(attempted_vault_id, false);
+    }
   };
 
   registry.register({
@@ -173,7 +178,7 @@ export function register_vault_actions(input: ActionRegistrationInput) {
 
         const result =
           await services.vault.change_vault_by_id(selected_vault_id);
-        await handle_open_result(request_revision, result);
+        await handle_open_result(request_revision, result, selected_vault_id);
       });
     },
   });
@@ -305,3 +310,11 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     },
   });
 }
+const is_unavailable_vault_error = (message: string): boolean => {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("vault unavailable") ||
+    normalized.includes("could not be found") ||
+    normalized.includes("no such file or directory")
+  );
+};

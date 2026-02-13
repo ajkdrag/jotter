@@ -62,6 +62,17 @@ export class VaultStore {
     );
   }
 
+  set_vault_availability(vault_id: VaultId, is_available: boolean) {
+    this.recent_vaults = this.recent_vaults.map((vault) =>
+      vault.id === vault_id ? { ...vault, is_available } : vault,
+    );
+
+    if (this.vault?.id === vault_id) {
+      this.vault = { ...this.vault, is_available };
+      this.generation += 1;
+    }
+  }
+
   get_pinned_vault_id_by_slot(slot: number): VaultId | null {
     if (slot < 0) return null;
     return this.pinned_vault_ids[slot] ?? null;
