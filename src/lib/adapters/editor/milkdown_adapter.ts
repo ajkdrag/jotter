@@ -6,7 +6,7 @@ import {
   editorViewCtx,
   parserCtx,
 } from "@milkdown/kit/core";
-import { Plugin, PluginKey } from "@milkdown/kit/prose/state";
+import { EditorState, Plugin, PluginKey } from "@milkdown/kit/prose/state";
 import { $prose } from "@milkdown/kit/utils";
 import type { CursorInfo } from "$lib/types/editor";
 import { Slice } from "@milkdown/kit/prose/model";
@@ -38,7 +38,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-static";
-import type { EditorPort } from "$lib/ports/editor_port";
+import type { BufferConfig, EditorPort } from "$lib/ports/editor_port";
 import type { AssetPath, VaultId } from "$lib/types/ids";
 import { as_asset_path } from "$lib/types/ids";
 import {
@@ -59,7 +59,12 @@ import {
   set_wiki_suggestions,
   wiki_suggest_plugin,
   wiki_suggest_plugin_config_key,
+  type WikiSuggestPluginConfig,
 } from "./wiki_suggest_plugin";
+import {
+  create_editor_context_plugin,
+  editor_context_plugin_key,
+} from "./editor_context_plugin";
 import {
   format_wiki_target_for_markdown,
   format_wiki_target_for_markdown_link,
@@ -195,6 +200,21 @@ export function create_milkdown_editor_port(args?: {
       let current_is_dirty = false;
       let editor: Editor | null = null;
       let is_large_note = is_large_markdown(initial_markdown);
+      let current_note_path = note_path;
+      let current_link_syntax = link_syntax;
+      let current_vault_id = vault_id;
+
+      type BufferEntry = {
+        state: EditorState;
+        note_path: string;
+        link_syntax: string;
+        markdown: string;
+        is_dirty: boolean;
+      };
+
+      const buffer_map = new Map<string, BufferEntry>();
+
+      let wiki_suggest_config: WikiSuggestPluginConfig | null = null;
 
       function normalize_markdown(raw: string): string {
         const needs_zws_cleanup = raw.includes("\u200B");
@@ -213,9 +233,9 @@ export function create_milkdown_editor_port(args?: {
             if (!resolved_note_path) return full;
 
             const safe_label = String(label);
-            if (link_syntax === "markdown") {
+            if (current_link_syntax === "markdown") {
               const target = format_wiki_target_for_markdown_link({
-                base_note_path: note_path,
+                base_note_path: current_note_path,
                 resolved_note_path,
               });
 
@@ -223,7 +243,7 @@ export function create_milkdown_editor_port(args?: {
             }
 
             const target = format_wiki_target_for_markdown({
-              base_note_path: note_path,
+              base_note_path: current_note_path,
               resolved_note_path,
             });
 
@@ -253,9 +273,8 @@ export function create_milkdown_editor_port(args?: {
         .use(commonmark)
         .use(imageBlockComponent)
         .config((ctx) => {
-          if (vault_id && resolve_asset_url_for_vault) {
+          if (resolve_asset_url_for_vault) {
             const resolve = resolve_asset_url_for_vault;
-            const vid = vault_id;
             const resolved_url_cache = new Map<string, string>();
             const pending_resolutions = new Set<string>();
             const update_image_height = (
@@ -333,7 +352,9 @@ export function create_milkdown_editor_port(args?: {
                 const cached = resolved_url_cache.get(url);
                 if (cached) return cached;
 
-                const result = resolve(vid, as_asset_path(url));
+                if (!current_vault_id) return url;
+
+                const result = resolve(current_vault_id, as_asset_path(url));
                 if (typeof result === "string") {
                   resolved_url_cache.set(url, result);
                   return result;
@@ -365,7 +386,13 @@ export function create_milkdown_editor_port(args?: {
         .use(listItemBlockComponent)
         .use(markdown_link_input_rule_plugin)
         .use(image_input_rule_plugin)
-        .use(create_wiki_link_converter_plugin(note_path))
+        .use(
+          create_editor_context_plugin({
+            note_path: current_note_path,
+            link_syntax: current_link_syntax,
+          }),
+        )
+        .use(create_wiki_link_converter_plugin())
         .use(listener)
         .use(history)
         .use(dirty_state_plugin_config_key)
@@ -395,7 +422,6 @@ export function create_milkdown_editor_port(args?: {
       if (on_internal_link_click) {
         builder = builder.use(
           create_wiki_link_click_plugin({
-            base_note_path: note_path,
             on_internal_link_click,
             on_external_link_click: on_external_link_click ?? (() => {}),
           }),
@@ -413,15 +439,17 @@ export function create_milkdown_editor_port(args?: {
       }
 
       if (on_wiki_suggest_query) {
+        wiki_suggest_config = {
+          on_query: on_wiki_suggest_query,
+          on_dismiss: () => {},
+          base_note_path: current_note_path,
+        };
         builder = builder
           .use(wiki_suggest_plugin_config_key)
           .use(wiki_suggest_plugin)
           .config((ctx) => {
-            ctx.set(wiki_suggest_plugin_config_key.key, {
-              on_query: on_wiki_suggest_query,
-              on_dismiss: () => {},
-              base_note_path: note_path,
-            });
+            if (!wiki_suggest_config) return;
+            ctx.set(wiki_suggest_plugin_config_key.key, wiki_suggest_config);
           });
       }
 
@@ -438,6 +466,32 @@ export function create_milkdown_editor_port(args?: {
         });
       };
 
+      function get_buffer_entry_from_view_state(
+        state: EditorState,
+      ): BufferEntry {
+        const dirty_state = dirty_state_plugin_key.getState(state) as
+          | { is_dirty?: boolean }
+          | undefined;
+
+        return {
+          state,
+          note_path: current_note_path,
+          link_syntax: current_link_syntax,
+          markdown: current_markdown,
+          is_dirty: Boolean(dirty_state?.is_dirty ?? current_is_dirty),
+        };
+      }
+
+      function save_current_buffer() {
+        run_editor_action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          buffer_map.set(
+            current_note_path,
+            get_buffer_entry_from_view_state(view.state),
+          );
+        });
+      }
+
       if (!is_large_note) {
         run_editor_action((ctx) => {
           const view = ctx.get(editorViewCtx);
@@ -447,6 +501,8 @@ export function create_milkdown_editor_port(args?: {
           view.dispatch(tr);
         });
       }
+
+      save_current_buffer();
 
       function mark_clean() {
         if (!editor) return;
@@ -461,6 +517,7 @@ export function create_milkdown_editor_port(args?: {
       const handle = {
         destroy() {
           if (!editor) return;
+          buffer_map.clear();
           void editor.destroy();
           editor = null;
         },
@@ -478,6 +535,7 @@ export function create_milkdown_editor_port(args?: {
               view.dispatch(tr);
             });
           }
+          save_current_buffer();
         },
         get_markdown() {
           return current_markdown;
@@ -510,6 +568,87 @@ export function create_milkdown_editor_port(args?: {
         mark_clean,
         is_dirty() {
           return current_is_dirty;
+        },
+        open_buffer(next_config: BufferConfig) {
+          if (!editor) return;
+
+          save_current_buffer();
+
+          current_vault_id = next_config.vault_id;
+          current_note_path = next_config.note_path;
+          current_link_syntax = next_config.link_syntax;
+          if (wiki_suggest_config) {
+            wiki_suggest_config.base_note_path = current_note_path;
+          }
+
+          run_editor_action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const parser = ctx.get(parserCtx);
+
+            const saved_entry = buffer_map.get(next_config.note_path);
+            if (saved_entry) {
+              view.updateState(saved_entry.state);
+              current_markdown = saved_entry.markdown;
+              current_is_dirty = saved_entry.is_dirty;
+              is_large_note = is_large_markdown(current_markdown);
+            } else {
+              let parsed_doc: ProseNode;
+              try {
+                parsed_doc = parser(next_config.initial_markdown);
+              } catch {
+                parsed_doc =
+                  view.state.schema.topNodeType.createAndFill() ??
+                  view.state.doc;
+              }
+
+              const new_state = EditorState.create({
+                schema: view.state.schema,
+                doc: parsed_doc,
+                plugins: view.state.plugins,
+              });
+
+              view.updateState(new_state);
+              current_markdown = normalize_markdown(
+                next_config.initial_markdown,
+              );
+              current_is_dirty = false;
+              is_large_note = is_large_markdown(current_markdown);
+            }
+
+            const context_tr = view.state.tr.setMeta(
+              editor_context_plugin_key,
+              {
+                action: "update",
+                note_path: current_note_path,
+                link_syntax: current_link_syntax,
+              },
+            );
+            view.dispatch(context_tr);
+
+            if (!saved_entry && !is_large_note) {
+              const full_scan_tr = view.state.tr.setMeta(wiki_link_plugin_key, {
+                action: "full_scan",
+              });
+              view.dispatch(full_scan_tr);
+
+              const clean_tr = view.state.tr.setMeta(dirty_state_plugin_key, {
+                action: "mark_clean",
+              });
+              view.dispatch(clean_tr);
+              current_is_dirty = false;
+            }
+
+            buffer_map.set(
+              current_note_path,
+              get_buffer_entry_from_view_state(view.state),
+            );
+          });
+
+          on_markdown_change(current_markdown);
+          on_dirty_state_change(current_is_dirty);
+        },
+        close_buffer(note_path_to_close: string) {
+          buffer_map.delete(note_path_to_close);
         },
         focus() {
           if (!editor) return;

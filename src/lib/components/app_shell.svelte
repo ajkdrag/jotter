@@ -35,7 +35,8 @@
       stores.ui.create_folder_dialog.open ||
       stores.ui.delete_folder_dialog.open ||
       stores.ui.rename_folder_dialog.open ||
-      stores.ui.image_paste_dialog.open,
+      stores.ui.image_paste_dialog.open ||
+      stores.ui.tab_close_confirm.open,
   );
 
   const vault_selection_loading = $derived(
@@ -82,6 +83,28 @@
     on_save: () => {
       void action_registry.execute(ACTION_IDS.note_request_save);
     },
+    on_close_tab: () => {
+      void action_registry.execute(ACTION_IDS.tab_close);
+    },
+    on_reopen_tab: () => {
+      void action_registry.execute(ACTION_IDS.tab_reopen_closed);
+    },
+    on_next_tab: () => {
+      void action_registry.execute(ACTION_IDS.tab_next);
+    },
+    on_prev_tab: () => {
+      void action_registry.execute(ACTION_IDS.tab_prev);
+    },
+    on_switch_to_tab: (index) => {
+      void action_registry.execute(ACTION_IDS.tab_activate_by_index, index);
+    },
+    on_move_tab_left: () => {
+      void action_registry.execute(ACTION_IDS.tab_move_left);
+    },
+    on_move_tab_right: () => {
+      void action_registry.execute(ACTION_IDS.tab_move_right);
+    },
+    has_tabs: () => stores.tab.has_tabs,
   });
 
   function handle_choose_vault_dir() {

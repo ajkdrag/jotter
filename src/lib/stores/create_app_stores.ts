@@ -4,6 +4,7 @@ import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { UIStore } from "$lib/stores/ui_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
+import { TabStore } from "$lib/stores/tab_store.svelte";
 
 export type AppStores = {
   vault: VaultStore;
@@ -12,6 +13,7 @@ export type AppStores = {
   ui: UIStore;
   op: OpStore;
   search: SearchStore;
+  tab: TabStore;
 };
 
 export function create_app_stores(): AppStores {
@@ -22,5 +24,6 @@ export function create_app_stores(): AppStores {
     ui: new UIStore(),
     op: new OpStore(),
     search: new SearchStore(),
+    tab: new TabStore(),
   };
 }

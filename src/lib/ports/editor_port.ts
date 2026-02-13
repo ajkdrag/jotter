@@ -2,6 +2,13 @@ import type { EditorSettings } from "$lib/types/editor_settings";
 import type { VaultId } from "$lib/types/ids";
 import type { CursorInfo, PastedImagePayload } from "$lib/types/editor";
 
+export type BufferConfig = {
+  note_path: string;
+  vault_id: VaultId | null;
+  link_syntax: EditorSettings["link_syntax"];
+  initial_markdown: string;
+};
+
 export type EditorSession = {
   destroy: () => void;
   set_markdown: (markdown: string) => void;
@@ -13,6 +20,8 @@ export type EditorSession = {
   set_wiki_suggestions?: (
     items: Array<{ title: string; path: string }>,
   ) => void;
+  open_buffer: (config: BufferConfig) => void;
+  close_buffer: (note_path: string) => void;
 };
 
 export type EditorEventHandlers = {

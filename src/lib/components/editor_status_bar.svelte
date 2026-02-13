@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Info, GitBranch, RefreshCw } from "@lucide/svelte";
+  import ThemeToggle from "$lib/components/theme_toggle.svelte";
   import type { CursorInfo } from "$lib/types/editor";
   import type { IndexProgress } from "$lib/stores/search_store.svelte";
+  import type { ThemeMode } from "$lib/types/theme";
 
   interface Props {
     cursor_info: CursorInfo | null;
@@ -9,8 +11,10 @@
     has_note: boolean;
     index_progress: IndexProgress;
     vault_name: string | null;
+    theme_mode: ThemeMode;
     on_vault_click: () => void;
     on_info_click: () => void;
+    on_theme_change: (mode: ThemeMode) => void;
   }
 
   let {
@@ -19,8 +23,10 @@
     has_note,
     index_progress,
     vault_name,
+    theme_mode,
     on_vault_click,
     on_info_click,
+    on_theme_change,
   }: Props = $props();
 
   const line = $derived(cursor_info?.line ?? null);
@@ -103,6 +109,8 @@
     >
       <Info />
     </button>
+    <span class="StatusBar__separator" aria-hidden="true"></span>
+    <ThemeToggle mode={theme_mode} on_change={on_theme_change} />
   </div>
 </div>
 
@@ -217,6 +225,20 @@
   :global(.StatusBar__item svg),
   :global(.StatusBar__action svg),
   :global(.StatusBar__vault-action svg) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
+  }
+
+  :global(.StatusBar .ThemeToggle) {
+    padding: 1px;
+  }
+
+  :global(.StatusBar .ThemeToggle__option) {
+    width: var(--size-touch-xs);
+    height: var(--size-touch-xs);
+  }
+
+  :global(.StatusBar .ThemeToggle__option svg) {
     width: var(--size-icon-xs);
     height: var(--size-icon-xs);
   }

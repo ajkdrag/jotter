@@ -12,6 +12,7 @@ import { SearchService } from "$lib/services/search_service";
 import { EditorService } from "$lib/services/editor_service";
 import { ClipboardService } from "$lib/services/clipboard_service";
 import { ShellService } from "$lib/services/shell_service";
+import { TabService } from "$lib/services/tab_service";
 import { mount_reactors } from "$lib/reactors";
 
 export type AppContext = ReturnType<typeof create_app_context>;
@@ -91,6 +92,14 @@ export function create_app_context(input: {
     now_ms,
   );
 
+  const tab_service = new TabService(
+    input.ports.vault_settings,
+    stores.vault,
+    stores.tab,
+    stores.notes,
+    note_service,
+  );
+
   const vault_service = new VaultService(
     input.ports.vault,
     input.ports.notes,
@@ -116,6 +125,7 @@ export function create_app_context(input: {
       editor: stores.editor,
       op: stores.op,
       search: stores.search,
+      tab: stores.tab,
     },
     services: {
       vault: vault_service,
@@ -126,6 +136,7 @@ export function create_app_context(input: {
       editor: editor_service,
       clipboard: clipboard_service,
       shell: shell_service,
+      tab: tab_service,
     },
     default_mount_config: input.default_mount_config,
   });
@@ -136,9 +147,11 @@ export function create_app_context(input: {
     op_store: stores.op,
     notes_store: stores.notes,
     vault_store: stores.vault,
+    tab_store: stores.tab,
     editor_service,
     note_service,
     vault_service,
+    tab_service,
   });
 
   return {

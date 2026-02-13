@@ -78,24 +78,22 @@ export class EditorService {
     this.active_note = null;
   }
 
-  async open_buffer(
+  open_buffer(
     note: OpenNoteState,
     link_syntax: EditorSettings["link_syntax"],
-  ): Promise<void> {
+  ): void {
     this.active_note = note;
     this.active_link_syntax = link_syntax;
 
-    if (!this.host_root) return;
+    if (!this.host_root || !this.session) return;
 
-    this.op_store.start("editor.open_buffer", Date.now());
-    try {
-      await this.recreate_session();
-      this.focus();
-      this.op_store.succeed("editor.open_buffer");
-    } catch (error) {
-      log.error("Editor open_buffer failed", { error });
-      this.op_store.fail("editor.open_buffer", error_message(error));
-    }
+    this.session.open_buffer({
+      note_path: note.meta.path,
+      vault_id: this.vault_store.vault?.id ?? null,
+      link_syntax,
+      initial_markdown: note.markdown,
+    });
+    this.focus();
   }
 
   insert_text(text: string) {
@@ -123,6 +121,10 @@ export class EditorService {
     this.session?.focus();
   }
 
+  close_buffer(note_path: NotePath) {
+    this.session?.close_buffer(note_path);
+  }
+
   private next_session_generation(): number {
     this.session_generation += 1;
     return this.session_generation;
@@ -142,9 +144,14 @@ export class EditorService {
     if (!host_root || !active_note) return;
 
     const generation = this.next_session_generation();
-    const note_id = active_note.meta.id;
 
     this.teardown_session();
+    if (typeof host_root.replaceChildren === "function") {
+      host_root.replaceChildren();
+    }
+
+    const get_active_note_id = () => this.active_note?.meta.id ?? null;
+    const get_active_note_path = () => this.active_note?.meta.path ?? null;
 
     const next_session = await this.editor_port.start_session({
       root: host_root,
@@ -155,15 +162,21 @@ export class EditorService {
       events: {
         on_markdown_change: (markdown: string) => {
           if (!this.is_generation_current(generation)) return;
-          this.editor_store.set_markdown(note_id, as_markdown_text(markdown));
+          const id = get_active_note_id();
+          if (!id) return;
+          this.editor_store.set_markdown(id, as_markdown_text(markdown));
         },
         on_dirty_state_change: (is_dirty: boolean) => {
           if (!this.is_generation_current(generation)) return;
-          this.editor_store.set_dirty(note_id, is_dirty);
+          const id = get_active_note_id();
+          if (!id) return;
+          this.editor_store.set_dirty(id, is_dirty);
         },
         on_cursor_change: (cursor: CursorInfo) => {
           if (!this.is_generation_current(generation)) return;
-          this.editor_store.set_cursor(note_id, cursor);
+          const id = get_active_note_id();
+          if (!id) return;
+          this.editor_store.set_cursor(id, cursor);
         },
         on_internal_link_click: (note_path: string) => {
           if (!this.is_generation_current(generation)) return;
@@ -175,11 +188,10 @@ export class EditorService {
         },
         on_image_paste_requested: (image: PastedImagePayload) => {
           if (!this.is_generation_current(generation)) return;
-          this.callbacks.on_image_paste_requested(
-            note_id,
-            active_note.meta.path,
-            image,
-          );
+          const id = get_active_note_id();
+          const path = get_active_note_path();
+          if (!id || !path) return;
+          this.callbacks.on_image_paste_requested(id, path, image);
         },
         ...(this.search_service
           ? {

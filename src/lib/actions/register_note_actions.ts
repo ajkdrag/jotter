@@ -1,5 +1,6 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
+import { capture_active_tab_snapshot } from "$lib/actions/register_tab_actions";
 import { clear_folder_filetree_state } from "$lib/actions/filetree_state";
 import type { NoteMeta } from "$lib/types/note";
 import { as_note_path, type NoteId, type NotePath } from "$lib/types/ids";
@@ -127,8 +128,20 @@ export function register_note_actions(input: ActionRegistrationInput) {
         typeof folder_prefix === "string" && folder_prefix.length > 0
           ? folder_prefix
           : stores.ui.selected_folder_path;
+
+      capture_active_tab_snapshot(input);
+
       services.note.create_new_note(folder_path);
       stores.ui.set_selected_folder_path(folder_path);
+
+      const open_note = stores.editor.open_note;
+      if (open_note) {
+        const tab = stores.tab.open_tab(
+          open_note.meta.path,
+          open_note.meta.title || "Untitled",
+        );
+        stores.tab.set_cached_note(tab.id, open_note);
+      }
     },
   });
 
@@ -138,11 +151,36 @@ export function register_note_actions(input: ActionRegistrationInput) {
     when: () => stores.vault.vault !== null,
     execute: async (note_input: unknown) => {
       const parsed = parse_note_open_input(note_input);
-      const result = await services.note.open_note(parsed.note_path, false, {
+      const note_path = parsed.note_path;
+
+      const existing_tab = stores.tab.find_tab_by_path(note_path as NotePath);
+      if (existing_tab) {
+        if (stores.tab.active_tab_id !== existing_tab.id) {
+          capture_active_tab_snapshot(input);
+          stores.tab.activate_tab(existing_tab.id);
+        }
+        const result = await services.note.open_note(note_path, false, {
+          cleanup_if_missing: parsed.cleanup_if_missing,
+        });
+        if (result.status === "opened") {
+          stores.ui.set_selected_folder_path(result.selected_folder_path);
+        }
+        return;
+      }
+
+      capture_active_tab_snapshot(input);
+
+      const result = await services.note.open_note(note_path, false, {
         cleanup_if_missing: parsed.cleanup_if_missing,
       });
       if (result.status === "opened") {
+        const title = note_name_from_path(note_path);
+        const tab = stores.tab.open_tab(note_path as NotePath, title);
         stores.ui.set_selected_folder_path(result.selected_folder_path);
+        const open_note = stores.editor.open_note;
+        if (open_note) {
+          stores.tab.set_cached_note(tab.id, open_note);
+        }
       }
       if (result.status === "not_found") {
         toast.error("Note no longer exists");
@@ -155,10 +193,21 @@ export function register_note_actions(input: ActionRegistrationInput) {
     label: "Open Wiki Link",
     when: () => stores.vault.vault !== null,
     execute: async (note_path: unknown) => {
-      const result = await services.note.open_wiki_link(String(note_path));
+      const path_str = String(note_path);
+
+      capture_active_tab_snapshot(input);
+
+      const result = await services.note.open_wiki_link(path_str);
       if (result.status === "opened") {
+        const opened_path = stores.editor.open_note?.meta.path ?? path_str;
+        const title = note_name_from_path(opened_path);
+        const tab = stores.tab.open_tab(opened_path as NotePath, title);
         stores.ui.set_selected_folder_path(result.selected_folder_path);
         clear_folder_filetree_state(input, result.selected_folder_path);
+        const open_note = stores.editor.open_note;
+        if (open_note) {
+          stores.tab.set_cached_note(tab.id, open_note);
+        }
       }
       if (result.status === "failed") {
         toast.error(result.error);
@@ -292,10 +341,20 @@ export function register_note_actions(input: ActionRegistrationInput) {
       const note = stores.ui.delete_note_dialog.note;
       if (!note) return;
 
+      const tab = stores.tab.find_tab_by_path(note.path);
+      if (tab) {
+        stores.tab.close_tab(tab.id);
+      }
+
       const result = await services.note.delete_note(note);
       if (result.status === "deleted") {
         clear_folder_filetree_state(input, parent_folder_path(note.path));
         close_delete_dialog(input);
+
+        const active_tab = stores.tab.active_tab;
+        if (active_tab) {
+          await services.note.open_note(active_tab.note_path, false);
+        }
       }
     },
   });
@@ -355,6 +414,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       }
 
       if (result.status === "renamed") {
+        stores.tab.update_tab_path(note.path, new_path);
         clear_folder_filetree_state(input, parent);
         const new_parent = parent_folder_path(new_path);
         if (new_parent !== parent) {
@@ -375,6 +435,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
 
     const result = await services.note.rename_note(note, new_path, true);
     if (result.status === "renamed") {
+      stores.tab.update_tab_path(note.path, new_path);
       clear_folder_filetree_state(input, parent);
       const new_parent = parent_folder_path(new_path);
       if (new_parent !== parent) {
@@ -465,6 +526,12 @@ export function register_note_actions(input: ActionRegistrationInput) {
       }
 
       if (result.status === "saved") {
+        if (stores.tab.active_tab_id && result.saved_path) {
+          stores.tab.update_tab_path(
+            stores.tab.active_tab_id as NotePath,
+            result.saved_path,
+          );
+        }
         clear_folder_filetree_state(
           input,
           parent_folder_path(result.saved_path),
@@ -483,6 +550,12 @@ export function register_note_actions(input: ActionRegistrationInput) {
 
       const result = await services.note.save_note(path, true);
       if (result.status === "saved") {
+        if (stores.tab.active_tab_id && result.saved_path) {
+          stores.tab.update_tab_path(
+            stores.tab.active_tab_id as NotePath,
+            result.saved_path,
+          );
+        }
         clear_folder_filetree_state(
           input,
           parent_folder_path(result.saved_path),

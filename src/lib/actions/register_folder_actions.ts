@@ -571,6 +571,7 @@ export function register_folder_actions(input: ActionRegistrationInput) {
 
       const old_prefix = `${folder_path}/`;
       const new_prefix = `${new_path}/`;
+      stores.tab.update_tab_path_prefix(old_prefix, new_prefix);
       void services.folder
         .rename_folder_index(old_prefix, new_prefix)
         .catch((err: unknown) => {

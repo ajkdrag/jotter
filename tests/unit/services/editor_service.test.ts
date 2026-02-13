@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
+  BufferConfig,
   EditorPort,
   EditorSession,
   EditorSessionConfig,
@@ -44,6 +45,10 @@ function create_session(initial_markdown: string): EditorSession {
     mark_clean: vi.fn(),
     is_dirty: vi.fn(() => false),
     focus: vi.fn(),
+    open_buffer: vi.fn((config: BufferConfig) => {
+      current_markdown = config.initial_markdown;
+    }),
+    close_buffer: vi.fn(),
   };
 }
 
@@ -111,17 +116,10 @@ function session_config_at(
 }
 
 describe("EditorService", () => {
-  it("mounts and opens buffers with session configs and hooks", async () => {
-    const first_session = create_session("alpha");
-    const second_session = create_session("beta");
-    let invocation = 0;
+  it("mounts session and delegates open_buffer to session handle", async () => {
+    const session = create_session("alpha");
     const { service, editor_store, start_session, session_configs } =
-      create_setup(() => {
-        invocation += 1;
-        return Promise.resolve(
-          invocation === 1 ? first_session : second_session,
-        );
-      });
+      create_setup(() => Promise.resolve(session));
     const root = {} as HTMLDivElement;
     const first_note = create_open_note("docs/alpha.md", "# Alpha");
     const second_note = create_open_note("docs/beta.md", "# Beta");
@@ -133,38 +131,38 @@ describe("EditorService", () => {
       link_syntax: "wikilink",
     });
 
+    expect(start_session).toHaveBeenCalledTimes(1);
+    const mount_config = session_config_at(session_configs, 0);
+    expect(mount_config.root).toBe(root);
+    expect(mount_config.initial_markdown).toBe("# Alpha");
+    expect(mount_config.note_path).toBe(as_note_path("docs/alpha.md"));
+    expect(mount_config.vault_id).toBe(create_test_vault().id);
+    expect(mount_config.link_syntax).toBe("wikilink");
+    expect(typeof mount_config.events.on_markdown_change).toBe("function");
+    expect(typeof mount_config.events.on_dirty_state_change).toBe("function");
+    expect(typeof mount_config.events.on_cursor_change).toBe("function");
+    expect(typeof mount_config.events.on_internal_link_click).toBe("function");
+    expect(typeof mount_config.events.on_image_paste_requested).toBe(
+      "function",
+    );
+
     editor_store.set_open_note(second_note);
-    await service.open_buffer(second_note, "markdown");
+    service.open_buffer(second_note, "markdown");
 
-    expect(start_session).toHaveBeenCalledTimes(2);
-    expect(first_session.destroy).toHaveBeenCalledTimes(1);
-
-    const first_call = session_config_at(session_configs, 0);
-    expect(first_call.root).toBe(root);
-    expect(first_call.initial_markdown).toBe("# Alpha");
-    expect(first_call.note_path).toBe(as_note_path("docs/alpha.md"));
-    expect(first_call.vault_id).toBe(create_test_vault().id);
-    expect(first_call.link_syntax).toBe("wikilink");
-    expect(typeof first_call.events.on_markdown_change).toBe("function");
-    expect(typeof first_call.events.on_dirty_state_change).toBe("function");
-    expect(typeof first_call.events.on_cursor_change).toBe("function");
-    expect(typeof first_call.events.on_internal_link_click).toBe("function");
-    expect(typeof first_call.events.on_image_paste_requested).toBe("function");
-
-    const second_call = session_config_at(session_configs, 1);
-    expect(second_call.initial_markdown).toBe("# Beta");
-    expect(second_call.note_path).toBe(as_note_path("docs/beta.md"));
-    expect(second_call.link_syntax).toBe("markdown");
+    expect(start_session).toHaveBeenCalledTimes(1);
+    expect(session.open_buffer).toHaveBeenCalledWith({
+      note_path: as_note_path("docs/beta.md"),
+      vault_id: create_test_vault().id,
+      link_syntax: "markdown",
+      initial_markdown: "# Beta",
+    });
   });
 
-  it("applies markdown updates only for active session generation", async () => {
-    const first_session = create_session("alpha");
-    const second_session = create_session("beta");
-    let invocation = 0;
-    const { service, editor_store, session_configs } = create_setup(() => {
-      invocation += 1;
-      return Promise.resolve(invocation === 1 ? first_session : second_session);
-    });
+  it("routes markdown events to the current active note", async () => {
+    const session = create_session("alpha");
+    const { service, editor_store, session_configs } = create_setup(() =>
+      Promise.resolve(session),
+    );
     const root = {} as HTMLDivElement;
     const first_note = create_open_note("docs/alpha.md", "# Alpha");
     const second_note = create_open_note("docs/beta.md", "# Beta");
@@ -176,18 +174,19 @@ describe("EditorService", () => {
       link_syntax: "wikilink",
     });
 
-    editor_store.set_open_note(second_note);
-    await service.open_buffer(second_note, "wikilink");
+    const events = session_config_at(session_configs, 0).events;
 
-    const first_events = session_config_at(session_configs, 0).events;
-    const second_events = session_config_at(session_configs, 1).events;
-
-    first_events.on_markdown_change("# stale");
-    expect(editor_store.open_note?.markdown).toBe(as_markdown_text("# Beta"));
-
-    second_events.on_markdown_change("# updated");
+    events.on_markdown_change("# Updated Alpha");
     expect(editor_store.open_note?.markdown).toBe(
-      as_markdown_text("# updated"),
+      as_markdown_text("# Updated Alpha"),
+    );
+
+    editor_store.set_open_note(second_note);
+    service.open_buffer(second_note, "wikilink");
+
+    events.on_markdown_change("# Updated Beta");
+    expect(editor_store.open_note?.markdown).toBe(
+      as_markdown_text("# Updated Beta"),
     );
   });
 
@@ -287,14 +286,11 @@ describe("EditorService", () => {
     );
   });
 
-  it("recreates sessions on note switch and ignores stale events", async () => {
-    const first_session = create_session("alpha");
-    const second_session = create_session("beta");
-    let invocation = 0;
-    const { service, editor_store, session_configs } = create_setup(() => {
-      invocation += 1;
-      return Promise.resolve(invocation === 1 ? first_session : second_session);
-    });
+  it("routes dirty state events to the current active note via open_buffer", async () => {
+    const session = create_session("alpha");
+    const { service, editor_store, session_configs } = create_setup(() =>
+      Promise.resolve(session),
+    );
     const root = {} as HTMLDivElement;
     const first_note = create_open_note("docs/alpha.md", "# Alpha");
     const second_note = create_open_note("docs/beta.md", "# Beta");
@@ -307,15 +303,11 @@ describe("EditorService", () => {
     });
 
     editor_store.set_open_note(second_note);
-    await service.open_buffer(second_note, "wikilink");
+    service.open_buffer(second_note, "wikilink");
 
-    const first_events = session_config_at(session_configs, 0).events;
-    const second_events = session_config_at(session_configs, 1).events;
+    const events = session_config_at(session_configs, 0).events;
 
-    first_events.on_dirty_state_change(true);
-    expect(editor_store.open_note?.is_dirty).toBe(false);
-
-    second_events.on_dirty_state_change(true);
+    events.on_dirty_state_change(true);
     expect(editor_store.open_note?.is_dirty).toBe(true);
   });
 
@@ -394,7 +386,7 @@ describe("EditorService", () => {
     expect(editor_store.open_note?.is_dirty).toBe(false);
   });
 
-  it("tracks op_store status for mount and open_buffer", async () => {
+  it("tracks op_store status for mount", async () => {
     const session = create_session("alpha");
     const { service, editor_store, op_store } = create_setup(() =>
       Promise.resolve(session),
@@ -405,11 +397,6 @@ describe("EditorService", () => {
     editor_store.set_open_note(note);
     await service.mount({ root, note, link_syntax: "wikilink" });
     expect(op_store.get("editor.mount").status).toBe("success");
-
-    const second_note = create_open_note("docs/beta.md", "# Beta");
-    editor_store.set_open_note(second_note);
-    await service.open_buffer(second_note, "wikilink");
-    expect(op_store.get("editor.open_buffer").status).toBe("success");
   });
 
   it("records op_store failure when mount throws", async () => {

@@ -8,12 +8,14 @@ import type { SearchService } from "$lib/services/search_service";
 import type { EditorService } from "$lib/services/editor_service";
 import type { ClipboardService } from "$lib/services/clipboard_service";
 import type { ShellService } from "$lib/services/shell_service";
+import type { TabService } from "$lib/services/tab_service";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import type { SearchStore } from "$lib/stores/search_store.svelte";
+import type { TabStore } from "$lib/stores/tab_store.svelte";
 
 export type ActionRegistrationInput = {
   registry: ActionRegistry;
@@ -24,6 +26,7 @@ export type ActionRegistrationInput = {
     editor: EditorStore;
     op: OpStore;
     search: SearchStore;
+    tab: TabStore;
   };
   services: {
     vault: VaultService;
@@ -34,6 +37,7 @@ export type ActionRegistrationInput = {
     editor: EditorService;
     clipboard: ClipboardService;
     shell: ShellService;
+    tab: TabService;
   };
   default_mount_config: AppMountConfig;
 };

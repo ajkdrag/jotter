@@ -35,7 +35,7 @@ export function create_editor_sync_reactor(
       last_link_syntax = link_syntax;
 
       if (!should_open) return;
-      void editor_service.open_buffer(open_note, link_syntax);
+      editor_service.open_buffer(open_note, link_syntax);
     });
   });
 }

@@ -7,6 +7,7 @@ import { register_settings_actions } from "$lib/actions/register_settings_action
 import { register_omnibar_actions } from "$lib/actions/register_omnibar_actions";
 import { register_ui_actions } from "$lib/actions/register_ui_actions";
 import { register_find_in_file_actions } from "$lib/actions/register_find_in_file_actions";
+import { register_tab_actions } from "$lib/actions/register_tab_actions";
 
 export function register_actions(input: ActionRegistrationInput) {
   register_app_actions(input);
@@ -17,4 +18,5 @@ export function register_actions(input: ActionRegistrationInput) {
   register_omnibar_actions(input);
   register_ui_actions(input);
   register_find_in_file_actions(input);
+  register_tab_actions(input);
 }

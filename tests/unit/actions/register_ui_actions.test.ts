@@ -8,6 +8,7 @@ import { NotesStore } from "$lib/stores/notes_store.svelte";
 import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
+import { TabStore } from "$lib/stores/tab_store.svelte";
 
 describe("register_ui_actions", () => {
   it("opens and closes vault dashboard", async () => {
@@ -19,6 +20,7 @@ describe("register_ui_actions", () => {
       editor: new EditorStore(),
       op: new OpStore(),
       search: new SearchStore(),
+      tab: new TabStore(),
     };
 
     register_ui_actions({
@@ -52,6 +54,7 @@ describe("register_ui_actions", () => {
       editor: new EditorStore(),
       op: new OpStore(),
       search: new SearchStore(),
+      tab: new TabStore(),
     };
 
     register_ui_actions({

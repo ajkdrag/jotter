@@ -87,6 +87,12 @@ const INITIAL_VAULT_DASHBOARD = {
   open: false,
 } as const;
 
+const INITIAL_TAB_CLOSE_CONFIRM = {
+  open: false,
+  tab_id: null,
+  tab_title: "",
+} as const;
+
 function initial_filetree() {
   return {
     expanded_paths: new SvelteSet<string>(),
@@ -219,6 +225,12 @@ export class UIStore {
     open: boolean;
   }>({ ...INITIAL_VAULT_DASHBOARD });
 
+  tab_close_confirm = $state<{
+    open: boolean;
+    tab_id: string | null;
+    tab_title: string;
+  }>({ ...INITIAL_TAB_CLOSE_CONFIRM });
+
   set_theme(theme: ThemeMode) {
     this.theme = theme;
   }
@@ -260,5 +272,6 @@ export class UIStore {
     this.image_paste_dialog = { ...INITIAL_IMAGE_PASTE_DIALOG };
     this.cross_vault_open_confirm = { ...INITIAL_CROSS_VAULT_OPEN_CONFIRM };
     this.vault_dashboard = { ...INITIAL_VAULT_DASHBOARD };
+    this.tab_close_confirm = { ...INITIAL_TAB_CLOSE_CONFIRM };
   }
 }

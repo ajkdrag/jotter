@@ -91,6 +91,25 @@ export const ACTION_IDS = {
   find_in_file_set_query: "find_in_file.set_query",
   find_in_file_next: "find_in_file.next",
   find_in_file_prev: "find_in_file.prev",
+
+  tab_close: "tab.close",
+  tab_close_other: "tab.close_other",
+  tab_close_right: "tab.close_right",
+  tab_close_all: "tab.close_all",
+  tab_activate: "tab.activate",
+  tab_activate_by_index: "tab.activate_by_index",
+  tab_next: "tab.next",
+  tab_prev: "tab.prev",
+  tab_reopen_closed: "tab.reopen_closed",
+  tab_pin: "tab.pin",
+  tab_unpin: "tab.unpin",
+  tab_move_left: "tab.move_left",
+  tab_move_right: "tab.move_right",
+  tab_copy_path: "tab.copy_path",
+  tab_reveal_in_tree: "tab.reveal_in_tree",
+  tab_confirm_close_save: "tab.confirm_close_save",
+  tab_confirm_close_discard: "tab.confirm_close_discard",
+  tab_cancel_close: "tab.cancel_close",
 } as const;
 
 export type ActionId = (typeof ACTION_IDS)[keyof typeof ACTION_IDS];

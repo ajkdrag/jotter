@@ -14,6 +14,16 @@ export class ClipboardService {
     private readonly now_ms: () => number,
   ) {}
 
+  async copy_text(text: string): Promise<void> {
+    try {
+      await this.clipboard_port.write_text(text);
+    } catch (error) {
+      const message = error_message(error);
+      log.error("Copy text failed", { error: message });
+      throw error;
+    }
+  }
+
   async copy_open_note_markdown(): Promise<void> {
     const markdown = this.editor_store.open_note?.markdown;
     if (!markdown) return;

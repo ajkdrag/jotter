@@ -8,6 +8,8 @@ async function apply_opened_vault(
   input: ActionRegistrationInput,
   editor_settings: EditorSettings,
 ) {
+  input.stores.tab.reset();
+  input.stores.editor.clear_open_note();
   input.stores.ui.reset_for_new_vault();
   input.stores.ui.set_editor_settings(editor_settings);
   input.stores.ui.change_vault = {
@@ -17,6 +19,22 @@ async function apply_opened_vault(
     error: null,
   };
   await input.registry.execute(ACTION_IDS.folder_refresh_tree);
+
+  const persisted = await input.services.tab.load_tabs();
+  if (persisted && persisted.tabs.length > 0) {
+    await input.services.tab.restore_tabs(persisted);
+  }
+
+  if (input.stores.tab.tabs.length === 0) {
+    input.services.note.create_new_note("");
+    const open_note = input.stores.editor.open_note;
+    if (open_note) {
+      input.stores.tab.open_tab(
+        open_note.meta.path,
+        open_note.meta.title || "Untitled",
+      );
+    }
+  }
 }
 
 export function register_vault_actions(input: ActionRegistrationInput) {
@@ -25,7 +43,8 @@ export function register_vault_actions(input: ActionRegistrationInput) {
   let pending_discard_confirm_change: (() => Promise<void>) | null = null;
 
   const has_unsaved_editor_changes = (): boolean =>
-    stores.editor.open_note?.is_dirty === true;
+    stores.editor.open_note?.is_dirty === true ||
+    stores.tab.get_dirty_tabs().length > 0;
 
   const clear_discard_confirm_state = () => {
     pending_discard_confirm_change = null;
@@ -224,11 +243,11 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         error: null,
       };
 
-      const save_result = await services.note.save_note(null, true);
-      if (save_result.status !== "saved") {
+      const active_save = await services.note.save_note(null, true);
+      if (active_save.status !== "saved") {
         const error =
-          save_result.status === "failed"
-            ? save_result.error
+          active_save.status === "failed"
+            ? active_save.error
             : "Could not save current note before switching vault.";
         stores.ui.change_vault = {
           ...stores.ui.change_vault,
@@ -237,6 +256,20 @@ export function register_vault_actions(input: ActionRegistrationInput) {
           confirm_discard_open: true,
         };
         return;
+      }
+
+      const remaining_dirty = stores.tab
+        .get_dirty_tabs()
+        .filter((t) => t.id !== stores.tab.active_tab_id);
+
+      for (const tab of remaining_dirty) {
+        const cached = stores.tab.get_cached_note(tab.id);
+        if (cached) {
+          await services.note.write_note_content(
+            cached.meta.path,
+            cached.markdown,
+          );
+        }
       }
 
       clear_discard_confirm_state();

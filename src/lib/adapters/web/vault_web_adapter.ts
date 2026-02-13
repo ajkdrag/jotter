@@ -135,6 +135,9 @@ async function check_vault_availability(
       if (permission === "denied") {
         return false;
       }
+      if (permission === "prompt") {
+        return true;
+      }
     }
 
     if (typeof handle.values === "function") {

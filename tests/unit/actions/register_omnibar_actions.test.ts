@@ -8,6 +8,7 @@ import { NotesStore } from "$lib/stores/notes_store.svelte";
 import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
+import { TabStore } from "$lib/stores/tab_store.svelte";
 import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
 import { create_test_note, create_test_vault } from "../helpers/test_fixtures";
 
@@ -20,6 +21,7 @@ function create_omnibar_actions_harness() {
     editor: new EditorStore(),
     op: new OpStore(),
     search: new SearchStore(),
+    tab: new TabStore(),
   };
   const execute_vault_select = vi.fn((vault_id: unknown) => {
     stores.vault.set_vault(
@@ -59,6 +61,11 @@ function create_omnibar_actions_harness() {
     editor: {},
     clipboard: {},
     shell: {},
+    tab: {
+      load_tabs: vi.fn().mockResolvedValue(null),
+      restore_tabs: vi.fn().mockResolvedValue(undefined),
+      save_tabs: vi.fn().mockResolvedValue(undefined),
+    },
   };
 
   register_omnibar_actions({

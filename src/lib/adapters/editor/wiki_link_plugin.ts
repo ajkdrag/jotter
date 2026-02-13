@@ -13,6 +13,7 @@ import {
   try_decode_wiki_link_href,
 } from "$lib/domain/wiki_link";
 import { dirty_state_plugin_key } from "./dirty_state_plugin";
+import { editor_context_plugin_key } from "./editor_context_plugin";
 
 const ZERO_WIDTH_SPACE = "\u200B";
 const WIKI_LINK_REGEX = /\[\[([^\]\n]+?)(?:\|([^\]\n]+?))?\]\]/;
@@ -125,7 +126,7 @@ function build_replacement(input: {
 
 export function create_wiki_link_converter_prose_plugin(input: {
   link_type: MarkType;
-  base_note_path: string;
+  base_note_path?: string;
 }) {
   return new Plugin({
     key: wiki_link_plugin_key,
@@ -136,6 +137,10 @@ export function create_wiki_link_converter_prose_plugin(input: {
       const should_scan =
         force_full_scan || transactions.some((tr) => tr.docChanged);
       if (!should_scan) return null;
+
+      const context_state = editor_context_plugin_key.getState(new_state);
+      const base_note_path =
+        context_state?.note_path ?? input.base_note_path ?? "";
 
       const tr = new_state.tr;
 
@@ -190,7 +195,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
 
             const replacement = build_replacement({
               link_type: input.link_type,
-              base_note_path: input.base_note_path,
+              base_note_path,
               raw_target: m.raw_target,
               raw_label: m.raw_label,
             });
@@ -232,7 +237,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
 
         const replacement = build_replacement({
           link_type: input.link_type,
-          base_note_path: input.base_note_path,
+          base_note_path,
           raw_target,
           raw_label: raw_label ?? null,
         });
@@ -264,6 +269,7 @@ export function create_wiki_link_converter_prose_plugin(input: {
         }
         if (!tr.docChanged) return null;
         tr.setMeta(dirty_state_plugin_key, { action: "mark_clean" });
+        tr.setMeta("addToHistory", false);
         return tr;
       }
 
@@ -314,9 +320,9 @@ function parse_internal_href(href: string): string | null {
 }
 
 export function create_wiki_link_click_prose_plugin(input: {
-  base_note_path: string;
   on_internal_link_click: (note_path: string) => void;
   on_external_link_click: (url: string) => void;
+  base_note_path?: string;
 }) {
   function anchor_href_from_event(event: MouseEvent): string | null {
     const target = event.target;
@@ -326,26 +332,11 @@ export function create_wiki_link_click_prose_plugin(input: {
     return anchor.getAttribute("href");
   }
 
-  function resolve_href(href: string): string | null {
-    const wiki_path = try_decode_wiki_link_href(href);
-    if (wiki_path) return wiki_path;
-
-    const raw_path = parse_internal_href(href);
-    if (!raw_path) return null;
-
-    return (
-      resolve_wiki_target_to_note_path({
-        base_note_path: input.base_note_path,
-        raw_target: raw_path,
-      }) ?? raw_path
-    );
-  }
-
   return new Plugin({
     key: new PluginKey("wiki-link-click"),
     props: {
       handleDOMEvents: {
-        click: (_view, event) => {
+        click: (view, event) => {
           if (event.button !== 0) return false;
           if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
             return false;
@@ -357,12 +348,29 @@ export function create_wiki_link_click_prose_plugin(input: {
 
           if (is_external_url(href)) {
             input.on_external_link_click(href);
-          } else {
-            const note_path = resolve_href(href);
-            if (note_path) {
-              input.on_internal_link_click(note_path);
-            }
+            return true;
           }
+
+          const wiki_path = try_decode_wiki_link_href(href);
+          if (wiki_path) {
+            input.on_internal_link_click(wiki_path);
+            return true;
+          }
+
+          const raw_path = parse_internal_href(href);
+          if (!raw_path) return true;
+
+          const editor_state = view?.state;
+          const ctx_state = editor_state
+            ? editor_context_plugin_key.getState(editor_state)
+            : null;
+          const base = ctx_state?.note_path ?? input.base_note_path ?? "";
+          const resolved =
+            resolve_wiki_target_to_note_path({
+              base_note_path: base,
+              raw_target: raw_path,
+            }) ?? raw_path;
+          input.on_internal_link_click(resolved);
 
           return true;
         },
@@ -371,17 +379,15 @@ export function create_wiki_link_click_prose_plugin(input: {
   });
 }
 
-export const create_wiki_link_converter_plugin = (base_note_path: string) =>
+export const create_wiki_link_converter_plugin = () =>
   $prose((ctx) => {
     const link_type = linkSchema.type(ctx);
     return create_wiki_link_converter_prose_plugin({
       link_type,
-      base_note_path,
     });
   });
 
 export const create_wiki_link_click_plugin = (input: {
-  base_note_path: string;
   on_internal_link_click: (note_path: string) => void;
   on_external_link_click: (url: string) => void;
 }) => $prose(() => create_wiki_link_click_prose_plugin(input));

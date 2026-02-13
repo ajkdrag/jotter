@@ -2,16 +2,15 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import * as Resizable from "$lib/components/ui/resizable/index.js";
   import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-  import * as ContextMenu from "$lib/components/ui/context-menu";
   import { Button } from "$lib/components/ui/button";
   import ActivityBar from "$lib/components/activity_bar.svelte";
   import VirtualFileTree from "$lib/components/virtual_file_tree.svelte";
   import VaultDashboardPanel from "$lib/components/vault_dashboard_panel.svelte";
   import NoteEditor from "$lib/components/note_editor.svelte";
+  import TabBar from "$lib/components/tab_bar.svelte";
   import FindInFileBar from "$lib/components/find_in_file_bar.svelte";
   import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
   import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
-  import ThemeToggle from "$lib/components/theme_toggle.svelte";
   import { SvelteSet } from "svelte/reactivity";
   import { build_filetree, sort_tree } from "$lib/domain/filetree";
   import { flatten_filetree } from "$lib/domain/flatten_filetree";
@@ -21,14 +20,10 @@
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { NoteMeta } from "$lib/types/note";
   import {
-    Circle,
     FilePlus,
     FolderPlus,
     RefreshCw,
     FoldVertical,
-    Copy,
-    Pencil,
-    Trash2,
     Star,
   } from "@lucide/svelte";
 
@@ -265,22 +260,11 @@
     }
   });
 
-  const open_note_title = $derived(
-    stores.editor.open_note?.meta.title ?? "Notes",
-  );
   const word_count = $derived(
     stores.editor.open_note ? count_words(stores.editor.open_note.markdown) : 0,
   );
-  const is_persisted_note = $derived(
-    stores.editor.open_note != null &&
-      stores.editor.open_note.meta.path.endsWith(".md"),
-  );
 
   let details_dialog_open = $state(false);
-
-  function handle_theme_change(theme: "light" | "dark" | "system") {
-    void action_registry.execute(ACTION_IDS.ui_set_theme, theme);
-  }
 
   type HeaderAction = {
     icon: typeof FilePlus;
@@ -626,89 +610,7 @@
             defaultSize={stores.ui.sidebar_open ? 80 : 100}
           >
             <Sidebar.Inset class="flex h-full min-h-0 flex-col">
-              <header
-                class="flex h-12 shrink-0 items-center gap-2 border-b px-4"
-              >
-                <ContextMenu.Root>
-                  <ContextMenu.Trigger class="min-w-0 flex-1">
-                    <div
-                      class="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium"
-                    >
-                      <span class="truncate">{open_note_title}</span>
-                      {#if stores.editor.open_note?.is_dirty}
-                        <Circle class="h-2 w-2 shrink-0 fill-current" />
-                      {/if}
-                    </div>
-                  </ContextMenu.Trigger>
-                  <ContextMenu.Portal>
-                    <ContextMenu.Content>
-                      <ContextMenu.Item
-                        disabled={!stores.editor.open_note}
-                        onclick={() =>
-                          void action_registry.execute(
-                            ACTION_IDS.note_copy_markdown,
-                          )}
-                      >
-                        <Copy class="mr-2 h-4 w-4" />
-                        <span>Copy Markdown</span>
-                      </ContextMenu.Item>
-                      {#if is_persisted_note}
-                        <ContextMenu.Separator />
-                        <ContextMenu.Item
-                          onclick={() => {
-                            const note_path =
-                              stores.editor.open_note?.meta.path;
-                            if (!note_path) {
-                              return;
-                            }
-                            void action_registry.execute(
-                              ACTION_IDS.note_toggle_star,
-                              note_path,
-                            );
-                          }}
-                        >
-                          <Star class="mr-2 h-4 w-4" />
-                          <span>
-                            {stores.notes.is_starred_path(
-                              stores.editor.open_note?.meta.path ?? "",
-                            )
-                              ? "Unstar"
-                              : "Star"}
-                          </span>
-                        </ContextMenu.Item>
-                        <ContextMenu.Separator />
-                        <ContextMenu.Item
-                          onclick={() =>
-                            void action_registry.execute(
-                              ACTION_IDS.note_request_rename,
-                              stores.editor.open_note?.meta,
-                            )}
-                        >
-                          <Pencil class="mr-2 h-4 w-4" />
-                          <span>Rename</span>
-                        </ContextMenu.Item>
-                        <ContextMenu.Item
-                          class="text-destructive"
-                          onclick={() =>
-                            void action_registry.execute(
-                              ACTION_IDS.note_request_delete,
-                              stores.editor.open_note?.meta,
-                            )}
-                        >
-                          <Trash2 class="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </ContextMenu.Item>
-                      {/if}
-                    </ContextMenu.Content>
-                  </ContextMenu.Portal>
-                </ContextMenu.Root>
-                <div class="shrink-0">
-                  <ThemeToggle
-                    mode={stores.ui.theme}
-                    on_change={handle_theme_change}
-                  />
-                </div>
-              </header>
+              <TabBar />
               <div class="flex min-h-0 flex-1 flex-col">
                 <FindInFileBar
                   open={stores.ui.find_in_file.open}
@@ -741,9 +643,12 @@
       has_note={!!stores.editor.open_note}
       index_progress={stores.search.index_progress}
       vault_name={stores.vault.vault?.name ?? null}
+      theme_mode={stores.ui.theme}
       on_vault_click={() =>
         void action_registry.execute(ACTION_IDS.vault_request_change)}
       on_info_click={() => (details_dialog_open = true)}
+      on_theme_change={(mode) =>
+        void action_registry.execute(ACTION_IDS.ui_set_theme, mode)}
     />
   </div>
 

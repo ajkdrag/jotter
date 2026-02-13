@@ -3,6 +3,7 @@ import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
 import {
   as_markdown_text,
   as_note_path,
+  type MarkdownText,
   type NotePath,
   type AssetPath,
   type VaultId,
@@ -503,6 +504,12 @@ export class NoteService {
     this.editor_store.update_open_note_path(target_path);
     this.editor_store.mark_clean(target_path);
     this.notes_store.add_recent_note(written.meta);
+  }
+
+  async write_note_content(note_path: NotePath, markdown: MarkdownText) {
+    const vault = this.vault_store.vault;
+    if (!vault) return;
+    await this.notes_port.write_note(vault.id, note_path, markdown);
   }
 
   private async rename_note_with_overwrite_if_needed(

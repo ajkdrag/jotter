@@ -12,6 +12,7 @@
   import Omnibar from "$lib/components/omnibar.svelte";
   import ImagePasteDialog from "$lib/components/image_paste_dialog.svelte";
   import ConfirmCrossVaultOpenDialog from "$lib/components/confirm_cross_vault_open_dialog.svelte";
+  import TabCloseConfirmDialog from "$lib/components/tab_close_confirm_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem } from "$lib/types/search";
@@ -317,4 +318,14 @@
     void action_registry.execute(ACTION_IDS.omnibar_confirm_cross_vault_open)}
   on_cancel={() =>
     void action_registry.execute(ACTION_IDS.omnibar_cancel_cross_vault_open)}
+/>
+
+<TabCloseConfirmDialog
+  open={stores.ui.tab_close_confirm.open}
+  tab_title={stores.ui.tab_close_confirm.tab_title}
+  on_save={() =>
+    void action_registry.execute(ACTION_IDS.tab_confirm_close_save)}
+  on_discard={() =>
+    void action_registry.execute(ACTION_IDS.tab_confirm_close_discard)}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.tab_cancel_close)}
 />
