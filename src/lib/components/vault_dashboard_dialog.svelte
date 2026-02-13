@@ -249,6 +249,8 @@
     flex-direction: column;
     gap: var(--space-4);
     padding: var(--space-2) 0;
+    overflow: hidden;
+    min-width: 0;
   }
 
   :global(.VaultDashboard__title) {
@@ -265,6 +267,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    min-width: 0;
   }
 
   .VaultDashboard__section-header {
@@ -329,6 +332,7 @@
     align-items: center;
     gap: var(--space-2);
     width: 100%;
+    min-width: 0;
     padding: var(--space-1-5) var(--space-2);
     border-radius: var(--radius);
     background: transparent;
