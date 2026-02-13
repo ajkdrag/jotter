@@ -11,6 +11,7 @@ import {
   store_vault,
   get_vault,
   list_vaults as list_stored_vaults,
+  remove_vault as remove_stored_vault,
 } from "./storage";
 
 const LAST_VAULT_KEY = "jotter_last_vault_id";
@@ -243,6 +244,13 @@ export function create_vault_web_adapter(): VaultPort {
         note_count: r.note_count,
         is_available: true,
       }));
+    },
+
+    async remove_vault(vault_id: VaultId): Promise<void> {
+      await remove_stored_vault(vault_id);
+      if (localStorage.getItem(LAST_VAULT_KEY) === vault_id) {
+        localStorage.removeItem(LAST_VAULT_KEY);
+      }
     },
 
     remember_last_vault(vault_id: VaultId): Promise<void> {

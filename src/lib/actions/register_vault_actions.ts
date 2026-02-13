@@ -220,6 +220,22 @@ export function register_vault_actions(input: ActionRegistrationInput) {
   });
 
   registry.register({
+    id: ACTION_IDS.vault_remove_from_registry,
+    label: "Remove Vault From Registry",
+    execute: async (vault_id: unknown) => {
+      if (typeof vault_id !== "string") {
+        return;
+      }
+      const result = await services.vault.remove_vault_from_registry(
+        vault_id as VaultId,
+      );
+      if (result.status === "failed") {
+        toast.error(result.error);
+      }
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.vault_toggle_pin,
     label: "Toggle Vault Pin",
     execute: async (vault_id: unknown) => {

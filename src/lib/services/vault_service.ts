@@ -234,6 +234,38 @@ export class VaultService {
     return this.change_vault_by_id(vault_id);
   }
 
+  async remove_vault_from_registry(
+    vault_id: VaultId,
+  ): Promise<{ status: "success" } | { status: "failed"; error: string }> {
+    if (this.vault_store.vault?.id === vault_id) {
+      return { status: "failed", error: "Cannot remove active vault" };
+    }
+
+    const previous_recent_vaults = [...this.vault_store.recent_vaults];
+    const previous_pinned_vault_ids = [...this.vault_store.pinned_vault_ids];
+    this.op_store.start("vault.remove", this.now_ms());
+
+    try {
+      await this.vault_port.remove_vault(vault_id);
+      const [recent_vaults, pinned_vault_ids] = await Promise.all([
+        this.vault_port.list_vaults(),
+        this.load_pinned_vault_ids(),
+      ]);
+      this.vault_store.set_recent_vaults(recent_vaults);
+      this.vault_store.set_pinned_vault_ids(pinned_vault_ids);
+      await this.save_pinned_vault_ids(this.vault_store.pinned_vault_ids);
+      this.op_store.succeed("vault.remove");
+      return { status: "success" };
+    } catch (error) {
+      this.vault_store.set_recent_vaults(previous_recent_vaults);
+      this.vault_store.set_pinned_vault_ids(previous_pinned_vault_ids);
+      const message = error_message(error);
+      logger.error(`Remove vault from registry failed: ${message}`);
+      this.op_store.fail("vault.remove", message);
+      return { status: "failed", error: message };
+    }
+  }
+
   async rebuild_index(): Promise<
     | { status: "started" }
     | { status: "skipped" }

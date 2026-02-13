@@ -164,10 +164,26 @@ pub struct RememberLastArgs {
     pub vault_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RemoveVaultArgs {
+    pub vault_id: String,
+}
+
 #[tauri::command]
 pub fn remember_last_vault(app: AppHandle, args: RememberLastArgs) -> Result<(), String> {
     let mut store = storage::load_store(&app)?;
     store.last_vault_id = Some(args.vault_id);
+    storage::save_store(&app, &store)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_vault_from_registry(app: AppHandle, args: RemoveVaultArgs) -> Result<(), String> {
+    let mut store = storage::load_store(&app)?;
+    store.vaults.retain(|entry| entry.vault.id != args.vault_id);
+    if store.last_vault_id.as_deref() == Some(args.vault_id.as_str()) {
+        store.last_vault_id = None;
+    }
     storage::save_store(&app, &store)?;
     Ok(())
 }

@@ -15,6 +15,7 @@
     on_choose_vault_dir: () => void;
     on_select_vault: (vault_id: VaultId) => void;
     on_toggle_pin_vault: (vault_id: VaultId) => void;
+    on_remove_vault: (vault_id: VaultId) => void;
     hide_choose_vault_button?: boolean;
   }
 
@@ -29,6 +30,7 @@
     on_choose_vault_dir,
     on_select_vault,
     on_toggle_pin_vault,
+    on_remove_vault,
     hide_choose_vault_button = false,
   }: Props = $props();
 </script>
@@ -45,6 +47,7 @@
       {on_choose_vault_dir}
       {on_select_vault}
       {on_toggle_pin_vault}
+      {on_remove_vault}
       on_close={() => {
         on_open_change(false);
       }}

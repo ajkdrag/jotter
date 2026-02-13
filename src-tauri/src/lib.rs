@@ -33,6 +33,7 @@ pub fn run() {
             vault_service::open_vault,
             vault_service::open_vault_by_id,
             vault_service::list_vaults,
+            vault_service::remove_vault_from_registry,
             vault_service::remember_last_vault,
             vault_service::get_last_vault_id,
             watcher_service::watch_vault,

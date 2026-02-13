@@ -10,7 +10,7 @@
     clamp_vault_selection,
     move_vault_selection,
   } from "$lib/domain/vault_switcher";
-  import { Plus, Check, Star, X } from "@lucide/svelte";
+  import { Plus, Check, Star, Trash2, X } from "@lucide/svelte";
 
   interface Props {
     recent_vaults: Vault[];
@@ -21,6 +21,7 @@
     on_choose_vault_dir: () => void;
     on_select_vault: (vault_id: VaultId) => void;
     on_toggle_pin_vault: (vault_id: VaultId) => void;
+    on_remove_vault: (vault_id: VaultId) => void;
     on_close?: () => void;
     is_dialog?: boolean;
     hide_choose_vault_button?: boolean;
@@ -35,6 +36,7 @@
     on_choose_vault_dir,
     on_select_vault,
     on_toggle_pin_vault,
+    on_remove_vault,
     on_close,
     is_dialog = false,
     hide_choose_vault_button = false,
@@ -75,6 +77,12 @@
     event.stopPropagation();
     event.preventDefault();
     on_toggle_pin_vault(vault_id);
+  }
+
+  function handle_remove_vault(vault_id: VaultId, event: MouseEvent) {
+    event.stopPropagation();
+    event.preventDefault();
+    on_remove_vault(vault_id);
   }
 
   function open_selected_vault() {
@@ -294,6 +302,17 @@
                   : "Pin vault"}
               >
                 <Star />
+              </button>
+              <button
+                type="button"
+                class="VaultPanel__pin-btn"
+                onclick={(event) => {
+                  handle_remove_vault(vault.id, event);
+                }}
+                disabled={is_loading || current_vault_id === vault.id}
+                aria-label="Remove vault from list"
+              >
+                <Trash2 />
               </button>
               {#if current_vault_id === vault.id}
                 <Check class="VaultPanel__check-icon" />

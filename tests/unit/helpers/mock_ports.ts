@@ -49,6 +49,10 @@ export function create_mock_vault_port(): VaultPort & {
     list_vaults() {
       return Promise.resolve(mock._mock_vaults);
     },
+    remove_vault(vault_id: VaultId) {
+      mock._mock_vaults = mock._mock_vaults.filter((v) => v.id !== vault_id);
+      return Promise.resolve();
+    },
     remember_last_vault(_vault_id: VaultId) {
       return Promise.resolve();
     },

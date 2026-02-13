@@ -830,4 +830,152 @@ describe("VaultService", () => {
       vi.useRealTimers();
     }
   });
+
+  it("removes non-active vault from registry and prunes pinned state", async () => {
+    const vault_a: Vault = {
+      id: as_vault_id("vault-a"),
+      name: "Vault A",
+      path: as_vault_path("/vault/a"),
+      created_at: 1,
+    };
+    const vault_b: Vault = {
+      id: as_vault_id("vault-b"),
+      name: "Vault B",
+      path: as_vault_path("/vault/b"),
+      created_at: 1,
+    };
+
+    const vault_port = {
+      choose_vault: vi.fn(),
+      open_vault: vi.fn(),
+      open_vault_by_id: vi.fn(),
+      list_vaults: vi.fn().mockResolvedValue([vault_a]),
+      remove_vault: vi.fn().mockResolvedValue(undefined),
+      remember_last_vault: vi.fn(),
+      get_last_vault_id: vi.fn(),
+    };
+
+    const settings_port = {
+      get_setting: vi.fn().mockResolvedValue([vault_b.id]),
+      set_setting: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_vault(vault_a);
+    vault_store.set_recent_vaults([vault_a, vault_b]);
+    vault_store.set_pinned_vault_ids([vault_b.id]);
+
+    const service = new VaultService(
+      vault_port as never,
+      { list_folder_contents: vi.fn() } as never,
+      {
+        touch_index: vi.fn(),
+        cancel_index: vi.fn(),
+        sync_index: vi.fn(),
+        rebuild_index: vi.fn(),
+        upsert_note: vi.fn(),
+        remove_note: vi.fn(),
+        remove_notes: vi.fn(),
+        remove_notes_by_prefix: vi.fn(),
+        rename_folder_paths: vi.fn(),
+        subscribe_index_progress: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        watch_vault: vi.fn(),
+        unwatch_vault: vi.fn(),
+        subscribe_fs_events: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      settings_port as never,
+      {
+        get_vault_setting: vi.fn(),
+        set_vault_setting: vi.fn(),
+        delete_vault_setting: vi.fn(),
+      } as never,
+      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+      vault_store,
+      new NotesStore(),
+      new EditorStore(),
+      new OpStore(),
+      new SearchStore(),
+      () => 1,
+    );
+
+    const result = await service.remove_vault_from_registry(vault_b.id);
+
+    expect(result).toEqual({ status: "success" });
+    expect(vault_port.remove_vault).toHaveBeenCalledWith(vault_b.id);
+    expect(vault_store.recent_vaults.map((vault) => vault.id)).toEqual([
+      vault_a.id,
+    ]);
+    expect(vault_store.pinned_vault_ids).toEqual([]);
+    expect(settings_port.set_setting).toHaveBeenLastCalledWith(
+      "pinned_vault_ids",
+      [],
+    );
+  });
+
+  it("blocks removing the active vault from registry", async () => {
+    const vault_a: Vault = {
+      id: as_vault_id("vault-a"),
+      name: "Vault A",
+      path: as_vault_path("/vault/a"),
+      created_at: 1,
+    };
+
+    const vault_port = {
+      choose_vault: vi.fn(),
+      open_vault: vi.fn(),
+      open_vault_by_id: vi.fn(),
+      list_vaults: vi.fn(),
+      remove_vault: vi.fn(),
+      remember_last_vault: vi.fn(),
+      get_last_vault_id: vi.fn(),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_vault(vault_a);
+
+    const service = new VaultService(
+      vault_port as never,
+      { list_folder_contents: vi.fn() } as never,
+      {
+        touch_index: vi.fn(),
+        cancel_index: vi.fn(),
+        sync_index: vi.fn(),
+        rebuild_index: vi.fn(),
+        upsert_note: vi.fn(),
+        remove_note: vi.fn(),
+        remove_notes: vi.fn(),
+        remove_notes_by_prefix: vi.fn(),
+        rename_folder_paths: vi.fn(),
+        subscribe_index_progress: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        watch_vault: vi.fn(),
+        unwatch_vault: vi.fn(),
+        subscribe_fs_events: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      { get_setting: vi.fn(), set_setting: vi.fn() } as never,
+      {
+        get_vault_setting: vi.fn(),
+        set_vault_setting: vi.fn(),
+        delete_vault_setting: vi.fn(),
+      } as never,
+      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+      vault_store,
+      new NotesStore(),
+      new EditorStore(),
+      new OpStore(),
+      new SearchStore(),
+      () => 1,
+    );
+
+    const result = await service.remove_vault_from_registry(vault_a.id);
+
+    expect(result).toEqual({
+      status: "failed",
+      error: "Cannot remove active vault",
+    });
+    expect(vault_port.remove_vault).not.toHaveBeenCalled();
+  });
 });

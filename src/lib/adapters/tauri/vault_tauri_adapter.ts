@@ -18,6 +18,11 @@ export function create_vault_tauri_adapter(): VaultPort {
     async list_vaults() {
       return await tauri_invoke<Vault[]>("list_vaults");
     },
+    async remove_vault(vault_id: VaultId) {
+      await tauri_invoke<undefined>("remove_vault_from_registry", {
+        args: { vault_id: vault_id },
+      });
+    },
     async remember_last_vault(vault_id: VaultId) {
       await tauri_invoke<undefined>("remember_last_vault", {
         args: { vault_id: vault_id },

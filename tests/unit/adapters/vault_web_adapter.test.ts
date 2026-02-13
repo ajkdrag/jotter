@@ -148,4 +148,31 @@ describe("vault_web_adapter", () => {
       },
     ]);
   });
+
+  it("removes vault from storage and clears last vault id", async () => {
+    vi.spyOn(storage, "remove_vault").mockResolvedValue(undefined);
+    const entries = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      writable: true,
+      value: {
+        getItem: (key: string) => entries.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          entries.set(key, value);
+        },
+        removeItem: (key: string) => {
+          entries.delete(key);
+        },
+      },
+    });
+    localStorage.setItem("jotter_last_vault_id", "web_existing");
+
+    const adapter = create_vault_web_adapter();
+    await adapter.remove_vault(as_vault_id("web_existing"));
+
+    expect(storage.remove_vault).toHaveBeenCalledWith(
+      as_vault_id("web_existing"),
+    );
+    expect(localStorage.getItem("jotter_last_vault_id")).toBeNull();
+  });
 });

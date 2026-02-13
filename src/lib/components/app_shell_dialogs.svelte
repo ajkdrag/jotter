@@ -90,6 +90,11 @@
       void action_registry.execute(ACTION_IDS.vault_select, vault_id)}
     on_toggle_pin_vault={(vault_id: VaultId) =>
       void action_registry.execute(ACTION_IDS.vault_toggle_pin, vault_id)}
+    on_remove_vault={(vault_id: VaultId) =>
+      void action_registry.execute(
+        ACTION_IDS.vault_remove_from_registry,
+        vault_id,
+      )}
     {hide_choose_vault_button}
   />
 {/if}

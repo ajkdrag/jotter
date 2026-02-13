@@ -34,6 +34,7 @@ function create_vault_actions_harness() {
         error: "switch blocked",
       }),
       select_pinned_vault_by_slot: vi.fn(),
+      remove_vault_from_registry: vi.fn(),
       toggle_vault_pin: vi.fn(),
       rebuild_index: vi.fn(),
       reset_change_operation: vi.fn(),

@@ -36,6 +36,7 @@ export const ACTION_IDS = {
   vault_confirm_discard_change: "vault.confirm_discard_change",
   vault_cancel_discard_change: "vault.cancel_discard_change",
   vault_select_pinned_slot: "vault.select_pinned_slot",
+  vault_remove_from_registry: "vault.remove_from_registry",
   vault_toggle_pin: "vault.toggle_pin",
   vault_reindex: "vault.reindex",
 

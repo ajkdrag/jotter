@@ -19,6 +19,25 @@ const LAST_VAULT_KEY = "jotter_test_last_vault_id";
 
 export function create_test_vault_adapter(): VaultPort {
   let last_vault_id: VaultId | null = null;
+  const vault_a: Vault = {
+    id: TEST_VAULT_ID,
+    path: TEST_VAULT_PATH,
+    name: TEST_VAULT_NAME,
+    created_at: Date.now(),
+    last_opened_at: Date.now(),
+    note_count: 12,
+    is_available: true,
+  };
+  const vault_b: Vault = {
+    id: TEST_VAULT_2_ID,
+    path: TEST_VAULT_2_PATH,
+    name: TEST_VAULT_2_NAME,
+    created_at: Date.now(),
+    last_opened_at: Date.now(),
+    note_count: 8,
+    is_available: true,
+  };
+  const vaults: Vault[] = [vault_a, vault_b];
 
   return {
     choose_vault(): Promise<VaultPath | null> {
@@ -28,25 +47,17 @@ export function create_test_vault_adapter(): VaultPort {
     open_vault(vault_path: VaultPath): Promise<Vault> {
       if (vault_path === TEST_VAULT_PATH) {
         return Promise.resolve({
-          id: TEST_VAULT_ID,
-          path: TEST_VAULT_PATH,
-          name: TEST_VAULT_NAME,
+          ...vault_a,
           created_at: Date.now(),
           last_opened_at: Date.now(),
-          note_count: 12,
-          is_available: true,
         });
       }
 
       if (vault_path === TEST_VAULT_2_PATH) {
         return Promise.resolve({
-          id: TEST_VAULT_2_ID,
-          path: TEST_VAULT_2_PATH,
-          name: TEST_VAULT_2_NAME,
+          ...vault_b,
           created_at: Date.now(),
           last_opened_at: Date.now(),
-          note_count: 8,
-          is_available: true,
         });
       }
 
@@ -60,25 +71,17 @@ export function create_test_vault_adapter(): VaultPort {
     open_vault_by_id(vault_id: VaultId): Promise<Vault> {
       if (vault_id === TEST_VAULT_ID) {
         return Promise.resolve({
-          id: TEST_VAULT_ID,
-          path: TEST_VAULT_PATH,
-          name: TEST_VAULT_NAME,
+          ...vault_a,
           created_at: Date.now(),
           last_opened_at: Date.now(),
-          note_count: 12,
-          is_available: true,
         });
       }
 
       if (vault_id === TEST_VAULT_2_ID) {
         return Promise.resolve({
-          id: TEST_VAULT_2_ID,
-          path: TEST_VAULT_2_PATH,
-          name: TEST_VAULT_2_NAME,
+          ...vault_b,
           created_at: Date.now(),
           last_opened_at: Date.now(),
-          note_count: 8,
-          is_available: true,
         });
       }
 
@@ -90,26 +93,18 @@ export function create_test_vault_adapter(): VaultPort {
     },
 
     list_vaults(): Promise<Vault[]> {
-      return Promise.resolve([
-        {
-          id: TEST_VAULT_ID,
-          path: TEST_VAULT_PATH,
-          name: TEST_VAULT_NAME,
-          created_at: Date.now(),
-          last_opened_at: Date.now(),
-          note_count: 12,
-          is_available: true,
-        },
-        {
-          id: TEST_VAULT_2_ID,
-          path: TEST_VAULT_2_PATH,
-          name: TEST_VAULT_2_NAME,
-          created_at: Date.now(),
-          last_opened_at: Date.now(),
-          note_count: 8,
-          is_available: true,
-        },
-      ]);
+      return Promise.resolve(vaults);
+    },
+
+    remove_vault(vault_id: VaultId): Promise<void> {
+      const index = vaults.findIndex((vault) => vault.id === vault_id);
+      if (index >= 0) {
+        vaults.splice(index, 1);
+      }
+      if (last_vault_id === vault_id) {
+        last_vault_id = null;
+      }
+      return Promise.resolve();
     },
 
     remember_last_vault(vault_id: VaultId): Promise<void> {
