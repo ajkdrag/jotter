@@ -7,10 +7,12 @@ export function use_keyboard_shortcuts(input: {
   is_enabled: () => boolean;
   is_blocked: () => boolean;
   is_omnibar_open: () => boolean;
+  is_vault_switcher_open: () => boolean;
   on_toggle_omnibar: () => void;
   on_open_omnibar_commands: () => void;
   on_open_omnibar_notes: () => void;
   on_open_vault_switcher: () => void;
+  on_close_vault_switcher: () => void;
   on_select_pinned_vault: (slot: number) => void;
   on_toggle_sidebar: () => void;
   on_toggle_find_in_file: () => void;
@@ -20,10 +22,12 @@ export function use_keyboard_shortcuts(input: {
     is_enabled,
     is_blocked,
     is_omnibar_open,
+    is_vault_switcher_open,
     on_toggle_omnibar,
     on_open_omnibar_commands,
     on_open_omnibar_notes,
     on_open_vault_switcher,
+    on_close_vault_switcher,
     on_select_pinned_vault,
     on_toggle_sidebar,
     on_toggle_find_in_file,
@@ -43,6 +47,15 @@ export function use_keyboard_shortcuts(input: {
   };
 
   const handle_keydown_capture = (event: KeyboardEvent) => {
+    if (is_mod_combo(event, "w")) {
+      if (!is_enabled()) return;
+      if (!is_vault_switcher_open()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      on_close_vault_switcher();
+      return;
+    }
+
     const slot = mod_slot(event);
     if (slot !== null) {
       if (!is_enabled()) return;

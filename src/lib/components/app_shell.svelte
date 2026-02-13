@@ -45,6 +45,7 @@
     is_enabled: () => has_vault,
     is_blocked: () => any_blocking_dialog_open || omnibar_open,
     is_omnibar_open: () => omnibar_open,
+    is_vault_switcher_open: () => stores.ui.change_vault.open,
     on_toggle_omnibar: () => {
       void action_registry.execute(ACTION_IDS.omnibar_toggle);
     },
@@ -57,6 +58,9 @@
     },
     on_open_vault_switcher: () => {
       void action_registry.execute(ACTION_IDS.vault_request_change);
+    },
+    on_close_vault_switcher: () => {
+      void action_registry.execute(ACTION_IDS.vault_close_change);
     },
     on_select_pinned_vault: (slot) => {
       void action_registry.execute(ACTION_IDS.vault_select_pinned_slot, slot);
