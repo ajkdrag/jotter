@@ -181,6 +181,7 @@ export function create_vault_web_adapter(): VaultPort {
         created_at,
         last_opened_at,
         note_count,
+        is_available: true,
       };
     },
 
@@ -227,6 +228,7 @@ export function create_vault_web_adapter(): VaultPort {
         created_at,
         last_opened_at,
         note_count,
+        is_available: true,
       };
     },
 
@@ -239,6 +241,7 @@ export function create_vault_web_adapter(): VaultPort {
         created_at: r.created_at,
         last_opened_at: r.last_accessed,
         note_count: r.note_count,
+        is_available: true,
       }));
     },
 

@@ -264,6 +264,76 @@ describe("VaultService", () => {
     }
   });
 
+  it("returns failure when selecting an unavailable vault by id", async () => {
+    const unavailable_error = "vault unavailable at path: /vault/missing";
+    const vault_a: Vault = {
+      id: as_vault_id("vault-a"),
+      name: "Vault A",
+      path: as_vault_path("/vault/a"),
+      created_at: 1,
+    };
+
+    const vault_port = {
+      choose_vault: vi.fn(),
+      open_vault: vi.fn(),
+      open_vault_by_id: vi.fn().mockRejectedValue(new Error(unavailable_error)),
+      list_vaults: vi.fn().mockResolvedValue([vault_a]),
+      remember_last_vault: vi.fn(),
+      get_last_vault_id: vi.fn(),
+    };
+
+    const service = new VaultService(
+      vault_port as never,
+      {
+        list_folder_contents: vi.fn().mockResolvedValue({
+          notes: [],
+          subfolders: [],
+          total_count: 0,
+          has_more: false,
+        }),
+      } as never,
+      {
+        touch_index: vi.fn(),
+        cancel_index: vi.fn(),
+        sync_index: vi.fn(),
+        rebuild_index: vi.fn(),
+        upsert_note: vi.fn(),
+        remove_note: vi.fn(),
+        remove_notes: vi.fn(),
+        remove_notes_by_prefix: vi.fn(),
+        rename_folder_paths: vi.fn(),
+        subscribe_index_progress: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        watch_vault: vi.fn(),
+        unwatch_vault: vi.fn(),
+        subscribe_fs_events: vi.fn().mockReturnValue(() => {}),
+      } as never,
+      {
+        get_setting: vi.fn().mockResolvedValue(null),
+        set_setting: vi.fn(),
+      } as never,
+      {
+        get_vault_setting: vi.fn().mockResolvedValue(null),
+        set_vault_setting: vi.fn().mockResolvedValue(undefined),
+        delete_vault_setting: vi.fn(),
+      } as never,
+      {
+        get_theme: vi.fn().mockReturnValue("system"),
+        set_theme: vi.fn(),
+      } as never,
+      new VaultStore(),
+      new NotesStore(),
+      new EditorStore(),
+      new OpStore(),
+      new SearchStore(),
+      () => 1,
+    );
+
+    const result = await service.change_vault_by_id(vault_a.id);
+    expect(result).toEqual({ status: "failed", error: unavailable_error });
+  });
+
   it("saves starred paths to vault settings", async () => {
     const vault_id = as_vault_id("vault-a");
 

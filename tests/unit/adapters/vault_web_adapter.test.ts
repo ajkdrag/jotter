@@ -77,6 +77,7 @@ describe("vault_web_adapter", () => {
     );
     expect(vault.last_opened_at).toBeTypeOf("number");
     expect(vault.note_count).toBeNull();
+    expect(vault.is_available).toBe(true);
   });
 
   it("creates a new vault identity when no stored vault matches", async () => {
@@ -113,6 +114,7 @@ describe("vault_web_adapter", () => {
     );
     expect(vault.last_opened_at).toBeTypeOf("number");
     expect(vault.note_count).toBeNull();
+    expect(vault.is_available).toBe(true);
   });
 
   it("maps last opened and note count from storage", async () => {
@@ -142,6 +144,7 @@ describe("vault_web_adapter", () => {
         created_at: 1234,
         last_opened_at: 4321,
         note_count: 7,
+        is_available: true,
       },
     ]);
   });

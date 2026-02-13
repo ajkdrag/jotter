@@ -65,6 +65,9 @@
       event.stopPropagation();
       event.preventDefault();
     }
+    if (!is_vault_available(vault)) {
+      return;
+    }
     on_select_vault(vault.id);
   }
 
@@ -82,7 +85,11 @@
     if (!selected_vault) {
       return;
     }
-    if (is_loading || selected_vault.id === current_vault_id) {
+    if (
+      is_loading ||
+      selected_vault.id === current_vault_id ||
+      !is_vault_available(selected_vault)
+    ) {
       return;
     }
     on_select_vault(selected_vault.id);
@@ -139,6 +146,10 @@
     }
     const suffix = vault.note_count === 1 ? "note" : "notes";
     return `${vault.note_count} ${suffix}`;
+  }
+
+  function is_vault_available(vault: Vault): boolean {
+    return vault.is_available !== false;
   }
 </script>
 
@@ -228,7 +239,12 @@
             class:VaultPanel__vault-item--active={current_vault_id === vault.id}
             class:VaultPanel__vault-item--highlighted={index ===
               selected_vault_index}
-            data-disabled={is_loading || current_vault_id === vault.id}
+            class:VaultPanel__vault-item--unavailable={!is_vault_available(
+              vault,
+            )}
+            data-disabled={is_loading ||
+              current_vault_id === vault.id ||
+              !is_vault_available(vault)}
           >
             <button
               type="button"
@@ -238,7 +254,9 @@
               onmouseenter={() => {
                 selected_vault_index = index;
               }}
-              disabled={is_loading || current_vault_id === vault.id}
+              disabled={is_loading ||
+                current_vault_id === vault.id ||
+                !is_vault_available(vault)}
               class="VaultPanel__vault-select-btn"
             >
               <div class="VaultPanel__vault-info">
@@ -247,10 +265,16 @@
                   {format_path(vault.path)}
                 </div>
                 <div class="VaultPanel__vault-meta">
-                  <span>Opened {format_last_opened(vault)}</span>
-                  <span class="VaultPanel__vault-count">
-                    {format_note_count(vault)}
-                  </span>
+                  {#if is_vault_available(vault)}
+                    <span>Opened {format_last_opened(vault)}</span>
+                    <span class="VaultPanel__vault-count">
+                      {format_note_count(vault)}
+                    </span>
+                  {:else}
+                    <span class="VaultPanel__vault-unavailable">
+                      Unavailable
+                    </span>
+                  {/if}
                 </div>
               </div>
             </button>
@@ -357,6 +381,10 @@
   .VaultPanel__vault-item[data-disabled="true"] {
     cursor: default;
     opacity: 0.6;
+  }
+
+  .VaultPanel__vault-item--unavailable {
+    border-style: dashed;
   }
 
   .VaultPanel__vault-item--active {
@@ -475,6 +503,11 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 0 var(--space-1-5);
+  }
+
+  .VaultPanel__vault-unavailable {
+    color: var(--destructive);
+    font-weight: 500;
   }
 
   :global(.VaultPanel__check-icon) {

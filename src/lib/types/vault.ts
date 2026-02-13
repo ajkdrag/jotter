@@ -7,4 +7,5 @@ export type Vault = {
   created_at: number;
   last_opened_at?: number | null;
   note_count?: number | null;
+  is_available?: boolean;
 };

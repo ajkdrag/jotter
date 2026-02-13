@@ -34,6 +34,7 @@ export function create_test_vault_adapter(): VaultPort {
           created_at: Date.now(),
           last_opened_at: Date.now(),
           note_count: 12,
+          is_available: true,
         });
       }
 
@@ -45,6 +46,7 @@ export function create_test_vault_adapter(): VaultPort {
           created_at: Date.now(),
           last_opened_at: Date.now(),
           note_count: 8,
+          is_available: true,
         });
       }
 
@@ -64,6 +66,7 @@ export function create_test_vault_adapter(): VaultPort {
           created_at: Date.now(),
           last_opened_at: Date.now(),
           note_count: 12,
+          is_available: true,
         });
       }
 
@@ -75,6 +78,7 @@ export function create_test_vault_adapter(): VaultPort {
           created_at: Date.now(),
           last_opened_at: Date.now(),
           note_count: 8,
+          is_available: true,
         });
       }
 
@@ -94,6 +98,7 @@ export function create_test_vault_adapter(): VaultPort {
           created_at: Date.now(),
           last_opened_at: Date.now(),
           note_count: 12,
+          is_available: true,
         },
         {
           id: TEST_VAULT_2_ID,
@@ -102,6 +107,7 @@ export function create_test_vault_adapter(): VaultPort {
           created_at: Date.now(),
           last_opened_at: Date.now(),
           note_count: 8,
+          is_available: true,
         },
       ]);
     },

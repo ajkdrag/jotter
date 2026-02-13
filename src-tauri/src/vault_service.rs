@@ -18,6 +18,12 @@ fn vault_name(path: &str) -> String {
         .to_string()
 }
 
+fn is_vault_path_available(path: &str) -> bool {
+    std::fs::metadata(path)
+        .map(|metadata| metadata.is_dir())
+        .unwrap_or(false)
+}
+
 fn load_note_count(app: &AppHandle, vault_id: &str) -> Option<u64> {
     match crate::notes_service::list_notes(app.clone(), vault_id.to_string()) {
         Ok(notes) => Some(notes.len() as u64),
@@ -91,6 +97,7 @@ pub fn open_vault(app: AppHandle, args: OpenVaultArgs) -> Result<Vault, String> 
         created_at,
         last_opened_at: Some(storage::now_ms()),
         note_count,
+        is_available: true,
     };
 
     upsert_vault(&mut store, vault.clone());
@@ -113,6 +120,14 @@ pub fn open_vault_by_id(app: AppHandle, vault_id: String) -> Result<Vault, Strin
             "vault not found".to_string()
         })?;
 
+    entry.vault.is_available = is_vault_path_available(&entry.vault.path);
+    if !entry.vault.is_available {
+        let message = format!("vault unavailable at path: {}", entry.vault.path);
+        log::warn!("Open vault by id skipped: {}", message);
+        storage::save_store(&app, &store)?;
+        return Err(message);
+    }
+
     entry.last_opened_at = now;
     entry.vault.last_opened_at = Some(now);
     if note_count.is_some() {
@@ -131,8 +146,9 @@ pub fn list_vaults(app: AppHandle) -> Result<Vec<Vault>, String> {
         .sort_by(|a, b| b.last_opened_at.cmp(&a.last_opened_at));
     let vaults = store
         .vaults
-        .iter()
+        .iter_mut()
         .map(|entry| {
+            entry.vault.is_available = is_vault_path_available(&entry.vault.path);
             let mut vault = entry.vault.clone();
             if vault.last_opened_at.is_none() {
                 vault.last_opened_at = Some(entry.last_opened_at);

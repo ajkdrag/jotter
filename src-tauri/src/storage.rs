@@ -4,6 +4,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, Manager};
 
+fn default_is_available() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vault {
     pub id: String,
@@ -14,6 +18,8 @@ pub struct Vault {
     pub last_opened_at: Option<i64>,
     #[serde(default)]
     pub note_count: Option<u64>,
+    #[serde(default = "default_is_available")]
+    pub is_available: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
