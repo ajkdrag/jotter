@@ -8,6 +8,7 @@
   import { format_relative_time } from "$lib/utils/relative_time";
   import {
     clamp_vault_selection,
+    duplicate_vault_names,
     move_vault_selection,
   } from "$lib/domain/vault_switcher";
   import { Plus, Check, Star, Trash2, X } from "@lucide/svelte";
@@ -46,6 +47,7 @@
   const filtered_recent_vaults = $derived(
     search_vaults(recent_vaults, vault_query),
   );
+  const duplicate_names = $derived(duplicate_vault_names(recent_vaults));
 
   $effect(() => {
     selected_vault_index = clamp_vault_selection(
@@ -133,7 +135,10 @@
     }
   }
 
-  function format_path(path: string): string {
+  function format_path(path: string, vault_name: string): string {
+    if (duplicate_names.has(vault_name)) {
+      return path;
+    }
     const parts = path.split(/[/\\\\]/);
     if (parts.length > 3) {
       return `.../${parts.slice(-2).join("/")}`;
@@ -269,8 +274,13 @@
             >
               <div class="VaultPanel__vault-info">
                 <div class="VaultPanel__vault-name">{vault.name}</div>
-                <div class="VaultPanel__vault-path">
-                  {format_path(vault.path)}
+                <div
+                  class="VaultPanel__vault-path"
+                  class:VaultPanel__vault-path--disambiguated={duplicate_names.has(
+                    vault.name,
+                  )}
+                >
+                  {format_path(vault.path, vault.name)}
                 </div>
                 <div class="VaultPanel__vault-meta">
                   {#if is_vault_available(vault)}
@@ -505,6 +515,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .VaultPanel__vault-path--disambiguated {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    word-break: break-all;
   }
 
   .VaultPanel__vault-meta {
