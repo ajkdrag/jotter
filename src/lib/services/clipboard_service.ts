@@ -2,7 +2,9 @@ import type { ClipboardPort } from "$lib/ports/clipboard_port";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("clipboard_service");
 
 export class ClipboardService {
   constructor(
@@ -23,7 +25,7 @@ export class ClipboardService {
       this.op_store.succeed("clipboard.write");
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Copy markdown failed: ${message}`);
+      log.error("Copy markdown failed", { error: message });
       this.op_store.fail("clipboard.write", message);
     }
   }

@@ -7,9 +7,10 @@ import type {
   FolderLoadState,
   FolderPaginationState,
 } from "$lib/types/filetree";
-import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
 import { parent_folder_path } from "$lib/utils/path";
+
+const log = create_logger("folder_actions");
 
 function should_load_folder(state: FolderLoadState | undefined): boolean {
   return !state || state === "unloaded" || state === "error";
@@ -459,9 +460,10 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       void services.folder
         .remove_notes_by_prefix(folder_prefix)
         .catch((err: unknown) => {
-          logger.error(
-            `Background index cleanup failed for ${folder_path}: ${error_message(err)}`,
-          );
+          log.error("Background index cleanup failed", {
+            folder_path,
+            error: err,
+          });
         });
     }
   }
@@ -572,14 +574,13 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       void services.folder
         .rename_folder_index(old_prefix, new_prefix)
         .catch((err: unknown) => {
-          logger.error(
-            `Background index rename failed for ${folder_path}: ${error_message(err)}`,
-          );
+          log.error("Background index rename failed", {
+            folder_path,
+            error: err,
+          });
         });
     } catch (err) {
-      logger.error(
-        `Unexpected rename flow failure for ${folder_path}: ${error_message(err)}`,
-      );
+      log.error("Unexpected rename flow failure", { folder_path, error: err });
     }
   }
 

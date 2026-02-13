@@ -31,11 +31,13 @@ import type {
 } from "$lib/types/vault_service_result";
 import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
 import type { ThemeMode } from "$lib/types/theme";
 import { PAGE_SIZE } from "$lib/constants/pagination";
 import type { IndexChange } from "$lib/ports/workspace_index_port";
 import type { VaultFsEvent } from "$lib/types/watcher";
+
+const log = create_logger("vault_service");
 
 export type AppMountConfig = {
   reset_app_state: boolean;
@@ -128,7 +130,7 @@ export class VaultService {
       };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`App startup failed: ${message}`);
+      log.error("App startup failed", { error: message });
       this.op_store.fail("app.startup", message);
       return {
         status: "error",
@@ -189,7 +191,7 @@ export class VaultService {
       return { status: "success" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Set theme failed: ${message}`);
+      log.error("Set theme failed", { error: message });
       this.op_store.fail("theme.set", message);
       return {
         status: "failed",
@@ -219,7 +221,7 @@ export class VaultService {
     } catch (error) {
       this.vault_store.set_pinned_vault_ids(previous_pinned_ids);
       const message = error_message(error);
-      logger.error(`Toggle vault pin failed: ${message}`);
+      log.error("Toggle vault pin failed", { error: message });
       this.op_store.fail("vault.pin", message);
       return { status: "failed", error: message };
     }
@@ -261,7 +263,7 @@ export class VaultService {
       this.vault_store.set_recent_vaults(previous_recent_vaults);
       this.vault_store.set_pinned_vault_ids(previous_pinned_vault_ids);
       const message = error_message(error);
-      logger.error(`Remove vault from registry failed: ${message}`);
+      log.error("Remove vault from registry failed", { error: message });
       this.op_store.fail("vault.remove", message);
       return { status: "failed", error: message };
     }
@@ -288,7 +290,7 @@ export class VaultService {
       return { status: "started" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Reindex vault failed: ${message}`);
+      log.error("Reindex vault failed", { error: message });
       this.op_store.fail("vault.reindex", message);
       return {
         status: "failed",
@@ -320,7 +322,7 @@ export class VaultService {
         return { status: "stale" };
       }
       const message = error_message(error);
-      logger.error(`${error_label}: ${message}`);
+      log.error(error_label, { error: message });
       this.op_store.fail("vault.change", message);
       return { status: "failed", error: message };
     }
@@ -343,7 +345,7 @@ export class VaultService {
     try {
       await this.watcher_port.unwatch_vault();
     } catch (error) {
-      logger.error(`Unwatch vault failed: ${error_message(error)}`);
+      log.error("Unwatch vault failed", { error });
     }
     this.throw_if_stale(open_revision);
     await this.vault_port.remember_last_vault(vault.id);
@@ -416,14 +418,14 @@ export class VaultService {
         },
       );
     } catch (error) {
-      logger.error(`Watch vault failed: ${error_message(error)}`);
+      log.error("Watch vault failed", { error });
     }
 
     this.index_port.sync_index(vault.id).catch((e: unknown) => {
       if (!this.is_current_open_revision(event_revision)) {
         return;
       }
-      logger.error(`Background index sync failed: ${error_message(e)}`);
+      log.error("Background index sync failed", { error: e });
     });
 
     return editor_settings;
@@ -482,7 +484,7 @@ export class VaultService {
         recent_notes,
       );
     } catch (error) {
-      logger.error(`Save recent notes failed: ${error_message(error)}`);
+      log.error("Save recent notes failed", { error });
     }
   }
 
@@ -509,7 +511,7 @@ export class VaultService {
       });
       return parsed;
     } catch (error) {
-      logger.error(`Load recent notes failed: ${error_message(error)}`);
+      log.error("Load recent notes failed", { error });
       return [];
     }
   }
@@ -525,7 +527,7 @@ export class VaultService {
         starred_paths,
       );
     } catch (error) {
-      logger.error(`Save starred paths failed: ${error_message(error)}`);
+      log.error("Save starred paths failed", { error });
     }
   }
 
@@ -542,7 +544,7 @@ export class VaultService {
         (entry): entry is string => typeof entry === "string",
       );
     } catch (error) {
-      logger.error(`Load starred paths failed: ${error_message(error)}`);
+      log.error("Load starred paths failed", { error });
       return [];
     }
   }
@@ -562,7 +564,7 @@ export class VaultService {
         .filter((entry): entry is string => typeof entry === "string")
         .map((vault_id) => as_vault_id(vault_id));
     } catch (error) {
-      logger.error(`Load pinned vault IDs failed: ${error_message(error)}`);
+      log.error("Load pinned vault IDs failed", { error });
       return [];
     }
   }
@@ -591,13 +593,13 @@ export class VaultService {
       try {
         await this.index_port.cancel_index(current_vault_id);
       } catch (error) {
-        logger.error(`Cancel index failed: ${error_message(error)}`);
+        log.error("Cancel index failed", { error });
       }
     }
     try {
       await this.watcher_port.unwatch_vault();
     } catch (error) {
-      logger.error(`Unwatch vault failed: ${error_message(error)}`);
+      log.error("Unwatch vault failed", { error });
     }
     return revision;
   }
@@ -764,9 +766,7 @@ export class VaultService {
       if (!this.is_current_open_revision(revision)) {
         return;
       }
-      logger.error(
-        `Watcher-triggered index sync failed: ${error_message(error)}`,
-      );
+      log.error("Watcher-triggered index sync failed", { error });
     }
   }
 

@@ -37,6 +37,9 @@ import {
   to_string,
   to_nullable_string,
 } from "$lib/adapters/shared/coerce";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("search_worker");
 
 const BATCH_SIZE = 100;
 const SQLITE_OPEN_FLAGS =
@@ -603,9 +606,9 @@ async function handle_request(request: SearchWorkerRequest): Promise<void> {
   } catch (error) {
     const message = as_error_message(error);
     if (is_unreachable_runtime_abort(error)) {
-      console.error("search_worker fatal wasm abort", {
+      log.error("Fatal wasm abort", {
         request_type: request.type,
-        message,
+        error,
       });
     }
     post_message({

@@ -9,6 +9,9 @@ import {
 } from "$lib/types/ids";
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
 import type { FolderContents } from "$lib/types/filetree";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("test_notes_adapter");
 
 const TEST_FILES_BASE = "/test/files";
 const TEST_FILES_INDEX = "/test/files/index.json";
@@ -71,7 +74,7 @@ async function discover_test_files(): Promise<string[]> {
       return files;
     }
   } catch (error) {
-    console.warn("Failed to discover test files, using fallback list:", error);
+    log.warn("Failed to discover test files, using fallback list", { error });
   }
   return ["welcome.md", "getting-started.md"];
 }
@@ -104,7 +107,7 @@ async function load_base_files(): Promise<
         });
       }
     } catch (error) {
-      console.warn(`Failed to load test file ${file_name}:`, error);
+      log.warn("Failed to load test file", { file_name, error });
     }
   }
 

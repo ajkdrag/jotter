@@ -1,5 +1,7 @@
 import type { ShellPort } from "$lib/ports/shell_port";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("shell_service");
 
 export class ShellService {
   constructor(private readonly shell_port: ShellPort) {}
@@ -8,7 +10,7 @@ export class ShellService {
     try {
       await this.shell_port.open_url(url);
     } catch (error) {
-      logger.error(`Open URL failed: ${String(error)}`);
+      log.error("Open URL failed", { error });
     }
   }
 }

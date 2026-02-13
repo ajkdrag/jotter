@@ -65,6 +65,7 @@ fn upsert_vault(store: &mut VaultStore, mut vault: Vault) {
 
 #[tauri::command]
 pub fn open_vault(app: AppHandle, args: OpenVaultArgs) -> Result<Vault, String> {
+    log::info!("Opening vault path={}", args.vault_path);
     let vault_path = canonicalize_path(&args.vault_path).map_err(|e| {
         log::error!(
             "Failed to canonicalize vault path {}: {}",
@@ -107,6 +108,7 @@ pub fn open_vault(app: AppHandle, args: OpenVaultArgs) -> Result<Vault, String> 
 
 #[tauri::command]
 pub fn open_vault_by_id(app: AppHandle, vault_id: String) -> Result<Vault, String> {
+    log::info!("Opening vault by id vault_id={}", vault_id);
     let mut store = storage::load_store(&app)?;
     let now = storage::now_ms();
     let note_count = load_note_count(&app, &vault_id);
@@ -140,6 +142,7 @@ pub fn open_vault_by_id(app: AppHandle, vault_id: String) -> Result<Vault, Strin
 
 #[tauri::command]
 pub fn list_vaults(app: AppHandle) -> Result<Vec<Vault>, String> {
+    log::info!("Listing vaults");
     let mut store = storage::load_store(&app)?;
     store
         .vaults
@@ -171,6 +174,7 @@ pub struct RemoveVaultArgs {
 
 #[tauri::command]
 pub fn remember_last_vault(app: AppHandle, args: RememberLastArgs) -> Result<(), String> {
+    log::info!("Remembering last vault vault_id={}", args.vault_id);
     let mut store = storage::load_store(&app)?;
     store.last_vault_id = Some(args.vault_id);
     storage::save_store(&app, &store)?;
@@ -179,6 +183,7 @@ pub fn remember_last_vault(app: AppHandle, args: RememberLastArgs) -> Result<(),
 
 #[tauri::command]
 pub fn remove_vault_from_registry(app: AppHandle, args: RemoveVaultArgs) -> Result<(), String> {
+    log::info!("Removing vault from registry vault_id={}", args.vault_id);
     let mut store = storage::load_store(&app)?;
     store.vaults.retain(|entry| entry.vault.id != args.vault_id);
     if store.last_vault_id.as_deref() == Some(args.vault_id.as_str()) {

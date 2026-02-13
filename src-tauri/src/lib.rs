@@ -13,22 +13,41 @@ include!(concat!(env!("OUT_DIR"), "/icon_stamp.rs"));
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = ICON_STAMP;
+    log::info!("Jotter starting");
+
+    let log_level = if cfg!(debug_assertions) {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Info
+    };
+
+    let mut log_builder = tauri_plugin_log::Builder::new()
+        .level(log_level)
+        .targets([
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                file_name: None,
+            }),
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
+        ]);
+
+    if std::env::var("JOTTER_LOG_FORMAT").as_deref() == Ok("json") {
+        log_builder = log_builder.format(|callback, message, record| {
+            callback.finish(format_args!(
+                r#"{{"level":"{}","target":"{}","message":"{}"}}"#,
+                record.level(),
+                record.target(),
+                message
+            ))
+        });
+    }
+
     tauri::Builder::default()
         .manage(watcher_service::WatcherState::default())
         .manage(index_service::SearchDbState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .targets([
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-                        file_name: None,
-                    }),
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
-                ])
-                .build(),
-        )
+        .plugin(log_builder.build())
         .invoke_handler(tauri::generate_handler![
             vault_service::open_vault,
             vault_service::open_vault_by_id,

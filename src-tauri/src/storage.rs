@@ -53,6 +53,7 @@ pub fn store_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 pub fn load_store(app: &AppHandle) -> Result<VaultStore, String> {
+    log::debug!("Loading vault store");
     let path = store_path(app)?;
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
@@ -69,6 +70,7 @@ pub fn load_store(app: &AppHandle) -> Result<VaultStore, String> {
 }
 
 pub fn save_store(app: &AppHandle, store: &VaultStore) -> Result<(), String> {
+    log::debug!("Saving vault store");
     let path = store_path(app)?;
     let tmp = path.with_extension("json.tmp");
     let bytes = serde_json::to_vec_pretty(store).map_err(|e| e.to_string())?;

@@ -30,7 +30,9 @@ import { note_path_exists } from "$lib/domain/note_path_exists";
 import type { EditorService } from "$lib/services/editor_service";
 import { to_open_note_state, type PastedImagePayload } from "$lib/types/editor";
 import { create_write_queue } from "$lib/utils/write_queue";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("note_service");
 
 export class NoteService {
   private readonly enqueue_write = create_write_queue();
@@ -157,9 +159,10 @@ export class NoteService {
         await this.index_port
           .remove_note(vault_id, resolved_path)
           .catch((cleanup_error: unknown) => {
-            logger.error(
-              `Stale index cleanup failed (${String(resolved_path)}): ${error_message(cleanup_error)}`,
-            );
+            log.error("Stale index cleanup failed", {
+              path: String(resolved_path),
+              error: cleanup_error,
+            });
           });
         this.notes_store.remove_note(resolved_path);
         this.notes_store.remove_recent_note(resolved_path);
@@ -168,7 +171,7 @@ export class NoteService {
       }
 
       const message = error_message(error);
-      logger.error(`Open note failed: ${message}`);
+      log.error("Open note failed", { error: message });
       this.op_store.fail(op_key, message);
       return { status: "failed", error: message };
     }
@@ -219,7 +222,7 @@ export class NoteService {
       };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Write image asset failed: ${message}`);
+      log.error("Write image asset failed", { error: message });
       this.op_store.fail("asset.write", message);
       return {
         status: "failed",
@@ -261,7 +264,7 @@ export class NoteService {
       return { status: "deleted" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Delete note failed: ${message}`);
+      log.error("Delete note failed", { error: message });
       this.op_store.fail("note.delete", message);
       return {
         status: "failed",
@@ -320,7 +323,7 @@ export class NoteService {
         return { status: "conflict" };
       }
       const message = error_message(error);
-      logger.error(`Rename note failed: ${message}`);
+      log.error("Rename note failed", { error: message });
       this.op_store.fail("note.rename", message);
       return {
         status: "failed",
@@ -412,7 +415,7 @@ export class NoteService {
         return { status: "conflict" };
       }
       const message = error_message(error);
-      logger.error(`Save note failed: ${message}`);
+      log.error("Save note failed", { error: message });
       this.finish_save_operation(message);
       return {
         status: "failed",

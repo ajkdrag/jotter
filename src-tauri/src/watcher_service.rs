@@ -61,6 +61,7 @@ pub fn watch_vault(
     state: State<WatcherState>,
     vault_id: String,
 ) -> Result<(), String> {
+    log::info!("Watching vault vault_id={}", vault_id);
     {
         let mut guard = state.inner.lock().map_err(|_| "watcher lock poisoned")?;
         if let Some(rt) = guard.take() {
@@ -171,6 +172,7 @@ pub fn watch_vault(
 
 #[tauri::command]
 pub fn unwatch_vault(state: State<WatcherState>) -> Result<(), String> {
+    log::info!("Unwatching vault");
     let mut guard = state.inner.lock().map_err(|_| "watcher lock poisoned")?;
     if let Some(rt) = guard.take() {
         let _ = rt.stop_tx.send(());

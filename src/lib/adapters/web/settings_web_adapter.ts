@@ -1,5 +1,7 @@
 import type { SettingsPort } from "$lib/ports/settings_port";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("settings_web_adapter");
 
 const SETTINGS_PREFIX = "jotter_settings_";
 
@@ -10,7 +12,7 @@ export function create_settings_web_adapter(): SettingsPort {
         const value = localStorage.getItem(`${SETTINGS_PREFIX}${key}`);
         return Promise.resolve(value ? JSON.parse(value) : null);
       } catch (e) {
-        logger.from_error(`Failed to parse setting "${key}"`, e);
+        log.error("Failed to parse setting", { key, error: e });
         return Promise.resolve(null);
       }
     },
@@ -19,7 +21,7 @@ export function create_settings_web_adapter(): SettingsPort {
       try {
         localStorage.setItem(`${SETTINGS_PREFIX}${key}`, JSON.stringify(value));
       } catch (e) {
-        logger.from_error(`Failed to save setting "${key}"`, e);
+        log.error("Failed to save setting", { key, error: e });
       }
       return Promise.resolve();
     },

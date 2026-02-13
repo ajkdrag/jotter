@@ -1,6 +1,8 @@
 import { toast } from "svelte-sonner";
 import type { OpStore } from "$lib/stores/op_store.svelte";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("op_toast_reactor");
 
 export function create_op_toast_reactor(op_store: OpStore): () => void {
   let last_clipboard_status = op_store.get("clipboard.write").status;
@@ -19,9 +21,9 @@ export function create_op_toast_reactor(op_store: OpStore): () => void {
         }
 
         if (clipboard.status === "error") {
-          logger.error(
-            `Clipboard write failed: ${clipboard.error ?? "unknown error"}`,
-          );
+          log.error("Clipboard write failed", {
+            error: clipboard.error ?? "unknown error",
+          });
           toast.error("Failed to copy to clipboard");
         }
       }
@@ -30,9 +32,9 @@ export function create_op_toast_reactor(op_store: OpStore): () => void {
         last_theme_status = theme_set.status;
 
         if (theme_set.status === "error") {
-          logger.error(
-            `Theme update failed: ${theme_set.error ?? "unknown error"}`,
-          );
+          log.error("Theme update failed", {
+            error: theme_set.error ?? "unknown error",
+          });
           toast.error("Failed to update theme");
         }
       }

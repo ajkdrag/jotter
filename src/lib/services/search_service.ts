@@ -16,8 +16,10 @@ import { search_within_text } from "$lib/domain/search_within_text";
 import { COMMANDS_REGISTRY } from "$lib/domain/search_commands";
 import { SETTINGS_REGISTRY } from "$lib/types/settings_registry";
 import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
 import type { Vault } from "$lib/types/vault";
+
+const log = create_logger("search_service");
 
 function score_command(query: string, command: CommandDefinition): number {
   const label = command.label.toLowerCase();
@@ -111,7 +113,7 @@ export class SearchService {
       }
 
       const message = error_message(error);
-      logger.error(`Search failed: ${message}`);
+      log.error("Search failed", { error: message });
       this.op_store.fail("search.notes", message);
       return { status: "failed", error: message, results: [] };
     }
@@ -140,7 +142,7 @@ export class SearchService {
         return { status: "stale", results: [] };
       }
       const message = error_message(error);
-      logger.error(`Wiki suggest failed: ${message}`);
+      log.error("Wiki suggest failed", { error: message });
       return { status: "failed", error: message, results: [] };
     }
   }
@@ -194,9 +196,10 @@ export class SearchService {
           if (!first_error) {
             first_error = message;
           }
-          logger.error(
-            `Cross-vault search failed for ${vault.name}: ${message}`,
-          );
+          log.error("Cross-vault search failed", {
+            vault_name: vault.name,
+            error: message,
+          });
           continue;
         }
 
@@ -228,7 +231,7 @@ export class SearchService {
       }
 
       const message = error_message(error);
-      logger.error(`Cross-vault search failed: ${message}`);
+      log.error("Cross-vault search failed", { error: message });
       this.op_store.fail("search.notes.all_vaults", message);
       return { status: "failed", error: message, groups: [] };
     }

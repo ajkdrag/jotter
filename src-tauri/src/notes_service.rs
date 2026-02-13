@@ -197,6 +197,7 @@ pub(crate) fn file_meta(path: &Path) -> Result<(i64, i64), String> {
 
 #[tauri::command]
 pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, String> {
+    log::info!("Listing notes vault_id={}", vault_id);
     let root = storage::vault_path(&app, &vault_id).map_err(|e| {
         log::error!("Failed to resolve vault path for {}: {}", vault_id, e);
         e
@@ -242,6 +243,7 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
 
 #[tauri::command]
 pub fn read_note(app: AppHandle, vault_id: String, note_id: String) -> Result<NoteDoc, String> {
+    log::debug!("Reading note vault_id={} note_id={}", vault_id, note_id);
     let root = storage::vault_path(&app, &vault_id)?;
     let abs = safe_vault_abs(&root, &note_id)?;
     let markdown = std::fs::read_to_string(&abs).map_err(|e| {
@@ -290,6 +292,7 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
 
 #[tauri::command]
 pub fn write_note(args: NoteWriteArgs, app: AppHandle) -> Result<(), String> {
+    log::debug!("Writing note vault_id={} note_id={}", args.vault_id, args.note_id);
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs_for_write(&root, &args.note_id)?;
     atomic_write(&abs, &args.markdown)?;
@@ -305,6 +308,7 @@ pub struct NoteCreateArgs {
 
 #[tauri::command]
 pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, String> {
+    log::info!("Creating note vault_id={} note_path={}", args.vault_id, args.note_path);
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs_for_write(&root, &args.note_path)?;
     let dir = abs.parent().ok_or("invalid note path")?;
@@ -394,6 +398,7 @@ fn sanitize_stem(value: &str) -> String {
 
 #[tauri::command]
 pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<String, String> {
+    log::debug!("Writing image asset vault_id={} note_path={}", args.vault_id, args.note_path);
     let root = storage::vault_path(&app, &args.vault_id)?;
     let _ = safe_vault_abs_for_write(&root, &args.note_path)?;
 
@@ -500,6 +505,7 @@ fn rename_with_temp_path(from_abs: &Path, to_abs: &Path) -> Result<(), String> {
 
 #[tauri::command]
 pub fn rename_note(args: NoteRenameArgs, app: AppHandle) -> Result<(), String> {
+    log::info!("Renaming note vault_id={} from={} to={}", args.vault_id, args.from, args.to);
     let root = storage::vault_path(&app, &args.vault_id)?;
     let from_abs = safe_vault_abs(&root, &args.from)?;
     let to_abs = safe_vault_rename_target_abs(&root, &args.to)?;
@@ -675,6 +681,7 @@ pub struct FolderStats {
 
 #[tauri::command]
 pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
+    log::info!("Deleting note vault_id={} note_id={}", args.vault_id, args.note_id);
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs(&root, &args.note_id)?;
     std::fs::remove_file(&abs).map_err(|e| e.to_string())?;
@@ -684,6 +691,7 @@ pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_folders(app: AppHandle, vault_id: String) -> Result<Vec<String>, String> {
+    log::debug!("Listing folders vault_id={}", vault_id);
     let root = storage::vault_path(&app, &vault_id)?;
     let mut out = Vec::new();
 
@@ -719,6 +727,7 @@ pub struct FolderCreateArgs {
 
 #[tauri::command]
 pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), String> {
+    log::debug!("Creating folder vault_id={} parent_path={} folder_name={}", args.vault_id, args.parent_path, args.folder_name);
     let root = storage::vault_path(&app, &args.vault_id)?;
     let parent = if args.parent_path.is_empty() {
         root.clone()
@@ -749,6 +758,7 @@ pub struct FolderRenameArgs {
 
 #[tauri::command]
 pub fn rename_folder(args: FolderRenameArgs, app: AppHandle) -> Result<(), String> {
+    log::debug!("Renaming folder vault_id={} from_path={} to_path={}", args.vault_id, args.from_path, args.to_path);
     let root = storage::vault_path(&app, &args.vault_id)?;
     if args.from_path.is_empty() || args.to_path.is_empty() {
         return Err("cannot rename vault root".to_string());
@@ -779,6 +789,7 @@ pub struct FolderDeleteArgs {
 
 #[tauri::command]
 pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<(), String> {
+    log::debug!("Deleting folder vault_id={} folder_path={}", args.vault_id, args.folder_path);
     let root = storage::vault_path(&app, &args.vault_id)?;
     if args.folder_path.is_empty() {
         return Err("cannot delete vault root".to_string());
@@ -801,6 +812,7 @@ pub fn list_folder_contents(
     offset: usize,
     limit: usize,
 ) -> Result<FolderContents, String> {
+    log::debug!("Listing folder contents vault_id={} folder_path={}", vault_id, folder_path);
     let root = storage::vault_path(&app, &vault_id)?;
     let target = if folder_path.is_empty() {
         root.clone()
@@ -860,6 +872,7 @@ pub fn get_folder_stats(
     vault_id: String,
     folder_path: String,
 ) -> Result<FolderStats, String> {
+    log::debug!("Getting folder stats vault_id={} folder_path={}", vault_id, folder_path);
     let root = storage::vault_path(&app, &vault_id)?;
     let target = if folder_path.is_empty() {
         root.clone()

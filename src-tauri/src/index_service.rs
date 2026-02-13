@@ -556,6 +556,7 @@ fn send_write_blocking(
 
 #[tauri::command]
 pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
+    log::info!("Building index vault_id={}", vault_id);
     let vault_root = storage::vault_path(&app, &vault_id)?;
     ensure_worker(&app, &vault_id)?;
 
@@ -590,6 +591,7 @@ pub fn index_cancel(app: AppHandle, vault_id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn index_rebuild(app: AppHandle, vault_id: String) -> Result<(), String> {
+    log::info!("Rebuilding index vault_id={}", vault_id);
     let vault_root = storage::vault_path(&app, &vault_id)?;
     ensure_worker(&app, &vault_id)?;
 
@@ -618,6 +620,7 @@ pub fn index_search(
     vault_id: String,
     query: SearchQueryInput,
 ) -> Result<Vec<SearchHit>, String> {
+    log::debug!("Searching index vault_id={} query={}", vault_id, query.text);
     with_read_conn(&app, &vault_id, |conn| {
         search_db::search(conn, &query.text, query.scope, 50)
     })
@@ -630,6 +633,7 @@ pub fn index_suggest(
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<search_db::SuggestionHit>, String> {
+    log::debug!("Suggesting from index vault_id={} query={}", vault_id, query);
     with_read_conn(&app, &vault_id, |conn| {
         search_db::suggest(conn, &query, limit.unwrap_or(15))
     })

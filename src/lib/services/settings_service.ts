@@ -9,7 +9,9 @@ import type {
 } from "$lib/types/settings_service_result";
 import { SETTINGS_KEY } from "$lib/types/editor_settings";
 import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("settings_service");
 
 const GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY = "show_vault_dashboard_on_open";
 
@@ -100,7 +102,7 @@ export class SettingsService {
       };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Load settings failed: ${message}`);
+      log.error("Load settings failed", { error: message });
       this.op_store.fail("settings.load", message);
       return {
         status: "failed",
@@ -134,7 +136,7 @@ export class SettingsService {
       return { status: "success" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Save settings failed: ${message}`);
+      log.error("Save settings failed", { error: message });
       this.op_store.fail("settings.save", message);
       return {
         status: "failed",

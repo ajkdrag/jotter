@@ -12,7 +12,9 @@ import type {
 import { PAGE_SIZE } from "$lib/constants/pagination";
 import { error_message } from "$lib/utils/error_message";
 import { ensure_open_note } from "$lib/domain/ensure_open_note";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("folder_service");
 
 export class FolderService {
   constructor(
@@ -51,7 +53,7 @@ export class FolderService {
       return { status: "success" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Create folder failed: ${message}`);
+      log.error("Create folder failed", { error: message });
       this.op_store.fail("folder.create", message);
       return {
         status: "failed",
@@ -83,7 +85,7 @@ export class FolderService {
       };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Load folder delete stats failed: ${message}`);
+      log.error("Load folder delete stats failed", { error: message });
       this.op_store.fail("folder.delete_stats", message);
       return {
         status: "failed",
@@ -128,7 +130,7 @@ export class FolderService {
       return { status: "success" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Delete folder failed: ${message}`);
+      log.error("Delete folder failed", { error: message });
       this.op_store.fail("folder.delete", message);
       return {
         status: "failed",
@@ -154,7 +156,7 @@ export class FolderService {
       return { status: "success" };
     } catch (error) {
       const message = error_message(error);
-      logger.error(`Rename folder failed: ${message}`);
+      log.error("Rename folder failed", { error: message });
       this.op_store.fail("folder.rename", message);
       return {
         status: "failed",
@@ -212,7 +214,7 @@ export class FolderService {
       }
 
       const message = error_message(error);
-      logger.error(`Load folder failed (${path}): ${message}`);
+      log.error("Load folder failed", { path, error: message });
       return {
         status: "failed",
         error: message,
@@ -258,7 +260,7 @@ export class FolderService {
       }
 
       const message = error_message(error);
-      logger.error(`Load folder page failed (${path}): ${message}`);
+      log.error("Load folder page failed", { path, error: message });
       return {
         status: "failed",
         error: message,

@@ -7,22 +7,24 @@
   import { ModeWatcher } from "mode-watcher";
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
-  import { logger } from "$lib/utils/logger";
+  import { create_logger } from "$lib/utils/logger";
   import { error_message } from "$lib/utils/error_message";
   import { onMount } from "svelte";
+
+  const log = create_logger("app");
 
   let { children }: { children: Snippet } = $props();
 
   onMount(() => {
     const on_error = (event: ErrorEvent) => {
       event.preventDefault();
-      logger.from_error("Unhandled error", event.error);
+      log.error("Unhandled error", { error: event.error });
       toast.error("Something went wrong");
     };
 
     const on_rejection = (event: PromiseRejectionEvent) => {
       event.preventDefault();
-      logger.error(`Unhandled rejection: ${error_message(event.reason)}`);
+      log.error("Unhandled rejection", { error: event.reason });
       toast.error("Something went wrong");
     };
 

@@ -12,7 +12,9 @@ import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import type { SearchService } from "$lib/services/search_service";
 import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("editor_service");
 
 export type EditorServiceCallbacks = {
   on_internal_link_click: (note_path: string) => void;
@@ -64,7 +66,7 @@ export class EditorService {
       this.focus();
       this.op_store.succeed("editor.mount");
     } catch (error) {
-      logger.error(`Editor mount failed: ${error_message(error)}`);
+      log.error("Editor mount failed", { error });
       this.op_store.fail("editor.mount", error_message(error));
     }
   }
@@ -91,7 +93,7 @@ export class EditorService {
       this.focus();
       this.op_store.succeed("editor.open_buffer");
     } catch (error) {
-      logger.error(`Editor open_buffer failed: ${error_message(error)}`);
+      log.error("Editor open_buffer failed", { error });
       this.op_store.fail("editor.open_buffer", error_message(error));
     }
   }
@@ -225,7 +227,7 @@ export class EditorService {
     try {
       session.destroy();
     } catch (error) {
-      logger.error(`Editor teardown failed: ${error_message(error)}`);
+      log.error("Editor teardown failed", { error });
     }
   }
 }

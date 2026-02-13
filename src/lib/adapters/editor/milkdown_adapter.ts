@@ -66,7 +66,9 @@ import {
   try_decode_wiki_link_href,
 } from "$lib/domain/wiki_link";
 import { error_message } from "$lib/utils/error_message";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("milkdown_adapter");
 
 function create_svg_data_uri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -344,10 +346,9 @@ export function create_milkdown_editor_port(args?: {
                       finalize_resolution(url, resolved_url);
                     })
                     .catch((error: unknown) => {
-                      console.error(
-                        "Failed to resolve asset URL for image block:",
+                      log.error("Failed to resolve asset URL for image block", {
                         error,
-                      );
+                      });
                       finalize_resolution(url, IMAGE_LOAD_ERROR_PLACEHOLDER);
                     });
                 }
@@ -433,7 +434,7 @@ export function create_milkdown_editor_port(args?: {
         const outcome = editor.action(action);
         void Promise.resolve(outcome).catch((error: unknown) => {
           if (is_missing_editor_view(error)) return;
-          logger.error(`Editor action failed: ${error_message(error)}`);
+          log.error("Editor action failed", { error });
         });
       };
 
@@ -495,7 +496,7 @@ export function create_milkdown_editor_port(args?: {
               view.dispatch(tr);
               view.focus();
             } catch (error) {
-              console.error("Failed to insert markdown at cursor:", error);
+              log.error("Failed to insert markdown at cursor", { error });
               const tr = state.tr.insertText(
                 text,
                 state.selection.from,

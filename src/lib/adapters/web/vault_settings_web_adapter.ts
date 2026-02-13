@@ -1,8 +1,10 @@
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { VaultId } from "$lib/types/ids";
-import { logger } from "$lib/utils/logger";
+import { create_logger } from "$lib/utils/logger";
 import { APP_DIR } from "$lib/constants/special_folders";
 import { get_vault } from "./storage";
+
+const log = create_logger("vault_settings_web_adapter");
 
 const SETTINGS_DIR = APP_DIR;
 const SETTINGS_FILE = "settings.json";
@@ -59,7 +61,7 @@ async function read_settings_file(
   try {
     return JSON.parse(text) as Record<string, unknown>;
   } catch (e) {
-    logger.from_error("Failed to parse vault settings", e);
+    log.error("Failed to parse vault settings", { error: e });
     return {};
   }
 }

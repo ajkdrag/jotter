@@ -44,6 +44,7 @@ pub async fn get_vault_setting(
     key: String,
     app: AppHandle,
 ) -> Result<Option<Value>, String> {
+    log::debug!("Getting vault setting vault_id={} key={}", vault_id, key);
     let settings = load_vault_settings(&app, &vault_id)?;
     Ok(settings.get(&key).cloned())
 }
@@ -55,6 +56,7 @@ pub async fn set_vault_setting(
     value: Value,
     app: AppHandle,
 ) -> Result<(), String> {
+    log::debug!("Setting vault setting vault_id={} key={}", vault_id, key);
     let mut settings = load_vault_settings(&app, &vault_id)?;
     settings.insert(key, value);
     save_vault_settings(&app, &vault_id, &settings)?;

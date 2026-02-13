@@ -42,4 +42,33 @@ describe("register_ui_actions", () => {
     await registry.execute(ACTION_IDS.ui_close_vault_dashboard);
     expect(stores.ui.vault_dashboard.open).toBe(false);
   });
+
+  it("accepts dashboard sidebar view", async () => {
+    const registry = new ActionRegistry();
+    const stores = {
+      ui: new UIStore(),
+      vault: new VaultStore(),
+      notes: new NotesStore(),
+      editor: new EditorStore(),
+      op: new OpStore(),
+      search: new SearchStore(),
+    };
+
+    register_ui_actions({
+      registry,
+      stores,
+      services: {
+        shell: { open_url: async () => {} },
+        vault: { set_theme: () => ({ status: "success" as const }) },
+      } as never,
+      default_mount_config: {
+        reset_app_state: true,
+        bootstrap_default_vault_path: null,
+      },
+    });
+
+    expect(stores.ui.sidebar_view).toBe("explorer");
+    await registry.execute(ACTION_IDS.ui_set_sidebar_view, "dashboard");
+    expect(stores.ui.sidebar_view).toBe("dashboard");
+  });
 });
