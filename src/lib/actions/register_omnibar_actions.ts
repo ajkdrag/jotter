@@ -2,7 +2,7 @@ import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
 import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
 import type { CommandId } from "$lib/types/command_palette";
-import type { VaultId } from "$lib/types/ids";
+import { as_note_path, type VaultId } from "$lib/types/ids";
 
 function open_omnibar(input: ActionRegistrationInput) {
   input.stores.ui.omnibar = {
@@ -26,6 +26,15 @@ function close_omnibar(input: ActionRegistrationInput) {
   };
   input.stores.search.clear_omnibar();
   input.services.search.reset_search_notes_operation();
+}
+
+function clear_cross_vault_open_confirm(input: ActionRegistrationInput) {
+  input.stores.ui.cross_vault_open_confirm = {
+    open: false,
+    target_vault_id: null,
+    target_vault_name: "",
+    note_path: null,
+  };
 }
 
 async function execute_command(
@@ -65,12 +74,12 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
     case "cross_vault_note":
       close_omnibar(input);
       if (input.stores.vault.vault?.id !== item.vault_id) {
-        await registry.execute(
-          ACTION_IDS.vault_select,
-          item.vault_id as VaultId,
-        );
-      }
-      if (input.stores.vault.vault?.id !== item.vault_id) {
+        input.stores.ui.cross_vault_open_confirm = {
+          open: true,
+          target_vault_id: item.vault_id as VaultId,
+          target_vault_name: item.vault_name,
+          note_path: item.note.id,
+        };
         return;
       }
       await registry.execute(ACTION_IDS.note_open, {
@@ -251,6 +260,40 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       const item = arg as OmnibarItem | undefined;
       if (!item) return;
       await confirm_item(input, item);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.omnibar_confirm_cross_vault_open,
+    label: "Confirm Open Cross-Vault Note",
+    execute: async () => {
+      const pending = stores.ui.cross_vault_open_confirm;
+      const target_vault_id = pending.target_vault_id;
+      const note_path = pending.note_path;
+      clear_cross_vault_open_confirm(input);
+      if (!target_vault_id || !note_path) {
+        return;
+      }
+
+      if (stores.vault.vault?.id !== target_vault_id) {
+        await registry.execute(ACTION_IDS.vault_select, target_vault_id);
+      }
+      if (stores.vault.vault?.id !== target_vault_id) {
+        return;
+      }
+
+      await registry.execute(ACTION_IDS.note_open, {
+        note_path: as_note_path(note_path),
+        cleanup_if_missing: true,
+      });
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.omnibar_cancel_cross_vault_open,
+    label: "Cancel Open Cross-Vault Note",
+    execute: () => {
+      clear_cross_vault_open_confirm(input);
     },
   });
 }

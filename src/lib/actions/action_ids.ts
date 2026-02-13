@@ -80,6 +80,8 @@ export const ACTION_IDS = {
   omnibar_set_selected_index: "omnibar.set_selected_index",
   omnibar_set_scope: "omnibar.set_scope",
   omnibar_confirm_item: "omnibar.confirm_item",
+  omnibar_confirm_cross_vault_open: "omnibar.confirm_cross_vault_open",
+  omnibar_cancel_cross_vault_open: "omnibar.cancel_cross_vault_open",
 
   find_in_file_toggle: "find_in_file.toggle",
   find_in_file_open: "find_in_file.open",

@@ -36,7 +36,7 @@
 </script>
 
 <Dialog.Root {open} onOpenChange={on_open_change}>
-  <Dialog.Content class="max-w-[65ch]" showCloseButton={false}>
+  <Dialog.Content class="VaultDialog" showCloseButton={false}>
     <VaultSelectionPanel
       is_dialog={true}
       {recent_vaults}
@@ -55,3 +55,10 @@
     />
   </Dialog.Content>
 </Dialog.Root>
+
+<style>
+  :global(.VaultDialog) {
+    max-width: var(--size-dialog-xl);
+    padding: var(--space-8);
+  }
+</style>

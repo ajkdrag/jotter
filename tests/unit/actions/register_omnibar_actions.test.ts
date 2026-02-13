@@ -108,11 +108,23 @@ describe("register_omnibar_actions", () => {
       snippet: "alpha",
     });
 
+    expect(execute_vault_select).not.toHaveBeenCalled();
+    expect(execute_note_open).not.toHaveBeenCalled();
+    expect(stores.ui.cross_vault_open_confirm).toEqual({
+      open: true,
+      target_vault_id: as_vault_id("vault-b"),
+      target_vault_name: "Vault B",
+      note_path: note.id,
+    });
+
+    await registry.execute(ACTION_IDS.omnibar_confirm_cross_vault_open);
+
     expect(execute_vault_select).toHaveBeenCalledWith(as_vault_id("vault-b"));
     expect(execute_note_open).toHaveBeenCalledWith({
       note_path: note.id,
       cleanup_if_missing: true,
     });
+    expect(stores.ui.cross_vault_open_confirm.open).toBe(false);
   });
 
   it("switches scope and searches across all vaults", async () => {
@@ -174,6 +186,25 @@ describe("register_omnibar_actions", () => {
     expect(stores.search.omnibar_items[0]).toMatchObject({
       kind: "cross_vault_note",
       vault_name: "Vault B",
+    });
+  });
+
+  it("cancels cross-vault open confirmation", async () => {
+    const { registry, stores } = create_omnibar_actions_harness();
+    stores.ui.cross_vault_open_confirm = {
+      open: true,
+      target_vault_id: as_vault_id("vault-b"),
+      target_vault_name: "Vault B",
+      note_path: as_note_path("docs/alpha.md"),
+    };
+
+    await registry.execute(ACTION_IDS.omnibar_cancel_cross_vault_open);
+
+    expect(stores.ui.cross_vault_open_confirm).toEqual({
+      open: false,
+      target_vault_id: null,
+      target_vault_name: "",
+      note_path: null,
     });
   });
 });

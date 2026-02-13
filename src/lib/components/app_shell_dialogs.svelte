@@ -10,6 +10,7 @@
   import CreateFolderDialog from "$lib/components/create_folder_dialog.svelte";
   import Omnibar from "$lib/components/omnibar.svelte";
   import ImagePasteDialog from "$lib/components/image_paste_dialog.svelte";
+  import ConfirmCrossVaultOpenDialog from "$lib/components/confirm_cross_vault_open_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
@@ -261,4 +262,14 @@
     void action_registry.execute(ACTION_IDS.note_cancel_image_paste)}
   on_retry={() =>
     void action_registry.execute(ACTION_IDS.note_confirm_image_paste)}
+/>
+
+<ConfirmCrossVaultOpenDialog
+  open={stores.ui.cross_vault_open_confirm.open}
+  is_switching={stores.ui.change_vault.is_loading}
+  target_vault_name={stores.ui.cross_vault_open_confirm.target_vault_name}
+  on_confirm={() =>
+    void action_registry.execute(ACTION_IDS.omnibar_confirm_cross_vault_open)}
+  on_cancel={() =>
+    void action_registry.execute(ACTION_IDS.omnibar_cancel_cross_vault_open)}
 />

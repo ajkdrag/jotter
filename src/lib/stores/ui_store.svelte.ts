@@ -2,7 +2,7 @@ import type { ThemeMode } from "$lib/types/theme";
 import type { EditorSettings } from "$lib/types/editor_settings";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
 import type { NoteMeta } from "$lib/types/note";
-import type { NoteId, NotePath } from "$lib/types/ids";
+import type { NoteId, NotePath, VaultId } from "$lib/types/ids";
 import type {
   FolderLoadState,
   FolderPaginationState,
@@ -74,6 +74,13 @@ const INITIAL_IMAGE_PASTE_DIALOG = {
   filename: "",
   estimated_size_bytes: 0,
   target_folder: "",
+} as const;
+
+const INITIAL_CROSS_VAULT_OPEN_CONFIRM = {
+  open: false,
+  target_vault_id: null,
+  target_vault_name: "",
+  note_path: null,
 } as const;
 
 function initial_filetree() {
@@ -197,6 +204,13 @@ export class UIStore {
     target_folder: string;
   }>({ ...INITIAL_IMAGE_PASTE_DIALOG });
 
+  cross_vault_open_confirm = $state<{
+    open: boolean;
+    target_vault_id: VaultId | null;
+    target_vault_name: string;
+    note_path: NotePath | null;
+  }>({ ...INITIAL_CROSS_VAULT_OPEN_CONFIRM });
+
   set_theme(theme: ThemeMode) {
     this.theme = theme;
   }
@@ -236,5 +250,6 @@ export class UIStore {
     this.find_in_file = { ...INITIAL_FIND_IN_FILE };
     this.filetree = initial_filetree();
     this.image_paste_dialog = { ...INITIAL_IMAGE_PASTE_DIALOG };
+    this.cross_vault_open_confirm = { ...INITIAL_CROSS_VAULT_OPEN_CONFIRM };
   }
 }

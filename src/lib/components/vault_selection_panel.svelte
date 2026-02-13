@@ -46,9 +46,25 @@
   let vault_query = $state("");
   let selected_vault_index = $state(0);
   let search_input_ref: HTMLInputElement | null = $state(null);
+
   const filtered_recent_vaults = $derived(
     search_vaults(recent_vaults, vault_query),
   );
+
+  const pinned_ids_set = $derived(new Set(pinned_vault_ids));
+
+  const pinned_vaults = $derived(
+    filtered_recent_vaults.filter((v) => pinned_ids_set.has(v.id)),
+  );
+
+  const unpinned_vaults = $derived(
+    filtered_recent_vaults.filter((v) => !pinned_ids_set.has(v.id)),
+  );
+
+  const has_sections = $derived(
+    pinned_vaults.length > 0 && unpinned_vaults.length > 0,
+  );
+
   const duplicate_names = $derived(duplicate_vault_names(recent_vaults));
 
   $effect(() => {
@@ -143,6 +159,10 @@
     }
   }
 
+  function flat_index_of(vault: Vault): number {
+    return filtered_recent_vaults.indexOf(vault);
+  }
+
   function format_path(path: string, vault_name: string): string {
     if (duplicate_names.has(vault_name)) {
       return path;
@@ -175,8 +195,8 @@
 </script>
 
 {#if is_dialog}
-  <div class="flex flex-col gap-6">
-    <div class="relative">
+  <div class="VaultPanel">
+    <div class="VaultPanel__dialog-header">
       {#if on_close}
         <button
           type="button"
@@ -197,7 +217,7 @@
         </p>
       </div>
     </div>
-    <div class="space-y-6">
+    <div class="VaultPanel__body">
       {@render content()}
     </div>
   </div>
@@ -210,12 +230,96 @@
           >Choose a vault directory or select from recent vaults</Card.Description
         >
       </Card.Header>
-      <Card.Content class="space-y-6">
-        {@render content()}
+      <Card.Content>
+        <div class="VaultPanel__body">
+          {@render content()}
+        </div>
       </Card.Content>
     </Card.Root>
   </div>
 {/if}
+
+{#snippet vault_row(vault: Vault)}
+  {@const index = flat_index_of(vault)}
+  <div
+    class="VaultPanel__vault-item"
+    class:VaultPanel__vault-item--active={current_vault_id === vault.id}
+    class:VaultPanel__vault-item--highlighted={index === selected_vault_index}
+    class:VaultPanel__vault-item--unavailable={!is_vault_available(vault)}
+    data-disabled={is_loading ||
+      current_vault_id === vault.id ||
+      !is_vault_available(vault)}
+  >
+    <button
+      type="button"
+      onclick={(e) => {
+        handle_select_vault(vault, e);
+      }}
+      onmouseenter={() => {
+        selected_vault_index = index;
+      }}
+      disabled={is_loading ||
+        current_vault_id === vault.id ||
+        !is_vault_available(vault)}
+      class="VaultPanel__vault-select-btn"
+    >
+      <div class="VaultPanel__vault-info">
+        <div class="VaultPanel__vault-name-row">
+          <span class="VaultPanel__vault-name">{vault.name}</span>
+          {#if !is_vault_available(vault)}
+            <span class="VaultPanel__badge VaultPanel__badge--unavailable"
+              >Unavailable</span
+            >
+          {/if}
+        </div>
+        <div
+          class="VaultPanel__vault-path"
+          class:VaultPanel__vault-path--disambiguated={duplicate_names.has(
+            vault.name,
+          )}
+        >
+          {format_path(vault.path, vault.name)}
+        </div>
+        <div
+          class="VaultPanel__vault-meta"
+          class:VaultPanel__vault-meta--dimmed={!is_vault_available(vault)}
+        >
+          <span>Opened {format_last_opened(vault)}</span>
+          <span class="VaultPanel__meta-sep" aria-hidden="true">·</span>
+          <span>{format_note_count(vault)}</span>
+        </div>
+      </div>
+    </button>
+    <div class="VaultPanel__vault-actions">
+      <button
+        type="button"
+        class="VaultPanel__icon-btn"
+        class:VaultPanel__icon-btn--active={pinned_ids_set.has(vault.id)}
+        onclick={(event) => {
+          handle_toggle_pin(vault.id, event);
+        }}
+        disabled={is_loading}
+        aria-label={pinned_ids_set.has(vault.id) ? "Unpin vault" : "Pin vault"}
+      >
+        <Pin />
+      </button>
+      <button
+        type="button"
+        class="VaultPanel__icon-btn"
+        onclick={(event) => {
+          handle_remove_vault(vault.id, event);
+        }}
+        disabled={is_loading || current_vault_id === vault.id}
+        aria-label="Remove vault from list"
+      >
+        <Trash2 />
+      </button>
+      {#if current_vault_id === vault.id}
+        <Check class="VaultPanel__check-icon" />
+      {/if}
+    </div>
+  </div>
+{/snippet}
 
 {#snippet content()}
   {#if !hide_choose_vault_button}
@@ -239,7 +343,6 @@
 
   {#if recent_vaults.length > 0}
     <div class="VaultPanel__recent">
-      <h3 class="VaultPanel__section-title">Recent Vaults</h3>
       <div class="VaultPanel__search">
         <Input
           bind:ref={search_input_ref}
@@ -254,91 +357,35 @@
           aria-label="Search vaults"
         />
       </div>
-      <div class="VaultPanel__list">
-        {#each filtered_recent_vaults as vault, index (vault.id)}
-          <div
-            class="VaultPanel__vault-item"
-            class:VaultPanel__vault-item--active={current_vault_id === vault.id}
-            class:VaultPanel__vault-item--highlighted={index ===
-              selected_vault_index}
-            class:VaultPanel__vault-item--unavailable={!is_vault_available(
-              vault,
-            )}
-            data-disabled={is_loading ||
-              current_vault_id === vault.id ||
-              !is_vault_available(vault)}
-          >
-            <button
-              type="button"
-              onclick={(e) => {
-                handle_select_vault(vault, e);
-              }}
-              onmouseenter={() => {
-                selected_vault_index = index;
-              }}
-              disabled={is_loading ||
-                current_vault_id === vault.id ||
-                !is_vault_available(vault)}
-              class="VaultPanel__vault-select-btn"
-            >
-              <div class="VaultPanel__vault-info">
-                <div class="VaultPanel__vault-name">{vault.name}</div>
-                <div
-                  class="VaultPanel__vault-path"
-                  class:VaultPanel__vault-path--disambiguated={duplicate_names.has(
-                    vault.name,
-                  )}
-                >
-                  {format_path(vault.path, vault.name)}
-                </div>
-                <div class="VaultPanel__vault-meta">
-                  {#if is_vault_available(vault)}
-                    <span>Opened {format_last_opened(vault)}</span>
-                    <span class="VaultPanel__vault-count">
-                      {format_note_count(vault)}
-                    </span>
-                  {:else}
-                    <span class="VaultPanel__vault-unavailable">
-                      Unavailable
-                    </span>
-                  {/if}
-                </div>
-              </div>
-            </button>
-            <div class="VaultPanel__vault-actions">
-              <button
-                type="button"
-                class="VaultPanel__icon-btn"
-                class:VaultPanel__icon-btn--active={pinned_vault_ids.includes(
-                  vault.id,
-                )}
-                onclick={(event) => {
-                  handle_toggle_pin(vault.id, event);
-                }}
-                disabled={is_loading}
-                aria-label={pinned_vault_ids.includes(vault.id)
-                  ? "Unpin vault"
-                  : "Pin vault"}
-              >
-                <Pin />
-              </button>
-              <button
-                type="button"
-                class="VaultPanel__icon-btn"
-                onclick={(event) => {
-                  handle_remove_vault(vault.id, event);
-                }}
-                disabled={is_loading || current_vault_id === vault.id}
-                aria-label="Remove vault from list"
-              >
-                <Trash2 />
-              </button>
-              {#if current_vault_id === vault.id}
-                <Check class="VaultPanel__check-icon" />
-              {/if}
+      <div class="VaultPanel__sections">
+        {#if pinned_vaults.length > 0}
+          <div class="VaultPanel__section">
+            <h3 class="VaultPanel__section-title">
+              <Pin class="VaultPanel__section-icon" />
+              Pinned
+            </h3>
+            <div class="VaultPanel__list">
+              {#each pinned_vaults as vault (vault.id)}
+                {@render vault_row(vault)}
+              {/each}
             </div>
           </div>
-        {/each}
+        {/if}
+
+        {#if has_sections}
+          <div class="VaultPanel__divider" role="separator"></div>
+        {/if}
+
+        {#if unpinned_vaults.length > 0}
+          <div class="VaultPanel__section">
+            <h3 class="VaultPanel__section-title">Recent</h3>
+            <div class="VaultPanel__list">
+              {#each unpinned_vaults as vault (vault.id)}
+                {@render vault_row(vault)}
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
       {#if filtered_recent_vaults.length === 0}
         <div class="VaultPanel__empty-filter">No vaults match your search</div>
@@ -355,6 +402,22 @@
 {/snippet}
 
 <style>
+  .VaultPanel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .VaultPanel__dialog-header {
+    position: relative;
+  }
+
+  .VaultPanel__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
   :global(.VaultPanel__action-btn) {
     width: 100%;
   }
@@ -369,26 +432,57 @@
   }
 
   .VaultPanel__recent {
-    margin-top: var(--space-4);
+    display: flex;
+    flex-direction: column;
   }
 
-  .VaultPanel__section-title {
-    margin-bottom: var(--space-3);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted-foreground);
+  .VaultPanel__search {
+    margin-bottom: var(--space-4);
   }
 
-  .VaultPanel__list {
+  .VaultPanel__sections {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-height: var(--size-dialog-list-height-lg);
+    overflow-y: auto;
+    padding-right: var(--space-1);
+  }
+
+  .VaultPanel__section {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
   }
 
-  .VaultPanel__search {
-    margin-bottom: var(--space-3);
+  .VaultPanel__section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    padding-left: var(--space-1);
+  }
+
+  :global(.VaultPanel__section-icon) {
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
+    opacity: 0.7;
+  }
+
+  .VaultPanel__divider {
+    height: 1px;
+    background-color: var(--border);
+    margin: 0 var(--space-1);
+  }
+
+  .VaultPanel__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
   }
 
   .VaultPanel__empty-filter {
@@ -402,7 +496,7 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: var(--space-2-5) var(--space-3);
+    padding: var(--space-3) var(--space-3);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
     background-color: var(--card);
@@ -428,6 +522,13 @@
 
   .VaultPanel__vault-item--unavailable {
     border-style: dashed;
+    opacity: 0.7;
+  }
+
+  .VaultPanel__vault-item--unavailable[data-disabled="true"]:not(
+      .VaultPanel__vault-item--active
+    ) {
+    opacity: 0.7;
   }
 
   .VaultPanel__vault-item--active {
@@ -465,10 +566,74 @@
     border-radius: var(--radius-md);
   }
 
-  .VaultPanel__vault-actions {
+  .VaultPanel__vault-name-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .VaultPanel__vault-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .VaultPanel__badge {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1;
+    padding: var(--space-0-5) var(--space-1-5);
+    border-radius: var(--radius-sm);
+  }
+
+  .VaultPanel__badge--unavailable {
+    color: var(--destructive);
+    background-color: color-mix(in oklch, var(--destructive) 10%, transparent);
+    border: 1px solid color-mix(in oklch, var(--destructive) 20%, transparent);
+  }
+
+  .VaultPanel__vault-path {
+    margin-top: var(--space-0-5);
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .VaultPanel__vault-path--disambiguated {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .VaultPanel__vault-meta {
+    margin-top: var(--space-1);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+
+  .VaultPanel__vault-meta--dimmed {
+    opacity: 0.6;
+  }
+
+  .VaultPanel__meta-sep {
+    color: var(--border);
+    font-weight: 700;
+    user-select: none;
+  }
+
+  .VaultPanel__vault-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
     margin-left: var(--space-4);
   }
 
@@ -514,51 +679,6 @@
   :global(.VaultPanel__icon-btn svg) {
     width: var(--size-icon);
     height: var(--size-icon);
-  }
-
-  .VaultPanel__vault-name {
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .VaultPanel__vault-path {
-    font-size: var(--text-sm);
-    color: var(--muted-foreground);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .VaultPanel__vault-path--disambiguated {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-    overflow-wrap: break-word;
-  }
-
-  .VaultPanel__vault-meta {
-    margin-top: var(--space-1);
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-xs);
-    color: var(--muted-foreground);
-  }
-
-  .VaultPanel__vault-count {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 0 var(--space-1-5);
-  }
-
-  .VaultPanel__vault-unavailable {
-    color: var(--muted-foreground);
-    font-weight: 500;
-    font-style: italic;
   }
 
   :global(.VaultPanel__check-icon) {
