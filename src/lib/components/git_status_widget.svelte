@@ -102,7 +102,7 @@
   }
 
   .GitStatusWidget__indicator--dirty {
-    background-color: var(--chart-4);
+    background-color: var(--warning);
   }
 
   .GitStatusWidget__indicator--clean {
