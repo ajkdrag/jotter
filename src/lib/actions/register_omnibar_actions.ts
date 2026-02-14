@@ -86,6 +86,15 @@ async function execute_command(
     case "show_vault_dashboard":
       await registry.execute(ACTION_IDS.ui_open_vault_dashboard);
       break;
+    case "git_version_history":
+      await registry.execute(ACTION_IDS.git_open_history);
+      break;
+    case "git_create_checkpoint":
+      await registry.execute(ACTION_IDS.git_open_checkpoint);
+      break;
+    case "git_init_repo":
+      await registry.execute(ACTION_IDS.git_init);
+      break;
   }
 }
 

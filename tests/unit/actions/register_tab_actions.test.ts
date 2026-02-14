@@ -9,6 +9,7 @@ import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
 import { TabStore } from "$lib/stores/tab_store.svelte";
+import { GitStore } from "$lib/stores/git_store.svelte";
 import { as_markdown_text, as_note_path } from "$lib/types/ids";
 import type { NotePath } from "$lib/types/ids";
 import type { OpenNoteState } from "$lib/types/editor";
@@ -43,6 +44,7 @@ function create_tab_actions_harness() {
     op: new OpStore(),
     search: new SearchStore(),
     tab: new TabStore(),
+    git: new GitStore(),
   };
 
   const services = {

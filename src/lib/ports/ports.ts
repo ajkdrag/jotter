@@ -8,6 +8,7 @@ import type { ThemePort } from "$lib/ports/theme_port";
 import type { VaultPort } from "$lib/ports/vault_port";
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
+import type { GitPort } from "$lib/ports/git_port";
 import type { ShellPort } from "$lib/ports/shell_port";
 import type { WatcherPort } from "$lib/ports/watcher_port";
 
@@ -24,4 +25,5 @@ export type Ports = {
   clipboard: ClipboardPort;
   watcher: WatcherPort;
   shell: ShellPort;
+  git: GitPort;
 };

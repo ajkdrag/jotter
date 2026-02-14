@@ -8,6 +8,7 @@ import { register_omnibar_actions } from "$lib/actions/register_omnibar_actions"
 import { register_ui_actions } from "$lib/actions/register_ui_actions";
 import { register_find_in_file_actions } from "$lib/actions/register_find_in_file_actions";
 import { register_tab_actions } from "$lib/actions/register_tab_actions";
+import { register_git_actions } from "$lib/actions/register_git_actions";
 
 export function register_actions(input: ActionRegistrationInput) {
   register_app_actions(input);
@@ -19,4 +20,5 @@ export function register_actions(input: ActionRegistrationInput) {
   register_ui_actions(input);
   register_find_in_file_actions(input);
   register_tab_actions(input);
+  register_git_actions(input);
 }

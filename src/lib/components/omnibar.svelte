@@ -10,6 +10,9 @@
   import FilePlusIcon from "@lucide/svelte/icons/file-plus";
   import FolderOpenIcon from "@lucide/svelte/icons/folder-open";
   import LibraryIcon from "@lucide/svelte/icons/library";
+  import GitBranchIcon from "@lucide/svelte/icons/git-branch";
+  import HistoryIcon from "@lucide/svelte/icons/history";
+  import BookmarkIcon from "@lucide/svelte/icons/bookmark";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
   import type { NoteMeta } from "$lib/types/note";
@@ -21,6 +24,9 @@
     "file-plus": FilePlusIcon,
     "folder-open": FolderOpenIcon,
     settings: SettingsIcon,
+    "git-branch": GitBranchIcon,
+    history: HistoryIcon,
+    bookmark: BookmarkIcon,
   };
 
   const SCOPES: OmnibarScope[] = ["current_vault", "all_vaults"];

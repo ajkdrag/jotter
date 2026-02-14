@@ -80,6 +80,9 @@
     on_open_vault_dashboard: () => {
       void action_registry.execute(ACTION_IDS.ui_open_vault_dashboard);
     },
+    on_open_version_history: () => {
+      void action_registry.execute(ACTION_IDS.git_open_history);
+    },
     on_save: () => {
       void action_registry.execute(ACTION_IDS.note_request_save);
     },

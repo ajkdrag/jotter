@@ -644,9 +644,16 @@
       index_progress={stores.search.index_progress}
       vault_name={stores.vault.vault?.name ?? null}
       theme_mode={stores.ui.theme}
+      git_enabled={stores.git.enabled}
+      git_branch={stores.git.branch}
+      git_is_dirty={stores.git.is_dirty}
+      git_pending_files={stores.git.pending_files}
+      git_sync_status={stores.git.sync_status}
       on_vault_click={() =>
         void action_registry.execute(ACTION_IDS.vault_request_change)}
       on_info_click={() => (details_dialog_open = true)}
+      on_git_click={() =>
+        void action_registry.execute(ACTION_IDS.git_open_history)}
       on_theme_change={(mode) =>
         void action_registry.execute(ACTION_IDS.ui_set_theme, mode)}
     />

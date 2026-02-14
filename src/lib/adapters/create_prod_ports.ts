@@ -21,6 +21,8 @@ import { create_watcher_tauri_adapter } from "$lib/adapters/tauri/watcher_tauri_
 import { create_watcher_web_adapter } from "$lib/adapters/web/watcher_web_adapter";
 import { create_shell_tauri_adapter } from "$lib/adapters/tauri/shell_tauri_adapter";
 import { create_shell_web_adapter } from "$lib/adapters/web/shell_web_adapter";
+import { create_git_tauri_adapter } from "$lib/adapters/tauri/git_tauri_adapter";
+import { create_git_web_adapter } from "$lib/adapters/web/git_web_adapter";
 import type { Ports } from "$lib/ports/ports";
 import { create_search_db_web } from "$lib/adapters/web/search_db_web";
 
@@ -43,6 +45,7 @@ export function create_prod_ports(): Ports {
       clipboard: create_clipboard_tauri_adapter(),
       watcher: create_watcher_tauri_adapter(),
       shell: create_shell_tauri_adapter(),
+      git: create_git_tauri_adapter(),
     };
   }
 
@@ -66,5 +69,6 @@ export function create_prod_ports(): Ports {
     clipboard: create_clipboard_web_adapter(),
     watcher: create_watcher_web_adapter(),
     shell: create_shell_web_adapter(),
+    git: create_git_web_adapter(),
   };
 }

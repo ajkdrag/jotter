@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { Info, GitBranch, RefreshCw } from "@lucide/svelte";
+  import { Info, FolderOpen, RefreshCw } from "@lucide/svelte";
   import ThemeToggle from "$lib/components/theme_toggle.svelte";
+  import GitStatusWidget from "$lib/components/git_status_widget.svelte";
   import type { CursorInfo } from "$lib/types/editor";
   import type { IndexProgress } from "$lib/stores/search_store.svelte";
   import type { ThemeMode } from "$lib/types/theme";
+  import type { GitSyncStatus } from "$lib/types/git";
 
   interface Props {
     cursor_info: CursorInfo | null;
@@ -12,8 +14,14 @@
     index_progress: IndexProgress;
     vault_name: string | null;
     theme_mode: ThemeMode;
+    git_enabled: boolean;
+    git_branch: string;
+    git_is_dirty: boolean;
+    git_pending_files: number;
+    git_sync_status: GitSyncStatus;
     on_vault_click: () => void;
     on_info_click: () => void;
+    on_git_click: () => void;
     on_theme_change: (mode: ThemeMode) => void;
   }
 
@@ -24,8 +32,14 @@
     index_progress,
     vault_name,
     theme_mode,
+    git_enabled,
+    git_branch,
+    git_is_dirty,
+    git_pending_files,
+    git_sync_status,
     on_vault_click,
     on_info_click,
+    on_git_click,
     on_theme_change,
   }: Props = $props();
 
@@ -97,7 +111,7 @@
       disabled={!vault_name}
       aria-label="Switch vault"
     >
-      <GitBranch />
+      <FolderOpen />
       <span>{vault_name ?? "--"}</span>
     </button>
     <button
@@ -109,6 +123,17 @@
     >
       <Info />
     </button>
+    {#if git_enabled}
+      <span class="StatusBar__separator" aria-hidden="true"></span>
+      <GitStatusWidget
+        enabled={git_enabled}
+        branch={git_branch}
+        is_dirty={git_is_dirty}
+        pending_files={git_pending_files}
+        sync_status={git_sync_status}
+        on_click={on_git_click}
+      />
+    {/if}
     <span class="StatusBar__separator" aria-hidden="true"></span>
     <ThemeToggle mode={theme_mode} on_change={on_theme_change} />
   </div>

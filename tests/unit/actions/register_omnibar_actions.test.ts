@@ -9,6 +9,7 @@ import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
 import { TabStore } from "$lib/stores/tab_store.svelte";
+import { GitStore } from "$lib/stores/git_store.svelte";
 import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
 import { create_test_note, create_test_vault } from "../helpers/test_fixtures";
 
@@ -22,6 +23,7 @@ function create_omnibar_actions_harness() {
     op: new OpStore(),
     search: new SearchStore(),
     tab: new TabStore(),
+    git: new GitStore(),
   };
   const execute_vault_select = vi.fn((vault_id: unknown) => {
     stores.vault.set_vault(

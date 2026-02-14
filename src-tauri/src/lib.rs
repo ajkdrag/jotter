@@ -1,4 +1,5 @@
 mod constants;
+mod git_service;
 mod index_service;
 mod notes_service;
 mod search_db;
@@ -85,7 +86,15 @@ pub fn run() {
             settings_service::get_setting,
             settings_service::set_setting,
             vault_settings_service::get_vault_setting,
-            vault_settings_service::set_vault_setting
+            vault_settings_service::set_vault_setting,
+            git_service::git_has_repo,
+            git_service::git_init_repo,
+            git_service::git_status,
+            git_service::git_stage_and_commit,
+            git_service::git_log,
+            git_service::git_diff,
+            git_service::git_show_file_at_commit,
+            git_service::git_restore_file
         ])
         .register_uri_scheme_protocol("jotter-asset", |ctx, req| {
             storage::handle_asset_request(ctx.app_handle(), req)

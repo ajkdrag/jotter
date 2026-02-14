@@ -93,6 +93,16 @@ const INITIAL_TAB_CLOSE_CONFIRM = {
   tab_title: "",
 } as const;
 
+const INITIAL_VERSION_HISTORY_DIALOG = {
+  open: false,
+  note_path: null,
+} as const;
+
+const INITIAL_CHECKPOINT_DIALOG = {
+  open: false,
+  description: "",
+} as const;
+
 function initial_filetree() {
   return {
     expanded_paths: new SvelteSet<string>(),
@@ -231,6 +241,16 @@ export class UIStore {
     tab_title: string;
   }>({ ...INITIAL_TAB_CLOSE_CONFIRM });
 
+  version_history_dialog = $state<{
+    open: boolean;
+    note_path: NotePath | null;
+  }>({ ...INITIAL_VERSION_HISTORY_DIALOG });
+
+  checkpoint_dialog = $state<{
+    open: boolean;
+    description: string;
+  }>({ ...INITIAL_CHECKPOINT_DIALOG });
+
   set_theme(theme: ThemeMode) {
     this.theme = theme;
   }
@@ -273,5 +293,7 @@ export class UIStore {
     this.cross_vault_open_confirm = { ...INITIAL_CROSS_VAULT_OPEN_CONFIRM };
     this.vault_dashboard = { ...INITIAL_VAULT_DASHBOARD };
     this.tab_close_confirm = { ...INITIAL_TAB_CLOSE_CONFIRM };
+    this.version_history_dialog = { ...INITIAL_VERSION_HISTORY_DIALOG };
+    this.checkpoint_dialog = { ...INITIAL_CHECKPOINT_DIALOG };
   }
 }

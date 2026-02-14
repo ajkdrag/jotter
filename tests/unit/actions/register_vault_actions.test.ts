@@ -9,6 +9,7 @@ import { EditorStore } from "$lib/stores/editor_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
 import { TabStore } from "$lib/stores/tab_store.svelte";
+import { GitStore } from "$lib/stores/git_store.svelte";
 import { as_vault_id, as_vault_path } from "$lib/types/ids";
 import {
   create_open_note_state,
@@ -26,6 +27,7 @@ function create_vault_actions_harness() {
     op: new OpStore(),
     search: new SearchStore(),
     tab: new TabStore(),
+    git: new GitStore(),
   };
 
   const services = {
@@ -81,6 +83,12 @@ function create_vault_actions_harness() {
   registry.register({
     id: ACTION_IDS.folder_refresh_tree,
     label: "Refresh Folder Tree",
+    execute: async () => {},
+  });
+
+  registry.register({
+    id: ACTION_IDS.git_check_repo,
+    label: "Check Git Repo",
     execute: async () => {},
   });
 

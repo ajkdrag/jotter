@@ -6,6 +6,7 @@ import { create_recent_notes_persist_reactor } from "$lib/reactors/recent_notes_
 import { create_starred_persist_reactor } from "$lib/reactors/starred_persist.reactor.svelte";
 import { create_tab_dirty_sync_reactor } from "$lib/reactors/tab_dirty_sync.reactor.svelte";
 import { create_tab_persist_reactor } from "$lib/reactors/tab_persist.reactor.svelte";
+import { create_git_autocommit_reactor } from "$lib/reactors/git_autocommit.reactor.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
@@ -16,6 +17,8 @@ import type { EditorService } from "$lib/services/editor_service";
 import type { NoteService } from "$lib/services/note_service";
 import type { VaultService } from "$lib/services/vault_service";
 import type { TabService } from "$lib/services/tab_service";
+import type { GitStore } from "$lib/stores/git_store.svelte";
+import type { GitService } from "$lib/services/git_service";
 
 export type ReactorContext = {
   editor_store: EditorStore;
@@ -24,10 +27,12 @@ export type ReactorContext = {
   notes_store: NotesStore;
   vault_store: VaultStore;
   tab_store: TabStore;
+  git_store: GitStore;
   editor_service: EditorService;
   note_service: NoteService;
   vault_service: VaultService;
   tab_service: TabService;
+  git_service: GitService;
 };
 
 export function mount_reactors(context: ReactorContext): () => void {
@@ -63,6 +68,11 @@ export function mount_reactors(context: ReactorContext): () => void {
       context.tab_store,
       context.vault_store,
       context.tab_service,
+    ),
+    create_git_autocommit_reactor(
+      context.editor_store,
+      context.git_store,
+      context.git_service,
     ),
   ];
 

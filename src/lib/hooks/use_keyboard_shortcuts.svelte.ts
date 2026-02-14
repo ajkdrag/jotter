@@ -18,6 +18,7 @@ export function use_keyboard_shortcuts(input: {
   on_toggle_sidebar: () => void;
   on_toggle_find_in_file: () => void;
   on_open_vault_dashboard?: () => void;
+  on_open_version_history?: () => void;
   on_save: () => void;
   on_close_tab?: () => void;
   on_reopen_tab?: () => void;
@@ -43,6 +44,7 @@ export function use_keyboard_shortcuts(input: {
     on_toggle_sidebar,
     on_toggle_find_in_file,
     on_open_vault_dashboard = () => {},
+    on_open_version_history = () => {},
     on_save,
     on_close_tab = () => {},
     on_reopen_tab = () => {},
@@ -192,6 +194,15 @@ export function use_keyboard_shortcuts(input: {
       event.stopPropagation();
       if (is_blocked()) return;
       on_open_vault_dashboard();
+      return;
+    }
+
+    if (is_mod_combo(event, "h") && event.shiftKey) {
+      if (!is_enabled()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (is_blocked()) return;
+      on_open_version_history();
       return;
     }
 

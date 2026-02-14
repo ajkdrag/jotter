@@ -19,6 +19,7 @@ async function apply_opened_vault(
     error: null,
   };
   await input.registry.execute(ACTION_IDS.folder_refresh_tree);
+  await input.registry.execute(ACTION_IDS.git_check_repo);
 
   const persisted = await input.services.tab.load_tabs();
   if (persisted && persisted.tabs.length > 0) {

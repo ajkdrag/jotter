@@ -38,6 +38,7 @@ export function register_app_actions(input: ActionRegistrationInput) {
           result.editor_settings ?? { ...DEFAULT_EDITOR_SETTINGS },
         );
         await registry.execute(ACTION_IDS.folder_refresh_tree);
+        await registry.execute(ACTION_IDS.git_check_repo);
         if (stores.ui.editor_settings.show_vault_dashboard_on_open) {
           await registry.execute(ACTION_IDS.ui_open_vault_dashboard);
         }

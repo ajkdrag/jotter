@@ -13,6 +13,7 @@ import { EditorService } from "$lib/services/editor_service";
 import { ClipboardService } from "$lib/services/clipboard_service";
 import { ShellService } from "$lib/services/shell_service";
 import { TabService } from "$lib/services/tab_service";
+import { GitService } from "$lib/services/git_service";
 import { mount_reactors } from "$lib/reactors";
 
 export type AppContext = ReturnType<typeof create_app_context>;
@@ -100,6 +101,14 @@ export function create_app_context(input: {
     note_service,
   );
 
+  const git_service = new GitService(
+    input.ports.git,
+    stores.vault,
+    stores.git,
+    stores.op,
+    now_ms,
+  );
+
   const vault_service = new VaultService(
     input.ports.vault,
     input.ports.notes,
@@ -126,6 +135,7 @@ export function create_app_context(input: {
       op: stores.op,
       search: stores.search,
       tab: stores.tab,
+      git: stores.git,
     },
     services: {
       vault: vault_service,
@@ -137,6 +147,7 @@ export function create_app_context(input: {
       clipboard: clipboard_service,
       shell: shell_service,
       tab: tab_service,
+      git: git_service,
     },
     default_mount_config: input.default_mount_config,
   });
@@ -148,10 +159,12 @@ export function create_app_context(input: {
     notes_store: stores.notes,
     vault_store: stores.vault,
     tab_store: stores.tab,
+    git_store: stores.git,
     editor_service,
     note_service,
     vault_service,
     tab_service,
+    git_service,
   });
 
   return {

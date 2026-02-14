@@ -13,6 +13,8 @@
   import ImagePasteDialog from "$lib/components/image_paste_dialog.svelte";
   import ConfirmCrossVaultOpenDialog from "$lib/components/confirm_cross_vault_open_dialog.svelte";
   import TabCloseConfirmDialog from "$lib/components/tab_close_confirm_dialog.svelte";
+  import VersionHistoryDialog from "$lib/components/version_history_dialog.svelte";
+  import CheckpointDialog from "$lib/components/checkpoint_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem } from "$lib/types/search";
@@ -328,4 +330,34 @@
   on_discard={() =>
     void action_registry.execute(ACTION_IDS.tab_confirm_close_discard)}
   on_cancel={() => void action_registry.execute(ACTION_IDS.tab_cancel_close)}
+/>
+
+<VersionHistoryDialog
+  open={stores.ui.version_history_dialog.open}
+  note_path={stores.ui.version_history_dialog.note_path}
+  commits={stores.git.history}
+  is_loading={stores.git.is_loading_diff}
+  selected_commit={stores.git.selected_commit}
+  diff={stores.git.selected_diff}
+  file_content={null}
+  on_close={() => void action_registry.execute(ACTION_IDS.git_close_history)}
+  on_select_commit={(commit) =>
+    void action_registry.execute(ACTION_IDS.git_select_commit, commit)}
+  on_restore={(commit) =>
+    void action_registry.execute(ACTION_IDS.git_restore_version, commit)}
+/>
+
+<CheckpointDialog
+  open={stores.ui.checkpoint_dialog.open}
+  description={stores.ui.checkpoint_dialog.description}
+  is_loading={stores.git.sync_status === "committing"}
+  on_update_description={(value) =>
+    void action_registry.execute(
+      ACTION_IDS.git_update_checkpoint_description,
+      value,
+    )}
+  on_confirm={() =>
+    void action_registry.execute(ACTION_IDS.git_confirm_checkpoint)}
+  on_cancel={() =>
+    void action_registry.execute(ACTION_IDS.git_cancel_checkpoint)}
 />

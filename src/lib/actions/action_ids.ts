@@ -110,6 +110,19 @@ export const ACTION_IDS = {
   tab_confirm_close_save: "tab.confirm_close_save",
   tab_confirm_close_discard: "tab.confirm_close_discard",
   tab_cancel_close: "tab.cancel_close",
+
+  git_check_repo: "git.check_repo",
+  git_init: "git.init",
+  git_refresh_status: "git.refresh_status",
+  git_commit_all: "git.commit_all",
+  git_open_history: "git.open_history",
+  git_close_history: "git.close_history",
+  git_restore_version: "git.restore_version",
+  git_open_checkpoint: "git.open_checkpoint",
+  git_update_checkpoint_description: "git.update_checkpoint_description",
+  git_confirm_checkpoint: "git.confirm_checkpoint",
+  git_cancel_checkpoint: "git.cancel_checkpoint",
+  git_select_commit: "git.select_commit",
 } as const;
 
 export type ActionId = (typeof ACTION_IDS)[keyof typeof ACTION_IDS];

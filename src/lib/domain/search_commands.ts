@@ -36,4 +36,25 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     keywords: ["dashboard", "vault", "overview", "stats", "activity"],
     icon: "folder-open",
   },
+  {
+    id: "git_version_history",
+    label: "Version History",
+    description: "View version history for the current note",
+    keywords: ["history", "versions", "git", "log", "timeline"],
+    icon: "history",
+  },
+  {
+    id: "git_create_checkpoint",
+    label: "Create Checkpoint",
+    description: "Save a named checkpoint of the current state",
+    keywords: ["checkpoint", "snapshot", "save", "git", "commit"],
+    icon: "bookmark",
+  },
+  {
+    id: "git_init_repo",
+    label: "Initialize Git Repository",
+    description: "Initialize version control for this vault",
+    keywords: ["git", "init", "repo", "repository", "version", "control"],
+    icon: "git-branch",
+  },
 ];
