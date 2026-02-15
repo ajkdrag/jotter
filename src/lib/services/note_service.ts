@@ -148,7 +148,10 @@ export class NoteService {
         ? `${doc.meta.id}:reload:${String(this.now_ms())}`
         : undefined;
       this.editor_store.set_open_note(
-        to_open_note_state(doc, { buffer_id: forced_buffer_id }),
+        to_open_note_state(
+          doc,
+          forced_buffer_id ? { buffer_id: forced_buffer_id } : undefined,
+        ),
       );
       this.op_store.succeed(op_key);
 
