@@ -442,6 +442,8 @@
                         <VirtualFileTree
                           nodes={starred_nodes}
                           selected_path={stores.ui.selected_folder_path}
+                          revealed_note_path={stores.ui
+                            .filetree_revealed_note_path}
                           open_note_path={stores.editor.open_note?.meta.path ??
                             ""}
                           starred_paths={stores.notes.starred_paths}
@@ -531,6 +533,8 @@
                       <VirtualFileTree
                         nodes={flat_nodes}
                         selected_path={stores.ui.selected_folder_path}
+                        revealed_note_path={stores.ui
+                          .filetree_revealed_note_path}
                         open_note_path={stores.editor.open_note?.meta.path ??
                           ""}
                         starred_paths={stores.notes.starred_paths}

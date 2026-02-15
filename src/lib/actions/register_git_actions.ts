@@ -187,6 +187,18 @@ export function register_git_actions(input: ActionRegistrationInput) {
         toast.success("Checkpoint created", { id: toast_id });
         return;
       }
+      if (result.status === "no_repo") {
+        toast.error("No git repository found", {
+          id: toast_id,
+          action: {
+            label: "Initialize",
+            onClick: () => {
+              void registry.execute(ACTION_IDS.git_init);
+            },
+          },
+        });
+        return;
+      }
       if (result.status === "skipped") {
         toast.info("No changes to checkpoint", { id: toast_id });
         return;

@@ -60,6 +60,7 @@ export const ACTION_IDS = {
   folder_cancel_rename: "folder.cancel_rename",
   folder_retry_rename: "folder.retry_rename",
   folder_toggle_star: "folder.toggle_star",
+  filetree_reveal_note: "filetree.reveal_note",
 
   shell_open_url: "shell.open_url",
 

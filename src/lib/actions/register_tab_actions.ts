@@ -271,14 +271,14 @@ export function register_tab_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.tab_reveal_in_tree,
     label: "Reveal in File Tree",
-    execute: (tab_id: unknown) => {
+    execute: async (tab_id: unknown) => {
       const id = String(tab_id);
       const tab = stores.tab.tabs.find((t) => t.id === id);
       if (!tab) return;
 
-      const folder = parent_folder_path(tab.note_path);
-      stores.ui.set_selected_folder_path(folder);
-      stores.ui.set_sidebar_view("explorer");
+      await registry.execute(ACTION_IDS.filetree_reveal_note, {
+        note_path: tab.note_path,
+      });
     },
   });
 

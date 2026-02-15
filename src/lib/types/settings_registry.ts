@@ -121,7 +121,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     key: "show_vault_dashboard_on_open",
     label: "Show Vault Dashboard on Open",
     description: "Open vault dashboard automatically when switching vaults",
-    category: "Files",
+    category: "Misc",
     keywords: ["vault", "dashboard", "overview", "open", "startup", "switch"],
   },
   {

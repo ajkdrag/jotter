@@ -146,7 +146,10 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
       break;
     case "setting":
       close_omnibar(input);
-      await registry.execute(ACTION_IDS.settings_open);
+      await registry.execute(
+        ACTION_IDS.settings_open,
+        item.setting.category.toLowerCase(),
+      );
       break;
   }
 }

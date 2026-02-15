@@ -203,6 +203,27 @@ describe("register_git_actions", () => {
     expect(stores.ui.checkpoint_dialog.description).toBe("");
   });
 
+  it("git_confirm_checkpoint shows init action when no repo", async () => {
+    const { registry, stores, services } = create_harness();
+    services.git.create_checkpoint.mockResolvedValue({ status: "no_repo" });
+    stores.ui.checkpoint_dialog = {
+      open: true,
+      description: "milestone",
+    };
+
+    await registry.execute(ACTION_IDS.git_confirm_checkpoint);
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "No git repository found",
+      expect.objectContaining({
+        id: "toast-id",
+      }),
+    );
+    const call_args = vi.mocked(toast.error).mock.calls[0] as unknown[];
+    const opts = call_args[1] as { action: { label: string } };
+    expect(opts.action.label).toBe("Initialize");
+  });
+
   it("git_restore_version force-reloads restored note and closes history", async () => {
     const { registry, stores, services } = create_harness();
     stores.ui.version_history_dialog = {

@@ -19,7 +19,10 @@
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem } from "$lib/types/search";
   import type { OmnibarScope } from "$lib/types/search";
-  import type { EditorSettings } from "$lib/types/editor_settings";
+  import type {
+    EditorSettings,
+    SettingsCategory,
+  } from "$lib/types/editor_settings";
   import type { VaultId } from "$lib/types/ids";
 
   type Props = {
@@ -241,11 +244,15 @@
 <SettingsDialog
   open={stores.ui.settings_dialog.open}
   editor_settings={stores.ui.settings_dialog.current_settings}
+  active_category={stores.ui.settings_dialog.active_category}
   is_saving={stores.op.is_pending("settings.save")}
   has_unsaved_changes={settings_has_unsaved_changes}
   error={settings_error}
   on_update_settings={(settings: EditorSettings) =>
     void action_registry.execute(ACTION_IDS.settings_update, settings)}
+  on_category_change={(category: SettingsCategory) => {
+    stores.ui.settings_dialog.active_category = category;
+  }}
   on_save={() => void action_registry.execute(ACTION_IDS.settings_save)}
   on_close={() => void action_registry.execute(ACTION_IDS.settings_close)}
 />

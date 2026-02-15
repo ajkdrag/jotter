@@ -1,6 +1,9 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
-import type { EditorSettings } from "$lib/types/editor_settings";
+import type {
+  EditorSettings,
+  SettingsCategory,
+} from "$lib/types/editor_settings";
 
 export function register_settings_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
@@ -9,7 +12,10 @@ export function register_settings_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.settings_open,
     label: "Open Settings",
-    execute: async () => {
+    execute: async (arg: unknown) => {
+      const category = (
+        typeof arg === "string" ? arg : "typography"
+      ) as SettingsCategory;
       const open_revision = ++settings_open_revision;
       const snapshot = { ...stores.ui.editor_settings };
       stores.ui.settings_dialog = {
@@ -17,6 +23,7 @@ export function register_settings_actions(input: ActionRegistrationInput) {
         current_settings: snapshot,
         persisted_settings: snapshot,
         has_unsaved_changes: false,
+        active_category: category,
       };
 
       const result = await services.settings.load_settings(

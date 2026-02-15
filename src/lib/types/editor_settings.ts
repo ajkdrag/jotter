@@ -1,3 +1,11 @@
+export type SettingsCategory =
+  | "typography"
+  | "layout"
+  | "links"
+  | "files"
+  | "git"
+  | "misc";
+
 export type EditorSettings = {
   font_size: number;
   line_height: number;

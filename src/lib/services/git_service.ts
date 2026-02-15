@@ -8,6 +8,7 @@ import { error_message } from "$lib/utils/error_message";
 type CommitRunResult =
   | { status: "committed" }
   | { status: "skipped" }
+  | { status: "no_repo" }
   | { status: "failed"; error: string };
 
 export type GitInitResult =
@@ -18,6 +19,7 @@ export type GitInitResult =
 export type GitCheckpointResult =
   | { status: "created" }
   | { status: "skipped" }
+  | { status: "no_repo" }
   | { status: "failed"; error: string }
   | { status: "created"; warning: string };
 
@@ -81,6 +83,12 @@ export class GitService {
     files: string[] | null,
   ): Promise<CommitRunResult> {
     const vault_path = this.get_vault_path();
+    const has_repo = await this.git_port.has_repo(vault_path);
+    if (!has_repo) {
+      this.op_store.start(op_key, this.now_ms());
+      this.op_store.fail(op_key, "No git repository");
+      return { status: "no_repo" };
+    }
     this.op_store.start(op_key, this.now_ms());
     this.git_store.set_sync_status("committing");
     this.git_store.set_error(null);
@@ -184,6 +192,9 @@ export class GitService {
   async create_checkpoint(description: string): Promise<GitCheckpointResult> {
     const message = `Checkpoint: ${description}`;
     const result = await this.run_commit("git.checkpoint", message, null);
+    if (result.status === "no_repo") {
+      return { status: "no_repo" };
+    }
     if (result.status === "skipped") {
       return { status: "skipped" };
     }

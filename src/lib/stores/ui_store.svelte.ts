@@ -1,5 +1,8 @@
 import type { ThemeMode } from "$lib/types/theme";
-import type { EditorSettings } from "$lib/types/editor_settings";
+import type {
+  EditorSettings,
+  SettingsCategory,
+} from "$lib/types/editor_settings";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
 import type { NoteMeta } from "$lib/types/note";
 import type { NoteId, NotePath, VaultId } from "$lib/types/ids";
@@ -122,6 +125,7 @@ function initial_settings_dialog(settings: EditorSettings) {
     current_settings: { ...settings },
     persisted_settings: { ...settings },
     has_unsaved_changes: false,
+    active_category: "typography" as SettingsCategory,
   };
 }
 
@@ -130,6 +134,7 @@ export class UIStore {
   sidebar_open = $state(true);
   sidebar_view = $state<SidebarView>("explorer");
   selected_folder_path = $state("");
+  filetree_revealed_note_path = $state("");
   editor_settings = $state<EditorSettings>({ ...DEFAULT_EDITOR_SETTINGS });
   system_dialog_open = $state(false);
   recent_command_ids = $state<string[]>([]);
@@ -196,6 +201,7 @@ export class UIStore {
     current_settings: EditorSettings;
     persisted_settings: EditorSettings;
     has_unsaved_changes: boolean;
+    active_category: SettingsCategory;
   }>(initial_settings_dialog(DEFAULT_EDITOR_SETTINGS));
 
   omnibar = $state<{
@@ -275,6 +281,11 @@ export class UIStore {
 
   set_selected_folder_path(path: string) {
     this.selected_folder_path = path;
+    this.filetree_revealed_note_path = "";
+  }
+
+  set_filetree_revealed_note_path(path: string) {
+    this.filetree_revealed_note_path = path;
   }
 
   set_editor_settings(settings: EditorSettings) {
@@ -297,6 +308,7 @@ export class UIStore {
 
   reset_for_new_vault() {
     this.selected_folder_path = "";
+    this.filetree_revealed_note_path = "";
     this.delete_note_dialog = { ...INITIAL_DELETE_NOTE_DIALOG };
     this.rename_note_dialog = { ...INITIAL_RENAME_NOTE_DIALOG };
     this.save_note_dialog = { ...INITIAL_SAVE_NOTE_DIALOG };

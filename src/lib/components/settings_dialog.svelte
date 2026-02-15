@@ -11,15 +11,20 @@
   import FolderIcon from "@lucide/svelte/icons/folder";
   import GitBranchIcon from "@lucide/svelte/icons/git-branch";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
-  import type { EditorSettings } from "$lib/types/editor_settings";
+  import type {
+    EditorSettings,
+    SettingsCategory,
+  } from "$lib/types/editor_settings";
 
   type Props = {
     open: boolean;
     editor_settings: EditorSettings;
+    active_category: SettingsCategory;
     is_saving: boolean;
     has_unsaved_changes: boolean;
     error: string | null;
     on_update_settings: (settings: EditorSettings) => void;
+    on_category_change: (category: SettingsCategory) => void;
     on_save: () => void;
     on_close: () => void;
   };
@@ -27,23 +32,15 @@
   let {
     open,
     editor_settings,
+    active_category,
     is_saving,
     has_unsaved_changes,
     error,
     on_update_settings,
+    on_category_change,
     on_save,
     on_close,
   }: Props = $props();
-
-  type SettingsCategory =
-    | "typography"
-    | "layout"
-    | "links"
-    | "files"
-    | "git"
-    | "misc";
-
-  let active_category = $state<SettingsCategory>("typography");
 
   let font_size_value = $derived(editor_settings.font_size);
   let line_height_value = $derived(editor_settings.line_height);
@@ -115,7 +112,7 @@
             class:SettingsDialog__nav-item--selected={active_category ===
               cat.id}
             onclick={() => {
-              active_category = cat.id;
+              on_category_change(cat.id);
             }}
           >
             <cat.icon />

@@ -96,6 +96,30 @@ function build_folder_path_from_name(parent: string, name: string): string {
   return parent ? `${parent}/${name}` : name;
 }
 
+function parse_reveal_note_path(input: unknown): string {
+  if (input && typeof input === "object" && "note_path" in input) {
+    const record = input as Record<string, unknown>;
+    if (typeof record.note_path === "string") {
+      return record.note_path;
+    }
+  }
+  return String(input);
+}
+
+function ancestor_folder_paths(note_path: string): string[] {
+  const segments = note_path.split("/").filter(Boolean);
+  if (segments.length <= 1) {
+    return [];
+  }
+
+  const folders = segments.slice(0, -1);
+  const result: string[] = [];
+  for (let i = 0; i < folders.length; i += 1) {
+    result.push(folders.slice(0, i + 1).join("/"));
+  }
+  return result;
+}
+
 function is_valid_folder_name(name: string): boolean {
   const trimmed = name.trim();
   return (
@@ -288,6 +312,30 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       };
 
       await load_folder(input, folder_path);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.filetree_reveal_note,
+    label: "Reveal Note In File Tree",
+    execute: (note_input: unknown) => {
+      const note_path = parse_reveal_note_path(note_input).trim();
+      if (!note_path) return;
+
+      const expanded_paths = new SvelteSet(stores.ui.filetree.expanded_paths);
+      for (const folder_path of ancestor_folder_paths(note_path)) {
+        expanded_paths.add(folder_path);
+      }
+
+      stores.ui.filetree = {
+        ...stores.ui.filetree,
+        expanded_paths,
+      };
+
+      const folder = parent_folder_path(note_path);
+      stores.ui.set_selected_folder_path(folder);
+      stores.ui.set_filetree_revealed_note_path(note_path);
+      stores.ui.set_sidebar_view("explorer");
     },
   });
 

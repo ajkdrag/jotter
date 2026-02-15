@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ActionRegistry } from "$lib/actions/registry";
 import { ACTION_IDS } from "$lib/actions/action_ids";
+import { register_folder_actions } from "$lib/actions/register_folder_actions";
 import { register_tab_actions } from "$lib/actions/register_tab_actions";
 import { UIStore } from "$lib/stores/ui_store.svelte";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
@@ -70,6 +71,16 @@ function create_tab_actions_harness() {
   };
 
   register_tab_actions({
+    registry,
+    stores,
+    services: services as never,
+    default_mount_config: {
+      reset_app_state: true,
+      bootstrap_default_vault_path: null,
+    },
+  });
+
+  register_folder_actions({
     registry,
     stores,
     services: services as never,
@@ -452,14 +463,37 @@ describe("register_tab_actions", () => {
   });
 
   describe("tab_reveal_in_tree", () => {
-    it("sets sidebar view to explorer and selects folder", async () => {
+    it("delegates to filetree reveal and expands ancestor folders", async () => {
       const { registry, stores } = create_tab_actions_harness();
-      stores.tab.open_tab(np("docs/note.md"), "note");
+      stores.tab.open_tab(np("docs/specs/note.md"), "note");
 
-      await registry.execute(ACTION_IDS.tab_reveal_in_tree, "docs/note.md");
+      stores.editor.set_open_note(mock_open_note("other.md"));
+
+      await registry.execute(
+        ACTION_IDS.tab_reveal_in_tree,
+        "docs/specs/note.md",
+      );
 
       expect(stores.ui.sidebar_view).toBe("explorer");
-      expect(stores.ui.selected_folder_path).toBe("docs");
+      expect(stores.ui.selected_folder_path).toBe("docs/specs");
+      expect(stores.ui.filetree_revealed_note_path).toBe("docs/specs/note.md");
+      expect(stores.ui.filetree.expanded_paths.has("docs")).toBe(true);
+      expect(stores.ui.filetree.expanded_paths.has("docs/specs")).toBe(true);
+    });
+  });
+
+  describe("filetree_reveal_note", () => {
+    it("reveals root-level note without expanding folders", async () => {
+      const { registry, stores } = create_tab_actions_harness();
+
+      await registry.execute(ACTION_IDS.filetree_reveal_note, {
+        note_path: "root.md",
+      });
+
+      expect(stores.ui.sidebar_view).toBe("explorer");
+      expect(stores.ui.selected_folder_path).toBe("");
+      expect(stores.ui.filetree_revealed_note_path).toBe("root.md");
+      expect(stores.ui.filetree.expanded_paths.size).toBe(0);
     });
   });
 });

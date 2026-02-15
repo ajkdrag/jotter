@@ -7,6 +7,7 @@
   type Props = {
     nodes: FlatTreeNode[];
     selected_path: string;
+    revealed_note_path: string;
     open_note_path: string;
     starred_paths?: string[];
     on_toggle_folder: (path: string) => void;
@@ -28,6 +29,7 @@
   let {
     nodes,
     selected_path,
+    revealed_note_path,
     open_note_path,
     starred_paths = [],
     on_toggle_folder,
@@ -168,7 +170,8 @@
             {node}
             is_selected={node.is_folder
               ? selected_path === node.path
-              : open_note_path === node.path}
+              : revealed_note_path === node.path ||
+                open_note_path === node.path}
             is_starred={starred_paths.includes(node.path)}
             {on_toggle_folder}
             {on_toggle_folder_node}
