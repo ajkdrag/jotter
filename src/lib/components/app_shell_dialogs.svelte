@@ -336,10 +336,11 @@
   open={stores.ui.version_history_dialog.open}
   note_path={stores.ui.version_history_dialog.note_path}
   commits={stores.git.history}
-  is_loading={stores.git.is_loading_diff}
+  is_loading={stores.git.is_loading_history}
+  is_restoring={stores.op.is_pending("git.restore")}
   selected_commit={stores.git.selected_commit}
   diff={stores.git.selected_diff}
-  file_content={null}
+  file_content={stores.git.selected_file_content}
   on_close={() => void action_registry.execute(ACTION_IDS.git_close_history)}
   on_select_commit={(commit) =>
     void action_registry.execute(ACTION_IDS.git_select_commit, commit)}

@@ -73,5 +73,12 @@ export function create_git_tauri_adapter(): GitPort {
         commitHash: commit_hash,
       });
     },
+    async create_tag(vault_path: VaultPath, name: string, message: string) {
+      await tauri_invoke<undefined>("git_create_tag", {
+        vaultPath: vault_path,
+        name,
+        message,
+      });
+    },
   };
 }

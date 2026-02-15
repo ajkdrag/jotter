@@ -9,6 +9,7 @@
   import LayoutIcon from "@lucide/svelte/icons/layout-template";
   import Link2Icon from "@lucide/svelte/icons/link-2";
   import FolderIcon from "@lucide/svelte/icons/folder";
+  import GitBranchIcon from "@lucide/svelte/icons/git-branch";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import type { EditorSettings } from "$lib/types/editor_settings";
 
@@ -270,6 +271,30 @@
               checked={editor_settings.autosave_enabled}
               onCheckedChange={(v: boolean) => {
                 update("autosave_enabled", v);
+              }}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="SettingsDialog__section">
+        <div class="SettingsDialog__section-header">
+          <GitBranchIcon class="size-4 text-muted-foreground" />
+          <span>Git</span>
+        </div>
+
+        <div class="SettingsDialog__section-content">
+          <div class="SettingsDialog__row">
+            <div class="SettingsDialog__label-group">
+              <span class="SettingsDialog__label">Auto-commit</span>
+              <span class="SettingsDialog__description"
+                >Automatically commit saved changes to Git</span
+              >
+            </div>
+            <Switch.Root
+              checked={editor_settings.git_autocommit_enabled}
+              onCheckedChange={(v: boolean) => {
+                update("git_autocommit_enabled", v);
               }}
             />
           </div>

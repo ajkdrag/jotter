@@ -24,10 +24,13 @@ export type ImagePasteRequest = {
   image: PastedImagePayload;
 };
 
-export function to_open_note_state(doc: NoteDoc): OpenNoteState {
+export function to_open_note_state(
+  doc: NoteDoc,
+  options?: { buffer_id?: string },
+): OpenNoteState {
   return {
     ...doc,
-    buffer_id: doc.meta.id,
+    buffer_id: options?.buffer_id ?? doc.meta.id,
     is_dirty: false,
   };
 }

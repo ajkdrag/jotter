@@ -175,6 +175,17 @@ export class TabStore {
     this.note_cache = next;
   }
 
+  invalidate_cache_by_path(note_path: NotePath) {
+    const tab_ids = this.tabs
+      .filter((t) => paths_equal_ignore_case(t.note_path, note_path))
+      .map((t) => t.id);
+    if (tab_ids.length === 0) return;
+    const ids_to_clear = new Set(tab_ids);
+    this.note_cache = new Map(
+      [...this.note_cache].filter(([id]) => !ids_to_clear.has(id)),
+    );
+  }
+
   pin_tab(tab_id: TabId) {
     const tab = this.tabs.find((t) => t.id === tab_id);
     if (!tab || tab.is_pinned) return;

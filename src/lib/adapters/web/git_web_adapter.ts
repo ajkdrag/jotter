@@ -12,6 +12,8 @@ import { compute_line_diff } from "./git_diff_utils";
 import { list_vaults, type VaultRecord } from "./storage";
 
 const DIR = "/";
+const DEFAULT_GITIGNORE =
+  "node_modules/\n.DS_Store\n*.tmp\n.env\nThumbs.db\n.jotter/\n";
 
 async function find_vault_record(vault_path: VaultPath): Promise<VaultRecord> {
   const vaults = await list_vaults();
@@ -78,6 +80,17 @@ export function create_git_web_adapter(): GitPort {
     async init_repo(vault_path: VaultPath): Promise<void> {
       const fs = await get_fs_for_vault(vault_path);
       await git.init({ fs, dir: DIR });
+      await ensure_default_gitignore(fs);
+      await stage_all_changes(fs);
+      const matrix = (await git.statusMatrix({ fs, dir: DIR })) as StatusRow[];
+      if (has_staged_changes(matrix)) {
+        await git.commit({
+          fs,
+          dir: DIR,
+          message: "Initial commit",
+          author: { name: "Jotter", email: "jotter@local" },
+        });
+      }
     },
 
     async status(vault_path: VaultPath): Promise<GitStatus> {
@@ -113,7 +126,7 @@ export function create_git_web_adapter(): GitPort {
     ): Promise<string> {
       const fs = await get_fs_for_vault(vault_path);
 
-      if (files) {
+      if (files && files.length > 0) {
         for (const filepath of files) {
           try {
             await fs.promises.stat(`/${filepath}`);
@@ -123,20 +136,15 @@ export function create_git_web_adapter(): GitPort {
           }
         }
       } else {
-        const matrix = (await git.statusMatrix({
-          fs,
-          dir: DIR,
-        })) as StatusRow[];
-        for (const row of matrix) {
-          const [filepath, head, workdir] = row;
-          if (head !== workdir) {
-            if (workdir === 0) {
-              await git.remove({ fs, dir: DIR, filepath });
-            } else {
-              await git.add({ fs, dir: DIR, filepath });
-            }
-          }
-        }
+        await stage_all_changes(fs);
+      }
+
+      const staged_matrix = (await git.statusMatrix({
+        fs,
+        dir: DIR,
+      })) as StatusRow[];
+      if (!has_staged_changes(staged_matrix)) {
+        throw new Error("nothing to commit");
       }
 
       const sha = await git.commit({
@@ -222,9 +230,73 @@ export function create_git_web_adapter(): GitPort {
       const fs = await get_fs_for_vault(vault_path);
       const content = await read_blob_text(fs, commit_hash, file_path);
       await fs.promises.writeFile(`/${file_path}`, content);
+      await stage_single_path(fs, file_path);
+      const staged_matrix = (await git.statusMatrix({
+        fs,
+        dir: DIR,
+      })) as StatusRow[];
+      if (has_staged_changes(staged_matrix)) {
+        const short_hash = commit_hash.slice(0, 7);
+        const title =
+          file_path.split("/").pop()?.replace(/\.md$/, "") ?? file_path;
+        await git.commit({
+          fs,
+          dir: DIR,
+          message: `Restore: ${title} to ${short_hash}`,
+          author: { name: "Jotter", email: "jotter@local" },
+        });
+      }
       return content;
     },
+    async create_tag(
+      vault_path: VaultPath,
+      name: string,
+      _message: string,
+    ): Promise<void> {
+      const fs = await get_fs_for_vault(vault_path);
+      await git.tag({ fs, dir: DIR, ref: name });
+    },
   };
+}
+
+async function ensure_default_gitignore(fs: FsAdapter): Promise<void> {
+  try {
+    await fs.promises.stat("/.gitignore");
+  } catch {
+    await fs.promises.writeFile("/.gitignore", DEFAULT_GITIGNORE);
+  }
+}
+
+async function stage_all_changes(fs: FsAdapter): Promise<void> {
+  const matrix = (await git.statusMatrix({
+    fs,
+    dir: DIR,
+  })) as StatusRow[];
+  for (const row of matrix) {
+    const [filepath, head, workdir] = row;
+    if (head === workdir) continue;
+    if (workdir === 0) {
+      await git.remove({ fs, dir: DIR, filepath });
+    } else {
+      await git.add({ fs, dir: DIR, filepath });
+    }
+  }
+}
+
+async function stage_single_path(
+  fs: FsAdapter,
+  file_path: string,
+): Promise<void> {
+  try {
+    await fs.promises.stat(`/${file_path}`);
+    await git.add({ fs, dir: DIR, filepath: file_path });
+  } catch {
+    await git.remove({ fs, dir: DIR, filepath: file_path });
+  }
+}
+
+function has_staged_changes(matrix: StatusRow[]): boolean {
+  return matrix.some(([, head, , stage]) => head !== stage);
 }
 
 async function read_blob_text(

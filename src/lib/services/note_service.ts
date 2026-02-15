@@ -93,7 +93,7 @@ export class NoteService {
   async open_note(
     note_path: string,
     create_if_missing: boolean = false,
-    options?: { cleanup_if_missing?: boolean },
+    options?: { cleanup_if_missing?: boolean; force_reload?: boolean },
   ): Promise<NoteOpenResult> {
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) {
@@ -115,7 +115,11 @@ export class NoteService {
       resolved_path = as_note_path(resolved_existing ?? note_path);
 
       const current_open_id = this.editor_store.open_note?.meta.id ?? null;
-      if (current_open_id && current_open_id === resolved_path) {
+      if (
+        !options?.force_reload &&
+        current_open_id &&
+        current_open_id === resolved_path
+      ) {
         const open_meta = this.editor_store.open_note?.meta;
         if (open_meta && open_meta.path.endsWith(".md")) {
           this.notes_store.add_recent_note(open_meta);
@@ -140,7 +144,12 @@ export class NoteService {
         this.notes_store.add_recent_note(doc.meta);
       }
 
-      this.editor_store.set_open_note(to_open_note_state(doc));
+      const forced_buffer_id = options?.force_reload
+        ? `${doc.meta.id}:reload:${String(this.now_ms())}`
+        : undefined;
+      this.editor_store.set_open_note(
+        to_open_note_state(doc, { buffer_id: forced_buffer_id }),
+      );
       this.op_store.succeed(op_key);
 
       return {

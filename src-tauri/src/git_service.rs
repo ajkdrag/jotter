@@ -234,6 +234,11 @@ pub fn git_stage_and_commit(
     let sig = default_signature()?;
 
     let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+    if let Some(parent_commit) = parent.as_ref() {
+        if parent_commit.tree_id() == tree_oid {
+            return Err("nothing to commit".to_string());
+        }
+    }
     let parents: Vec<&git2::Commit> = parent.iter().collect();
 
     let oid = repo
@@ -241,6 +246,21 @@ pub fn git_stage_and_commit(
         .map_err(|e| format!("failed to commit: {}", e))?;
 
     Ok(oid.to_string())
+}
+
+#[tauri::command]
+pub fn git_create_tag(vault_path: String, name: String, message: String) -> Result<(), String> {
+    let repo = open_repo(&vault_path)?;
+    let head = repo
+        .head()
+        .map_err(|e| format!("failed to resolve HEAD: {}", e))?;
+    let target = head
+        .peel(ObjectType::Commit)
+        .map_err(|e| format!("failed to peel HEAD to commit: {}", e))?;
+    let sig = default_signature()?;
+    repo.tag(&name, &target, &sig, &message, false)
+        .map_err(|e| format!("failed to create tag: {}", e))?;
+    Ok(())
 }
 
 #[tauri::command]

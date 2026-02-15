@@ -603,6 +603,29 @@ describe("TabStore", () => {
       }).not.toThrow();
     });
 
+    it("invalidate_cache_by_path clears cache for all matching tabs", () => {
+      const store = new TabStore();
+      store.open_tab(np("docs/a.md"), "a");
+      store.open_tab(np("docs/b.md"), "b");
+      store.set_cached_note("docs/a.md", mock_open_note("docs/a.md"));
+      store.set_cached_note("docs/b.md", mock_open_note("docs/b.md"));
+
+      store.invalidate_cache_by_path(np("docs/a.md"));
+
+      expect(store.get_cached_note("docs/a.md")).toBeNull();
+      expect(store.get_cached_note("docs/b.md")?.meta.path).toBe("docs/b.md");
+    });
+
+    it("invalidate_cache_by_path is no-op for unmatched path", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+      store.set_cached_note("a.md", mock_open_note("a.md"));
+
+      store.invalidate_cache_by_path(np("missing.md"));
+
+      expect(store.get_cached_note("a.md")?.meta.path).toBe("a.md");
+    });
+
     it("overwrites existing cache entry", () => {
       const store = new TabStore();
       const first = mock_open_note("a.md");

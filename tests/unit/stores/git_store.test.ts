@@ -13,8 +13,10 @@ describe("GitStore", () => {
     expect(store.error).toBeNull();
     expect(store.history).toEqual([]);
     expect(store.history_note_path).toBeNull();
+    expect(store.is_loading_history).toBe(false);
     expect(store.selected_commit).toBeNull();
     expect(store.selected_diff).toBeNull();
+    expect(store.selected_file_content).toBeNull();
     expect(store.is_loading_diff).toBe(false);
   });
 
@@ -64,9 +66,10 @@ describe("GitStore", () => {
     const diff = { additions: 5, deletions: 2, hunks: [] };
     store.set_loading_diff(true);
     expect(store.is_loading_diff).toBe(true);
-    store.set_selected_commit(commit, diff);
+    store.set_selected_commit(commit, diff, "# preview");
     expect(store.selected_commit).toEqual(commit);
     expect(store.selected_diff).toEqual(diff);
+    expect(store.selected_file_content).toBe("# preview");
     expect(store.is_loading_diff).toBe(false);
   });
 
@@ -81,13 +84,16 @@ describe("GitStore", () => {
         message: "initial",
       },
     ];
+    store.set_loading_history(true);
     store.set_history(commits, "notes/test.md");
     expect(store.history).toEqual(commits);
     expect(store.history_note_path).toBe("notes/test.md");
+    expect(store.is_loading_history).toBe(true);
 
     store.clear_history();
     expect(store.history).toEqual([]);
     expect(store.history_note_path).toBeNull();
+    expect(store.is_loading_history).toBe(false);
   });
 
   it("resets all state", () => {
@@ -97,6 +103,7 @@ describe("GitStore", () => {
     store.set_sync_status("pushing");
     store.set_last_commit_time(9999);
     store.set_error("err");
+    store.set_loading_history(true);
     store.set_history(
       [
         {
@@ -118,6 +125,7 @@ describe("GitStore", () => {
         message: "m",
       },
       { additions: 1, deletions: 0, hunks: [] },
+      "preview",
     );
 
     store.reset();
@@ -131,8 +139,10 @@ describe("GitStore", () => {
     expect(store.error).toBeNull();
     expect(store.history).toEqual([]);
     expect(store.history_note_path).toBeNull();
+    expect(store.is_loading_history).toBe(false);
     expect(store.selected_commit).toBeNull();
     expect(store.selected_diff).toBeNull();
+    expect(store.selected_file_content).toBeNull();
     expect(store.is_loading_diff).toBe(false);
   });
 });

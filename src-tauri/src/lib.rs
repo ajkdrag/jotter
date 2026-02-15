@@ -94,7 +94,8 @@ pub fn run() {
             git_service::git_log,
             git_service::git_diff,
             git_service::git_show_file_at_commit,
-            git_service::git_restore_file
+            git_service::git_restore_file,
+            git_service::git_create_tag
         ])
         .register_uri_scheme_protocol("jotter-asset", |ctx, req| {
             storage::handle_asset_request(ctx.app_handle(), req)

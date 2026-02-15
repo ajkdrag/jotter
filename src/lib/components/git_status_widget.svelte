@@ -25,6 +25,13 @@
       sync_status === "pushing" ||
       sync_status === "pulling",
   );
+  const status_label = $derived.by(() => {
+    if (sync_status === "committing") return "Committing...";
+    if (sync_status === "pushing") return "Pushing...";
+    if (sync_status === "pulling") return "Pulling...";
+    if (sync_status === "error") return "Error";
+    return null;
+  });
 </script>
 
 {#if enabled}
@@ -43,6 +50,9 @@
       class:GitStatusWidget__indicator--dirty={is_dirty}
       class:GitStatusWidget__indicator--clean={!is_dirty}
     ></span>
+    {#if status_label}
+      <span class="GitStatusWidget__state">{status_label}</span>
+    {/if}
     {#if pending_files > 0}
       <span class="GitStatusWidget__badge">{pending_files}</span>
     {/if}
@@ -115,6 +125,11 @@
     padding: 1px var(--space-1);
     border-radius: var(--radius-sm);
     background-color: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  .GitStatusWidget__state {
+    font-size: var(--text-xs);
     color: var(--muted-foreground);
   }
 </style>

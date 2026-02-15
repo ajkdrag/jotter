@@ -7,6 +7,7 @@ export type EditorSettings = {
   attachment_folder: string;
   show_hidden_files: boolean;
   autosave_enabled: boolean;
+  git_autocommit_enabled: boolean;
   show_vault_dashboard_on_open: boolean;
 };
 
@@ -19,6 +20,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   attachment_folder: ".assets",
   show_hidden_files: false,
   autosave_enabled: true,
+  git_autocommit_enabled: false,
   show_vault_dashboard_on_open: true,
 };
 

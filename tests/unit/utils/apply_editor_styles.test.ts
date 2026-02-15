@@ -12,6 +12,7 @@ describe("apply_editor_styles", () => {
     attachment_folder: ".assets",
     show_hidden_files: false,
     autosave_enabled: true,
+    git_autocommit_enabled: false,
     show_vault_dashboard_on_open: true,
   };
 

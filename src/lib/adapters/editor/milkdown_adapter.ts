@@ -490,6 +490,7 @@ export function create_milkdown_editor_port(args?: {
       }
 
       function save_current_buffer() {
+        if (!current_note_path) return;
         run_editor_action((ctx) => {
           const view = ctx.get(editorViewCtx);
           buffer_map.set(
@@ -611,7 +612,10 @@ export function create_milkdown_editor_port(args?: {
         open_buffer(next_config: BufferConfig) {
           if (!editor) return;
 
-          save_current_buffer();
+          const is_same_path = next_config.note_path === current_note_path;
+          if (!is_same_path) {
+            save_current_buffer();
+          }
 
           current_vault_id = next_config.vault_id;
           current_note_path = next_config.note_path;
@@ -624,7 +628,9 @@ export function create_milkdown_editor_port(args?: {
             const view = ctx.get(editorViewCtx);
             const parser = ctx.get(parserCtx);
 
-            const saved_entry = buffer_map.get(next_config.note_path);
+            const saved_entry = is_same_path
+              ? null
+              : buffer_map.get(next_config.note_path);
             if (saved_entry) {
               view.updateState(saved_entry.state);
               current_markdown = saved_entry.markdown;
@@ -672,6 +678,9 @@ export function create_milkdown_editor_port(args?: {
         },
         close_buffer(note_path_to_close: string) {
           buffer_map.delete(note_path_to_close);
+          if (current_note_path === note_path_to_close) {
+            current_note_path = "";
+          }
         },
         focus() {
           if (!editor) return;

@@ -11,8 +11,10 @@ export class GitStore {
 
   history = $state<GitCommit[]>([]);
   history_note_path = $state<string | null>(null);
+  is_loading_history = $state(false);
   selected_commit = $state<GitCommit | null>(null);
   selected_diff = $state<GitDiff | null>(null);
+  selected_file_content = $state<string | null>(null);
   is_loading_diff = $state(false);
 
   set_status(branch: string, is_dirty: boolean, pending_files: number) {
@@ -40,11 +42,23 @@ export class GitStore {
   set_history(commits: GitCommit[], note_path: string | null) {
     this.history = commits;
     this.history_note_path = note_path;
+    this.selected_commit = null;
+    this.selected_diff = null;
+    this.selected_file_content = null;
   }
 
-  set_selected_commit(commit: GitCommit | null, diff: GitDiff | null) {
+  set_loading_history(loading: boolean) {
+    this.is_loading_history = loading;
+  }
+
+  set_selected_commit(
+    commit: GitCommit | null,
+    diff: GitDiff | null,
+    file_content: string | null,
+  ) {
     this.selected_commit = commit;
     this.selected_diff = diff;
+    this.selected_file_content = file_content;
     this.is_loading_diff = false;
   }
 
@@ -55,8 +69,10 @@ export class GitStore {
   clear_history() {
     this.history = [];
     this.history_note_path = null;
+    this.is_loading_history = false;
     this.selected_commit = null;
     this.selected_diff = null;
+    this.selected_file_content = null;
     this.is_loading_diff = false;
   }
 
@@ -70,8 +86,10 @@ export class GitStore {
     this.error = null;
     this.history = [];
     this.history_note_path = null;
+    this.is_loading_history = false;
     this.selected_commit = null;
     this.selected_diff = null;
+    this.selected_file_content = null;
     this.is_loading_diff = false;
   }
 }

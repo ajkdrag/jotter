@@ -316,6 +316,68 @@ describe("NoteService", () => {
     expect(notes_store.recent_notes[0]).toEqual(note_meta);
   });
 
+  it("re-reads note when force_reload is enabled", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    vault_store.set_vault(create_test_vault());
+
+    const note_meta = {
+      id: as_note_path("docs/alpha.md"),
+      path: as_note_path("docs/alpha.md"),
+      name: "alpha",
+      title: "alpha",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+    editor_store.set_open_note({
+      meta: note_meta,
+      markdown: as_markdown_text("# stale"),
+      buffer_id: "alpha",
+      is_dirty: false,
+    });
+
+    const notes_port = create_mock_notes_port();
+    const read_note = vi.fn().mockResolvedValue({
+      meta: note_meta,
+      markdown: as_markdown_text("# refreshed"),
+    });
+    notes_port.read_note = read_note;
+    const index_port = create_mock_index_port();
+    const assets_port = {
+      resolve_asset_url: vi.fn(),
+      write_image_asset: vi.fn(),
+    } as unknown as AssetsPort;
+    const editor_service = {
+      flush: vi.fn().mockReturnValue(null),
+      mark_clean: vi.fn(),
+    } as unknown as EditorService;
+
+    const service = new NoteService(
+      notes_port,
+      index_port,
+      assets_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      op_store,
+      editor_service,
+      () => 1,
+    );
+
+    const result = await service.open_note("docs/alpha.md", false, {
+      force_reload: true,
+    });
+
+    expect(result.status).toBe("opened");
+    expect(read_note).toHaveBeenCalledTimes(1);
+    expect(editor_store.open_note?.markdown).toBe(
+      as_markdown_text("# refreshed"),
+    );
+    expect(editor_store.open_note?.buffer_id).toContain(":reload:");
+  });
+
   it("removes deleted notes from recent list", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();

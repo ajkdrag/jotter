@@ -11,6 +11,7 @@
     note_path: string | null;
     commits: GitCommit[];
     is_loading: boolean;
+    is_restoring: boolean;
     selected_commit: GitCommit | null;
     diff: GitDiff | null;
     file_content: string | null;
@@ -24,6 +25,7 @@
     note_path,
     commits,
     is_loading,
+    is_restoring,
     selected_commit,
     diff,
     file_content,
@@ -75,6 +77,7 @@
               <span class="VersionHistory__commit-message">
                 {commit.message}
               </span>
+              <span class="VersionHistory__commit-author">{commit.author}</span>
               <span class="VersionHistory__commit-hash">
                 {commit.short_hash}
               </span>
@@ -115,12 +118,13 @@
         <Button variant="outline" onclick={on_close}>Close</Button>
         <Button
           variant="destructive"
+          disabled={is_restoring}
           onclick={() => {
             if (selected_commit) on_restore(selected_commit);
           }}
         >
           <RotateCcw />
-          Restore This Version
+          {is_restoring ? "Restoring..." : "Restore This Version"}
         </Button>
       </Dialog.Footer>
     {/if}
@@ -221,6 +225,12 @@
 
   .VersionHistory__commit--selected .VersionHistory__commit-message {
     color: var(--interactive);
+  }
+
+  .VersionHistory__commit-author {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    opacity: 0.8;
   }
 
   .VersionHistory__commit-hash {

@@ -72,6 +72,7 @@ export function mount_reactors(context: ReactorContext): () => void {
     create_git_autocommit_reactor(
       context.editor_store,
       context.git_store,
+      context.ui_store,
       context.git_service,
     ),
   ];

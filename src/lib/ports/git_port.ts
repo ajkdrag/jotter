@@ -31,4 +31,9 @@ export interface GitPort {
     file_path: string,
     commit_hash: string,
   ): Promise<string>;
+  create_tag(
+    vault_path: VaultPath,
+    name: string,
+    message: string,
+  ): Promise<void>;
 }
