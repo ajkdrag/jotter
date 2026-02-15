@@ -37,6 +37,7 @@ describe("SettingsService", () => {
       autosave_enabled: true,
       git_autocommit_enabled: false,
       show_vault_dashboard_on_open: true,
+      max_open_tabs: 5,
     });
 
     expect(result.status).toBe("success");
@@ -77,6 +78,7 @@ describe("SettingsService", () => {
       autosave_enabled: true,
       git_autocommit_enabled: false,
       show_vault_dashboard_on_open: false,
+      max_open_tabs: 5,
     };
 
     const result = await service.save_settings(settings);
@@ -129,6 +131,7 @@ describe("SettingsService", () => {
       autosave_enabled: true,
       git_autocommit_enabled: false,
       show_vault_dashboard_on_open: true,
+      max_open_tabs: 5,
     });
 
     expect(result.status).toBe("success");

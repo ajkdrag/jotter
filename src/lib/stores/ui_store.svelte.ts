@@ -89,9 +89,13 @@ const INITIAL_VAULT_DASHBOARD = {
 
 const INITIAL_TAB_CLOSE_CONFIRM = {
   open: false,
-  tab_id: null,
+  tab_id: null as string | null,
   tab_title: "",
-} as const;
+  pending_dirty_tab_ids: [] as string[],
+  close_mode: "single" as "single" | "all" | "other" | "right",
+  keep_tab_id: null as string | null,
+  apply_to_all: false,
+};
 
 const INITIAL_VERSION_HISTORY_DIALOG = {
   open: false,
@@ -239,6 +243,10 @@ export class UIStore {
     open: boolean;
     tab_id: string | null;
     tab_title: string;
+    pending_dirty_tab_ids: string[];
+    close_mode: "single" | "all" | "other" | "right";
+    keep_tab_id: string | null;
+    apply_to_all: boolean;
   }>({ ...INITIAL_TAB_CLOSE_CONFIRM });
 
   version_history_dialog = $state<{

@@ -325,11 +325,16 @@
 <TabCloseConfirmDialog
   open={stores.ui.tab_close_confirm.open}
   tab_title={stores.ui.tab_close_confirm.tab_title}
+  remaining_count={stores.ui.tab_close_confirm.pending_dirty_tab_ids.length}
+  apply_to_all={stores.ui.tab_close_confirm.apply_to_all}
   on_save={() =>
     void action_registry.execute(ACTION_IDS.tab_confirm_close_save)}
   on_discard={() =>
     void action_registry.execute(ACTION_IDS.tab_confirm_close_discard)}
   on_cancel={() => void action_registry.execute(ACTION_IDS.tab_cancel_close)}
+  on_toggle_apply_to_all={(checked) => {
+    stores.ui.tab_close_confirm.apply_to_all = checked;
+  }}
 />
 
 <VersionHistoryDialog

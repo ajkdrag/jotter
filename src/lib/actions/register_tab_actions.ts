@@ -1,8 +1,29 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
-import type { TabId } from "$lib/types/tab";
+import type { Tab, TabId } from "$lib/types/tab";
+import type { NotePath } from "$lib/types/ids";
 import { parent_folder_path } from "$lib/utils/path";
 import { toast } from "svelte-sonner";
+
+export function try_open_tab(
+  stores: ActionRegistrationInput["stores"],
+  note_path: NotePath,
+  title: string,
+): Tab | null {
+  const existing = stores.tab.find_tab_by_path(note_path);
+  if (existing) {
+    stores.tab.activate_tab(existing.id);
+    return existing;
+  }
+  const max = stores.ui.editor_settings.max_open_tabs;
+  if (stores.tab.tabs.length >= max) {
+    toast.error(
+      `Tab limit reached (max ${String(max)}). Close a tab to open a new one.`,
+    );
+    return null;
+  }
+  return stores.tab.open_tab(note_path, title);
+}
 
 export function register_tab_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
@@ -58,6 +79,10 @@ export function register_tab_actions(input: ActionRegistrationInput) {
           open: true,
           tab_id: tab.id,
           tab_title: tab.title,
+          pending_dirty_tab_ids: [],
+          close_mode: "single",
+          keep_tab_id: null,
+          apply_to_all: false,
         };
         return;
       }
@@ -72,12 +97,16 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     when: () => stores.tab.tabs.length > 1,
     execute: async (tab_id: unknown) => {
       const id = String(tab_id);
-      const dirty_others = stores.tab.tabs.filter(
-        (t) => t.id !== id && !t.is_pinned && t.is_dirty,
+      const closable = stores.tab.tabs.filter(
+        (t) => t.id !== id && !t.is_pinned,
       );
-      for (const dt of dirty_others) {
-        stores.tab.set_dirty(dt.id, false);
+      const dirty = closable.filter((t) => t.is_dirty);
+
+      if (dirty.length > 0) {
+        start_batch_close_confirm(stores, dirty, "other", id);
+        return;
       }
+
       stores.tab.close_other_tabs(id);
       await open_active_tab_note(input);
     },
@@ -88,6 +117,19 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     label: "Close Tabs to the Right",
     execute: async (tab_id: unknown) => {
       const id = String(tab_id);
+      const index = stores.tab.tabs.findIndex((t) => t.id === id);
+      if (index === -1) return;
+
+      const right_tabs = stores.tab.tabs.filter(
+        (t, i) => i > index && !t.is_pinned,
+      );
+      const dirty = right_tabs.filter((t) => t.is_dirty);
+
+      if (dirty.length > 0) {
+        start_batch_close_confirm(stores, dirty, "right", id);
+        return;
+      }
+
       stores.tab.close_tabs_to_right(id);
       await open_active_tab_note(input);
     },
@@ -97,6 +139,13 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.tab_close_all,
     label: "Close All Tabs",
     execute: () => {
+      const dirty = stores.tab.get_dirty_tabs();
+
+      if (dirty.length > 0) {
+        start_batch_close_confirm(stores, dirty, "all", null);
+        return;
+      }
+
       stores.tab.close_all_tabs();
       stores.editor.clear_open_note();
     },
@@ -148,7 +197,8 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       if (!entry) return;
 
       await capture_active_tab_snapshot(input);
-      stores.tab.open_tab(entry.note_path, entry.title);
+      const tab = try_open_tab(stores, entry.note_path, entry.title);
+      if (!tab) return;
 
       const result = await services.note.open_note(entry.note_path, false);
       if (result.status === "opened") {
@@ -236,28 +286,27 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.tab_confirm_close_save,
     label: "Save and Close Tab",
     execute: async () => {
-      const tab_id = stores.ui.tab_close_confirm.tab_id;
+      const { tab_id, close_mode, apply_to_all, pending_dirty_tab_ids } =
+        stores.ui.tab_close_confirm;
       if (!tab_id) return;
 
-      stores.ui.tab_close_confirm = {
-        open: false,
-        tab_id: null,
-        tab_title: "",
-      };
+      await save_dirty_tab(input, tab_id);
 
-      const tab = stores.tab.tabs.find((t) => t.id === tab_id);
-      if (!tab) return;
-
-      if (stores.tab.active_tab_id !== tab_id) {
-        await capture_active_tab_snapshot(input);
-        stores.tab.activate_tab(tab_id);
-        await open_active_tab_note(input);
-      }
-
-      const save_result = await services.note.save_note(null, true);
-      if (save_result.status === "saved") {
+      if (close_mode === "single") {
+        reset_close_confirm(stores);
         await close_tab_immediate(input, tab_id);
+        return;
       }
+
+      if (apply_to_all) {
+        for (const pending_id of pending_dirty_tab_ids) {
+          await save_dirty_tab(input, pending_id);
+        }
+        await execute_batch_close(input);
+        return;
+      }
+
+      await advance_or_finish_batch(input);
     },
   });
 
@@ -265,16 +314,27 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.tab_confirm_close_discard,
     label: "Discard and Close Tab",
     execute: async () => {
-      const tab_id = stores.ui.tab_close_confirm.tab_id;
+      const { tab_id, close_mode, apply_to_all, pending_dirty_tab_ids } =
+        stores.ui.tab_close_confirm;
       if (!tab_id) return;
 
-      stores.ui.tab_close_confirm = {
-        open: false,
-        tab_id: null,
-        tab_title: "",
-      };
       stores.tab.set_dirty(tab_id, false);
-      await close_tab_immediate(input, tab_id);
+
+      if (close_mode === "single") {
+        reset_close_confirm(stores);
+        await close_tab_immediate(input, tab_id);
+        return;
+      }
+
+      if (apply_to_all) {
+        for (const pending_id of pending_dirty_tab_ids) {
+          stores.tab.set_dirty(pending_id, false);
+        }
+        await execute_batch_close(input);
+        return;
+      }
+
+      await advance_or_finish_batch(input);
     },
   });
 
@@ -282,11 +342,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.tab_cancel_close,
     label: "Cancel Close Tab",
     execute: () => {
-      stores.ui.tab_close_confirm = {
-        open: false,
-        tab_id: null,
-        tab_title: "",
-      };
+      reset_close_confirm(stores);
     },
   });
 }
@@ -348,6 +404,108 @@ async function open_active_tab_note(input: ActionRegistrationInput) {
       stores.tab.set_cached_note(active_tab.id, open_note);
     }
   }
+}
+
+function reset_close_confirm(stores: ActionRegistrationInput["stores"]) {
+  stores.ui.tab_close_confirm = {
+    open: false,
+    tab_id: null,
+    tab_title: "",
+    pending_dirty_tab_ids: [],
+    close_mode: "single",
+    keep_tab_id: null,
+    apply_to_all: false,
+  };
+}
+
+function start_batch_close_confirm(
+  stores: ActionRegistrationInput["stores"],
+  dirty_tabs: Tab[],
+  close_mode: "all" | "other" | "right",
+  keep_tab_id: string | null,
+) {
+  const first = dirty_tabs[0];
+  if (!first) return;
+  stores.ui.tab_close_confirm = {
+    open: true,
+    tab_id: first.id,
+    tab_title: first.title,
+    pending_dirty_tab_ids: dirty_tabs.slice(1).map((t) => t.id),
+    close_mode,
+    keep_tab_id,
+    apply_to_all: false,
+  };
+}
+
+async function save_dirty_tab(
+  input: ActionRegistrationInput,
+  tab_id: string,
+): Promise<void> {
+  const { stores, services } = input;
+
+  if (stores.tab.active_tab_id === tab_id) {
+    await services.note.save_note(null, true);
+    return;
+  }
+
+  const cached = stores.tab.get_cached_note(tab_id);
+  if (cached) {
+    await services.note.write_note_content(cached.meta.path, cached.markdown);
+    stores.tab.set_dirty(tab_id, false);
+  }
+}
+
+async function execute_batch_close(
+  input: ActionRegistrationInput,
+): Promise<void> {
+  const { stores } = input;
+  const { close_mode, keep_tab_id } = stores.ui.tab_close_confirm;
+
+  reset_close_confirm(stores);
+
+  switch (close_mode) {
+    case "all": {
+      stores.tab.close_all_tabs();
+      stores.editor.clear_open_note();
+      break;
+    }
+    case "other": {
+      if (keep_tab_id) {
+        stores.tab.close_other_tabs(keep_tab_id);
+        await open_active_tab_note(input);
+      }
+      break;
+    }
+    case "right": {
+      if (keep_tab_id) {
+        stores.tab.close_tabs_to_right(keep_tab_id);
+        await open_active_tab_note(input);
+      }
+      break;
+    }
+  }
+}
+
+async function advance_or_finish_batch(
+  input: ActionRegistrationInput,
+): Promise<void> {
+  const { stores } = input;
+  const { pending_dirty_tab_ids } = stores.ui.tab_close_confirm;
+
+  if (pending_dirty_tab_ids.length > 0) {
+    const next_id = pending_dirty_tab_ids[0];
+    const next_tab = stores.tab.tabs.find((t) => t.id === next_id);
+    stores.ui.tab_close_confirm = {
+      ...stores.ui.tab_close_confirm,
+      tab_id: next_id ?? null,
+      tab_title: next_tab?.title ?? "",
+      pending_dirty_tab_ids: pending_dirty_tab_ids.slice(1),
+      apply_to_all: false,
+    };
+    return;
+  }
+
+  await execute_batch_close(input);
 }
 
 async function close_tab_immediate(

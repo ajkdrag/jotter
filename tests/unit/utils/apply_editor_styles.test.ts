@@ -14,6 +14,7 @@ describe("apply_editor_styles", () => {
     autosave_enabled: true,
     git_autocommit_enabled: false,
     show_vault_dashboard_on_open: true,
+    max_open_tabs: 5,
   };
 
   const original_document = globalThis.document;

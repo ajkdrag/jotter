@@ -9,6 +9,7 @@ export type EditorSettings = {
   autosave_enabled: boolean;
   git_autocommit_enabled: boolean;
   show_vault_dashboard_on_open: boolean;
+  max_open_tabs: number;
 };
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
@@ -22,6 +23,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   autosave_enabled: true,
   git_autocommit_enabled: false,
   show_vault_dashboard_on_open: true,
+  max_open_tabs: 5,
 };
 
 export const SETTINGS_KEY = "editor" as const;

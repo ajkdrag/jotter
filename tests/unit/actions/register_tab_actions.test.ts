@@ -384,6 +384,10 @@ describe("register_tab_actions", () => {
         open: true,
         tab_id: "a.md",
         tab_title: "a",
+        pending_dirty_tab_ids: [],
+        close_mode: "single",
+        keep_tab_id: null,
+        apply_to_all: false,
       };
 
       await registry.execute(ACTION_IDS.tab_confirm_close_save);
@@ -402,6 +406,10 @@ describe("register_tab_actions", () => {
         open: true,
         tab_id: "a.md",
         tab_title: "a",
+        pending_dirty_tab_ids: [],
+        close_mode: "single",
+        keep_tab_id: null,
+        apply_to_all: false,
       };
 
       await registry.execute(ACTION_IDS.tab_confirm_close_discard);
@@ -419,6 +427,10 @@ describe("register_tab_actions", () => {
         open: true,
         tab_id: "a.md",
         tab_title: "a",
+        pending_dirty_tab_ids: [],
+        close_mode: "single",
+        keep_tab_id: null,
+        apply_to_all: false,
       };
 
       await registry.execute(ACTION_IDS.tab_cancel_close);

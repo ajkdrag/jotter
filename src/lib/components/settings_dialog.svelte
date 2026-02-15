@@ -37,6 +37,7 @@
 
   let font_size_value = $derived(editor_settings.font_size);
   let line_height_value = $derived(editor_settings.line_height);
+  let max_open_tabs_value = $derived(editor_settings.max_open_tabs);
 
   function update<K extends keyof EditorSettings>(
     key: K,
@@ -187,6 +188,33 @@
                 {/each}
               </Select.Content>
             </Select.Root>
+          </div>
+          <div class="SettingsDialog__row--stacked">
+            <div class="flex items-center justify-between">
+              <div class="SettingsDialog__label-group">
+                <span class="SettingsDialog__label">Max Open Tabs</span>
+                <span class="SettingsDialog__description"
+                  >Limit the number of tabs for better performance (1–10)</span
+                >
+              </div>
+              <span class="SettingsDialog__badge"
+                >{editor_settings.max_open_tabs}</span
+              >
+            </div>
+            <Slider.Root
+              type="single"
+              value={max_open_tabs_value}
+              onValueChange={(v: number) => {
+                update(
+                  "max_open_tabs",
+                  Math.min(10, Math.max(1, Math.round(v))),
+                );
+              }}
+              min={1}
+              max={10}
+              step={1}
+              class="w-full"
+            />
           </div>
         </div>
       </section>

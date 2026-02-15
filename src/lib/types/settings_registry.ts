@@ -124,4 +124,11 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     category: "Files",
     keywords: ["vault", "dashboard", "overview", "open", "startup", "switch"],
   },
+  {
+    key: "max_open_tabs",
+    label: "Max Open Tabs",
+    description: "Maximum number of tabs that can be open at once",
+    category: "Layout",
+    keywords: ["tabs", "limit", "max", "open", "performance", "editor"],
+  },
 ];
