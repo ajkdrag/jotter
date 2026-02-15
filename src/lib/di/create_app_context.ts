@@ -163,6 +163,7 @@ export function create_app_context(input: {
     editor_service,
     note_service,
     vault_service,
+    settings_service,
     tab_service,
     git_service,
   });

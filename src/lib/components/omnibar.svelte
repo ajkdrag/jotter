@@ -39,6 +39,7 @@
     scope: OmnibarScope;
     items: OmnibarItem[];
     recent_notes: NoteMeta[];
+    recent_command_ids: string[];
     has_multiple_vaults: boolean;
     on_open_change: (open: boolean) => void;
     on_query_change: (query: string) => void;
@@ -55,6 +56,7 @@
     scope,
     items,
     recent_notes,
+    recent_command_ids,
     has_multiple_vaults,
     on_open_change,
     on_query_change,
@@ -66,6 +68,13 @@
   let input_ref: HTMLInputElement | null = $state(null);
   let collapsed_vaults = $state(new SvelteSet<string>());
   let prev_items_ref: OmnibarItem[] = $state([]);
+  let mouse_moved = $state(false);
+
+  $effect(() => {
+    if (open) {
+      mouse_moved = false;
+    }
+  });
 
   const is_command_mode = $derived(query.startsWith(">"));
   const has_query = $derived(
@@ -131,11 +140,23 @@
     }
   });
 
+  const sorted_commands = $derived.by(() => {
+    const mru_index = new Map(recent_command_ids.map((id, i) => [id, i]));
+    return [...COMMANDS_REGISTRY].sort((a, b) => {
+      const a_idx = mru_index.get(a.id);
+      const b_idx = mru_index.get(b.id);
+      if (a_idx !== undefined && b_idx !== undefined) return a_idx - b_idx;
+      if (a_idx !== undefined) return -1;
+      if (b_idx !== undefined) return 1;
+      return 0;
+    });
+  });
+
   const display_items: OmnibarItem[] = $derived.by(() => {
     if (has_query) return items;
 
     if (is_command_mode) {
-      return COMMANDS_REGISTRY.map((command) => ({
+      return sorted_commands.map((command) => ({
         kind: "command" as const,
         command,
         score: 0,
@@ -148,7 +169,7 @@
       kind: "recent_note" as const,
       note,
     }));
-    const commands: OmnibarItem[] = COMMANDS_REGISTRY.map((command) => ({
+    const commands: OmnibarItem[] = sorted_commands.map((command) => ({
       kind: "command" as const,
       command,
       score: 0,
@@ -311,6 +332,9 @@
         ? get_item_id(visible_items[selected_index])
         : undefined}
       class="Omnibar__list"
+      onmousemove={() => {
+        mouse_moved = true;
+      }}
     >
       {#if is_all_vaults && has_query}
         {#if vault_groups.length > 0}
@@ -366,6 +390,7 @@
                   class="Omnibar__item"
                   class:Omnibar__item--selected={vis_index === selected_index}
                   onmouseenter={() => {
+                    if (!mouse_moved) return;
                     on_selected_index_change(vis_index);
                   }}
                   onclick={() => {
@@ -427,6 +452,7 @@
             class="Omnibar__item"
             class:Omnibar__item--selected={index === selected_index}
             onmouseenter={() => {
+              if (!mouse_moved) return;
               on_selected_index_change(index);
             }}
             onclick={() => {

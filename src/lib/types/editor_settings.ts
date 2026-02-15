@@ -27,3 +27,37 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
 };
 
 export const SETTINGS_KEY = "editor" as const;
+
+export const GLOBAL_ONLY_SETTING_KEYS: readonly (keyof EditorSettings)[] = [
+  "show_vault_dashboard_on_open",
+  "git_autocommit_enabled",
+  "autosave_enabled",
+] as const;
+
+const GLOBAL_ONLY_SET = new Set<string>(GLOBAL_ONLY_SETTING_KEYS);
+
+export function omit_global_only_keys(
+  record: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (!GLOBAL_ONLY_SET.has(key)) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+export async function apply_global_only_overrides(
+  base: EditorSettings,
+  get_setting: (key: string) => Promise<unknown>,
+): Promise<EditorSettings> {
+  const result = { ...base };
+  for (const key of GLOBAL_ONLY_SETTING_KEYS) {
+    const global_value = await get_setting(key);
+    if (typeof global_value === typeof base[key]) {
+      (result as Record<string, unknown>)[key] = global_value;
+    }
+  }
+  return result;
+}

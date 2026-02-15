@@ -7,33 +7,31 @@ import type {
   SettingsLoadResult,
   SettingsSaveResult,
 } from "$lib/types/settings_service_result";
-import { SETTINGS_KEY } from "$lib/types/editor_settings";
+import {
+  SETTINGS_KEY,
+  GLOBAL_ONLY_SETTING_KEYS,
+  omit_global_only_keys,
+  apply_global_only_overrides,
+} from "$lib/types/editor_settings";
 import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("settings_service");
 
-const GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY = "show_vault_dashboard_on_open";
+const RECENT_COMMAND_IDS_KEY = "recent_command_ids";
 
 function sanitize_vault_scoped_settings(value: unknown): {
-  settings: EditorSettings | null;
-  had_global_dashboard_flag: boolean;
+  settings: Record<string, unknown> | null;
+  had_global_keys: boolean;
 } {
   if (!value || typeof value !== "object") {
-    return { settings: null, had_global_dashboard_flag: false };
+    return { settings: null, had_global_keys: false };
   }
   const record = value as Record<string, unknown>;
-  const had_global_dashboard_flag = Object.prototype.hasOwnProperty.call(
-    record,
-    "show_vault_dashboard_on_open",
-  );
-  if (had_global_dashboard_flag) {
-    delete record.show_vault_dashboard_on_open;
-  }
-  return {
-    settings: record as EditorSettings,
-    had_global_dashboard_flag,
-  };
+  const cleaned = omit_global_only_keys(record);
+  const had_global_keys =
+    Object.keys(cleaned).length < Object.keys(record).length;
+  return { settings: cleaned, had_global_keys };
 }
 
 export class SettingsService {
@@ -44,18 +42,6 @@ export class SettingsService {
     private readonly op_store: OpStore,
     private readonly now_ms: () => number,
   ) {}
-
-  private async load_global_show_dashboard_on_open(
-    fallback: boolean,
-  ): Promise<boolean> {
-    const global_value = await this.settings_port.get_setting<unknown>(
-      GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY,
-    );
-    if (typeof global_value === "boolean") {
-      return global_value;
-    }
-    return fallback;
-  }
 
   async load_settings(
     current_settings: EditorSettings,
@@ -76,19 +62,15 @@ export class SettingsService {
           vault_id,
           SETTINGS_KEY,
         );
-      const { settings: stored, had_global_dashboard_flag } =
+      const { settings: stored, had_global_keys } =
         sanitize_vault_scoped_settings(stored_raw);
       const merged = stored
         ? { ...current_settings, ...stored }
         : { ...current_settings };
-      const settings = {
-        ...merged,
-        show_vault_dashboard_on_open:
-          await this.load_global_show_dashboard_on_open(
-            merged.show_vault_dashboard_on_open,
-          ),
-      };
-      if (stored && had_global_dashboard_flag) {
+      const get_setting = (k: string) =>
+        this.settings_port.get_setting<unknown>(k);
+      const settings = await apply_global_only_overrides(merged, get_setting);
+      if (stored && had_global_keys) {
         await this.vault_settings_port.set_vault_setting(
           vault_id,
           SETTINGS_KEY,
@@ -121,17 +103,17 @@ export class SettingsService {
     this.op_store.start("settings.save", this.now_ms());
 
     try {
-      const { show_vault_dashboard_on_open, ...vault_scoped_settings } =
-        settings;
+      const vault_scoped = omit_global_only_keys(
+        settings as unknown as Record<string, unknown>,
+      );
       await this.vault_settings_port.set_vault_setting(
         vault_id,
         SETTINGS_KEY,
-        vault_scoped_settings,
+        vault_scoped,
       );
-      await this.settings_port.set_setting(
-        GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY,
-        show_vault_dashboard_on_open,
-      );
+      for (const key of GLOBAL_ONLY_SETTING_KEYS) {
+        await this.settings_port.set_setting(key, settings[key]);
+      }
       this.op_store.succeed("settings.save");
       return { status: "success" };
     } catch (error) {
@@ -142,6 +124,33 @@ export class SettingsService {
         status: "failed",
         error: message,
       };
+    }
+  }
+
+  async load_recent_command_ids(): Promise<string[]> {
+    try {
+      const stored = await this.settings_port.get_setting<unknown>(
+        RECENT_COMMAND_IDS_KEY,
+      );
+      if (!stored || !Array.isArray(stored)) return [];
+      return stored.filter(
+        (entry): entry is string => typeof entry === "string",
+      );
+    } catch (error) {
+      log.error("Load recent command IDs failed", {
+        error: error_message(error),
+      });
+      return [];
+    }
+  }
+
+  async save_recent_command_ids(ids: string[]): Promise<void> {
+    try {
+      await this.settings_port.set_setting(RECENT_COMMAND_IDS_KEY, ids);
+    } catch (error) {
+      log.error("Save recent command IDs failed", {
+        error: error_message(error),
+      });
     }
   }
 

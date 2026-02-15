@@ -2,6 +2,7 @@ import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
 import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
 import type { CommandId } from "$lib/types/command_palette";
+import { COMMANDS_REGISTRY } from "$lib/domain/search_commands";
 import { as_note_path, type VaultId } from "$lib/types/ids";
 
 function open_omnibar(input: ActionRegistrationInput) {
@@ -137,6 +138,10 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
       break;
     case "command":
       close_omnibar(input);
+      input.stores.ui.add_recent_command(
+        item.command.id,
+        COMMANDS_REGISTRY.length,
+      );
       await execute_command(input, item.command.id);
       break;
     case "setting":

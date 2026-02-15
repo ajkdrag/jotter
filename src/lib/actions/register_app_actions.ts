@@ -16,8 +16,12 @@ export function register_app_actions(input: ActionRegistrationInput) {
         error: null,
       };
 
-      const result = await services.vault.initialize(default_mount_config);
+      const [result, recent_command_ids] = await Promise.all([
+        services.vault.initialize(default_mount_config),
+        services.settings.load_recent_command_ids(),
+      ]);
       stores.ui.set_theme(result.theme);
+      stores.ui.set_recent_command_ids(recent_command_ids);
 
       if (result.status === "error") {
         stores.ui.startup = {

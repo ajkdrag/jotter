@@ -132,6 +132,7 @@ export class UIStore {
   selected_folder_path = $state("");
   editor_settings = $state<EditorSettings>({ ...DEFAULT_EDITOR_SETTINGS });
   system_dialog_open = $state(false);
+  recent_command_ids = $state<string[]>([]);
 
   startup = $state<{ status: AsyncStatus; error: string | null }>({
     status: "idle",
@@ -283,6 +284,15 @@ export class UIStore {
 
   set_system_dialog_open(open: boolean) {
     this.system_dialog_open = open;
+  }
+
+  set_recent_command_ids(ids: string[]) {
+    this.recent_command_ids = ids;
+  }
+
+  add_recent_command(id: string, max_size: number) {
+    const filtered = this.recent_command_ids.filter((c) => c !== id);
+    this.recent_command_ids = [id, ...filtered].slice(0, max_size);
   }
 
   reset_for_new_vault() {

@@ -21,6 +21,8 @@ import type { NoteMeta } from "$lib/types/note";
 import {
   DEFAULT_EDITOR_SETTINGS,
   SETTINGS_KEY,
+  omit_global_only_keys,
+  apply_global_only_overrides,
   type EditorSettings,
 } from "$lib/types/editor_settings";
 import type {
@@ -47,7 +49,6 @@ export type AppMountConfig = {
 const RECENT_NOTES_KEY = "recent_notes";
 const STARRED_PATHS_KEY = "starred_paths";
 const PINNED_VAULT_IDS_KEY = "pinned_vault_ids";
-const GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY = "show_vault_dashboard_on_open";
 const WATCHER_INDEX_FLUSH_DELAY_MS = 120;
 const WATCHER_BULK_FORCE_SCAN_THRESHOLD = 256;
 class StaleVaultOpenError extends Error {
@@ -434,43 +435,41 @@ export class VaultService {
   private async load_editor_settings(
     vault_id: VaultId,
   ): Promise<EditorSettings> {
+    const get_global = (k: string) =>
+      this.settings_port.get_setting<unknown>(k);
+
     const stored =
       await this.vault_settings_port.get_vault_setting<EditorSettings>(
         vault_id,
         SETTINGS_KEY,
       );
     if (stored) {
-      const global_show_dashboard_on_open =
-        await this.settings_port.get_setting<unknown>(
-          GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY,
-        );
-      const merged = { ...DEFAULT_EDITOR_SETTINGS, ...stored };
-      if (typeof global_show_dashboard_on_open === "boolean") {
-        merged.show_vault_dashboard_on_open = global_show_dashboard_on_open;
-      }
-      return merged;
+      const vault_only = omit_global_only_keys(
+        stored as Record<string, unknown>,
+      ) as Partial<EditorSettings>;
+      const merged = { ...DEFAULT_EDITOR_SETTINGS, ...vault_only };
+      return apply_global_only_overrides(merged, get_global);
     }
 
     const legacy =
       await this.settings_port.get_setting<EditorSettings>(SETTINGS_KEY);
     if (legacy) {
-      const migrated = { ...DEFAULT_EDITOR_SETTINGS, ...legacy };
-      const global_show_dashboard_on_open =
-        await this.settings_port.get_setting<unknown>(
-          GLOBAL_SHOW_DASHBOARD_ON_OPEN_KEY,
-        );
-      if (typeof global_show_dashboard_on_open === "boolean") {
-        migrated.show_vault_dashboard_on_open = global_show_dashboard_on_open;
-      }
+      const vault_only = omit_global_only_keys(
+        legacy as Record<string, unknown>,
+      ) as Partial<EditorSettings>;
+      const migrated = { ...DEFAULT_EDITOR_SETTINGS, ...vault_only };
       await this.vault_settings_port.set_vault_setting(
         vault_id,
         SETTINGS_KEY,
-        migrated,
+        vault_only,
       );
-      return migrated;
+      return apply_global_only_overrides(migrated, get_global);
     }
 
-    return { ...DEFAULT_EDITOR_SETTINGS };
+    return apply_global_only_overrides(
+      { ...DEFAULT_EDITOR_SETTINGS },
+      get_global,
+    );
   }
 
   async save_recent_notes(

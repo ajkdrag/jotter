@@ -3,144 +3,140 @@ import { SettingsService } from "$lib/services/settings_service";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { as_vault_id } from "$lib/types/ids";
+import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
 import { create_test_vault } from "../helpers/test_fixtures";
 
+const VAULT_ID = as_vault_id("vault-a");
+
+function make_service(overrides: {
+  vault_get?: unknown;
+  global_get?: (key: string) => unknown;
+}) {
+  const vault_settings_port = {
+    get_vault_setting: vi.fn().mockResolvedValue(overrides.vault_get ?? null),
+    set_vault_setting: vi.fn().mockResolvedValue(undefined),
+  };
+  const global_get = overrides.global_get ?? (() => null);
+  const settings_port = {
+    get_setting: vi
+      .fn()
+      .mockImplementation((key: string) => Promise.resolve(global_get(key))),
+    set_setting: vi.fn().mockResolvedValue(undefined),
+  };
+  const vault_store = new VaultStore();
+  vault_store.set_vault(create_test_vault({ id: VAULT_ID }));
+  const op_store = new OpStore();
+  const service = new SettingsService(
+    vault_settings_port as never,
+    settings_port as never,
+    vault_store,
+    op_store,
+    () => 1,
+  );
+  return { service, vault_settings_port, settings_port };
+}
+
 describe("SettingsService", () => {
-  it("loads show_vault_dashboard_on_open from global settings", async () => {
-    const vault_settings_port = {
-      get_vault_setting: vi.fn().mockResolvedValue({ autosave_enabled: true }),
-      set_vault_setting: vi.fn(),
-    };
-    const settings_port = {
-      get_setting: vi.fn().mockResolvedValue(false),
-      set_setting: vi.fn(),
-    };
-    const vault_store = new VaultStore();
-    vault_store.set_vault(create_test_vault({ id: as_vault_id("vault-a") }));
-    const op_store = new OpStore();
-    const service = new SettingsService(
-      vault_settings_port as never,
-      settings_port as never,
-      vault_store,
-      op_store,
-      () => 1,
-    );
+  it("loads global-only settings from global port, not vault", async () => {
+    const { service } = make_service({
+      vault_get: { font_size: 1.2 },
+      global_get: (key) => {
+        if (key === "show_vault_dashboard_on_open") return false;
+        if (key === "autosave_enabled") return false;
+        if (key === "git_autocommit_enabled") return true;
+        return null;
+      },
+    });
 
     const result = await service.load_settings({
-      font_size: 1,
-      line_height: 1.75,
-      heading_color: "inherit",
-      spacing: "normal",
-      link_syntax: "wikilink",
-      attachment_folder: ".assets",
-      show_hidden_files: false,
-      autosave_enabled: true,
-      git_autocommit_enabled: false,
-      show_vault_dashboard_on_open: true,
-      max_open_tabs: 5,
+      ...DEFAULT_EDITOR_SETTINGS,
     });
 
     expect(result.status).toBe("success");
-    if (result.status !== "success") {
-      throw new Error("expected success");
-    }
+    if (result.status !== "success") throw new Error("expected success");
     expect(result.settings.show_vault_dashboard_on_open).toBe(false);
+    expect(result.settings.autosave_enabled).toBe(false);
+    expect(result.settings.git_autocommit_enabled).toBe(true);
+    expect(result.settings.font_size).toBe(1.2);
   });
 
-  it("saves show_vault_dashboard_on_open to global settings only", async () => {
-    const vault_settings_port = {
-      get_vault_setting: vi.fn().mockResolvedValue(null),
-      set_vault_setting: vi.fn().mockResolvedValue(undefined),
-    };
-    const settings_port = {
-      get_setting: vi.fn().mockResolvedValue(null),
-      set_setting: vi.fn().mockResolvedValue(undefined),
-    };
-    const vault_store = new VaultStore();
-    vault_store.set_vault(create_test_vault({ id: as_vault_id("vault-a") }));
-    const op_store = new OpStore();
-    const service = new SettingsService(
-      vault_settings_port as never,
-      settings_port as never,
-      vault_store,
-      op_store,
-      () => 1,
-    );
+  it("saves global-only settings to global port only", async () => {
+    const { service, vault_settings_port, settings_port } = make_service({});
 
     const settings = {
-      font_size: 1,
-      line_height: 1.75,
-      heading_color: "inherit" as const,
-      spacing: "normal" as const,
-      link_syntax: "wikilink" as const,
-      attachment_folder: ".assets",
-      show_hidden_files: false,
-      autosave_enabled: true,
-      git_autocommit_enabled: false,
+      ...DEFAULT_EDITOR_SETTINGS,
       show_vault_dashboard_on_open: false,
-      max_open_tabs: 5,
+      autosave_enabled: false,
+      git_autocommit_enabled: true,
     };
 
     const result = await service.save_settings(settings);
-    const { show_vault_dashboard_on_open: _, ...vault_scoped_settings } =
-      settings;
 
     expect(result.status).toBe("success");
-    expect(vault_settings_port.set_vault_setting).toHaveBeenCalledWith(
-      as_vault_id("vault-a"),
-      "editor",
-      vault_scoped_settings,
-    );
+
+    const saved_vault = vault_settings_port.set_vault_setting.mock
+      .calls[0]?.[2] as Record<string, unknown>;
+    expect(saved_vault).not.toHaveProperty("show_vault_dashboard_on_open");
+    expect(saved_vault).not.toHaveProperty("autosave_enabled");
+    expect(saved_vault).not.toHaveProperty("git_autocommit_enabled");
+    expect(saved_vault).toHaveProperty("font_size");
+
     expect(settings_port.set_setting).toHaveBeenCalledWith(
       "show_vault_dashboard_on_open",
       false,
     );
+    expect(settings_port.set_setting).toHaveBeenCalledWith(
+      "autosave_enabled",
+      false,
+    );
+    expect(settings_port.set_setting).toHaveBeenCalledWith(
+      "git_autocommit_enabled",
+      true,
+    );
   });
 
-  it("sanitizes stale per-vault dashboard flag during load", async () => {
-    const vault_settings_port = {
-      get_vault_setting: vi.fn().mockResolvedValue({
+  it("sanitizes stale global-only keys from vault settings during load", async () => {
+    const { service, vault_settings_port } = make_service({
+      vault_get: {
+        font_size: 1.5,
         autosave_enabled: true,
         show_vault_dashboard_on_open: true,
-      }),
-      set_vault_setting: vi.fn().mockResolvedValue(undefined),
-    };
-    const settings_port = {
-      get_setting: vi.fn().mockResolvedValue(false),
-      set_setting: vi.fn(),
-    };
-    const vault_store = new VaultStore();
-    vault_store.set_vault(create_test_vault({ id: as_vault_id("vault-a") }));
-    const op_store = new OpStore();
-    const service = new SettingsService(
-      vault_settings_port as never,
-      settings_port as never,
-      vault_store,
-      op_store,
-      () => 1,
-    );
+        git_autocommit_enabled: true,
+      },
+      global_get: () => false,
+    });
 
     const result = await service.load_settings({
-      font_size: 1,
-      line_height: 1.75,
-      heading_color: "inherit",
-      spacing: "normal",
-      link_syntax: "wikilink",
-      attachment_folder: ".assets",
-      show_hidden_files: false,
-      autosave_enabled: true,
-      git_autocommit_enabled: false,
-      show_vault_dashboard_on_open: true,
-      max_open_tabs: 5,
+      ...DEFAULT_EDITOR_SETTINGS,
     });
 
     expect(result.status).toBe("success");
-    expect(vault_settings_port.set_vault_setting).toHaveBeenCalledWith(
-      as_vault_id("vault-a"),
-      "editor",
-      {
-        autosave_enabled: true,
-      },
+
+    const written_vault = vault_settings_port.set_vault_setting.mock
+      .calls[0]?.[2] as Record<string, unknown>;
+    expect(written_vault).not.toHaveProperty("show_vault_dashboard_on_open");
+    expect(written_vault).not.toHaveProperty("autosave_enabled");
+    expect(written_vault).not.toHaveProperty("git_autocommit_enabled");
+    expect(written_vault).toHaveProperty("font_size", 1.5);
+  });
+
+  it("uses fallback defaults when no global value is stored", async () => {
+    const { service } = make_service({
+      vault_get: { font_size: 1.2 },
+      global_get: () => null,
+    });
+
+    const result = await service.load_settings({
+      ...DEFAULT_EDITOR_SETTINGS,
+    });
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") throw new Error("expected success");
+    expect(result.settings.show_vault_dashboard_on_open).toBe(
+      DEFAULT_EDITOR_SETTINGS.show_vault_dashboard_on_open,
+    );
+    expect(result.settings.autosave_enabled).toBe(
+      DEFAULT_EDITOR_SETTINGS.autosave_enabled,
     );
   });
 });
