@@ -164,6 +164,10 @@
   --editor-bullet-size: 5px;
   --editor-bullet-nested-size: 4px;
   --editor-checkbox-size: 14px;
+  --editor-checkmark-width: 4px;
+  --editor-checkmark-height: 7px;
+  --editor-checkmark-stroke: 2px;
+  --editor-checkmark-offset: -1px;
 
   /* ----------------------------------------
      TRANSITION SYSTEM

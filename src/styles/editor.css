@@ -417,12 +417,13 @@
 .milkdown-list-item-block > .list-item > .label-wrapper .label.checked::after {
   content: "";
   position: absolute;
-  width: 4px;
-  height: 7px;
+  width: var(--editor-checkmark-width);
+  height: var(--editor-checkmark-height);
   border: solid var(--primary-foreground);
-  border-width: 0 2px 2px 0;
+  border-width: 0 var(--editor-checkmark-stroke) var(--editor-checkmark-stroke)
+    0;
   transform: rotate(45deg);
-  margin-top: -1px;
+  margin-top: var(--editor-checkmark-offset);
 }
 
 .milkdown-list-item-block
@@ -435,6 +436,24 @@
     var(--editor-text-muted) 50%,
     transparent
   );
+}
+
+/* Child checkboxes inherit checked appearance from parent */
+.list-item:has(> .label-wrapper .label.checked) .label.unchecked::before {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.list-item:has(> .label-wrapper .label.checked) .label.unchecked::after {
+  content: "";
+  position: absolute;
+  width: var(--editor-checkmark-width);
+  height: var(--editor-checkmark-height);
+  border: solid var(--primary-foreground);
+  border-width: 0 var(--editor-checkmark-stroke) var(--editor-checkmark-stroke)
+    0;
+  transform: rotate(45deg);
+  margin-top: var(--editor-checkmark-offset);
 }
 
 /* ============================================
