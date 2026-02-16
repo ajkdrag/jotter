@@ -66,6 +66,10 @@ import {
   editor_context_plugin_key,
 } from "./editor_context_plugin";
 import {
+  find_highlight_plugin,
+  find_highlight_plugin_key,
+} from "./find_highlight_plugin";
+import {
   format_wiki_target_for_markdown,
   format_wiki_target_for_markdown_link,
   try_decode_wiki_link_href,
@@ -393,6 +397,7 @@ export function create_milkdown_editor_port(args?: {
           }),
         )
         .use(create_wiki_link_converter_plugin())
+        .use(find_highlight_plugin)
         .use(listener)
         .use(history)
         .use(dirty_state_plugin_config_key)
@@ -694,6 +699,33 @@ export function create_milkdown_editor_port(args?: {
           run_editor_action((ctx) => {
             const view = ctx.get(editorViewCtx);
             set_wiki_suggestions(view, items);
+          });
+        },
+        update_find_state(query: string, selected_index: number) {
+          if (!editor) return;
+          run_editor_action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const tr = view.state.tr.setMeta(find_highlight_plugin_key, {
+              query,
+              selected_index,
+            });
+            view.dispatch(tr);
+
+            if (query) {
+              const plugin_state = find_highlight_plugin_key.getState(
+                view.state,
+              );
+              const positions = plugin_state?.match_positions;
+              const match = positions?.[selected_index];
+              if (match) {
+                const dom = view.domAtPos(match.from);
+                const node =
+                  dom.node instanceof HTMLElement
+                    ? dom.node
+                    : dom.node.parentElement;
+                node?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }
           });
         },
       };

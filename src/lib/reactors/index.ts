@@ -8,6 +8,7 @@ import { create_tab_dirty_sync_reactor } from "$lib/reactors/tab_dirty_sync.reac
 import { create_tab_persist_reactor } from "$lib/reactors/tab_persist.reactor.svelte";
 import { create_git_autocommit_reactor } from "$lib/reactors/git_autocommit.reactor.svelte";
 import { create_recent_commands_persist_reactor } from "$lib/reactors/recent_commands_persist.reactor.svelte";
+import { create_find_in_file_reactor } from "$lib/reactors/find_in_file.reactor.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
@@ -82,6 +83,7 @@ export function mount_reactors(context: ReactorContext): () => void {
       context.ui_store,
       context.settings_service,
     ),
+    create_find_in_file_reactor(context.ui_store, context.editor_service),
   ];
 
   return () => {

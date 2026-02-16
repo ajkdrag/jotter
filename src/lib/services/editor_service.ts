@@ -125,6 +125,10 @@ export class EditorService {
     this.session?.close_buffer(note_path);
   }
 
+  update_find_state(query: string, selected_index: number) {
+    this.session?.update_find_state?.(query, selected_index);
+  }
+
   private next_session_generation(): number {
     this.session_generation += 1;
     return this.session_generation;

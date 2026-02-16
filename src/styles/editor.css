@@ -31,6 +31,10 @@
   --editor-mark-bg: oklch(0.95 0.08 100);
   --editor-mark-text: oklch(0.35 0.08 100);
 
+  /* Find-in-file match highlighting */
+  --editor-find-match-bg: oklch(0.93 0.09 90);
+  --editor-find-match-selected-bg: oklch(0.82 0.15 75);
+
   /* Syntax highlighting tokens - Light mode */
   --syntax-comment: oklch(0.55 0.02 240);
   --syntax-punctuation: oklch(0.45 0.03 240);
@@ -60,6 +64,10 @@
   --editor-blockquote-bg: color-mix(in oklch, var(--muted) 30%, transparent);
   --editor-mark-bg: oklch(0.35 0.1 85);
   --editor-mark-text: oklch(0.85 0.08 85);
+
+  /* Find-in-file match highlighting - dark mode */
+  --editor-find-match-bg: oklch(0.38 0.08 80);
+  --editor-find-match-selected-bg: oklch(0.52 0.14 75);
 
   /* Syntax highlighting tokens - Dark mode */
   --syntax-comment: oklch(0.55 0.02 240);
@@ -872,6 +880,24 @@
 .ProseMirror ::selection {
   background: var(--editor-selection-bg);
   color: var(--foreground);
+}
+
+/* ============================================
+   FIND-IN-FILE MATCH HIGHLIGHTING
+   ============================================ */
+
+.ProseMirror .find-match {
+  background-color: var(--editor-find-match-bg);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px
+    color-mix(in oklch, var(--editor-find-match-bg) 60%, transparent);
+  transition: background-color var(--duration-fast) var(--ease-default);
+}
+
+.ProseMirror .find-match--selected {
+  background-color: var(--editor-find-match-selected-bg);
+  box-shadow: 0 0 0 1px
+    color-mix(in oklch, var(--editor-find-match-selected-bg) 80%, transparent);
 }
 
 /* ============================================

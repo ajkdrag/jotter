@@ -22,6 +22,7 @@ export type EditorSession = {
   ) => void;
   open_buffer: (config: BufferConfig) => void;
   close_buffer: (note_path: string) => void;
+  update_find_state?: (query: string, selected_index: number) => void;
 };
 
 export type EditorEventHandlers = {
