@@ -1,60 +1,50 @@
+import type { HotkeyConfig } from "$lib/types/hotkey_config";
+import type { ActionRegistry } from "$lib/actions/registry";
+import { normalize_event_to_key } from "$lib/domain/hotkey_validation";
+
 export type KeyboardShortcuts = {
   handle_keydown_capture: (event: KeyboardEvent) => void;
   handle_keydown: (event: KeyboardEvent) => void;
 };
 
 export function use_keyboard_shortcuts(input: {
+  hotkeys_config: () => HotkeyConfig;
   is_enabled: () => boolean;
   is_blocked: () => boolean;
   is_omnibar_open: () => boolean;
   is_vault_switcher_open: () => boolean;
-  on_toggle_omnibar: () => void;
-  on_open_omnibar_commands: () => void;
-  on_open_omnibar_notes: () => void;
-  on_open_omnibar_all_vaults?: () => void;
-  on_open_vault_switcher: () => void;
+  has_tabs: () => boolean;
+  action_registry: ActionRegistry;
   on_close_vault_switcher: () => void;
   on_select_pinned_vault: (slot: number) => void;
-  on_toggle_sidebar: () => void;
-  on_toggle_find_in_file: () => void;
-  on_open_vault_dashboard?: () => void;
-  on_open_version_history?: () => void;
-  on_save: () => void;
-  on_close_tab?: () => void;
-  on_reopen_tab?: () => void;
-  on_next_tab?: () => void;
-  on_prev_tab?: () => void;
-  on_switch_to_tab?: (index: number) => void;
-  on_move_tab_left?: () => void;
-  on_move_tab_right?: () => void;
-  has_tabs?: () => boolean;
+  on_switch_to_tab: (index: number) => void;
 }): KeyboardShortcuts {
   const {
+    hotkeys_config,
     is_enabled,
     is_blocked,
     is_omnibar_open,
     is_vault_switcher_open,
-    on_toggle_omnibar,
-    on_open_omnibar_commands,
-    on_open_omnibar_notes,
-    on_open_omnibar_all_vaults = on_open_omnibar_notes,
-    on_open_vault_switcher,
+    has_tabs,
+    action_registry,
     on_close_vault_switcher,
     on_select_pinned_vault,
-    on_toggle_sidebar,
-    on_toggle_find_in_file,
-    on_open_vault_dashboard = () => {},
-    on_open_version_history = () => {},
-    on_save,
-    on_close_tab = () => {},
-    on_reopen_tab = () => {},
-    on_next_tab = () => {},
-    on_prev_tab = () => {},
-    on_switch_to_tab = () => {},
-    on_move_tab_left = () => {},
-    on_move_tab_right = () => {},
-    has_tabs = () => false,
+    on_switch_to_tab,
   } = input;
+
+  const build_key_maps = () => {
+    const config = hotkeys_config();
+    const capture_map = new Map<string, string>();
+    const bubble_map = new Map<string, string>();
+
+    for (const binding of config.bindings) {
+      if (binding.key === null) continue;
+      const target_map = binding.phase === "capture" ? capture_map : bubble_map;
+      target_map.set(binding.key, binding.action_id);
+    }
+
+    return { capture_map, bubble_map };
+  };
 
   const is_mod_combo = (event: KeyboardEvent, key: string): boolean => {
     if (!(event.metaKey || event.ctrlKey)) return false;
@@ -69,64 +59,11 @@ export function use_keyboard_shortcuts(input: {
   };
 
   const handle_keydown_capture = (event: KeyboardEvent) => {
-    if (is_mod_combo(event, "w")) {
-      if (!is_enabled()) return;
-      if (is_vault_switcher_open()) {
-        event.preventDefault();
-        event.stopPropagation();
-        on_close_vault_switcher();
-        return;
-      }
-      if (has_tabs()) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (is_blocked()) return;
-        on_close_tab();
-        return;
-      }
-      return;
-    }
-
-    if (is_mod_combo(event, "t") && event.shiftKey) {
-      if (!is_enabled()) return;
+    if (is_mod_combo(event, "w") && is_vault_switcher_open()) {
       event.preventDefault();
       event.stopPropagation();
-      if (is_blocked()) return;
-      on_reopen_tab();
+      on_close_vault_switcher();
       return;
-    }
-
-    if (is_mod_combo(event, "Tab")) {
-      if (!is_enabled()) return;
-      if (!has_tabs()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (is_blocked()) return;
-      if (event.shiftKey) {
-        on_prev_tab();
-      } else {
-        on_next_tab();
-      }
-      return;
-    }
-
-    if ((event.metaKey || event.ctrlKey) && event.altKey && !event.shiftKey) {
-      if (event.key === "ArrowLeft") {
-        if (!is_enabled()) return;
-        event.preventDefault();
-        event.stopPropagation();
-        if (is_blocked()) return;
-        on_move_tab_left();
-        return;
-      }
-      if (event.key === "ArrowRight") {
-        if (!is_enabled()) return;
-        event.preventDefault();
-        event.stopPropagation();
-        if (is_blocked()) return;
-        on_move_tab_right();
-        return;
-      }
     }
 
     const slot = tab_number_slot(event);
@@ -143,85 +80,37 @@ export function use_keyboard_shortcuts(input: {
       return;
     }
 
-    if (is_mod_combo(event, "p")) {
-      if (!is_enabled()) return;
+    if (!is_enabled()) return;
+
+    const { capture_map } = build_key_maps();
+    const key = normalize_event_to_key(event);
+    const action_id = capture_map.get(key);
+
+    if (action_id) {
       event.preventDefault();
       event.stopPropagation();
+
       if (is_blocked() && !is_omnibar_open()) return;
-      if (is_omnibar_open()) {
-        on_toggle_omnibar();
-      } else {
-        on_open_omnibar_commands();
-      }
-      return;
-    }
 
-    if (is_mod_combo(event, "o")) {
-      if (!is_enabled()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (is_blocked() && !is_omnibar_open()) return;
-      if (event.shiftKey) {
-        if (is_blocked()) return;
-        on_open_vault_switcher();
-        return;
-      }
-      if (is_omnibar_open()) {
-        on_toggle_omnibar();
-      } else {
-        on_open_omnibar_notes();
-      }
-      return;
-    }
-
-    if (is_mod_combo(event, "f")) {
-      if (!is_enabled()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.shiftKey) {
-        if (is_blocked() && !is_omnibar_open()) return;
-        on_open_omnibar_all_vaults();
-        return;
-      }
-      if (is_blocked()) return;
-      on_toggle_find_in_file();
-      return;
-    }
-
-    if (is_mod_combo(event, "d") && event.shiftKey) {
-      if (!is_enabled()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (is_blocked()) return;
-      on_open_vault_dashboard();
-      return;
-    }
-
-    if (is_mod_combo(event, "h") && event.shiftKey) {
-      if (!is_enabled()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (is_blocked()) return;
-      on_open_version_history();
-      return;
-    }
-
-    if (is_mod_combo(event, "b")) {
-      if (!is_enabled()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (is_blocked()) return;
-      on_toggle_sidebar();
+      void action_registry.execute(action_id);
     }
   };
 
   const handle_keydown = (event: KeyboardEvent) => {
-    if (!is_mod_combo(event, "s")) return;
     if (!is_enabled()) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (is_blocked()) return;
-    on_save();
+
+    const { bubble_map } = build_key_maps();
+    const key = normalize_event_to_key(event);
+    const action_id = bubble_map.get(key);
+
+    if (action_id) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (is_blocked()) return;
+
+      void action_registry.execute(action_id);
+    }
   };
 
   return {

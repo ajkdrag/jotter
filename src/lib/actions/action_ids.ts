@@ -78,6 +78,7 @@ export const ACTION_IDS = {
 
   omnibar_toggle: "omnibar.toggle",
   omnibar_open: "omnibar.open",
+  omnibar_open_all_vaults: "omnibar.open_all_vaults",
   omnibar_close: "omnibar.close",
   omnibar_set_query: "omnibar.set_query",
   omnibar_set_selected_index: "omnibar.set_selected_index",
@@ -124,6 +125,13 @@ export const ACTION_IDS = {
   git_confirm_checkpoint: "git.confirm_checkpoint",
   git_cancel_checkpoint: "git.cancel_checkpoint",
   git_select_commit: "git.select_commit",
+
+  hotkey_open_editor: "hotkey.open_editor",
+  hotkey_close_editor: "hotkey.close_editor",
+  hotkey_set_binding: "hotkey.set_binding",
+  hotkey_clear_binding: "hotkey.clear_binding",
+  hotkey_reset_all: "hotkey.reset_all",
+  hotkey_reset_single: "hotkey.reset_single",
 } as const;
 
 export type ActionId = (typeof ACTION_IDS)[keyof typeof ACTION_IDS];

@@ -217,6 +217,38 @@ describe("register_omnibar_actions", () => {
     });
   });
 
+  it("omnibar_open opens in current_vault scope", async () => {
+    const { registry, stores } = create_omnibar_actions_harness();
+
+    await registry.execute(ACTION_IDS.omnibar_open);
+
+    expect(stores.ui.omnibar.open).toBe(true);
+    expect(stores.ui.omnibar.scope).toBe("current_vault");
+    expect(stores.ui.omnibar.query).toBe("");
+  });
+
+  it("omnibar_open_all_vaults opens in all_vaults scope", async () => {
+    const { registry, stores } = create_omnibar_actions_harness();
+
+    await registry.execute(ACTION_IDS.omnibar_open_all_vaults);
+
+    expect(stores.ui.omnibar.open).toBe(true);
+    expect(stores.ui.omnibar.scope).toBe("all_vaults");
+    expect(stores.ui.omnibar.query).toBe("");
+  });
+
+  it("omnibar_open and omnibar_open_all_vaults are independent actions", async () => {
+    const { registry, stores } = create_omnibar_actions_harness();
+
+    await registry.execute(ACTION_IDS.omnibar_open);
+    expect(stores.ui.omnibar.scope).toBe("current_vault");
+
+    stores.ui.omnibar = { ...stores.ui.omnibar, open: false };
+
+    await registry.execute(ACTION_IDS.omnibar_open_all_vaults);
+    expect(stores.ui.omnibar.scope).toBe("all_vaults");
+  });
+
   it("does not prompt switch for vault already marked unavailable", async () => {
     const { registry, stores, execute_vault_select, execute_note_open } =
       create_omnibar_actions_harness();

@@ -11,10 +11,13 @@
   import FolderIcon from "@lucide/svelte/icons/folder";
   import GitBranchIcon from "@lucide/svelte/icons/git-branch";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
+  import KeyboardIcon from "@lucide/svelte/icons/keyboard";
+  import HotkeysPanel from "$lib/components/hotkeys_panel.svelte";
   import type {
     EditorSettings,
     SettingsCategory,
   } from "$lib/types/editor_settings";
+  import type { HotkeyConfig, HotkeyBinding } from "$lib/types/hotkey_config";
 
   type Props = {
     open: boolean;
@@ -23,10 +26,15 @@
     is_saving: boolean;
     has_unsaved_changes: boolean;
     error: string | null;
+    hotkeys_config: HotkeyConfig;
     on_update_settings: (settings: EditorSettings) => void;
     on_category_change: (category: SettingsCategory) => void;
     on_save: () => void;
     on_close: () => void;
+    on_hotkey_edit: (binding: HotkeyBinding) => void;
+    on_hotkey_clear: (action_id: string) => void;
+    on_hotkey_reset_single: (action_id: string) => void;
+    on_hotkey_reset_all: () => void;
   };
 
   let {
@@ -36,10 +44,15 @@
     is_saving,
     has_unsaved_changes,
     error,
+    hotkeys_config,
     on_update_settings,
     on_category_change,
     on_save,
     on_close,
+    on_hotkey_edit,
+    on_hotkey_clear,
+    on_hotkey_reset_single,
+    on_hotkey_reset_all,
   }: Props = $props();
 
   let font_size_value = $derived(editor_settings.font_size);
@@ -71,6 +84,7 @@
     { id: "files", label: "Files", icon: FolderIcon },
     { id: "git", label: "Git", icon: GitBranchIcon },
     { id: "misc", label: "Misc", icon: SlidersIcon },
+    { id: "hotkeys", label: "Hotkeys", icon: KeyboardIcon },
   ];
 
   const heading_color_options = [
@@ -368,6 +382,16 @@
               />
             </div>
           </div>
+        {:else if active_category === "hotkeys"}
+          <h2 class="SettingsDialog__content-header">Hotkeys</h2>
+
+          <HotkeysPanel
+            config={hotkeys_config}
+            on_edit={on_hotkey_edit}
+            on_clear={on_hotkey_clear}
+            on_reset_single={on_hotkey_reset_single}
+            on_reset_all={on_hotkey_reset_all}
+          />
         {/if}
       </div>
     </div>

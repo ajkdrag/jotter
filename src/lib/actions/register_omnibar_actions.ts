@@ -81,6 +81,9 @@ async function execute_command(
     case "open_settings":
       await registry.execute(ACTION_IDS.settings_open);
       break;
+    case "open_hotkeys":
+      await registry.execute(ACTION_IDS.settings_open, "hotkeys");
+      break;
     case "reindex_vault":
       await registry.execute(ACTION_IDS.vault_reindex);
       break;
@@ -165,7 +168,14 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
         close_omnibar(input);
         return;
       }
-      open_omnibar(input);
+      stores.ui.omnibar = {
+        ...stores.ui.omnibar,
+        open: true,
+        query: ">",
+        selected_index: 0,
+        is_searching: false,
+      };
+      stores.search.clear_omnibar();
     },
   });
 
@@ -174,6 +184,22 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
     label: "Open Omnibar",
     execute: () => {
       open_omnibar(input);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.omnibar_open_all_vaults,
+    label: "Open Omnibar (All Vaults)",
+    execute: () => {
+      stores.ui.omnibar = {
+        ...stores.ui.omnibar,
+        open: true,
+        query: "",
+        selected_index: 0,
+        is_searching: false,
+        scope: "all_vaults",
+      };
+      stores.search.clear_omnibar();
     },
   });
 

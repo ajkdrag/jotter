@@ -13,6 +13,7 @@
   import GitBranchIcon from "@lucide/svelte/icons/git-branch";
   import HistoryIcon from "@lucide/svelte/icons/history";
   import BookmarkIcon from "@lucide/svelte/icons/bookmark";
+  import KeyboardIcon from "@lucide/svelte/icons/keyboard";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
   import type { NoteMeta } from "$lib/types/note";
@@ -24,6 +25,7 @@
     "file-plus": FilePlusIcon,
     "folder-open": FolderOpenIcon,
     settings: SettingsIcon,
+    keyboard: KeyboardIcon,
     "git-branch": GitBranchIcon,
     history: HistoryIcon,
     bookmark: BookmarkIcon,

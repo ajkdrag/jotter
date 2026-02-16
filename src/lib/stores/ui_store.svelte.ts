@@ -12,6 +12,11 @@ import type {
 } from "$lib/types/filetree";
 import type { PastedImagePayload } from "$lib/types/editor";
 import type { OmnibarScope } from "$lib/types/search";
+import type {
+  HotkeyConfig,
+  HotkeyOverride,
+  HotkeyRecorderState,
+} from "$lib/types/hotkey_config";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 type AsyncStatus = "idle" | "loading" | "error";
@@ -110,6 +115,15 @@ const INITIAL_CHECKPOINT_DIALOG = {
   description: "",
 } as const;
 
+const INITIAL_HOTKEY_RECORDER: HotkeyRecorderState = {
+  open: false,
+  action_id: null,
+  current_key: null,
+  pending_key: null,
+  conflict: null,
+  error: null,
+} as const;
+
 function initial_filetree() {
   return {
     expanded_paths: new SvelteSet<string>(),
@@ -126,6 +140,8 @@ function initial_settings_dialog(settings: EditorSettings) {
     persisted_settings: { ...settings },
     has_unsaved_changes: false,
     active_category: "typography" as SettingsCategory,
+    hotkey_draft_overrides: [] as HotkeyOverride[],
+    hotkey_draft_config: { bindings: [] } as HotkeyConfig,
   };
 }
 
@@ -202,6 +218,8 @@ export class UIStore {
     persisted_settings: EditorSettings;
     has_unsaved_changes: boolean;
     active_category: SettingsCategory;
+    hotkey_draft_overrides: HotkeyOverride[];
+    hotkey_draft_config: HotkeyConfig;
   }>(initial_settings_dialog(DEFAULT_EDITOR_SETTINGS));
 
   omnibar = $state<{
@@ -266,6 +284,14 @@ export class UIStore {
     description: string;
   }>({ ...INITIAL_CHECKPOINT_DIALOG });
 
+  hotkeys_config = $state<HotkeyConfig>({ bindings: [] });
+
+  hotkey_overrides = $state<HotkeyOverride[]>([]);
+
+  hotkey_recorder = $state<HotkeyRecorderState>({
+    ...INITIAL_HOTKEY_RECORDER,
+  });
+
   set_theme(theme: ThemeMode) {
     this.theme = theme;
   }
@@ -304,6 +330,10 @@ export class UIStore {
   add_recent_command(id: string, max_size: number) {
     const filtered = this.recent_command_ids.filter((c) => c !== id);
     this.recent_command_ids = [id, ...filtered].slice(0, max_size);
+  }
+
+  set_hotkeys_config(config: HotkeyConfig) {
+    this.hotkeys_config = config;
   }
 
   reset_for_new_vault() {

@@ -1,5 +1,6 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
+import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
 import type {
   EditorSettings,
   SettingsCategory,
@@ -18,12 +19,19 @@ export function register_settings_actions(input: ActionRegistrationInput) {
       ) as SettingsCategory;
       const open_revision = ++settings_open_revision;
       const snapshot = { ...stores.ui.editor_settings };
+      const draft_overrides = [...stores.ui.hotkey_overrides];
+      const draft_config = services.hotkey.merge_config(
+        DEFAULT_HOTKEYS,
+        draft_overrides,
+      );
       stores.ui.settings_dialog = {
         open: true,
         current_settings: snapshot,
         persisted_settings: snapshot,
         has_unsaved_changes: false,
         active_category: category,
+        hotkey_draft_overrides: draft_overrides,
+        hotkey_draft_config: draft_config,
       };
 
       const result = await services.settings.load_settings(
@@ -57,11 +65,18 @@ export function register_settings_actions(input: ActionRegistrationInput) {
       settings_open_revision += 1;
       const persisted = stores.ui.settings_dialog.persisted_settings;
       stores.ui.set_editor_settings(persisted);
+      const saved_overrides = [...stores.ui.hotkey_overrides];
+      const saved_config = services.hotkey.merge_config(
+        DEFAULT_HOTKEYS,
+        saved_overrides,
+      );
       stores.ui.settings_dialog = {
         ...stores.ui.settings_dialog,
         open: false,
         current_settings: persisted,
         has_unsaved_changes: false,
+        hotkey_draft_overrides: saved_overrides,
+        hotkey_draft_config: saved_config,
       };
       services.settings.reset_load_operation();
       services.settings.reset_save_operation();
@@ -97,6 +112,19 @@ export function register_settings_actions(input: ActionRegistrationInput) {
           has_unsaved_changes: false,
         };
       }
+
+      const draft_overrides = stores.ui.settings_dialog.hotkey_draft_overrides;
+      await services.hotkey.save_hotkey_overrides(draft_overrides);
+      stores.ui.hotkey_overrides = draft_overrides;
+      const new_config = services.hotkey.merge_config(
+        DEFAULT_HOTKEYS,
+        draft_overrides,
+      );
+      stores.ui.set_hotkeys_config(new_config);
+      stores.ui.settings_dialog = {
+        ...stores.ui.settings_dialog,
+        hotkey_draft_config: new_config,
+      };
     },
   });
 }

@@ -4,7 +4,8 @@ export type SettingsCategory =
   | "links"
   | "files"
   | "git"
-  | "misc";
+  | "misc"
+  | "hotkeys";
 
 export type EditorSettings = {
   font_size: number;

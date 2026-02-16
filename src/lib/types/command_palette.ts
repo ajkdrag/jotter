@@ -2,6 +2,7 @@ export type CommandId =
   | "create_new_note"
   | "change_vault"
   | "open_settings"
+  | "open_hotkeys"
   | "reindex_vault"
   | "show_vault_dashboard"
   | "git_version_history"
@@ -12,6 +13,7 @@ export type CommandIcon =
   | "file-plus"
   | "folder-open"
   | "settings"
+  | "keyboard"
   | "git-branch"
   | "history"
   | "bookmark";

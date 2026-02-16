@@ -23,6 +23,21 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     icon: "settings",
   },
   {
+    id: "open_hotkeys",
+    label: "Keyboard Shortcuts",
+    description: "Configure keyboard shortcuts and hotkeys",
+    keywords: [
+      "hotkeys",
+      "keyboard",
+      "shortcuts",
+      "keybindings",
+      "keys",
+      "remap",
+      "bindings",
+    ],
+    icon: "keyboard",
+  },
+  {
     id: "reindex_vault",
     label: "Reindex vault",
     description: "Rebuild search index for the current vault",

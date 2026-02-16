@@ -15,6 +15,7 @@
   import TabCloseConfirmDialog from "$lib/components/tab_close_confirm_dialog.svelte";
   import VersionHistoryDialog from "$lib/components/version_history_dialog.svelte";
   import CheckpointDialog from "$lib/components/checkpoint_dialog.svelte";
+  import HotkeyRecorderDialog from "$lib/components/hotkey_recorder_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem } from "$lib/types/search";
@@ -24,6 +25,7 @@
     SettingsCategory,
   } from "$lib/types/editor_settings";
   import type { VaultId } from "$lib/types/ids";
+  import type { HotkeyBinding } from "$lib/types/hotkey_config";
 
   type Props = {
     hide_choose_vault_button?: boolean;
@@ -64,10 +66,14 @@
   const image_paste_error = $derived(stores.op.get("asset.write").error);
 
   const settings_has_unsaved_changes = $derived.by(() => {
-    const { current_settings, persisted_settings } = stores.ui.settings_dialog;
-    return (
-      JSON.stringify(current_settings) !== JSON.stringify(persisted_settings)
-    );
+    const { current_settings, persisted_settings, hotkey_draft_overrides } =
+      stores.ui.settings_dialog;
+    const editor_changed =
+      JSON.stringify(current_settings) !== JSON.stringify(persisted_settings);
+    const hotkey_changed =
+      JSON.stringify(hotkey_draft_overrides) !==
+      JSON.stringify(stores.ui.hotkey_overrides);
+    return editor_changed || hotkey_changed;
   });
 
   const delete_folder_status = $derived.by(() => {
@@ -248,6 +254,7 @@
   is_saving={stores.op.is_pending("settings.save")}
   has_unsaved_changes={settings_has_unsaved_changes}
   error={settings_error}
+  hotkeys_config={stores.ui.settings_dialog.hotkey_draft_config}
   on_update_settings={(settings: EditorSettings) =>
     void action_registry.execute(ACTION_IDS.settings_update, settings)}
   on_category_change={(category: SettingsCategory) => {
@@ -255,6 +262,18 @@
   }}
   on_save={() => void action_registry.execute(ACTION_IDS.settings_save)}
   on_close={() => void action_registry.execute(ACTION_IDS.settings_close)}
+  on_hotkey_edit={(binding: HotkeyBinding) =>
+    void action_registry.execute(ACTION_IDS.hotkey_open_editor, {
+      action_id: binding.action_id,
+      current_key: binding.key,
+      label: binding.label,
+    })}
+  on_hotkey_clear={(action_id: string) =>
+    void action_registry.execute(ACTION_IDS.hotkey_clear_binding, action_id)}
+  on_hotkey_reset_single={(action_id: string) =>
+    void action_registry.execute(ACTION_IDS.hotkey_reset_single, action_id)}
+  on_hotkey_reset_all={() =>
+    void action_registry.execute(ACTION_IDS.hotkey_reset_all)}
 />
 
 <CreateFolderDialog
@@ -374,4 +393,43 @@
     void action_registry.execute(ACTION_IDS.git_confirm_checkpoint)}
   on_cancel={() =>
     void action_registry.execute(ACTION_IDS.git_cancel_checkpoint)}
+/>
+
+<HotkeyRecorderDialog
+  open={stores.ui.hotkey_recorder.open}
+  action_id={stores.ui.hotkey_recorder.action_id}
+  current_key={stores.ui.hotkey_recorder.current_key}
+  pending_key={stores.ui.hotkey_recorder.pending_key}
+  conflict={stores.ui.hotkey_recorder.conflict}
+  error={stores.ui.hotkey_recorder.error}
+  on_record={(key: string) => {
+    const recorder = stores.ui.hotkey_recorder;
+    if (recorder.action_id) {
+      const binding =
+        stores.ui.settings_dialog.hotkey_draft_config.bindings.find(
+          (b) => b.action_id === recorder.action_id,
+        );
+      void action_registry.execute(ACTION_IDS.hotkey_set_binding, {
+        action_id: recorder.action_id,
+        key,
+        phase: binding?.phase ?? "capture",
+      });
+    }
+  }}
+  on_save={() => {
+    const recorder = stores.ui.hotkey_recorder;
+    if (recorder.action_id && recorder.pending_key) {
+      const binding =
+        stores.ui.settings_dialog.hotkey_draft_config.bindings.find(
+          (b) => b.action_id === recorder.action_id,
+        );
+      void action_registry.execute(ACTION_IDS.hotkey_set_binding, {
+        action_id: recorder.action_id,
+        key: recorder.pending_key,
+        phase: binding?.phase ?? "capture",
+        force: true,
+      });
+    }
+  }}
+  on_cancel={() => void action_registry.execute(ACTION_IDS.hotkey_close_editor)}
 />

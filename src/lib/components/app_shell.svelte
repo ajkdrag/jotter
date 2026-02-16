@@ -44,70 +44,22 @@
   );
 
   const keyboard = use_keyboard_shortcuts({
+    hotkeys_config: () => stores.ui.hotkeys_config,
     is_enabled: () => has_vault,
     is_blocked: () => any_blocking_dialog_open || omnibar_open,
     is_omnibar_open: () => omnibar_open,
     is_vault_switcher_open: () => stores.ui.change_vault.open,
-    on_toggle_omnibar: () => {
-      void action_registry.execute(ACTION_IDS.omnibar_toggle);
-    },
-    on_open_omnibar_commands: () => {
-      void action_registry.execute(ACTION_IDS.omnibar_open);
-      void action_registry.execute(ACTION_IDS.omnibar_set_query, ">");
-    },
-    on_open_omnibar_notes: () => {
-      void action_registry.execute(ACTION_IDS.omnibar_open);
-    },
-    on_open_omnibar_all_vaults: () => {
-      void action_registry.execute(ACTION_IDS.omnibar_open);
-      void action_registry.execute(ACTION_IDS.omnibar_set_scope, "all_vaults");
-    },
-    on_open_vault_switcher: () => {
-      void action_registry.execute(ACTION_IDS.vault_request_change);
-    },
+    has_tabs: () => stores.tab.has_tabs,
+    action_registry,
     on_close_vault_switcher: () => {
       void action_registry.execute(ACTION_IDS.vault_close_change);
     },
     on_select_pinned_vault: (slot) => {
       void action_registry.execute(ACTION_IDS.vault_select_pinned_slot, slot);
     },
-    on_toggle_sidebar: () => {
-      void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
-    },
-    on_toggle_find_in_file: () => {
-      void action_registry.execute(ACTION_IDS.find_in_file_toggle);
-    },
-    on_open_vault_dashboard: () => {
-      void action_registry.execute(ACTION_IDS.ui_open_vault_dashboard);
-    },
-    on_open_version_history: () => {
-      void action_registry.execute(ACTION_IDS.git_open_history);
-    },
-    on_save: () => {
-      void action_registry.execute(ACTION_IDS.note_request_save);
-    },
-    on_close_tab: () => {
-      void action_registry.execute(ACTION_IDS.tab_close);
-    },
-    on_reopen_tab: () => {
-      void action_registry.execute(ACTION_IDS.tab_reopen_closed);
-    },
-    on_next_tab: () => {
-      void action_registry.execute(ACTION_IDS.tab_next);
-    },
-    on_prev_tab: () => {
-      void action_registry.execute(ACTION_IDS.tab_prev);
-    },
     on_switch_to_tab: (index) => {
       void action_registry.execute(ACTION_IDS.tab_activate_by_index, index);
     },
-    on_move_tab_left: () => {
-      void action_registry.execute(ACTION_IDS.tab_move_left);
-    },
-    on_move_tab_right: () => {
-      void action_registry.execute(ACTION_IDS.tab_move_right);
-    },
-    has_tabs: () => stores.tab.has_tabs,
   });
 
   function handle_choose_vault_dir() {
