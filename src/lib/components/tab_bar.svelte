@@ -225,14 +225,14 @@
           <ContextMenu.Portal>
             <ContextMenu.Content>
               <ContextMenu.Item
-                onclick={() =>
+                onSelect={() =>
                   void action_registry.execute(ACTION_IDS.tab_close, tab.id)}
               >
                 Close Tab
               </ContextMenu.Item>
               <ContextMenu.Item
                 disabled={tabs.length <= 1}
-                onclick={() =>
+                onSelect={() =>
                   void action_registry.execute(
                     ACTION_IDS.tab_close_other,
                     tab.id,
@@ -242,7 +242,7 @@
               </ContextMenu.Item>
               <ContextMenu.Item
                 disabled={tabs.indexOf(tab) >= tabs.length - 1}
-                onclick={() =>
+                onSelect={() =>
                   void action_registry.execute(
                     ACTION_IDS.tab_close_right,
                     tab.id,
@@ -251,7 +251,7 @@
                 Close Tabs to the Right
               </ContextMenu.Item>
               <ContextMenu.Item
-                onclick={() =>
+                onSelect={() =>
                   void action_registry.execute(ACTION_IDS.tab_close_all)}
               >
                 Close All Tabs
@@ -259,14 +259,14 @@
               <ContextMenu.Separator />
               {#if tab.is_pinned}
                 <ContextMenu.Item
-                  onclick={() =>
+                  onSelect={() =>
                     void action_registry.execute(ACTION_IDS.tab_unpin, tab.id)}
                 >
                   Unpin Tab
                 </ContextMenu.Item>
               {:else}
                 <ContextMenu.Item
-                  onclick={() =>
+                  onSelect={() =>
                     void action_registry.execute(ACTION_IDS.tab_pin, tab.id)}
                 >
                   Pin Tab
@@ -274,7 +274,7 @@
               {/if}
               <ContextMenu.Separator />
               <ContextMenu.Item
-                onclick={() =>
+                onSelect={() =>
                   void action_registry.execute(
                     ACTION_IDS.tab_copy_path,
                     tab.id,
@@ -283,7 +283,7 @@
                 Copy File Path
               </ContextMenu.Item>
               <ContextMenu.Item
-                onclick={() =>
+                onSelect={() =>
                   void action_registry.execute(
                     ACTION_IDS.tab_reveal_in_tree,
                     tab.id,
@@ -295,7 +295,7 @@
               {@const note_meta = find_note_meta(tab)}
               <ContextMenu.Item
                 disabled={!note_meta}
-                onclick={() => {
+                onSelect={() => {
                   if (note_meta) {
                     void action_registry.execute(
                       ACTION_IDS.note_toggle_star,
@@ -308,7 +308,7 @@
               </ContextMenu.Item>
               <ContextMenu.Item
                 disabled={!note_meta}
-                onclick={() => {
+                onSelect={() => {
                   if (note_meta) {
                     void action_registry.execute(
                       ACTION_IDS.note_request_rename,
@@ -321,7 +321,7 @@
               </ContextMenu.Item>
               <ContextMenu.Item
                 disabled={!note_meta}
-                onclick={() => {
+                onSelect={() => {
                   if (note_meta) {
                     void action_registry.execute(
                       ACTION_IDS.note_request_delete,
@@ -334,7 +334,7 @@
               </ContextMenu.Item>
               <ContextMenu.Item
                 disabled={!is_active}
-                onclick={() => {
+                onSelect={() => {
                   if (is_active) {
                     void action_registry.execute(ACTION_IDS.note_copy_markdown);
                   }

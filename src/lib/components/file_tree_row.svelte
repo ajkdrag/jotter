@@ -206,7 +206,7 @@
     <ContextMenu.Portal>
       <ContextMenu.Content>
         <ContextMenu.Item
-          onclick={() => {
+          onSelect={() => {
             if (on_request_create_note) {
               on_request_create_note(node.path);
             }
@@ -216,7 +216,7 @@
           <span>New Note</span>
         </ContextMenu.Item>
         <ContextMenu.Item
-          onclick={() => {
+          onSelect={() => {
             if (on_request_create_folder) {
               on_request_create_folder(node.path);
             }
@@ -227,7 +227,7 @@
         </ContextMenu.Item>
         <ContextMenu.Separator />
         <ContextMenu.Item
-          onclick={() => {
+          onSelect={() => {
             if (on_toggle_star) {
               on_toggle_star(node.path);
             }
@@ -245,7 +245,7 @@
           <ContextMenu.Separator />
           {#if on_request_rename_folder}
             <ContextMenu.Item
-              onclick={() => {
+              onSelect={() => {
                 on_request_rename_folder(node.path);
               }}
             >
@@ -255,7 +255,7 @@
           {/if}
           {#if on_request_delete_folder}
             <ContextMenu.Item
-              onclick={() => {
+              onSelect={() => {
                 on_request_delete_folder(node.path);
               }}
             >
@@ -275,7 +275,7 @@
     <ContextMenu.Portal>
       <ContextMenu.Content>
         <ContextMenu.Item
-          onclick={() => {
+          onSelect={() => {
             if (on_toggle_star) {
               on_toggle_star(node.path);
             }
@@ -293,7 +293,7 @@
           <ContextMenu.Separator />
           {#if on_request_rename}
             <ContextMenu.Item
-              onclick={() => {
+              onSelect={() => {
                 if (node.note) {
                   on_request_rename(node.note);
                 }
@@ -305,7 +305,7 @@
           {/if}
           {#if on_request_delete}
             <ContextMenu.Item
-              onclick={() => {
+              onSelect={() => {
                 if (node.note) {
                   on_request_delete(node.note);
                 }
