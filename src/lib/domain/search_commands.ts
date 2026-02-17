@@ -72,4 +72,11 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     keywords: ["git", "init", "repo", "repository", "version", "control"],
     icon: "git-branch",
   },
+  {
+    id: "toggle_links_panel",
+    label: "Toggle Links Panel",
+    description: "Show or hide backlinks and outlinks panel",
+    keywords: ["links", "backlinks", "outlinks", "context", "panel", "sidebar"],
+    icon: "link",
+  },
 ];

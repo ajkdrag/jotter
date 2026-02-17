@@ -19,6 +19,11 @@ export function create_test_workspace_index_adapter(): WorkspaceIndexPort {
       _vault_id: VaultId,
       _note_ids: NoteId[],
     ): Promise<void> {},
+    async rename_note_path(
+      _vault_id: VaultId,
+      _old_path: NoteId,
+      _new_path: NoteId,
+    ): Promise<void> {},
     async remove_notes_by_prefix(
       _vault_id: VaultId,
       _prefix: string,

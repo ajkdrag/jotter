@@ -23,5 +23,13 @@ export function create_test_search_adapter(): SearchPort {
     ): Promise<WikiSuggestion[]> {
       return Promise.resolve([]);
     },
+
+    get_note_links_snapshot(_vault_id: VaultId, _note_path: string) {
+      return Promise.resolve({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      });
+    },
   };
 }

@@ -1,27 +1,5 @@
 import { parent_folder_path } from "$lib/utils/path";
 
-const WIKI_LINK_PROTOCOL = "jotter:";
-const WIKI_LINK_HOST = "wiki";
-
-export function encode_wiki_link_href(note_path: string): string {
-  const url = new URL(`${WIKI_LINK_PROTOCOL}//${WIKI_LINK_HOST}`);
-  url.searchParams.set("path", note_path);
-  return url.toString();
-}
-
-export function try_decode_wiki_link_href(href: string): string | null {
-  try {
-    const url = new URL(href);
-    if (url.protocol !== WIKI_LINK_PROTOCOL) return null;
-    if (url.hostname !== WIKI_LINK_HOST) return null;
-    const path = url.searchParams.get("path");
-    if (!path) return null;
-    return path;
-  } catch {
-    return null;
-  }
-}
-
 function normalize_path_segments(path: string): string | null {
   const raw_parts = path.split("/").filter(Boolean);
   const parts: string[] = [];

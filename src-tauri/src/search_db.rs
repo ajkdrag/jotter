@@ -17,65 +17,54 @@ pub struct SuggestionHit {
     pub score: f64,
 }
 
-pub(crate) static WIKI_LINK_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[\[([^\]]+)\]\]").unwrap());
+pub(crate) static GFM_LINK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)(!?)\[([^\]]*)\]\(([^)]+\.md)\)").unwrap());
 
-pub(crate) fn normalize_key(s: &str) -> String {
-    s.trim().to_ascii_lowercase()
+pub(crate) fn resolve_relative_path(source_dir: &str, target: &str) -> Option<String> {
+    let source_parts: Vec<&str> = if source_dir.is_empty() {
+        Vec::new()
+    } else {
+        source_dir.split('/').collect()
+    };
+
+    let mut segments = source_parts;
+
+    for part in target.split('/') {
+        match part {
+            "." | "" => {}
+            ".." => {
+                if segments.pop().is_none() {
+                    return None;
+                }
+            }
+            _ => segments.push(part),
+        }
+    }
+
+    Some(segments.join("/"))
 }
 
-pub(crate) fn wiki_link_targets(markdown: &str) -> Vec<String> {
+pub(crate) fn gfm_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
+    let source_dir = match source_path.rfind('/') {
+        Some(i) => &source_path[..i],
+        None => "",
+    };
+
     let mut out = Vec::new();
-    for cap in WIKI_LINK_RE.captures_iter(markdown) {
-        let raw = cap.get(1).map(|m| m.as_str()).unwrap_or_default();
-        let left = raw.split('|').next().unwrap_or(raw);
-        let left = left.split('#').next().unwrap_or(left).trim();
-        if left.is_empty() {
+    for cap in GFM_LINK_RE.captures_iter(markdown) {
+        let bang = cap.get(1).map(|m| m.as_str()).unwrap_or_default();
+        if bang == "!" {
             continue;
         }
-        out.push(left.to_string());
+        let href = cap.get(3).map(|m| m.as_str().trim()).unwrap_or_default();
+        if href.starts_with("http://") || href.starts_with("https://") {
+            continue;
+        }
+        if let Some(resolved) = resolve_relative_path(source_dir, href) {
+            out.push(resolved);
+        }
     }
     out
-}
-
-pub(crate) fn resolve_wiki_target(
-    token: &str,
-    key_to_path: &BTreeMap<String, String>,
-) -> Option<String> {
-    let t = token.trim();
-    if t.is_empty() {
-        return None;
-    }
-    let token_no_ext = t.strip_suffix(".md").unwrap_or(t);
-
-    if token_no_ext.contains('/') {
-        let direct = normalize_key(token_no_ext);
-        if let Some(p) = key_to_path.get(&direct) {
-            return Some(p.clone());
-        }
-        let direct_md = normalize_key(&format!("{token_no_ext}.md"));
-        if let Some(p) = key_to_path.get(&direct_md) {
-            return Some(p.clone());
-        }
-    }
-
-    let k = normalize_key(token_no_ext);
-    key_to_path.get(&k).cloned()
-}
-
-pub(crate) fn build_key_map(notes: &BTreeMap<String, IndexNoteMeta>) -> BTreeMap<String, String> {
-    let mut map: BTreeMap<String, String> = BTreeMap::new();
-    for (path, meta) in notes.iter() {
-        map.entry(normalize_key(&meta.name))
-            .or_insert_with(|| path.clone());
-        map.entry(normalize_key(&meta.title))
-            .or_insert_with(|| path.clone());
-        map.entry(normalize_key(path))
-            .or_insert_with(|| path.clone());
-        map.entry(normalize_key(path.strip_suffix(".md").unwrap_or(path)))
-            .or_insert_with(|| path.clone());
-    }
-    map
 }
 
 pub(crate) fn list_markdown_files(root: &Path) -> Vec<PathBuf> {
@@ -204,6 +193,8 @@ pub fn remove_note(conn: &Connection, path: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM notes_fts WHERE path = ?1", params![path])
         .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM outlinks WHERE source_path = ?1", params![path])
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -233,7 +224,7 @@ pub fn remove_notes_by_prefix(conn: &Connection, prefix: &str) -> Result<(), Str
         )
         .and_then(|_| {
             conn.execute(
-                "DELETE FROM outlinks WHERE source_path LIKE ?1 ESCAPE '\\' OR target_path LIKE ?1 ESCAPE '\\'",
+                "DELETE FROM outlinks WHERE source_path LIKE ?1 ESCAPE '\\'",
                 params![like_pattern],
             )
         })
@@ -340,20 +331,16 @@ const BATCH_SIZE: usize = 100;
 fn resolve_batch_outlinks(
     conn: &Connection,
     pending_links: &[(String, Vec<String>)],
-    notes_cache: &BTreeMap<String, IndexNoteMeta>,
 ) -> Result<(), String> {
     if pending_links.is_empty() {
         return Ok(());
     }
 
-    let key_map = build_key_map(notes_cache);
     for (source, targets) in pending_links {
         let mut resolved: BTreeSet<String> = BTreeSet::new();
-        for token in targets {
-            if let Some(target) = resolve_wiki_target(token, &key_map) {
-                if target != *source {
-                    resolved.insert(target);
-                }
+        for target in targets {
+            if *target != *source {
+                resolved.insert(target.clone());
             }
         }
         set_outlinks(conn, source, &resolved.into_iter().collect::<Vec<_>>())?;
@@ -407,15 +394,14 @@ pub fn rebuild_index(
                 }
             };
             upsert_note(conn, &meta, &markdown)?;
-            let targets = wiki_link_targets(&markdown);
+            let targets = gfm_link_targets(&markdown, &meta.path);
             if !targets.is_empty() {
                 pending_links.push((meta.path.clone(), targets));
             }
         }
 
         conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
-        let notes_cache = get_all_notes_from_db(conn)?;
-        resolve_batch_outlinks(conn, &pending_links, &notes_cache)?;
+        resolve_batch_outlinks(conn, &pending_links)?;
         on_progress(indexed, total);
         yield_fn();
     }
@@ -510,15 +496,14 @@ pub fn sync_index(
                 }
             };
             upsert_note(conn, &meta, &markdown)?;
-            let targets = wiki_link_targets(&markdown);
+            let targets = gfm_link_targets(&markdown, &meta.path);
             if !targets.is_empty() {
                 pending_links.push((meta.path.clone(), targets));
             }
         }
 
         conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
-        let notes_cache = get_all_notes_from_db(conn)?;
-        resolve_batch_outlinks(conn, &pending_links, &notes_cache)?;
+        resolve_batch_outlinks(conn, &pending_links)?;
         on_progress(indexed, total);
         yield_fn();
     }
@@ -694,6 +679,22 @@ pub fn get_outlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>,
         .map_err(|e| e.to_string())
 }
 
+pub fn get_orphan_outlinks(conn: &Connection, path: &str) -> Result<Vec<String>, String> {
+    let sql = "SELECT o.target_path
+               FROM outlinks o
+               LEFT JOIN notes n ON n.path = o.target_path
+               WHERE o.source_path = ?1 AND n.path IS NULL
+               ORDER BY o.target_path";
+
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![path], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
 pub fn rename_folder_paths(
     conn: &Connection,
     old_prefix: &str,
@@ -756,6 +757,39 @@ pub fn rename_folder_paths(
             conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
             Ok(count)
         }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e)
+        }
+    }
+}
+
+pub fn rename_note_path(conn: &Connection, old_path: &str, new_path: &str) -> Result<(), String> {
+    conn.execute_batch("BEGIN IMMEDIATE")
+        .map_err(|e| e.to_string())?;
+
+    let result = conn
+        .execute(
+            "UPDATE notes_fts SET path = ?1 WHERE path = ?2",
+            params![new_path, old_path],
+        )
+        .and_then(|_| {
+            conn.execute(
+                "UPDATE notes SET path = ?1 WHERE path = ?2",
+                params![new_path, old_path],
+            )
+        })
+        .and_then(|_| {
+            conn.execute(
+                "UPDATE outlinks SET source_path = ?1 WHERE source_path = ?2",
+                params![new_path, old_path],
+            )
+        })
+        .map(|_| ())
+        .map_err(|e| e.to_string());
+
+    match result {
+        Ok(_) => conn.execute_batch("COMMIT").map_err(|e| e.to_string()),
         Err(e) => {
             let _ = conn.execute_batch("ROLLBACK");
             Err(e)
@@ -1017,14 +1051,98 @@ mod tests {
     }
 
     #[test]
-    fn rename_then_delete_prefix_leaves_no_stale_rows() {
+    fn rename_note_path_moves_note_and_outgoing_source_links() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let a = IndexNoteMeta {
+            id: "docs/old.md".to_string(),
+            path: "docs/old.md".to_string(),
+            title: "Old".to_string(),
+            name: "old".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        let b = IndexNoteMeta {
+            id: "docs/source.md".to_string(),
+            path: "docs/source.md".to_string(),
+            title: "Source".to_string(),
+            name: "source".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        upsert_note(&conn, &a, "body a").unwrap();
+        upsert_note(&conn, &b, "body b").unwrap();
+        set_outlinks(
+            &conn,
+            "docs/source.md",
+            &["docs/old.md".to_string()],
+        )
+        .unwrap();
+        set_outlinks(
+            &conn,
+            "docs/old.md",
+            &["docs/source.md".to_string()],
+        )
+        .unwrap();
+
+        rename_note_path(&conn, "docs/old.md", "docs/new.md").unwrap();
+
+        let backlinks = get_backlinks(&conn, "docs/new.md").unwrap();
+        assert!(backlinks.is_empty());
+
+        let outlinks = get_outlinks(&conn, "docs/new.md").unwrap();
+        assert_eq!(outlinks.len(), 1);
+        assert_eq!(outlinks[0].path, "docs/source.md");
+
+        let orphans = get_orphan_outlinks(&conn, "docs/source.md").unwrap();
+        assert_eq!(orphans, vec!["docs/old.md".to_string()]);
+    }
+
+    #[test]
+    fn get_orphan_outlinks_returns_missing_targets() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let source = IndexNoteMeta {
+            id: "docs/source.md".to_string(),
+            path: "docs/source.md".to_string(),
+            title: "Source".to_string(),
+            name: "source".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        upsert_note(&conn, &source, "body").unwrap();
+        set_outlinks(
+            &conn,
+            "docs/source.md",
+            &["docs/missing.md".to_string(), "docs/other.md".to_string()],
+        )
+        .unwrap();
+
+        let other = IndexNoteMeta {
+            id: "docs/other.md".to_string(),
+            path: "docs/other.md".to_string(),
+            title: "Other".to_string(),
+            name: "other".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        upsert_note(&conn, &other, "body").unwrap();
+
+        let orphans = get_orphan_outlinks(&conn, "docs/source.md").unwrap();
+        assert_eq!(orphans, vec!["docs/missing.md".to_string()]);
+    }
+
+    #[test]
+    fn rename_then_delete_prefix_preserves_orphan_targets() {
         let tmp = TempDir::new().unwrap();
         let conn = open_search_db(tmp.path()).unwrap();
 
         let notes = vec![
-            ("old/a.md", "A", "a", "[[keep/c]]"),
-            ("old/sub/b.md", "B", "b", "[[a]]"),
-            ("keep/c.md", "C", "c", "[[old/a]]"),
+            ("old/a.md", "A", "a", "links to c"),
+            ("old/sub/b.md", "B", "b", "links to a"),
+            ("keep/c.md", "C", "c", "links to old/a"),
         ];
         for (path, title, name, body) in &notes {
             let meta = IndexNoteMeta {
@@ -1058,14 +1176,14 @@ mod tests {
             .unwrap();
         assert_eq!(stale_notes_fts, 0);
 
-        let stale_outlinks: i64 = conn
+        let orphan_target_count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM outlinks WHERE source_path LIKE 'old/%' OR source_path LIKE 'new/%' OR target_path LIKE 'old/%' OR target_path LIKE 'new/%'",
+                "SELECT COUNT(*) FROM outlinks WHERE source_path = 'keep/c.md' AND target_path = 'new/a.md'",
                 [],
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(stale_outlinks, 0);
+        assert_eq!(orphan_target_count, 1);
     }
 
     #[test]
@@ -1107,7 +1225,7 @@ mod tests {
         let conn = open_search_db(root).unwrap();
 
         write_md(root, "notes/000-target.md", "# target");
-        write_md(root, "notes/001-source.md", "[[target]]");
+        write_md(root, "notes/001-source.md", "[target](000-target.md)");
         for i in 0..100 {
             write_md(root, &format!("notes/{:03}-filler.md", i + 2), "# filler");
         }
@@ -1140,7 +1258,7 @@ mod tests {
         let cancel = AtomicBool::new(false);
         rebuild_index(&conn, root, &cancel, &|_, _| {}, &mut || {}).unwrap();
 
-        write_md(root, "notes/source.md", "# source\n[[target]]");
+        write_md(root, "notes/source.md", "# source\n[target](target.md)");
 
         let mut checked = false;
         sync_index(&conn, root, &cancel, &|_, _| {}, &mut || {
@@ -1155,5 +1273,11 @@ mod tests {
         .unwrap();
 
         assert!(checked);
+    }
+
+    #[test]
+    fn gfm_link_targets_allows_spaces_in_folder_names() {
+        let targets = gfm_link_targets("[Doc](Folder Name/child note.md)", "root.md");
+        assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
     }
 }

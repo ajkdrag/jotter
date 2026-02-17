@@ -280,6 +280,18 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
         });
       }
     },
+    async rename_paths(
+      vault_id: VaultId,
+      renames: Array<{ old_path: string; new_path: string }>,
+    ): Promise<void> {
+      for (const rename of renames) {
+        await tauri_invoke<undefined>("index_rename_note", {
+          vaultId: vault_id,
+          oldPath: rename.old_path,
+          newPath: rename.new_path,
+        });
+      }
+    },
     async rename_prefixes(
       vault_id: VaultId,
       renames: PrefixRename[],
@@ -330,6 +342,17 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
         });
       }
       await Promise.resolve();
+    },
+    async rename_note_path(
+      vault_id: VaultId,
+      old_path: NoteId,
+      new_path: NoteId,
+    ): Promise<void> {
+      await actor.touch_index(vault_id, {
+        kind: "rename_path",
+        old_path,
+        new_path,
+      });
     },
     async remove_notes_by_prefix(
       vault_id: VaultId,

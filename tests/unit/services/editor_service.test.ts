@@ -128,7 +128,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note: first_note,
-      link_syntax: "wikilink",
     });
 
     expect(start_session).toHaveBeenCalledTimes(1);
@@ -137,7 +136,6 @@ describe("EditorService", () => {
     expect(mount_config.initial_markdown).toBe("# Alpha");
     expect(mount_config.note_path).toBe(as_note_path("docs/alpha.md"));
     expect(mount_config.vault_id).toBe(create_test_vault().id);
-    expect(mount_config.link_syntax).toBe("wikilink");
     expect(typeof mount_config.events.on_markdown_change).toBe("function");
     expect(typeof mount_config.events.on_dirty_state_change).toBe("function");
     expect(typeof mount_config.events.on_cursor_change).toBe("function");
@@ -147,13 +145,12 @@ describe("EditorService", () => {
     );
 
     editor_store.set_open_note(second_note);
-    service.open_buffer(second_note, "markdown");
+    service.open_buffer(second_note);
 
     expect(start_session).toHaveBeenCalledTimes(1);
     expect(session.open_buffer).toHaveBeenCalledWith({
       note_path: as_note_path("docs/beta.md"),
       vault_id: create_test_vault().id,
-      link_syntax: "markdown",
       initial_markdown: "# Beta",
     });
   });
@@ -171,7 +168,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note: first_note,
-      link_syntax: "wikilink",
     });
 
     const events = session_config_at(session_configs, 0).events;
@@ -182,7 +178,7 @@ describe("EditorService", () => {
     );
 
     editor_store.set_open_note(second_note);
-    service.open_buffer(second_note, "wikilink");
+    service.open_buffer(second_note);
 
     events.on_markdown_change("# Updated Beta");
     expect(editor_store.open_note?.markdown).toBe(
@@ -202,7 +198,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     const events = session_config_at(session_configs, 0).events;
@@ -224,7 +219,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     const events = session_config_at(session_configs, 0).events;
@@ -245,7 +239,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     const events = session_config_at(session_configs, 0).events;
@@ -268,7 +261,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     const image = {
@@ -299,11 +291,10 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note: first_note,
-      link_syntax: "wikilink",
     });
 
     editor_store.set_open_note(second_note);
-    service.open_buffer(second_note, "wikilink");
+    service.open_buffer(second_note);
 
     const events = session_config_at(session_configs, 0).events;
 
@@ -322,7 +313,6 @@ describe("EditorService", () => {
     const mount_promise = service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     service.unmount();
@@ -345,7 +335,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     session.set_markdown("# Flushed");
@@ -374,7 +363,6 @@ describe("EditorService", () => {
     await service.mount({
       root,
       note,
-      link_syntax: "wikilink",
     });
 
     service.mark_clean();
@@ -395,7 +383,7 @@ describe("EditorService", () => {
     const note = create_open_note("docs/alpha.md", "# Alpha");
 
     editor_store.set_open_note(note);
-    await service.mount({ root, note, link_syntax: "wikilink" });
+    await service.mount({ root, note });
     expect(op_store.get("editor.mount").status).toBe("success");
   });
 
@@ -407,7 +395,7 @@ describe("EditorService", () => {
     const note = create_open_note("docs/alpha.md", "# Alpha");
 
     editor_store.set_open_note(note);
-    await service.mount({ root, note, link_syntax: "wikilink" });
+    await service.mount({ root, note });
 
     expect(op_store.get("editor.mount").status).toBe("error");
     expect(op_store.get("editor.mount").error).toBe("boom");

@@ -6,6 +6,7 @@ export type { IndexProgressEvent };
 export type IndexChange =
   | { kind: "upsert_path"; path: NoteId }
   | { kind: "remove_path"; path: NoteId }
+  | { kind: "rename_path"; old_path: NoteId; new_path: NoteId }
   | { kind: "remove_prefix"; prefix: string }
   | { kind: "rename_prefix"; old_prefix: string; new_prefix: string }
   | { kind: "force_scan" }
@@ -19,6 +20,11 @@ export interface WorkspaceIndexPort {
   upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void>;
+  rename_note_path(
+    vault_id: VaultId,
+    old_path: NoteId,
+    new_path: NoteId,
+  ): Promise<void>;
   remove_notes_by_prefix(vault_id: VaultId, prefix: string): Promise<void>;
   rename_folder_paths(
     vault_id: VaultId,

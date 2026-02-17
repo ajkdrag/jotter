@@ -69,11 +69,6 @@ import {
   find_highlight_plugin,
   find_highlight_plugin_key,
 } from "./find_highlight_plugin";
-import {
-  format_wiki_target_for_markdown,
-  format_wiki_target_for_markdown_link,
-  try_decode_wiki_link_href,
-} from "$lib/domain/wiki_link";
 import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
 
@@ -182,14 +177,7 @@ export function create_milkdown_editor_port(args?: {
 
   return {
     start_session: async (config) => {
-      const {
-        root,
-        initial_markdown,
-        note_path,
-        link_syntax,
-        vault_id,
-        events,
-      } = config;
+      const { root, initial_markdown, note_path, vault_id, events } = config;
       const {
         on_markdown_change,
         on_dirty_state_change,
@@ -205,13 +193,11 @@ export function create_milkdown_editor_port(args?: {
       let editor: Editor | null = null;
       let is_large_note = is_large_markdown(initial_markdown);
       let current_note_path = note_path;
-      let current_link_syntax = link_syntax;
       let current_vault_id = vault_id;
 
       type BufferEntry = {
         state: EditorState;
         note_path: string;
-        link_syntax: string;
         markdown: string;
         is_dirty: boolean;
       };
@@ -221,40 +207,7 @@ export function create_milkdown_editor_port(args?: {
       let wiki_suggest_config: WikiSuggestPluginConfig | null = null;
 
       function normalize_markdown(raw: string): string {
-        const needs_zws_cleanup = raw.includes("\u200B");
-        const needs_wiki_cleanup = raw.includes("jotter://wiki");
-        if (!needs_zws_cleanup && !needs_wiki_cleanup) return raw;
-
-        const without_zws = needs_zws_cleanup
-          ? raw.replaceAll("\u200B", "")
-          : raw;
-        if (!needs_wiki_cleanup) return without_zws;
-
-        return without_zws.replace(
-          /\[([^\]]+)\]\((jotter:\/\/wiki\/?\?[^)\s]+)\)/g,
-          (full, label, href) => {
-            const resolved_note_path = try_decode_wiki_link_href(String(href));
-            if (!resolved_note_path) return full;
-
-            const safe_label = String(label);
-            if (current_link_syntax === "markdown") {
-              const target = format_wiki_target_for_markdown_link({
-                base_note_path: current_note_path,
-                resolved_note_path,
-              });
-
-              return `[${safe_label}](${target})`;
-            }
-
-            const target = format_wiki_target_for_markdown({
-              base_note_path: current_note_path,
-              resolved_note_path,
-            });
-
-            if (safe_label === target) return `[[${target}]]`;
-            return `[[${target}|${safe_label}]]`;
-          },
-        );
+        return raw.includes("\u200B") ? raw.replaceAll("\u200B", "") : raw;
       }
 
       let builder = Editor.make()
@@ -393,7 +346,6 @@ export function create_milkdown_editor_port(args?: {
         .use(
           create_editor_context_plugin({
             note_path: current_note_path,
-            link_syntax: current_link_syntax,
           }),
         )
         .use(create_wiki_link_converter_plugin())
@@ -481,7 +433,6 @@ export function create_milkdown_editor_port(args?: {
         return {
           state,
           note_path: current_note_path,
-          link_syntax: current_link_syntax,
           markdown: current_markdown,
           is_dirty: Boolean(dirty_state?.is_dirty ?? current_is_dirty),
         };
@@ -512,7 +463,6 @@ export function create_milkdown_editor_port(args?: {
         const context_tr = view.state.tr.setMeta(editor_context_plugin_key, {
           action: "update",
           note_path: current_note_path,
-          link_syntax: current_link_syntax,
         });
         view.dispatch(context_tr);
       }
@@ -624,7 +574,6 @@ export function create_milkdown_editor_port(args?: {
 
           current_vault_id = next_config.vault_id;
           current_note_path = next_config.note_path;
-          current_link_syntax = next_config.link_syntax;
           if (wiki_suggest_config) {
             wiki_suggest_config.base_note_path = current_note_path;
           }

@@ -77,11 +77,10 @@ describe("create_wiki_link_click_prose_plugin", () => {
     return handler.call(plugin, null as never, event as never);
   }
 
-  it("always calls preventDefault for internal wiki link clicks", () => {
+  it("calls preventDefault and resolves relative .md href", () => {
     const { plugin, on_internal_link_click } = setup();
 
-    const href = "jotter://wiki/?path=folder%2Fnote.md";
-    const { event, prevent_default } = create_mouse_event(href);
+    const { event, prevent_default } = create_mouse_event("note.md");
     const result = invoke_dom_click(plugin, event);
 
     expect(result).toBe(true);

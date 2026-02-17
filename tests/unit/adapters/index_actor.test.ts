@@ -26,6 +26,7 @@ describe("index_actor", () => {
       upsert_paths: vi.fn().mockResolvedValue(undefined),
       remove_paths: vi.fn().mockResolvedValue(undefined),
       remove_prefixes: vi.fn().mockResolvedValue(undefined),
+      rename_paths: vi.fn().mockResolvedValue(undefined),
       rename_prefixes: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -55,6 +56,7 @@ describe("index_actor", () => {
       upsert_paths: vi.fn().mockResolvedValue(undefined),
       remove_paths: vi.fn().mockResolvedValue(undefined),
       remove_prefixes: vi.fn().mockResolvedValue(undefined),
+      rename_paths: vi.fn().mockResolvedValue(undefined),
       rename_prefixes: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -96,6 +98,7 @@ describe("index_actor", () => {
       upsert_paths: vi.fn().mockResolvedValue(undefined),
       remove_paths: vi.fn().mockResolvedValue(undefined),
       remove_prefixes: vi.fn().mockResolvedValue(undefined),
+      rename_paths: vi.fn().mockResolvedValue(undefined),
       rename_prefixes: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -124,6 +127,7 @@ describe("index_actor", () => {
       upsert_paths: vi.fn().mockResolvedValue(undefined),
       remove_paths: vi.fn().mockResolvedValue(undefined),
       remove_prefixes: vi.fn().mockResolvedValue(undefined),
+      rename_paths: vi.fn().mockResolvedValue(undefined),
       rename_prefixes: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -156,6 +160,7 @@ describe("index_actor", () => {
       upsert_paths: vi.fn().mockResolvedValue(undefined),
       remove_paths: vi.fn().mockResolvedValue(undefined),
       remove_prefixes: vi.fn().mockResolvedValue(undefined),
+      rename_paths: vi.fn().mockResolvedValue(undefined),
       rename_prefixes: vi.fn().mockResolvedValue(undefined),
     };
 

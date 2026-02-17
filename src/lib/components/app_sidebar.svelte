@@ -11,6 +11,7 @@
   import FindInFileBar from "$lib/components/find_in_file_bar.svelte";
   import EditorStatusBar from "$lib/components/editor_status_bar.svelte";
   import NoteDetailsDialog from "$lib/components/note_details_dialog.svelte";
+  import ContextRail from "$lib/components/context_rail.svelte";
   import { SvelteSet } from "svelte/reactivity";
   import { build_filetree, sort_tree } from "$lib/domain/filetree";
   import { flatten_filetree } from "$lib/domain/flatten_filetree";
@@ -339,6 +340,7 @@
       <ActivityBar
         sidebar_open={stores.ui.sidebar_open}
         active_view={stores.ui.sidebar_view}
+        context_rail_open={stores.ui.context_rail_open}
         on_open_explorer={() => {
           if (stores.ui.sidebar_open && stores.ui.sidebar_view === "explorer") {
             void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
@@ -372,6 +374,8 @@
             "dashboard",
           );
         }}
+        on_toggle_context_rail={() =>
+          void action_registry.execute(ACTION_IDS.ui_toggle_context_rail)}
         on_open_settings={() =>
           void action_registry.execute(ACTION_IDS.settings_open)}
       />
@@ -609,10 +613,7 @@
             </Resizable.Pane>
             <Resizable.Handle withHandle />
           {/if}
-          <Resizable.Pane
-            order={2}
-            defaultSize={stores.ui.sidebar_open ? 80 : 100}
-          >
+          <Resizable.Pane order={2}>
             <Sidebar.Inset class="flex h-full min-h-0 flex-col">
               <TabBar />
               <div class="flex min-h-0 flex-1 flex-col">
@@ -638,6 +639,17 @@
               </div>
             </Sidebar.Inset>
           </Resizable.Pane>
+          {#if stores.ui.context_rail_open}
+            <Resizable.Handle withHandle />
+            <Resizable.Pane
+              defaultSize={20}
+              minSize={12}
+              maxSize={35}
+              order={3}
+            >
+              <ContextRail />
+            </Resizable.Pane>
+          {/if}
         </Resizable.PaneGroup>
       </Sidebar.Provider>
     </div>

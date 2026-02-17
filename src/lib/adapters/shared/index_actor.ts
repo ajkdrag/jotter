@@ -1,5 +1,6 @@
 import {
   count_index_workset_items,
+  type PathRename,
   reduce_index_changes,
   type PrefixRename,
   type ReducedIndexWorkset,
@@ -24,6 +25,7 @@ type IndexActorExecutor = {
   ): Promise<void>;
   upsert_paths(vault_id: VaultId, paths: string[]): Promise<void>;
   remove_paths(vault_id: VaultId, paths: string[]): Promise<void>;
+  rename_paths(vault_id: VaultId, renames: PathRename[]): Promise<void>;
   remove_prefixes(vault_id: VaultId, prefixes: string[]): Promise<void>;
   rename_prefixes(vault_id: VaultId, renames: PrefixRename[]): Promise<void>;
 };
@@ -174,6 +176,13 @@ export function create_index_actor(executor: IndexActorExecutor): {
       throw_if_aborted(signal);
       await executor.rename_prefixes(vault_id, workset.rename_prefixes);
       indexed += workset.rename_prefixes.length;
+      emit_progress();
+    }
+
+    if (workset.rename_paths.length > 0) {
+      throw_if_aborted(signal);
+      await executor.rename_paths(vault_id, workset.rename_paths);
+      indexed += workset.rename_paths.length;
       emit_progress();
     }
 

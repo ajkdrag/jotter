@@ -5,10 +5,16 @@ export type PrefixRename = {
   new_prefix: string;
 };
 
+export type PathRename = {
+  old_path: string;
+  new_path: string;
+};
+
 export type ReducedIndexWorkset = {
   upsert_paths: Set<string>;
   remove_paths: Set<string>;
   remove_prefixes: Set<string>;
+  rename_paths: PathRename[];
   rename_prefixes: PrefixRename[];
   force_scan: boolean;
   force_rebuild: boolean;
@@ -19,6 +25,7 @@ function create_empty_workset(): ReducedIndexWorkset {
     upsert_paths: new Set<string>(),
     remove_paths: new Set<string>(),
     remove_prefixes: new Set<string>(),
+    rename_paths: [],
     rename_prefixes: [],
     force_scan: false,
     force_rebuild: false,
@@ -73,6 +80,51 @@ function compact_renames(renames: PrefixRename[]): PrefixRename[] {
   return compacted;
 }
 
+function compact_path_renames(renames: PathRename[]): PathRename[] {
+  const compacted: PathRename[] = [];
+  for (const rename of renames) {
+    if (rename.old_path === rename.new_path) {
+      continue;
+    }
+    const previous = compacted.findIndex(
+      (entry) => entry.new_path === rename.old_path,
+    );
+    if (previous >= 0) {
+      compacted[previous] = {
+        old_path: compacted[previous]?.old_path ?? rename.old_path,
+        new_path: rename.new_path,
+      };
+      const composed = compacted[previous];
+      if (composed && composed.old_path === composed.new_path) {
+        compacted.splice(previous, 1);
+      }
+      continue;
+    }
+    compacted.push(rename);
+  }
+  return compacted;
+}
+
+function remap_exact_path(
+  path: string,
+  old_path: string,
+  new_path: string,
+): string {
+  return path === old_path ? new_path : path;
+}
+
+function remap_exact_set(
+  paths: Set<string>,
+  old_path: string,
+  new_path: string,
+): Set<string> {
+  const remapped = new Set<string>();
+  for (const path of paths) {
+    remapped.add(remap_exact_path(path, old_path, new_path));
+  }
+  return remapped;
+}
+
 function drop_paths_under_prefix(paths: Set<string>, prefix: string): void {
   for (const path of paths) {
     if (path.startsWith(prefix)) {
@@ -91,6 +143,7 @@ export function reduce_index_changes(
       workset.upsert_paths.clear();
       workset.remove_paths.clear();
       workset.remove_prefixes.clear();
+      workset.rename_paths = [];
       workset.rename_prefixes = [];
       workset.force_scan = false;
       workset.force_rebuild = true;
@@ -124,6 +177,27 @@ export function reduce_index_changes(
       workset.remove_prefixes.add(change.prefix);
       drop_paths_under_prefix(workset.upsert_paths, change.prefix);
       drop_paths_under_prefix(workset.remove_paths, change.prefix);
+      continue;
+    }
+
+    if (change.kind === "rename_path") {
+      workset.upsert_paths = remap_exact_set(
+        workset.upsert_paths,
+        change.old_path,
+        change.new_path,
+      );
+      workset.remove_paths = remap_exact_set(
+        workset.remove_paths,
+        change.old_path,
+        change.new_path,
+      );
+      workset.rename_paths = compact_path_renames([
+        ...workset.rename_paths,
+        {
+          old_path: change.old_path,
+          new_path: change.new_path,
+        },
+      ]);
       continue;
     }
 
@@ -161,6 +235,7 @@ export function count_index_workset_items(
     return 1;
   }
   return (
+    workset.rename_paths.length +
     workset.rename_prefixes.length +
     workset.remove_prefixes.size +
     workset.remove_paths.size +

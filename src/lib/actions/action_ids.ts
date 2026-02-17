@@ -68,6 +68,7 @@ export const ACTION_IDS = {
   ui_select_folder: "ui.select_folder",
   ui_set_sidebar_view: "ui.set_sidebar_view",
   ui_set_theme: "ui.set_theme",
+  ui_toggle_context_rail: "ui.toggle_context_rail",
   ui_open_vault_dashboard: "ui.open_vault_dashboard",
   ui_close_vault_dashboard: "ui.close_vault_dashboard",
 

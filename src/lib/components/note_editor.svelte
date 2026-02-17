@@ -9,12 +9,7 @@
   const open_note = $derived(stores.editor.open_note);
 
   function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
-    void action_registry.execute(
-      ACTION_IDS.app_editor_mount,
-      node,
-      note,
-      stores.ui.editor_settings.link_syntax,
-    );
+    void action_registry.execute(ACTION_IDS.app_editor_mount, node, note);
 
     return {
       destroy() {

@@ -106,4 +106,22 @@ describe("workspace_index_tauri_adapter", () => {
       newPrefix: "new/",
     });
   });
+
+  it("maps note rename to rename_path touch", async () => {
+    const adapter = create_workspace_index_tauri_adapter();
+
+    await adapter.rename_note_path(
+      as_vault_id("vault-rename-note"),
+      as_note_path("old.md"),
+      as_note_path("new.md"),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tauri_invoke_mock).toHaveBeenCalledWith("index_rename_note", {
+      vaultId: "vault-rename-note",
+      oldPath: "old.md",
+      newPath: "new.md",
+    });
+  });
 });

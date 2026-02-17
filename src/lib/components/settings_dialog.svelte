@@ -7,7 +7,6 @@
   import { Input } from "$lib/components/ui/input";
   import TypeIcon from "@lucide/svelte/icons/type";
   import LayoutIcon from "@lucide/svelte/icons/layout-template";
-  import Link2Icon from "@lucide/svelte/icons/link-2";
   import FolderIcon from "@lucide/svelte/icons/folder";
   import GitBranchIcon from "@lucide/svelte/icons/git-branch";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
@@ -80,7 +79,6 @@
   }[] = [
     { id: "typography", label: "Typography", icon: TypeIcon },
     { id: "layout", label: "Layout", icon: LayoutIcon },
-    { id: "links", label: "Links", icon: Link2Icon },
     { id: "files", label: "Files", icon: FolderIcon },
     { id: "git", label: "Git", icon: GitBranchIcon },
     { id: "misc", label: "Misc", icon: SlidersIcon },
@@ -97,11 +95,6 @@
     { value: "compact", label: "Compact" },
     { value: "normal", label: "Normal" },
     { value: "spacious", label: "Spacious" },
-  ];
-
-  const link_syntax_options = [
-    { value: "wikilink", label: "Wikilinks ([[note]])" },
-    { value: "markdown", label: "Markdown links ([note](note.md))" },
   ];
 </script>
 
@@ -262,36 +255,6 @@
                 step={1}
                 class="w-full"
               />
-            </div>
-          </div>
-        {:else if active_category === "links"}
-          <h2 class="SettingsDialog__content-header">Links</h2>
-
-          <div class="SettingsDialog__section-content">
-            <div class="SettingsDialog__row">
-              <span class="SettingsDialog__label">Save Link Syntax</span>
-              <Select.Root
-                type="single"
-                value={editor_settings.link_syntax}
-                onValueChange={(v: string | undefined) => {
-                  update_select("link_syntax", v);
-                }}
-              >
-                <Select.Trigger class="w-56">
-                  <span data-slot="select-value">
-                    {link_syntax_options.find(
-                      (o) => o.value === editor_settings.link_syntax,
-                    )?.label}
-                  </span>
-                </Select.Trigger>
-                <Select.Content>
-                  {#each link_syntax_options as option (option.value)}
-                    <Select.Item value={option.value}
-                      >{option.label}</Select.Item
-                    >
-                  {/each}
-                </Select.Content>
-              </Select.Root>
             </div>
           </div>
         {:else if active_category === "files"}

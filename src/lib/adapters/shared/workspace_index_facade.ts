@@ -46,6 +46,17 @@ export function wrap_index_actor_as_port(
       }
       await Promise.resolve();
     },
+    async rename_note_path(
+      vault_id: VaultId,
+      old_path: NoteId,
+      new_path: NoteId,
+    ): Promise<void> {
+      await actor.touch_index(vault_id, {
+        kind: "rename_path",
+        old_path,
+        new_path,
+      });
+    },
     async remove_notes_by_prefix(
       vault_id: VaultId,
       prefix: string,

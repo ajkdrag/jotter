@@ -20,49 +20,37 @@ function open_note(buffer_id: string) {
 
 describe("editor_sync.reactor", () => {
   it("opens buffer when note id changes", () => {
+    const note = open_note("notes/a.md");
     expect(
       resolve_editor_sync_open({
-        open_note: open_note("notes/a.md"),
-        link_syntax: "wikilink",
+        open_note_id: note.meta.id,
+        open_note_buffer_id: note.buffer_id,
         last_note_id: "notes/b.md",
         last_buffer_id: "notes/b.md",
-        last_link_syntax: "wikilink",
-      }),
-    ).toBe(true);
-  });
-
-  it("opens buffer when link syntax changes", () => {
-    expect(
-      resolve_editor_sync_open({
-        open_note: open_note("notes/a.md"),
-        link_syntax: "markdown",
-        last_note_id: "notes/a.md",
-        last_buffer_id: "notes/a.md",
-        last_link_syntax: "wikilink",
       }),
     ).toBe(true);
   });
 
   it("opens buffer when buffer id changes for same note", () => {
+    const note = open_note("notes/a.md:reload:1");
     expect(
       resolve_editor_sync_open({
-        open_note: open_note("notes/a.md:reload:1"),
-        link_syntax: "wikilink",
+        open_note_id: note.meta.id,
+        open_note_buffer_id: note.buffer_id,
         last_note_id: "notes/a.md",
         last_buffer_id: "notes/a.md",
-        last_link_syntax: "wikilink",
       }),
     ).toBe(true);
   });
 
-  it("does not reopen when note id, buffer id, and syntax are unchanged", () => {
+  it("does not reopen when note id and buffer id are unchanged", () => {
+    const note = open_note("notes/a.md");
     expect(
       resolve_editor_sync_open({
-        open_note: open_note("notes/a.md"),
-        link_syntax: "wikilink",
+        open_note_id: note.meta.id,
+        open_note_buffer_id: note.buffer_id,
         last_note_id: "notes/a.md",
         last_buffer_id: "notes/a.md",
-        last_link_syntax: "wikilink",
       }),
     ).toBe(false);
   });

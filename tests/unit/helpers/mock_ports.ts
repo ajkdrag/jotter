@@ -295,6 +295,11 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
     upsert_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_notes: { vault_id: VaultId; note_ids: NoteId[] }[];
+    rename_note_path: {
+      vault_id: VaultId;
+      old_path: NoteId;
+      new_path: NoteId;
+    }[];
     remove_notes_by_prefix: { vault_id: VaultId; prefix: string }[];
     rename_folder_paths: {
       vault_id: VaultId;
@@ -312,6 +317,11 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
       upsert_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_notes: [] as { vault_id: VaultId; note_ids: NoteId[] }[],
+      rename_note_path: [] as {
+        vault_id: VaultId;
+        old_path: NoteId;
+        new_path: NoteId;
+      }[],
       remove_notes_by_prefix: [] as { vault_id: VaultId; prefix: string }[],
       rename_folder_paths: [] as {
         vault_id: VaultId;
@@ -345,6 +355,10 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
     },
     remove_notes(vault_id: VaultId, note_ids: NoteId[]) {
       mock._calls.remove_notes.push({ vault_id, note_ids });
+      return Promise.resolve();
+    },
+    rename_note_path(vault_id: VaultId, old_path: NoteId, new_path: NoteId) {
+      mock._calls.rename_note_path.push({ vault_id, old_path, new_path });
       return Promise.resolve();
     },
     remove_notes_by_prefix(vault_id: VaultId, prefix: string) {

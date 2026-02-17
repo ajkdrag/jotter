@@ -62,6 +62,15 @@ export function register_ui_actions(input: ActionRegistrationInput) {
   });
 
   registry.register({
+    id: ACTION_IDS.ui_toggle_context_rail,
+    label: "Toggle Links Panel",
+    shortcut: "CmdOrCtrl+Shift+L",
+    execute: () => {
+      stores.ui.toggle_context_rail();
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.ui_open_vault_dashboard,
     label: "Open Vault Dashboard",
     shortcut: "CmdOrCtrl+Shift+D",

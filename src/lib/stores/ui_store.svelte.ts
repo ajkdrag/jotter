@@ -21,6 +21,7 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 type AsyncStatus = "idle" | "loading" | "error";
 type SidebarView = "explorer" | "dashboard" | "starred";
+type ContextRailTab = "links";
 
 const INITIAL_DELETE_NOTE_DIALOG = { open: false, note: null } as const;
 
@@ -284,6 +285,9 @@ export class UIStore {
     description: string;
   }>({ ...INITIAL_CHECKPOINT_DIALOG });
 
+  context_rail_open = $state(false);
+  context_rail_tab = $state<ContextRailTab>("links");
+
   hotkeys_config = $state<HotkeyConfig>({ bindings: [] });
 
   hotkey_overrides = $state<HotkeyOverride[]>([]);
@@ -312,6 +316,15 @@ export class UIStore {
 
   set_filetree_revealed_note_path(path: string) {
     this.filetree_revealed_note_path = path;
+  }
+
+  toggle_context_rail() {
+    this.context_rail_open = !this.context_rail_open;
+  }
+
+  set_context_rail_tab(tab: ContextRailTab) {
+    this.context_rail_tab = tab;
+    this.context_rail_open = true;
   }
 
   set_editor_settings(settings: EditorSettings) {
@@ -355,5 +368,7 @@ export class UIStore {
     this.tab_close_confirm = { ...INITIAL_TAB_CLOSE_CONFIRM };
     this.version_history_dialog = { ...INITIAL_VERSION_HISTORY_DIALOG };
     this.checkpoint_dialog = { ...INITIAL_CHECKPOINT_DIALOG };
+    this.context_rail_open = false;
+    this.context_rail_tab = "links";
   }
 }

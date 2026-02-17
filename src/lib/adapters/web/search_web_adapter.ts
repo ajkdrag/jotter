@@ -21,5 +21,13 @@ export function create_search_web_adapter(search_db: SearchDbWeb): SearchPort {
     ): Promise<WikiSuggestion[]> {
       return search_db.suggest(vault_id, query, limit);
     },
+
+    get_note_links_snapshot(_vault_id: VaultId, _note_path: string) {
+      return Promise.resolve({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      });
+    },
   };
 }

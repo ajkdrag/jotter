@@ -15,6 +15,7 @@ import { ShellService } from "$lib/services/shell_service";
 import { TabService } from "$lib/services/tab_service";
 import { GitService } from "$lib/services/git_service";
 import { HotkeyService } from "$lib/services/hotkey_service";
+import { LinksService } from "$lib/services/links_service";
 import { mount_reactors } from "$lib/reactors";
 
 export type AppContext = ReturnType<typeof create_app_context>;
@@ -73,6 +74,8 @@ export function create_app_context(input: {
     stores.op,
     editor_service,
     now_ms,
+    input.ports.search,
+    stores.tab,
   );
 
   const folder_service = new FolderService(
@@ -108,6 +111,12 @@ export function create_app_context(input: {
     stores.git,
     stores.op,
     now_ms,
+  );
+
+  const links_service = new LinksService(
+    input.ports.search,
+    stores.vault,
+    stores.links,
   );
 
   const hotkey_service = new HotkeyService(
@@ -165,6 +174,7 @@ export function create_app_context(input: {
     ui_store: stores.ui,
     op_store: stores.op,
     notes_store: stores.notes,
+    search_store: stores.search,
     vault_store: stores.vault,
     tab_store: stores.tab,
     git_store: stores.git,
@@ -174,6 +184,7 @@ export function create_app_context(input: {
     settings_service,
     tab_service,
     git_service,
+    links_service,
   });
 
   return {

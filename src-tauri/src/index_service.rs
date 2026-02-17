@@ -29,6 +29,13 @@ pub struct SearchHit {
     pub snippet: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct NoteLinksSnapshot {
+    pub backlinks: Vec<IndexNoteMeta>,
+    pub outlinks: Vec<IndexNoteMeta>,
+    pub orphan_links: Vec<String>,
+}
+
 #[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum SearchScope {
@@ -104,6 +111,11 @@ enum DbCommand {
         old_prefix: String,
         new_prefix: String,
         reply: SyncSender<Result<usize, String>>,
+    },
+    RenamePath {
+        old_path: String,
+        new_path: String,
+        reply: SyncSender<Result<(), String>>,
     },
     Shutdown,
 }
@@ -255,6 +267,21 @@ fn dispatch_command(
             }
             let _ = reply.send(result);
         }
+        DbCommand::RenamePath {
+            old_path,
+            new_path,
+            reply,
+        } => {
+            let result = search_db::rename_note_path(conn, &old_path, &new_path);
+            if let Ok(()) = &result {
+                if let Some(mut meta) = notes_cache.remove(&old_path) {
+                    meta.id = new_path.clone();
+                    meta.path = new_path.clone();
+                    notes_cache.insert(new_path, meta);
+                }
+            }
+            let _ = reply.send(result);
+        }
         DbCommand::Rebuild {
             vault_root,
             cancel,
@@ -315,13 +342,11 @@ fn handle_upsert(
     search_db::upsert_note(conn, &meta, &markdown)?;
     notes_cache.insert(meta.path.clone(), meta.clone());
 
-    let key_map = search_db::build_key_map(notes_cache);
+    let targets = search_db::gfm_link_targets(&markdown, &meta.path);
     let mut resolved: BTreeSet<String> = BTreeSet::new();
-    for token in search_db::wiki_link_targets(&markdown) {
-        if let Some(target) = search_db::resolve_wiki_target(&token, &key_map) {
-            if target != meta.path {
-                resolved.insert(target);
-            }
+    for target in targets {
+        if target != meta.path {
+            resolved.insert(target);
         }
     }
     search_db::set_outlinks(conn, &meta.path, &resolved.into_iter().collect::<Vec<_>>())
@@ -368,7 +393,8 @@ fn run_index_op(
                     | DbCommand::RemoveNote { .. }
                     | DbCommand::RemoveNotes { .. }
                     | DbCommand::RemoveNotesByPrefix { .. }
-                    | DbCommand::RenamePaths { .. } => {
+                    | DbCommand::RenamePaths { .. }
+                    | DbCommand::RenamePath { .. } => {
                         cancel.store(true, Ordering::Relaxed);
                         dispatch_command(conn, cmd, notes_cache, rx);
 
@@ -682,17 +708,6 @@ pub fn index_remove_notes_by_prefix(
 }
 
 #[tauri::command]
-pub fn index_outlinks(
-    app: AppHandle,
-    vault_id: String,
-    note_id: String,
-) -> Result<Vec<IndexNoteMeta>, String> {
-    with_read_conn(&app, &vault_id, |conn| {
-        search_db::get_outlinks(conn, &note_id)
-    })
-}
-
-#[tauri::command]
 pub fn index_rename_folder(
     app: AppHandle,
     vault_id: String,
@@ -713,12 +728,30 @@ pub fn index_rename_folder(
 }
 
 #[tauri::command]
-pub fn index_backlinks(
+pub fn index_rename_note(
+    app: AppHandle,
+    vault_id: String,
+    old_path: String,
+    new_path: String,
+) -> Result<(), String> {
+    send_write_blocking(&app, &vault_id, |reply| DbCommand::RenamePath {
+        old_path,
+        new_path,
+        reply,
+    })
+}
+
+#[tauri::command]
+pub fn index_note_links_snapshot(
     app: AppHandle,
     vault_id: String,
     note_id: String,
-) -> Result<Vec<IndexNoteMeta>, String> {
+) -> Result<NoteLinksSnapshot, String> {
     with_read_conn(&app, &vault_id, |conn| {
-        search_db::get_backlinks(conn, &note_id)
+        Ok(NoteLinksSnapshot {
+            backlinks: search_db::get_backlinks(conn, &note_id)?,
+            outlinks: search_db::get_outlinks(conn, &note_id)?,
+            orphan_links: search_db::get_orphan_outlinks(conn, &note_id)?,
+        })
     })
 }

@@ -4,7 +4,6 @@ import type {
   CursorInfo,
   PastedImagePayload,
 } from "$lib/types/editor";
-import type { EditorSettings } from "$lib/types/editor_settings";
 import type { MarkdownText, NoteId, NotePath } from "$lib/types/ids";
 import { as_markdown_text } from "$lib/types/ids";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
@@ -35,7 +34,6 @@ export class EditorService {
   private session: EditorSession | null = null;
   private host_root: HTMLDivElement | null = null;
   private active_note: OpenNoteState | null = null;
-  private active_link_syntax: EditorSettings["link_syntax"] = "wikilink";
   private session_generation = 0;
 
   constructor(
@@ -54,11 +52,9 @@ export class EditorService {
   async mount(args: {
     root: HTMLDivElement;
     note: OpenNoteState;
-    link_syntax: EditorSettings["link_syntax"];
   }): Promise<void> {
     this.host_root = args.root;
     this.active_note = args.note;
-    this.active_link_syntax = args.link_syntax;
 
     this.op_store.start("editor.mount", Date.now());
     try {
@@ -78,19 +74,14 @@ export class EditorService {
     this.active_note = null;
   }
 
-  open_buffer(
-    note: OpenNoteState,
-    link_syntax: EditorSettings["link_syntax"],
-  ): void {
+  open_buffer(note: OpenNoteState): void {
     this.active_note = note;
-    this.active_link_syntax = link_syntax;
 
     if (!this.host_root || !this.session) return;
 
     this.session.open_buffer({
       note_path: note.meta.path,
       vault_id: this.vault_store.vault?.id ?? null,
-      link_syntax,
       initial_markdown: note.markdown,
     });
     this.focus();
@@ -177,7 +168,6 @@ export class EditorService {
       initial_markdown: active_note.markdown,
       note_path: active_note.meta.path,
       vault_id: this.vault_store.vault?.id ?? null,
-      link_syntax: this.active_link_syntax,
       events: {
         on_markdown_change: (markdown: string) => {
           with_active_note_id((id) => {

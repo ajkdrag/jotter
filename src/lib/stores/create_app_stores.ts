@@ -6,6 +6,7 @@ import { OpStore } from "$lib/stores/op_store.svelte";
 import { SearchStore } from "$lib/stores/search_store.svelte";
 import { TabStore } from "$lib/stores/tab_store.svelte";
 import { GitStore } from "$lib/stores/git_store.svelte";
+import { LinksStore } from "$lib/stores/links_store.svelte";
 
 export type AppStores = {
   vault: VaultStore;
@@ -16,6 +17,7 @@ export type AppStores = {
   search: SearchStore;
   tab: TabStore;
   git: GitStore;
+  links: LinksStore;
 };
 
 export function create_app_stores(): AppStores {
@@ -28,5 +30,6 @@ export function create_app_stores(): AppStores {
     search: new SearchStore(),
     tab: new TabStore(),
     git: new GitStore(),
+    links: new LinksStore(),
   };
 }

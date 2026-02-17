@@ -8,7 +8,6 @@ describe("apply_editor_styles", () => {
     line_height: 1.8,
     heading_color: "accent",
     spacing: "spacious",
-    link_syntax: "wikilink",
     attachment_folder: ".assets",
     show_hidden_files: false,
     autosave_enabled: true,

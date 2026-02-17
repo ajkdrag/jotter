@@ -1,4 +1,4 @@
-import type { SearchPort } from "$lib/ports/search_port";
+import type { NoteLinksSnapshot, SearchPort } from "$lib/ports/search_port";
 import type { VaultId, NoteId } from "$lib/types/ids";
 import type {
   NoteSearchHit,
@@ -27,6 +27,23 @@ type TauriSuggestionHit = {
   score: number;
 };
 
+type TauriLinksSnapshot = {
+  backlinks: TauriNoteMeta[];
+  outlinks: TauriNoteMeta[];
+  orphan_links: string[];
+};
+
+function to_note_meta(hit: TauriNoteMeta) {
+  return {
+    id: hit.id as NoteId,
+    path: hit.path as NoteId,
+    title: hit.title,
+    name: hit.name,
+    mtime_ms: hit.mtime_ms,
+    size_bytes: hit.size_bytes,
+  };
+}
+
 export function create_search_tauri_adapter(): SearchPort {
   return {
     async search_notes(
@@ -39,14 +56,7 @@ export function create_search_tauri_adapter(): SearchPort {
         query,
       });
       return hits.slice(0, limit).map((hit) => ({
-        note: {
-          id: hit.note.id as NoteId,
-          path: hit.note.path as NoteId,
-          title: hit.note.title,
-          name: hit.note.name,
-          mtime_ms: hit.note.mtime_ms,
-          size_bytes: hit.note.size_bytes,
-        },
+        note: to_note_meta(hit.note),
         score: hit.score,
         snippet: hit.snippet ?? undefined,
       }));
@@ -63,16 +73,27 @@ export function create_search_tauri_adapter(): SearchPort {
         limit,
       });
       return hits.map((hit) => ({
-        note: {
-          id: hit.note.id as NoteId,
-          path: hit.note.path as NoteId,
-          title: hit.note.title,
-          name: hit.note.name,
-          mtime_ms: hit.note.mtime_ms,
-          size_bytes: hit.note.size_bytes,
-        },
+        note: to_note_meta(hit.note),
         score: hit.score,
       }));
+    },
+
+    async get_note_links_snapshot(
+      vault_id: VaultId,
+      note_path: string,
+    ): Promise<NoteLinksSnapshot> {
+      const snapshot = await tauri_invoke<TauriLinksSnapshot>(
+        "index_note_links_snapshot",
+        {
+          vaultId: vault_id,
+          noteId: note_path,
+        },
+      );
+      return {
+        backlinks: snapshot.backlinks.map(to_note_meta),
+        outlinks: snapshot.outlinks.map(to_note_meta),
+        orphan_links: snapshot.orphan_links,
+      };
     },
   };
 }

@@ -21,17 +21,12 @@ import {
   INSERT_OUTLINK_SQL,
   SEARCH_SCHEMA_SQL,
   SEARCH_SQL,
-  SELECT_ALL_NOTES_SQL,
   SUGGEST_SQL,
   UPSERT_NOTE_SQL,
   search_match_expression,
   suggest_match_expression,
 } from "$lib/db/search_queries";
-import {
-  build_key_map,
-  resolve_wiki_target,
-  wiki_link_targets,
-} from "$lib/adapters/web/wiki_links_web";
+import { gfm_link_targets } from "$lib/adapters/web/wiki_links_web";
 import {
   to_number,
   to_string,
@@ -56,14 +51,6 @@ type RuntimeState = {
 type RebuildState = {
   total: number;
   indexed: number;
-  key_map: Map<string, string>;
-};
-
-type NoteRef = {
-  path: string;
-  title: string;
-  mtime_ms: number;
-  size_bytes: number;
 };
 
 type VfsWithLifecycle = {
@@ -100,15 +87,6 @@ function to_note_meta(row: unknown[]): WorkerNoteMeta {
     id: path,
     path,
     name: file_stem(path),
-    title: to_string(row[1]),
-    mtime_ms: to_number(row[2]),
-    size_bytes: to_number(row[3]),
-  };
-}
-
-function to_note_ref(row: unknown[]): NoteRef {
-  return {
-    path: to_string(row[0]),
     title: to_string(row[1]),
     mtime_ms: to_number(row[2]),
     size_bytes: to_number(row[3]),
@@ -319,11 +297,6 @@ async function upsert_note_record(db: number, doc: NoteDoc): Promise<void> {
   ]);
 }
 
-async function list_all_notes(db: number): Promise<NoteRef[]> {
-  const rows = await sql_rows(db, SELECT_ALL_NOTES_SQL);
-  return rows.map(to_note_ref);
-}
-
 async function set_outlinks(
   db: number,
   source: string,
@@ -340,13 +313,10 @@ async function reindex_outlinks_for_note(
   source: string,
   markdown: string,
 ): Promise<void> {
-  const notes = await list_all_notes(db);
-  const key_map = build_key_map(notes);
+  const targets = gfm_link_targets(markdown, source);
   const resolved = new Set<string>();
 
-  for (const token of wiki_link_targets(markdown)) {
-    const target = resolve_wiki_target(token, key_map);
-    if (!target) continue;
+  for (const target of targets) {
     if (target === source) continue;
     resolved.add(target);
   }
@@ -369,7 +339,7 @@ async function rebuild_index(vault_id: string, docs: NoteDoc[]): Promise<void> {
 
 async function begin_rebuild(
   vault_id: string,
-  notes: WorkerNoteMeta[],
+  _notes: WorkerNoteMeta[],
   total: number,
 ): Promise<void> {
   const db = await ensure_db(vault_id);
@@ -379,7 +349,6 @@ async function begin_rebuild(
   rebuild_state_by_vault.set(vault_id, {
     total,
     indexed: 0,
-    key_map: build_key_map(notes),
   });
   post_message({ type: "progress", vault_id, indexed: 0, total });
 }
@@ -403,9 +372,7 @@ async function rebuild_batch(vault_id: string, docs: NoteDoc[]): Promise<void> {
       await upsert_note_record(db, doc);
       await sql_run(db, DELETE_OUTLINKS_FOR_SOURCE_SQL, [doc.meta.path]);
       const resolved = new Set<string>();
-      for (const token of wiki_link_targets(doc.markdown)) {
-        const target = resolve_wiki_target(token, state.key_map);
-        if (!target) continue;
+      for (const target of gfm_link_targets(doc.markdown, doc.meta.path)) {
         if (target === doc.meta.path) continue;
         resolved.add(target);
       }
@@ -441,6 +408,7 @@ async function remove_note(vault_id: string, note_id: string): Promise<void> {
   const db = await ensure_db(vault_id);
   await sql_run(db, DELETE_NOTE_SQL, [note_id]);
   await sql_run(db, DELETE_NOTE_FTS_SQL, [note_id]);
+  await sql_run(db, DELETE_OUTLINKS_FOR_SOURCE_SQL, [note_id]);
 }
 
 function normalize_limit(limit: number, fallback: number): number {

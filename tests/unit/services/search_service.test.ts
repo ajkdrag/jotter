@@ -34,6 +34,11 @@ describe("SearchService", () => {
           snippet: "match",
         },
       ]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();
@@ -62,6 +67,11 @@ describe("SearchService", () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();
@@ -96,6 +106,11 @@ describe("SearchService", () => {
         return call === 1 ? first.promise : second.promise;
       }),
       search_notes: vi.fn().mockResolvedValue([]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();
@@ -150,6 +165,11 @@ describe("SearchService", () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockReturnValue(deferred.promise),
       search_notes: vi.fn().mockResolvedValue([]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();
@@ -218,6 +238,11 @@ describe("SearchService", () => {
           },
         ]);
       }),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();
@@ -271,6 +296,11 @@ describe("SearchService", () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockRejectedValue(new Error("index unavailable")),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();
@@ -302,6 +332,11 @@ describe("SearchService", () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
     };
 
     const vault_store = new VaultStore();

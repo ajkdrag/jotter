@@ -95,9 +95,7 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     expect(para.textContent.includes("note")).toBe(true);
 
     const href = get_link_href(next.doc, schema.marks.link);
-    expect(href).not.toBeNull();
-    const url = new URL(String(href));
-    expect(url.searchParams.get("path")).toBe("abc/pqr/note.md");
+    expect(href).toBe("note.md");
   });
 
   it("converts labeled wikilinks", () => {
@@ -129,9 +127,7 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     expect(para.textContent.includes("Label")).toBe(true);
 
     const href = get_link_href(next.doc, schema.marks.link);
-    expect(href).not.toBeNull();
-    const url = new URL(String(href));
-    expect(url.searchParams.get("path")).toBe("abc/pqr/note.md");
+    expect(href).toBe("note.md");
   });
 
   it("converts wikilinks across multiple paragraphs via full scan", () => {

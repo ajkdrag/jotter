@@ -7,10 +7,9 @@ import type {
 } from "@milkdown/kit/prose/model";
 import { linkSchema } from "@milkdown/kit/preset/commonmark";
 import {
-  encode_wiki_link_href,
   format_wiki_target_for_markdown,
+  format_wiki_target_for_markdown_link,
   resolve_wiki_target_to_note_path,
-  try_decode_wiki_link_href,
 } from "$lib/domain/wiki_link";
 import { dirty_state_plugin_key } from "./dirty_state_plugin";
 import { editor_context_plugin_key } from "./editor_context_plugin";
@@ -109,8 +108,15 @@ function build_replacement(input: {
     raw_target: raw,
   });
 
-  const note_path = resolved ?? raw;
-  const href = encode_wiki_link_href(note_path);
+  const href = resolved
+    ? format_wiki_target_for_markdown_link({
+        base_note_path: input.base_note_path,
+        resolved_note_path: resolved,
+      })
+    : raw.endsWith(".md")
+      ? raw
+      : `${raw}.md`;
+
   const label = (input.raw_label ?? "").trim();
 
   const display = resolved
@@ -121,7 +127,7 @@ function build_replacement(input: {
       })
     : label || raw;
 
-  return { resolved_note_path: note_path, display, href };
+  return { resolved_note_path: resolved ?? raw, display, href };
 }
 
 export function create_wiki_link_converter_prose_plugin(input: {
@@ -348,12 +354,6 @@ export function create_wiki_link_click_prose_plugin(input: {
 
           if (is_external_url(href)) {
             input.on_external_link_click(href);
-            return true;
-          }
-
-          const wiki_path = try_decode_wiki_link_href(href);
-          if (wiki_path) {
-            input.on_internal_link_click(wiki_path);
             return true;
           }
 

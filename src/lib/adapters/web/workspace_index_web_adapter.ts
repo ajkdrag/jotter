@@ -189,7 +189,7 @@ async function remove_by_prefix(
     );
     await search_db.exec(
       vault_id,
-      "DELETE FROM outlinks WHERE source_path LIKE ?1 ESCAPE '\\' OR target_path LIKE ?1 ESCAPE '\\'",
+      "DELETE FROM outlinks WHERE source_path LIKE ?1 ESCAPE '\\'",
       [pattern],
     );
     await search_db.exec(
@@ -258,6 +258,36 @@ async function rename_prefix(
   }
 }
 
+async function rename_path(
+  search_db: SearchDbWeb,
+  vault_id: VaultId,
+  old_path: string,
+  new_path: string,
+): Promise<void> {
+  await search_db.exec(vault_id, "BEGIN IMMEDIATE");
+  try {
+    await search_db.exec(
+      vault_id,
+      "UPDATE notes_fts SET path = ?1 WHERE path = ?2",
+      [new_path, old_path],
+    );
+    await search_db.exec(
+      vault_id,
+      "UPDATE notes SET path = ?1 WHERE path = ?2",
+      [new_path, old_path],
+    );
+    await search_db.exec(
+      vault_id,
+      "UPDATE outlinks SET source_path = ?1 WHERE source_path = ?2",
+      [new_path, old_path],
+    );
+    await search_db.exec(vault_id, "COMMIT");
+  } catch (error) {
+    await search_db.exec(vault_id, "ROLLBACK").catch(() => undefined);
+    throw error;
+  }
+}
+
 export function create_workspace_index_web_adapter(
   notes: NotesPort,
   search_db: SearchDbWeb,
@@ -300,6 +330,19 @@ export function create_workspace_index_web_adapter(
     async remove_paths(vault_id: VaultId, paths: string[]): Promise<void> {
       for (const path of paths) {
         await search_db.remove_note(vault_id, as_note_path(path));
+      }
+    },
+    async rename_paths(
+      vault_id: VaultId,
+      renames: Array<{ old_path: string; new_path: string }>,
+    ): Promise<void> {
+      for (const rename of renames) {
+        await rename_path(
+          search_db,
+          vault_id,
+          rename.old_path,
+          rename.new_path,
+        );
       }
     },
     async remove_prefixes(

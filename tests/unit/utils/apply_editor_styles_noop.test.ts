@@ -12,7 +12,6 @@ describe("apply_editor_styles (no document)", () => {
       line_height: 1.5,
       heading_color: "inherit",
       spacing: "normal",
-      link_syntax: "wikilink",
       attachment_folder: ".assets",
       show_hidden_files: false,
       autosave_enabled: true,

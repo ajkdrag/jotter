@@ -1,11 +1,9 @@
-import type { EditorSettings } from "$lib/types/editor_settings";
 import type { VaultId } from "$lib/types/ids";
 import type { CursorInfo, PastedImagePayload } from "$lib/types/editor";
 
 export type BufferConfig = {
   note_path: string;
   vault_id: VaultId | null;
-  link_syntax: EditorSettings["link_syntax"];
   initial_markdown: string;
 };
 
@@ -40,7 +38,6 @@ export type EditorSessionConfig = {
   initial_markdown: string;
   note_path: string;
   vault_id: VaultId | null;
-  link_syntax: EditorSettings["link_syntax"];
   events: EditorEventHandlers;
 };
 

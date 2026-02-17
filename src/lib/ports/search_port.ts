@@ -4,6 +4,13 @@ import type {
   SearchQuery,
   WikiSuggestion,
 } from "$lib/types/search";
+import type { NoteMeta } from "$lib/types/note";
+
+export type NoteLinksSnapshot = {
+  backlinks: NoteMeta[];
+  outlinks: NoteMeta[];
+  orphan_links: string[];
+};
 
 export interface SearchPort {
   search_notes(
@@ -16,4 +23,8 @@ export interface SearchPort {
     query: string,
     limit?: number,
   ): Promise<WikiSuggestion[]>;
+  get_note_links_snapshot(
+    vault_id: VaultId,
+    note_path: string,
+  ): Promise<NoteLinksSnapshot>;
 }

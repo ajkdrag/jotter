@@ -292,6 +292,32 @@ describe("workspace_index_web_adapter", () => {
     );
   });
 
+  it("renames a single note path without rewriting inbound target rows", async () => {
+    const docs = new Map<string, NoteDoc>();
+    const { notes } = create_notes_port(docs);
+    const { search_db, mocks } = create_search_db();
+
+    const adapter = create_workspace_index_web_adapter(notes, search_db);
+    await adapter.rename_note_path(
+      as_vault_id("vault-rename-note"),
+      as_note_path("old.md"),
+      as_note_path("new.md"),
+    );
+    await flush_ticks();
+
+    expect(mocks.exec).toHaveBeenCalledWith(
+      as_vault_id("vault-rename-note"),
+      "UPDATE outlinks SET source_path = ?1 WHERE source_path = ?2",
+      ["new.md", "old.md"],
+    );
+    const rewrote_inbound_targets = mocks.exec.mock.calls.some(
+      (call) =>
+        typeof call[1] === "string" &&
+        call[1].includes("UPDATE outlinks SET target_path = ?1"),
+    );
+    expect(rewrote_inbound_targets).toBe(false);
+  });
+
   it("escapes sql like wildcards for prefix operations", async () => {
     const docs = new Map<string, NoteDoc>();
     const { notes } = create_notes_port(docs);

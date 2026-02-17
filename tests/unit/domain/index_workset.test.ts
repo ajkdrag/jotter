@@ -37,6 +37,27 @@ describe("index_workset", () => {
     expect(workset.rename_prefixes).toEqual([]);
   });
 
+  it("compacts note rename chains and remaps queued path updates", () => {
+    const workset = reduce_index_changes([
+      { kind: "upsert_path", path: as_note_path("docs/old.md") },
+      {
+        kind: "rename_path",
+        old_path: as_note_path("docs/old.md"),
+        new_path: as_note_path("docs/mid.md"),
+      },
+      {
+        kind: "rename_path",
+        old_path: as_note_path("docs/mid.md"),
+        new_path: as_note_path("docs/new.md"),
+      },
+    ]);
+
+    expect([...workset.upsert_paths]).toEqual(["docs/new.md"]);
+    expect(workset.rename_paths).toEqual([
+      { old_path: "docs/old.md", new_path: "docs/new.md" },
+    ]);
+  });
+
   it("force_rebuild clears all pending targeted work", () => {
     const workset = reduce_index_changes([
       { kind: "upsert_path", path: as_note_path("notes/a.md") },

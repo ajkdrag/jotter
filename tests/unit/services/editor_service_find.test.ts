@@ -70,7 +70,7 @@ describe("EditorService update_find_state", () => {
     const root = {} as HTMLDivElement;
     const note = create_open_note("test.md", "# Test");
 
-    await service.mount({ root, note, link_syntax: "wikilink" });
+    await service.mount({ root, note });
 
     service.update_find_state("test", 0);
     expect(session.update_find_state).toHaveBeenCalledWith("test", 0);
@@ -131,7 +131,7 @@ describe("EditorService update_find_state", () => {
     const root = {} as HTMLDivElement;
     const note = create_open_note("test.md", "# Test");
 
-    await service.mount({ root, note, link_syntax: "wikilink" });
+    await service.mount({ root, note });
 
     service.update_find_state("test", 0);
     expect(session.update_find_state).toHaveBeenCalledWith("test", 0);

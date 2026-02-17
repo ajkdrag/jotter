@@ -1,6 +1,5 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
-import type { EditorSettings } from "$lib/types/editor_settings";
 import type { OpenNoteState } from "$lib/types/editor";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
 import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
@@ -67,11 +66,10 @@ export function register_app_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.app_editor_mount,
     label: "Editor Mount",
-    execute: async (root: unknown, note: unknown, link_syntax: unknown) => {
+    execute: async (root: unknown, note: unknown) => {
       await services.editor.mount({
         root: root as HTMLDivElement,
         note: note as OpenNoteState,
-        link_syntax: link_syntax as EditorSettings["link_syntax"],
       });
     },
   });

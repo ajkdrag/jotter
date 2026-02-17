@@ -99,6 +99,9 @@ async function execute_command(
     case "git_init_repo":
       await registry.execute(ACTION_IDS.git_init);
       break;
+    case "toggle_links_panel":
+      await registry.execute(ACTION_IDS.ui_toggle_context_rail);
+      break;
   }
 }
 

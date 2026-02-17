@@ -7,7 +7,8 @@ export type CommandId =
   | "show_vault_dashboard"
   | "git_version_history"
   | "git_create_checkpoint"
-  | "git_init_repo";
+  | "git_init_repo"
+  | "toggle_links_panel";
 
 export type CommandIcon =
   | "file-plus"
@@ -16,7 +17,8 @@ export type CommandIcon =
   | "keyboard"
   | "git-branch"
   | "history"
-  | "bookmark";
+  | "bookmark"
+  | "link";
 
 export type CommandDefinition = {
   id: CommandId;
