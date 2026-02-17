@@ -109,6 +109,7 @@ export class FolderService {
         false;
 
       await this.notes_port.delete_folder(vault_id, folder_path);
+      await this.index_port.remove_notes_by_prefix(vault_id, folder_prefix);
 
       this.notes_store.remove_folder(folder_path);
       this.notes_store.remove_recent_notes_by_prefix(folder_prefix);

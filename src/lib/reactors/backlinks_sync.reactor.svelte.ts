@@ -7,12 +7,14 @@ type BacklinksSyncState = {
   last_note_path: string | null;
   last_panel_open: boolean;
   last_index_status: SearchStore["index_progress"]["status"];
+  last_is_dirty: boolean;
 };
 
 type BacklinksSyncInput = {
   open_note_path: string | null;
   panel_open: boolean;
   index_status: SearchStore["index_progress"]["status"];
+  is_dirty: boolean;
 };
 
 type BacklinksSyncDecision = {
@@ -25,16 +27,15 @@ export function resolve_backlinks_sync_decision(
   state: BacklinksSyncState,
   input: BacklinksSyncInput,
 ): BacklinksSyncDecision {
+  const next_state: BacklinksSyncState = {
+    last_note_path: input.open_note_path,
+    last_panel_open: input.panel_open,
+    last_index_status: input.index_status,
+    last_is_dirty: input.is_dirty,
+  };
+
   if (!input.open_note_path) {
-    return {
-      action: "clear",
-      note_path: null,
-      next_state: {
-        last_note_path: null,
-        last_panel_open: input.panel_open,
-        last_index_status: input.index_status,
-      },
-    };
+    return { action: "clear", note_path: null, next_state };
   }
 
   const path_changed = input.open_note_path !== state.last_note_path;
@@ -42,18 +43,19 @@ export function resolve_backlinks_sync_decision(
   const index_completed =
     input.index_status === "completed" &&
     state.last_index_status !== "completed";
+  const save_completed =
+    !input.is_dirty &&
+    state.last_is_dirty &&
+    input.open_note_path === state.last_note_path;
 
   const should_load =
-    input.panel_open && (path_changed || panel_opened || index_completed);
+    input.panel_open &&
+    (path_changed || panel_opened || index_completed || save_completed);
 
   return {
     action: should_load ? "load" : "noop",
     note_path: input.open_note_path,
-    next_state: {
-      last_note_path: input.open_note_path,
-      last_panel_open: input.panel_open,
-      last_index_status: input.index_status,
-    },
+    next_state,
   };
 }
 
@@ -67,6 +69,7 @@ export function create_backlinks_sync_reactor(
     last_note_path: null,
     last_panel_open: false,
     last_index_status: "idle",
+    last_is_dirty: false,
   };
 
   return $effect.root(() => {
@@ -75,6 +78,7 @@ export function create_backlinks_sync_reactor(
         open_note_path: editor_store.open_note?.meta.path ?? null,
         panel_open: ui_store.context_rail_open,
         index_status: search_store.index_progress.status,
+        is_dirty: editor_store.open_note?.is_dirty ?? false,
       });
       state = decision.next_state;
 
