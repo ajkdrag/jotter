@@ -4,7 +4,7 @@ This is the source-of-truth architecture for Jotter.
 
 ## Core model
 
-Jotter is built on five primary layers:
+Jotter is built on four primary layers:
 
 - Ports + adapters for all external IO boundaries
 - `$state` store classes for app state
@@ -65,6 +65,9 @@ Most user-triggered operations follow this loop:
 - `vault_store.svelte.ts`
 - `notes_store.svelte.ts`
 - `editor_store.svelte.ts`
+- `search_store.svelte.ts`
+- `tab_store.svelte.ts`
+- `git_store.svelte.ts`
 
 Rules:
 
@@ -76,10 +79,11 @@ Rules:
 
 Owns ephemeral cross-screen UI state:
 
-- dialogs
-- palette/search panel state
+- dialogs (rename, delete, save, image paste, create folder, vault, settings, etc.)
+- omnibar (command palette) and find-in-file panel state
 - sidebar/filetree view state
 - editor settings values used by UI
+- hotkey recorder state
 
 Rules:
 
@@ -101,13 +105,13 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 ## Layer responsibilities
 
-| Layer                | Responsibility                                | Rules                                                                                                         |
-| -------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Ports & Adapters** | IO boundaries (fs, window, clipboard, search) | Port = interface. Adapter = factory fn. Services never import adapters — injected via constructor.            |
-| **Stores**           | Reactive state (`$state` classes)             | Sync mutations only. No async. No imports of services/ports. Zero business logic.                             |
-| **Services**         | Use cases (async workflows)                   | Constructor receives ports + stores. One method = one user intention. Never subscribes to stores.             |
-| **Reactors**         | Cross-cutting reactive side effects           | Observes store state → calls service. Never writes to stores directly. All registered in `reactors/index.ts`. |
-| **Action Registry**  | Discoverable, triggerable actions             | Maps action IDs to service calls. Used by UI, shortcuts, command palette, Tauri menu.                         |
+| Layer                | Responsibility                                                           | Rules                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| **Ports & Adapters** | IO boundaries (vault, notes, index, search, clipboard, shell, git, etc.) | Port = interface. Adapter = factory fn. Services never import adapters — injected via constructor.            |
+| **Stores**           | Reactive state (`$state` classes)                                        | Sync mutations only. No async. No imports of services/ports. Zero business logic.                             |
+| **Services**         | Use cases (async workflows)                                              | Constructor receives ports + stores. One method = one user intention. Never subscribes to stores.             |
+| **Reactors**         | Cross-cutting reactive side effects                                      | Observes store state → calls service. Never writes to stores directly. All registered in `reactors/index.ts`. |
+| **Action Registry**  | Discoverable, triggerable actions                                        | Maps action IDs to service calls. Used by UI, shortcuts, command palette, Tauri menu.                         |
 
 ### `src/lib/types`
 
@@ -127,7 +131,7 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 - works with domain types (NoteMeta, NotePath, etc.)
 - contains domain rules and transformations
 - stores cannot import from domain
-- examples: `extract_note_title`, `wiki_link`, `sanitize_note_name`, `search_query_parser`
+- examples: `extract_note_title`, `wiki_link`, `sanitize_note_name`, `search_query_parser`, `note_path_exists`, `default_hotkeys`
 
 ### `src/lib/ports`
 
@@ -135,7 +139,12 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 ### `src/lib/adapters`
 
-- concrete web/tauri/test implementations of ports
+- concrete web/tauri/test implementations of ports (e.g. `editor/`, `web/`, `tauri/`, `shared/`, `test/`)
+
+### `src/lib/db`
+
+- search schema and query constants (SQL, BM25 weights)
+- used by search adapters for FTS index
 
 ### `src/lib/stores`
 
@@ -180,16 +189,18 @@ src/
 ├── lib/
 │   ├── types/           # Shared domain and UI-safe types
 │   ├── ports/           # Interface contracts for IO boundaries
-│   ├── adapters/        # Concrete web/tauri/test implementations of ports (e.g. editor/)
+│   ├── adapters/        # Concrete web/tauri/test implementations (editor/, web/, tauri/, shared/, test/)
+│   ├── db/              # Search schema and query constants
 │   ├── stores/          # Synchronous app state classes
 │   ├── services/        # Async use-case orchestration
 │   ├── reactors/        # Persistent observers; index.ts registers all
 │   ├── actions/         # Action registry + per-domain action registrations
 │   ├── components/      # App Svelte components (pages, panels, modals)
 │   ├── di/              # Composition root
-│   ├── context/         # Context provision
-│   ├── hooks/           # Shared hooks (e.g. keyboard shortcuts)
-│   ├── utils/           # Shared utilities
+│   ├── context/         # Context provision (app_context.svelte)
+│   ├── hooks/           # Shared hooks (keyboard shortcuts, external links)
+│   ├── domain/          # Domain-aware utilities
+│   ├── utils/           # Pure, domain-agnostic utilities
 │   └── ...
 ├── routes/              # Entrypoints (+page.svelte, test/+page.svelte)
 └── ...
@@ -232,18 +243,16 @@ START
 
 Entrypoints:
 
-- `src/routes/+page.svelte`
-- `src/routes/test/+page.svelte`
+- `src/routes/+page.svelte` — production (uses `create_prod_ports`)
+- `src/routes/test/+page.svelte` — test harness (uses `create_test_ports`)
 
-Bootstrap sequence:
+Bootstrap sequence (per entrypoint):
 
-1. Create production/test ports
-2. Create app context (`create_app_context`)
-3. Register actions
-4. Mount reactors
-5. Provide context
-6. Render `AppShell`
-7. Cleanup on destroy
+1. Create production or test ports
+2. Create app context (`create_app_context`) — registers actions and mounts reactors internally
+3. Provide context (`provide_app_context`)
+4. Render `AppShell`
+5. Cleanup on destroy (`app.destroy()`)
 
 ## Invariants
 
@@ -271,32 +280,29 @@ Bootstrap sequence:
 
 ## Example: Rename Note
 
-**Step 1 — Port** (e.g. `FsPort.rename`)
+**Step 1 — Port** (`NotesPort.rename_note`)
 
 **Step 2 — Store mutation**  
-Domain store exposes something like `upsertNoteMetadata(note)`; reuse or add as needed.
+Domain store exposes `notes_store.rename_note(old_path, new_path)`.
 
 **Step 3 — Service method**
 
 ```ts
-async renameNote(id: string, newTitle: string) {
-  const opKey = `note.rename:${id}`;
+async rename_note(note: NoteMeta, new_path: NotePath, overwrite: boolean) {
+  const opKey = `note.rename:${note.id}`;
   this.op_store.start(opKey);
   try {
-    const note = this.workspace.noteIndex.find(n => n.id === id);
-    if (!note) throw new Error('Note not found');
-    const newPath = `notes/${slugify(newTitle)}.md`;
-    await this.fs.rename(note.path, newPath);
-    this.workspace.upsertNoteMetadata({ ...note, title: newTitle, path: newPath });
+    await this.notes_port.rename_note(vault_id, note.path, new_path);
+    this.notes_store.rename_note(note.path, new_path);
     this.op_store.succeed(opKey);
   } catch (e) {
-    this.op_store.fail(opKey, errorToMessage(e));
+    this.op_store.fail(opKey, error_message(e));
   }
 }
 ```
 
 **Step 4 — Action**  
-Register in action registry: id, label, shortcut (e.g. F2), `when`, and `execute` (e.g. show rename modal). Component triggers `action_registry.execute('note.rename')`; modal reads `op_store`, calls service `renameNote()` on confirm.
+Register in action registry: id `note.request_rename`, `note.confirm_rename`, etc. Component triggers `action_registry.execute('note.request_rename', note)`; modal reads `op_store`, calls service `rename_note()` on confirm.
 
 **Step 5 — Reactor?**  
 Only if a cross-cutting side effect is required (e.g. window title). Otherwise none.

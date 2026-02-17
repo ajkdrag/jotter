@@ -19,7 +19,8 @@ This document defines the design system, conventions, and standards for jotter's
 src/
 ├── app.css                    # shadcn-svelte tokens (DO NOT MODIFY)
 ├── styles/
-│   ├── design_tokens.css      # Extended design system tokens
+│   ├── design_tokens.css      # Extended design system tokens (teal accent, spacing, typography)
+│   ├── component_overrides.css # BEM patterns, toast overrides, DialogSection
 │   └── editor.css             # Milkdown/ProseMirror editor styles
 ├── lib/utils/
 │   └── apply_editor_styles.ts # Applies editor CSS variables from settings
@@ -31,6 +32,8 @@ src/
 **Important**: Never modify `app.css` directly — it's managed by shadcn-svelte CLI. Extend tokens in `design_tokens.css`.
 
 Editor style settings are reflected at runtime by `src/lib/reactors/editor_styles.reactor.svelte.ts`, which calls `src/lib/utils/apply_editor_styles.ts`.
+
+**Design token usage**: Default to shadcn semantic utilities (`bg-card`, `text-foreground`, `border-border`, etc.). Use custom tokens from `design_tokens.css` only when shadcn lacks the specific token (e.g. `--interactive-bg`, `--focus-ring`, `--size-tree-row`).
 
 ---
 
@@ -101,10 +104,14 @@ Base unit: **4px** (`0.25rem`)
 | `--space-1`   | 4px   | Icon gaps, tight padding      |
 | `--space-1-5` | 6px   | Small padding                 |
 | `--space-2`   | 8px   | Standard gap between elements |
+| `--space-2-5` | 10px  | Medium gaps                   |
 | `--space-3`   | 12px  | Section padding               |
 | `--space-4`   | 16px  | Card padding, larger gaps     |
+| `--space-5`   | 20px  | Large padding                 |
 | `--space-6`   | 24px  | Section margins               |
 | `--space-8`   | 32px  | Large section spacing         |
+| `--space-10`  | 40px  | Extra large spacing           |
+| `--space-12`  | 48px  | Maximum spacing               |
 
 ### Usage Rules
 
@@ -148,11 +155,16 @@ Base unit: **4px** (`0.25rem`)
 
 ### Specific Components
 
-| Token                 | Value | Component                          |
-| --------------------- | ----- | ---------------------------------- |
-| `--size-activity-bar` | 44px  | Activity bar width and button size |
-| `--size-status-bar`   | 22px  | Status bar height                  |
-| `--size-tree-row`     | 30px  | File tree row height               |
+| Token                  | Value | Component                          |
+| ---------------------- | ----- | ---------------------------------- |
+| `--size-activity-bar`  | 44px  | Activity bar width and button size |
+| `--size-activity-icon` | 20px  | Activity bar icon size             |
+| `--size-status-bar`    | 22px  | Status bar height                  |
+| `--size-tree-row`      | 30px  | File tree row height               |
+| `--size-tree-indent`   | 16px  | Tree folder indent                 |
+| `--size-dialog-sm`     | 24rem | Small dialog width                 |
+| `--size-dialog-md`     | 28rem | Medium dialog width                |
+| `--size-dialog-lg`     | 32rem | Large dialog width                 |
 
 ---
 
@@ -252,8 +264,14 @@ Use BEM (Block\_\_Element--Modifier) for scoped component styles.
 ### Hover
 
 ```css
+/* Sidebar items: use shadcn sidebar accent */
 .item:hover {
-  background-color: var(--sidebar-accent); /* or var(--muted) */
+  background-color: var(--sidebar-accent);
+}
+
+/* Generic items: use muted */
+.item:hover {
+  background-color: var(--muted);
 }
 ```
 
@@ -313,6 +331,8 @@ Use BEM (Block\_\_Element--Modifier) for scoped component styles.
 | `--duration-normal` | 150ms    | Most interactions            |
 | `--duration-slow`   | 200ms    | Larger elements, panels      |
 | `--duration-slower` | 300ms    | Page transitions, modals     |
+
+Easing: `--ease-default`, `--ease-in`, `--ease-out`, `--ease-in-out`
 
 ```css
 .item {
@@ -504,13 +524,13 @@ height: var(--size-status-bar);
 ### Common Patterns
 
 ```css
-/* Selected item */
+/* Selected item (also use .selection-item--selected from component_overrides.css) */
 .item--selected {
   background-color: var(--interactive-bg);
   color: var(--interactive);
 }
 
-/* Section header */
+/* Section header (also use .DialogSection__header from component_overrides.css) */
 .header {
   font-size: var(--text-xs);
   font-weight: 500;
@@ -530,3 +550,9 @@ height: var(--size-status-bar);
   transition: background-color var(--duration-fast) var(--ease-default);
 }
 ```
+
+### Utility Classes (design_tokens.css)
+
+- `.is-active` / `.is-active-subtle` — selected/active background states
+- `.has-indicator` — activity bar–style left indicator line
+- `.bg-interactive` / `.bg-interactive-hover` — interactive backgrounds
