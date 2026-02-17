@@ -8,7 +8,12 @@ export const wiki_suggest_plugin_key = new PluginKey<WikiSuggestState>(
   "wiki-suggest",
 );
 
-type SuggestionItem = { title: string; path: string };
+type SuggestionItem = {
+  title: string;
+  path: string;
+  kind: "existing" | "planned";
+  ref_count?: number | undefined;
+};
 
 type WikiSuggestState = {
   active: boolean;
@@ -75,7 +80,22 @@ function render_items(
     row.type = "button";
     row.className = "WikiSuggest__item";
     if (i === selected_index) row.classList.add("WikiSuggest__item--selected");
-    row.textContent = item.title;
+    if (item.kind === "planned") {
+      row.classList.add("WikiSuggest__item--planned");
+    }
+
+    const label = document.createElement("span");
+    label.className = "WikiSuggest__label";
+    label.textContent = item.title;
+    row.appendChild(label);
+
+    if (item.kind === "planned") {
+      const refs = document.createElement("span");
+      refs.className = "WikiSuggest__badge";
+      refs.textContent = `${String(item.ref_count ?? 0)} refs`;
+      row.appendChild(refs);
+    }
+
     row.addEventListener("mousedown", (e) => {
       e.preventDefault();
       on_select(i);

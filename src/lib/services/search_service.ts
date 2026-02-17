@@ -3,7 +3,12 @@ import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import type { CommandDefinition } from "$lib/types/command_palette";
 import type { SettingDefinition } from "$lib/types/settings_registry";
-import type { InFileMatch, OmnibarItem } from "$lib/types/search";
+import type {
+  InFileMatch,
+  OmnibarItem,
+  PlannedLinkSuggestion,
+  WikiSuggestion,
+} from "$lib/types/search";
 import type {
   SearchNotesResult,
   WikiSuggestionsResult,
@@ -20,6 +25,9 @@ import { create_logger } from "$lib/utils/logger";
 import type { Vault } from "$lib/types/vault";
 
 const log = create_logger("search_service");
+const WIKI_SUGGEST_LIMIT = 15;
+const WIKI_SUGGEST_EXISTING_RESERVE = 10;
+const WIKI_SUGGEST_PLANNED_RESERVE = 5;
 
 function score_command(query: string, command: CommandDefinition): number {
   const label = command.label.toLowerCase();
@@ -38,6 +46,75 @@ function score_setting(query: string, setting: SettingDefinition): number {
   if (setting.description.toLowerCase().includes(query)) return 40;
   if (setting.category.toLowerCase().includes(query)) return 20;
   return 0;
+}
+
+function merge_wiki_suggestions(input: {
+  existing_suggestions: WikiSuggestion[];
+  planned_targets: PlannedLinkSuggestion[];
+}): WikiSuggestion[] {
+  const existing = input.existing_suggestions.filter(
+    (item): item is Extract<WikiSuggestion, { kind: "existing" }> =>
+      item.kind === "existing",
+  );
+  const existing_paths = new Set(
+    existing.map((item) => String(item.note.path).toLowerCase()),
+  );
+
+  const planned = [...input.planned_targets]
+    .sort((left, right) => {
+      if (right.ref_count !== left.ref_count) {
+        return right.ref_count - left.ref_count;
+      }
+      return left.target_path.localeCompare(right.target_path);
+    })
+    .filter((item) => !existing_paths.has(item.target_path.toLowerCase()))
+    .map((item) => ({
+      kind: "planned" as const,
+      target_path: item.target_path,
+      ref_count: item.ref_count,
+      score: item.ref_count,
+    }));
+
+  if (existing.length === 0) {
+    return planned.slice(0, WIKI_SUGGEST_LIMIT);
+  }
+  if (planned.length === 0) {
+    return existing.slice(0, WIKI_SUGGEST_LIMIT);
+  }
+
+  const existing_reserved = Math.min(
+    existing.length,
+    WIKI_SUGGEST_EXISTING_RESERVE,
+  );
+  const planned_reserved = Math.min(
+    planned.length,
+    WIKI_SUGGEST_PLANNED_RESERVE,
+  );
+
+  let merged: WikiSuggestion[] = [
+    ...existing.slice(0, existing_reserved),
+    ...planned.slice(0, planned_reserved),
+  ];
+  let remaining = WIKI_SUGGEST_LIMIT - merged.length;
+
+  if (remaining > 0) {
+    const existing_extra = existing.slice(
+      existing_reserved,
+      existing_reserved + remaining,
+    );
+    merged = [...merged, ...existing_extra];
+    remaining = WIKI_SUGGEST_LIMIT - merged.length;
+  }
+
+  if (remaining > 0) {
+    const planned_extra = planned.slice(
+      planned_reserved,
+      planned_reserved + remaining,
+    );
+    merged = [...merged, ...planned_extra];
+  }
+
+  return merged.slice(0, WIKI_SUGGEST_LIMIT);
 }
 
 export class SearchService {
@@ -128,14 +205,25 @@ export class SearchService {
     if (!vault_id) return { status: "skipped", results: [] };
 
     try {
-      const results = await this.search_port.suggest_wiki_links(
-        vault_id,
-        trimmed,
-        15,
-      );
+      const [existing_suggestions, planned_targets] = await Promise.all([
+        this.search_port.suggest_wiki_links(
+          vault_id,
+          trimmed,
+          WIKI_SUGGEST_LIMIT,
+        ),
+        this.search_port.suggest_planned_links(
+          vault_id,
+          trimmed,
+          WIKI_SUGGEST_LIMIT,
+        ),
+      ]);
       if (revision !== this.active_wiki_suggest_revision) {
         return { status: "stale", results: [] };
       }
+      const results = merge_wiki_suggestions({
+        existing_suggestions,
+        planned_targets,
+      });
       return { status: "success", results };
     } catch (error) {
       if (revision !== this.active_wiki_suggest_revision) {
@@ -282,6 +370,34 @@ export class SearchService {
         ...this.search_settings(parsed.text),
       ];
       return { domain: "commands", items };
+    }
+
+    if (parsed.domain === "planned") {
+      if (!parsed.text.trim()) {
+        return { domain: "planned", items: [] };
+      }
+      const vault_id = this.vault_store.vault?.id;
+      if (!vault_id) {
+        return { domain: "planned", items: [] };
+      }
+      try {
+        const suggestions = await this.search_port.suggest_planned_links(
+          vault_id,
+          parsed.text,
+          50,
+        );
+        const items: OmnibarItem[] = suggestions.map((item) => ({
+          kind: "planned_note" as const,
+          target_path: item.target_path,
+          ref_count: item.ref_count,
+          score: item.ref_count,
+        }));
+        return { domain: "planned", items };
+      } catch (error) {
+        const message = error_message(error);
+        log.error("Planned-note search failed", { error: message });
+        return { domain: "planned", items: [], status: "failed" };
+      }
     }
 
     const result = await this.search_notes(raw_query);

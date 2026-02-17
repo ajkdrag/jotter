@@ -3,6 +3,7 @@ import type { ActionRegistrationInput } from "$lib/actions/action_registration_i
 import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
 import type { CommandId } from "$lib/types/command_palette";
 import { COMMANDS_REGISTRY } from "$lib/domain/search_commands";
+import { parse_search_query } from "$lib/domain/search_query_parser";
 import { as_note_path, type VaultId } from "$lib/types/ids";
 
 function open_omnibar(input: ActionRegistrationInput) {
@@ -157,6 +158,13 @@ async function confirm_item(input: ActionRegistrationInput, item: OmnibarItem) {
         item.setting.category.toLowerCase(),
       );
       break;
+    case "planned_note":
+      close_omnibar(input);
+      await registry.execute(
+        ACTION_IDS.note_open_wiki_link,
+        as_note_path(item.target_path),
+      );
+      break;
   }
 }
 
@@ -234,8 +242,12 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       }
 
       stores.ui.omnibar = { ...stores.ui.omnibar, is_searching: true };
+      const parsed_query = parse_search_query(normalized_query);
 
-      if (stores.ui.omnibar.scope === "all_vaults") {
+      if (
+        stores.ui.omnibar.scope === "all_vaults" &&
+        parsed_query.domain === "notes"
+      ) {
         const result =
           await services.search.search_notes_all_vaults(normalized_query);
         if (stores.ui.omnibar.query !== normalized_query) return;
@@ -302,8 +314,9 @@ export function register_omnibar_actions(input: ActionRegistrationInput) {
       if (!current_query) return;
 
       stores.ui.omnibar = { ...stores.ui.omnibar, is_searching: true };
+      const parsed_query = parse_search_query(current_query);
 
-      if (new_scope === "all_vaults") {
+      if (new_scope === "all_vaults" && parsed_query.domain === "notes") {
         const result =
           await services.search.search_notes_all_vaults(current_query);
         if (stores.ui.omnibar.scope !== "all_vaults") return;

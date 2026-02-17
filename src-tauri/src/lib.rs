@@ -63,6 +63,7 @@ pub fn run() {
             index_service::index_rebuild,
             index_service::index_search,
             index_service::index_suggest,
+            index_service::index_suggest_planned,
             index_service::index_upsert_note,
             index_service::index_remove_note,
             index_service::index_remove_notes,

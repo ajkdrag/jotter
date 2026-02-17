@@ -15,6 +15,11 @@ import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("editor_service");
 
+function note_name_from_path(path: string): string {
+  const leaf = path.split("/").at(-1) ?? path;
+  return leaf.endsWith(".md") ? leaf.slice(0, -3) : leaf;
+}
+
 export type EditorServiceCallbacks = {
   on_internal_link_click: (note_path: string) => void;
   on_external_link_click: (url: string) => void;
@@ -212,10 +217,21 @@ export class EditorService {
                       return;
                     }
 
-                    const items = result.results.map((r) => ({
-                      title: r.note.name,
-                      path: r.note.path,
-                    }));
+                    const items = result.results.map((result_item) => {
+                      if (result_item.kind === "planned") {
+                        return {
+                          kind: "planned" as const,
+                          title: note_name_from_path(result_item.target_path),
+                          path: result_item.target_path,
+                          ref_count: result_item.ref_count,
+                        };
+                      }
+                      return {
+                        kind: "existing" as const,
+                        title: result_item.note.name,
+                        path: result_item.note.path,
+                      };
+                    });
                     this.session?.set_wiki_suggestions?.(items);
                   });
               },

@@ -1,6 +1,10 @@
 import type { SearchPort } from "$lib/ports/search_port";
 import type { VaultId } from "$lib/types/ids";
-import type { NoteSearchHit, WikiSuggestion } from "$lib/types/search";
+import type {
+  NoteSearchHit,
+  PlannedLinkSuggestion,
+  WikiSuggestion,
+} from "$lib/types/search";
 import type { SearchDbWeb } from "$lib/adapters/web/search_db_web";
 import type { SearchQuery } from "$lib/types/search";
 
@@ -20,6 +24,14 @@ export function create_search_web_adapter(search_db: SearchDbWeb): SearchPort {
       limit = 15,
     ): Promise<WikiSuggestion[]> {
       return search_db.suggest(vault_id, query, limit);
+    },
+
+    async suggest_planned_links(
+      vault_id: VaultId,
+      query: string,
+      limit = 15,
+    ): Promise<PlannedLinkSuggestion[]> {
+      return search_db.suggest_planned(vault_id, query, limit);
     },
 
     get_note_links_snapshot(_vault_id: VaultId, _note_path: string) {

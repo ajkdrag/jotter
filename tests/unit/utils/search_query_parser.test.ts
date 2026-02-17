@@ -49,6 +49,19 @@ describe("parse_search_query", () => {
     expect(result.text).toBe("");
   });
 
+  it("detects planned domain with #planned prefix", () => {
+    const result = parse_search_query("#planned architecture");
+    expect(result.domain).toBe("planned");
+    expect(result.text).toBe("architecture");
+    expect(result.scope).toBe("all");
+  });
+
+  it("detects planned domain case-insensitively", () => {
+    const result = parse_search_query("#Planned");
+    expect(result.domain).toBe("planned");
+    expect(result.text).toBe("");
+  });
+
   it("preserves raw value", () => {
     const result = parse_search_query("path: test");
     expect(result.raw).toBe("path: test");

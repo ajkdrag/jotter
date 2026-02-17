@@ -17,6 +17,18 @@ pub struct SuggestionHit {
     pub score: f64,
 }
 
+#[derive(Debug, Serialize)]
+pub struct PlannedSuggestionHit {
+    pub target_path: String,
+    pub ref_count: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OrphanLink {
+    pub target_path: String,
+    pub ref_count: i64,
+}
+
 pub(crate) static GFM_LINK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)(!?)\[([^\]]*)\]\(([^)]+\.md)\)").unwrap());
 
@@ -554,6 +566,16 @@ fn escape_fts_prefix_query(query: &str) -> String {
         .join(" ")
 }
 
+fn like_contains_pattern(query: &str) -> String {
+    let escaped = query
+        .trim()
+        .to_lowercase()
+        .replace('\\', r"\\")
+        .replace('%', r"\%")
+        .replace('_', r"\_");
+    format!("%{escaped}%")
+}
+
 fn note_meta_from_row(row: &rusqlite::Row) -> rusqlite::Result<IndexNoteMeta> {
     let path: String = row.get(0)?;
     let title: String = row.get(1)?;
@@ -645,6 +667,40 @@ pub fn suggest(conn: &Connection, query: &str, limit: usize) -> Result<Vec<Sugge
         .map_err(|e| e.to_string())
 }
 
+pub fn suggest_planned(
+    conn: &Connection,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<PlannedSuggestionHit>, String> {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let pattern = like_contains_pattern(trimmed);
+    let sql = "SELECT o.target_path, COUNT(*) as ref_count
+               FROM outlinks o
+               LEFT JOIN notes n ON n.path = o.target_path
+               WHERE n.path IS NULL
+                 AND lower(o.target_path) LIKE ?1 ESCAPE '\\'
+               GROUP BY o.target_path
+               ORDER BY ref_count DESC, o.target_path ASC
+               LIMIT ?2";
+
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![pattern, limit], |row| {
+            Ok(PlannedSuggestionHit {
+                target_path: row.get(0)?,
+                ref_count: row.get(1)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
 pub fn set_outlinks(conn: &Connection, source: &str, targets: &[String]) -> Result<(), String> {
     conn.execute(
         "DELETE FROM outlinks WHERE source_path = ?1",
@@ -679,8 +735,11 @@ pub fn get_outlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>,
         .map_err(|e| e.to_string())
 }
 
-pub fn get_orphan_outlinks(conn: &Connection, path: &str) -> Result<Vec<String>, String> {
-    let sql = "SELECT o.target_path
+pub fn get_orphan_outlinks(conn: &Connection, path: &str) -> Result<Vec<OrphanLink>, String> {
+    let sql = "SELECT o.target_path,
+                      (SELECT COUNT(*)
+                       FROM outlinks refs
+                       WHERE refs.target_path = o.target_path) as ref_count
                FROM outlinks o
                LEFT JOIN notes n ON n.path = o.target_path
                WHERE o.source_path = ?1 AND n.path IS NULL
@@ -688,7 +747,12 @@ pub fn get_orphan_outlinks(conn: &Connection, path: &str) -> Result<Vec<String>,
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(params![path], |row| row.get::<_, String>(0))
+        .query_map(params![path], |row| {
+            Ok(OrphanLink {
+                target_path: row.get(0)?,
+                ref_count: row.get(1)?,
+            })
+        })
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>()
@@ -1096,7 +1160,9 @@ mod tests {
         assert_eq!(outlinks[0].path, "docs/source.md");
 
         let orphans = get_orphan_outlinks(&conn, "docs/source.md").unwrap();
-        assert_eq!(orphans, vec!["docs/old.md".to_string()]);
+        assert_eq!(orphans.len(), 1);
+        assert_eq!(orphans[0].target_path, "docs/old.md");
+        assert_eq!(orphans[0].ref_count, 1);
     }
 
     #[test]
@@ -1131,7 +1197,75 @@ mod tests {
         upsert_note(&conn, &other, "body").unwrap();
 
         let orphans = get_orphan_outlinks(&conn, "docs/source.md").unwrap();
-        assert_eq!(orphans, vec!["docs/missing.md".to_string()]);
+        assert_eq!(orphans.len(), 1);
+        assert_eq!(orphans[0].target_path, "docs/missing.md");
+        assert_eq!(orphans[0].ref_count, 1);
+    }
+
+    #[test]
+    fn suggest_planned_returns_missing_targets_ranked_by_ref_count() {
+        let tmp = TempDir::new().unwrap();
+        let conn = open_search_db(tmp.path()).unwrap();
+
+        let source_a = IndexNoteMeta {
+            id: "docs/source-a.md".to_string(),
+            path: "docs/source-a.md".to_string(),
+            title: "Source A".to_string(),
+            name: "source-a".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        let source_b = IndexNoteMeta {
+            id: "docs/source-b.md".to_string(),
+            path: "docs/source-b.md".to_string(),
+            title: "Source B".to_string(),
+            name: "source-b".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        let existing = IndexNoteMeta {
+            id: "docs/existing.md".to_string(),
+            path: "docs/existing.md".to_string(),
+            title: "Existing".to_string(),
+            name: "existing".to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+
+        upsert_note(&conn, &source_a, "body").unwrap();
+        upsert_note(&conn, &source_b, "body").unwrap();
+        upsert_note(&conn, &existing, "body").unwrap();
+
+        set_outlinks(
+            &conn,
+            "docs/source-a.md",
+            &[
+                "docs/planned/high.md".to_string(),
+                "docs/planned/low.md".to_string(),
+                "docs/existing.md".to_string(),
+            ],
+        )
+        .unwrap();
+        set_outlinks(
+            &conn,
+            "docs/source-b.md",
+            &["docs/planned/high.md".to_string()],
+        )
+        .unwrap();
+
+        let suggestions = suggest_planned(&conn, "planned", 10).unwrap();
+        assert_eq!(suggestions.len(), 2);
+        assert_eq!(suggestions[0].target_path, "docs/planned/high.md");
+        assert_eq!(suggestions[0].ref_count, 2);
+        assert_eq!(suggestions[1].target_path, "docs/planned/low.md");
+        assert_eq!(suggestions[1].ref_count, 1);
+
+        let exact = suggest_planned(&conn, "LOW", 10).unwrap();
+        assert_eq!(exact.len(), 1);
+        assert_eq!(exact[0].target_path, "docs/planned/low.md");
+
+        let none = suggest_planned(&conn, "existing", 10).unwrap();
+        assert!(none.is_empty());
     }
 
     #[test]

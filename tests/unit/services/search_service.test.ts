@@ -3,7 +3,7 @@ import { SearchService } from "$lib/services/search_service";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
-import type { WikiSuggestion } from "$lib/types/search";
+import type { PlannedLinkSuggestion, WikiSuggestion } from "$lib/types/search";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 function create_deferred<T>() {
@@ -16,10 +16,33 @@ function create_deferred<T>() {
   return { promise, resolve, reject };
 }
 
+function existing(path: string, score = 1): WikiSuggestion {
+  return {
+    kind: "existing",
+    note: {
+      id: as_note_path(path),
+      path: as_note_path(path),
+      name: path.split("/").at(-1)?.replace(".md", "") ?? "",
+      title: path.split("/").at(-1)?.replace(".md", "") ?? "",
+      mtime_ms: 0,
+      size_bytes: 0,
+    },
+    score,
+  };
+}
+
+function planned(
+  target_path: string,
+  ref_count: number,
+): PlannedLinkSuggestion {
+  return { target_path, ref_count };
+}
+
 describe("SearchService", () => {
   it("searches notes and returns results", async () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([
         {
           note: {
@@ -66,6 +89,7 @@ describe("SearchService", () => {
   it("returns empty result and resets op for empty query", async () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([]),
       get_note_links_snapshot: vi.fn().mockResolvedValue({
         backlinks: [],
@@ -105,6 +129,7 @@ describe("SearchService", () => {
         call += 1;
         return call === 1 ? first.promise : second.promise;
       }),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([]),
       get_note_links_snapshot: vi.fn().mockResolvedValue({
         backlinks: [],
@@ -126,32 +151,8 @@ describe("SearchService", () => {
     const p1 = service.suggest_wiki_links("alpha");
     const p2 = service.suggest_wiki_links("beta");
 
-    second.resolve([
-      {
-        note: {
-          id: as_note_path("docs/beta.md"),
-          path: as_note_path("docs/beta.md"),
-          name: "beta",
-          title: "beta",
-          mtime_ms: 0,
-          size_bytes: 0,
-        },
-        score: 1,
-      },
-    ]);
-    first.resolve([
-      {
-        note: {
-          id: as_note_path("docs/alpha.md"),
-          path: as_note_path("docs/alpha.md"),
-          name: "alpha",
-          title: "alpha",
-          mtime_ms: 0,
-          size_bytes: 0,
-        },
-        score: 1,
-      },
-    ]);
+    second.resolve([existing("docs/beta.md")]);
+    first.resolve([existing("docs/alpha.md")]);
 
     const r2 = await p2;
     expect(r2.status).toBe("success");
@@ -164,6 +165,7 @@ describe("SearchService", () => {
     const deferred = create_deferred<WikiSuggestion[]>();
     const search_port = {
       suggest_wiki_links: vi.fn().mockReturnValue(deferred.promise),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([]),
       get_note_links_snapshot: vi.fn().mockResolvedValue({
         backlinks: [],
@@ -186,26 +188,128 @@ describe("SearchService", () => {
     const empty = await service.suggest_wiki_links("   ");
     expect(empty).toEqual({ status: "empty", results: [] });
 
-    deferred.resolve([
-      {
-        note: {
-          id: as_note_path("docs/alpha.md"),
-          path: as_note_path("docs/alpha.md"),
-          name: "alpha",
-          title: "alpha",
-          mtime_ms: 0,
-          size_bytes: 0,
-        },
-        score: 1,
-      },
-    ]);
+    deferred.resolve([existing("docs/alpha.md")]);
     const result = await inflight;
     expect(result).toEqual({ status: "stale", results: [] });
+  });
+
+  it("merges existing and planned wiki suggestions with reserve and dedupe", async () => {
+    const search_port = {
+      suggest_wiki_links: vi
+        .fn()
+        .mockResolvedValue([
+          existing("docs/shared.md", 1),
+          existing("docs/existing-1.md", 2),
+          existing("docs/existing-2.md", 3),
+          existing("docs/existing-3.md", 4),
+          existing("docs/existing-4.md", 5),
+          existing("docs/existing-5.md", 6),
+          existing("docs/existing-6.md", 7),
+          existing("docs/existing-7.md", 8),
+          existing("docs/existing-8.md", 9),
+          existing("docs/existing-9.md", 10),
+          existing("docs/existing-10.md", 11),
+          existing("docs/existing-11.md", 12),
+        ]),
+      suggest_planned_links: vi
+        .fn()
+        .mockResolvedValue([
+          planned("docs/planned-low.md", 1),
+          planned("docs/planned-high.md", 9),
+          planned("docs/shared.md", 20),
+          planned("docs/planned-mid.md", 3),
+          planned("docs/planned-tail.md", 2),
+        ]),
+      search_notes: vi.fn().mockResolvedValue([]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_vault(create_test_vault());
+    const op_store = new OpStore();
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
+
+    const result = await service.suggest_wiki_links("plan");
+    expect(result.status).toBe("success");
+    if (result.status !== "success") {
+      throw new Error("expected success");
+    }
+
+    expect(result.results).toHaveLength(15);
+    const planned_results = result.results.filter(
+      (item) => item.kind === "planned",
+    );
+    expect(planned_results).toHaveLength(4);
+    expect(planned_results.map((item) => item.target_path)).toEqual([
+      "docs/planned-high.md",
+      "docs/planned-mid.md",
+      "docs/planned-tail.md",
+      "docs/planned-low.md",
+    ]);
+    expect(result.results[0]).toMatchObject({
+      kind: "existing",
+      note: { path: as_note_path("docs/shared.md") },
+    });
+  });
+
+  it("searches planned notes in omnibar domain", async () => {
+    const search_port = {
+      suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi
+        .fn()
+        .mockResolvedValue([
+          planned("docs/planned/a.md", 7),
+          planned("docs/planned/b.md", 3),
+        ]),
+      search_notes: vi.fn().mockResolvedValue([]),
+      get_note_links_snapshot: vi.fn().mockResolvedValue({
+        backlinks: [],
+        outlinks: [],
+        orphan_links: [],
+      }),
+    };
+
+    const vault_store = new VaultStore();
+    vault_store.set_vault(create_test_vault());
+    const op_store = new OpStore();
+    const service = new SearchService(
+      search_port,
+      vault_store,
+      op_store,
+      () => 1,
+    );
+
+    const result = await service.search_omnibar("#planned docs/planned");
+    expect(result.domain).toBe("planned");
+    expect(result.items).toEqual([
+      {
+        kind: "planned_note",
+        target_path: "docs/planned/a.md",
+        ref_count: 7,
+        score: 7,
+      },
+      {
+        kind: "planned_note",
+        target_path: "docs/planned/b.md",
+        ref_count: 3,
+        score: 3,
+      },
+    ]);
   });
 
   it("searches across available vaults and groups results by vault", async () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockImplementation((vault_id: string) => {
         if (vault_id === "vault-work") {
           return Promise.resolve([
@@ -295,6 +399,7 @@ describe("SearchService", () => {
   it("returns failed when all cross-vault searches fail", async () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockRejectedValue(new Error("index unavailable")),
       get_note_links_snapshot: vi.fn().mockResolvedValue({
         backlinks: [],
@@ -331,6 +436,7 @@ describe("SearchService", () => {
   it("includes active vault even when not in recent list", async () => {
     const search_port = {
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       search_notes: vi.fn().mockResolvedValue([]),
       get_note_links_snapshot: vi.fn().mockResolvedValue({
         backlinks: [],

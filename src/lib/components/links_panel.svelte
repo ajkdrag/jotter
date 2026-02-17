@@ -65,18 +65,19 @@
   </LinkSection>
 
   <LinkSection
-    title="Orphan links"
+    title="Planned"
     count={orphan_links.length}
-    default_expanded={false}
+    default_expanded={true}
   >
     {#if orphan_links.length === 0}
-      <p class="LinksPanel__empty">No orphan links</p>
+      <p class="LinksPanel__empty">No planned notes</p>
     {:else}
-      {#each orphan_links as path (path)}
+      {#each orphan_links as link (link.target_path)}
         <LinkItem
-          title={title_from_path(path)}
-          {path}
-          onclick={() => open_or_create_note(path)}
+          title={title_from_path(link.target_path)}
+          path={link.target_path}
+          meta={`${String(link.ref_count)} refs`}
+          onclick={() => open_or_create_note(link.target_path)}
         />
       {/each}
     {/if}

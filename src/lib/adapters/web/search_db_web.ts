@@ -3,6 +3,7 @@ import { as_note_path, type NoteId, type VaultId } from "$lib/types/ids";
 import type {
   IndexProgressEvent,
   NoteSearchHit,
+  PlannedLinkSuggestion,
   SearchQuery,
   WikiSuggestion,
 } from "$lib/types/search";
@@ -10,6 +11,7 @@ import type {
   SearchWorkerMessage,
   SearchWorkerRequest,
   WorkerNoteMeta,
+  WorkerPlannedSuggestion,
   WorkerSearchHit,
   WorkerSuggestion,
 } from "$lib/adapters/web/search_worker_protocol";
@@ -125,8 +127,27 @@ export class SearchDbWeb {
       limit,
     });
     return hits.map((hit) => ({
+      kind: "existing" as const,
       note: this.to_note_meta(hit.note),
       score: hit.score,
+    }));
+  }
+
+  async suggest_planned(
+    vault_id: VaultId,
+    query: string,
+    limit = 15,
+  ): Promise<PlannedLinkSuggestion[]> {
+    await this.init(vault_id);
+    const hits = await this.request<WorkerPlannedSuggestion[]>({
+      type: "suggest_planned",
+      vault_id: String(vault_id),
+      query,
+      limit,
+    });
+    return hits.map((hit) => ({
+      target_path: hit.target_path,
+      ref_count: hit.ref_count,
     }));
   }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LinksStore } from "$lib/stores/links_store.svelte";
 import type { NoteId, NotePath } from "$lib/types/ids";
 import type { NoteMeta } from "$lib/types/note";
+import type { OrphanLink } from "$lib/types/search";
 
 function note(path: string): NoteMeta {
   return {
@@ -12,6 +13,10 @@ function note(path: string): NoteMeta {
     mtime_ms: 0,
     size_bytes: 0,
   };
+}
+
+function orphan(target_path: string, ref_count = 1): OrphanLink {
+  return { target_path, ref_count };
 }
 
 describe("LinksStore", () => {
@@ -28,11 +33,11 @@ describe("LinksStore", () => {
     store.set_snapshot("target.md", {
       backlinks: [note("a.md")],
       outlinks: [note("b.md")],
-      orphan_links: ["missing/c.md"],
+      orphan_links: [orphan("missing/c.md")],
     });
     expect(store.backlinks).toEqual([note("a.md")]);
     expect(store.outlinks).toEqual([note("b.md")]);
-    expect(store.orphan_links).toEqual(["missing/c.md"]);
+    expect(store.orphan_links).toEqual([orphan("missing/c.md")]);
     expect(store.active_note_path).toBe("target.md");
   });
 
@@ -41,7 +46,7 @@ describe("LinksStore", () => {
     store.set_snapshot("target.md", {
       backlinks: [note("a.md")],
       outlinks: [note("b.md")],
-      orphan_links: ["missing/c.md"],
+      orphan_links: [orphan("missing/c.md")],
     });
     store.clear();
     expect(store.backlinks).toEqual([]);
@@ -55,7 +60,7 @@ describe("LinksStore", () => {
     store.set_snapshot("target.md", {
       backlinks: [note("a.md")],
       outlinks: [note("b.md")],
-      orphan_links: ["missing/c.md"],
+      orphan_links: [orphan("missing/c.md")],
     });
     store.reset();
     expect(store.backlinks).toEqual([]);

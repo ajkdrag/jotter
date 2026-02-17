@@ -33,7 +33,7 @@ pub struct SearchHit {
 pub struct NoteLinksSnapshot {
     pub backlinks: Vec<IndexNoteMeta>,
     pub outlinks: Vec<IndexNoteMeta>,
-    pub orphan_links: Vec<String>,
+    pub orphan_links: Vec<search_db::OrphanLink>,
 }
 
 #[derive(Debug, Deserialize, Clone, Copy)]
@@ -662,6 +662,23 @@ pub fn index_suggest(
     log::debug!("Suggesting from index vault_id={} query={}", vault_id, query);
     with_read_conn(&app, &vault_id, |conn| {
         search_db::suggest(conn, &query, limit.unwrap_or(15))
+    })
+}
+
+#[tauri::command]
+pub fn index_suggest_planned(
+    app: AppHandle,
+    vault_id: String,
+    query: String,
+    limit: Option<usize>,
+) -> Result<Vec<search_db::PlannedSuggestionHit>, String> {
+    log::debug!(
+        "Suggesting planned links from index vault_id={} query={}",
+        vault_id,
+        query
+    );
+    with_read_conn(&app, &vault_id, |conn| {
+        search_db::suggest_planned(conn, &query, limit.unwrap_or(15))
     })
 }
 

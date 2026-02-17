@@ -543,6 +543,7 @@ describe("NoteService", () => {
     const search_port = {
       search_notes: vi.fn(),
       suggest_wiki_links: vi.fn(),
+      suggest_planned_links: vi.fn(),
       get_note_links_snapshot,
     } as unknown as SearchPort;
 
@@ -637,6 +638,7 @@ describe("NoteService", () => {
     const search_port = {
       search_notes: vi.fn(),
       suggest_wiki_links: vi.fn(),
+      suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn().mockResolvedValue({
         backlinks: [source_note],
         outlinks: [],

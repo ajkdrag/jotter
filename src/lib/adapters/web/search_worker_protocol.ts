@@ -67,6 +67,13 @@ export type SearchWorkerRequest =
       limit: number;
     }
   | {
+      type: "suggest_planned";
+      id: number;
+      vault_id: string;
+      query: string;
+      limit: number;
+    }
+  | {
       type: "close";
       id: number;
     };
@@ -89,6 +96,11 @@ export type WorkerSearchHit = {
 export type WorkerSuggestion = {
   note: WorkerNoteMeta;
   score: number;
+};
+
+export type WorkerPlannedSuggestion = {
+  target_path: string;
+  ref_count: number;
 };
 
 export type SearchWorkerMessage =

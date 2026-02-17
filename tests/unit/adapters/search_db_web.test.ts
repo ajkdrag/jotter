@@ -140,6 +140,52 @@ describe("search_db_web", () => {
     expect(hits[0]?.snippet).toBe("<b>alpha</b>");
   });
 
+  it("sends planned suggest request and maps result payload", async () => {
+    const db = new SearchDbWeb();
+    const vault_id = as_vault_id("vault-planned");
+
+    const init_promise = db.init(vault_id);
+    const worker = MockWorker.instances[0];
+    if (!worker) throw new Error("expected worker instance");
+    const init_request = worker.posted[0];
+    if (!init_request || init_request.type !== "init") {
+      throw new Error("expected init request");
+    }
+    worker.emit({
+      type: "ready",
+      id: init_request.id,
+      vault_id: String(vault_id),
+      storage: "memory",
+    });
+    worker.emit({ type: "result", id: init_request.id, data: null });
+    await init_promise;
+
+    const suggest_promise = db.suggest_planned(vault_id, "plan", 5);
+    await Promise.resolve();
+
+    const suggest_request = worker.posted[1];
+    if (!suggest_request || suggest_request.type !== "suggest_planned") {
+      throw new Error("expected suggest_planned request");
+    }
+    expect(suggest_request.query).toBe("plan");
+    expect(suggest_request.limit).toBe(5);
+
+    worker.emit({
+      type: "result",
+      id: suggest_request.id,
+      data: [
+        { target_path: "docs/planned/a.md", ref_count: 7 },
+        { target_path: "docs/planned/b.md", ref_count: 3 },
+      ],
+    });
+
+    const suggestions = await suggest_promise;
+    expect(suggestions).toEqual([
+      { target_path: "docs/planned/a.md", ref_count: 7 },
+      { target_path: "docs/planned/b.md", ref_count: 3 },
+    ]);
+  });
+
   it("times out pending worker requests", async () => {
     vi.useFakeTimers();
     const db = new SearchDbWeb({ request_timeout_ms: 50 });

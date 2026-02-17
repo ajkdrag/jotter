@@ -198,6 +198,67 @@ describe("register_omnibar_actions", () => {
     });
   });
 
+  it("uses local omnibar search for #planned even in all_vaults scope", async () => {
+    const { registry, stores, services } = create_omnibar_actions_harness();
+    services.search.search_omnibar = vi.fn().mockResolvedValue({
+      domain: "planned",
+      items: [
+        {
+          kind: "planned_note",
+          target_path: "docs/planned/a.md",
+          ref_count: 4,
+          score: 4,
+        },
+      ],
+    });
+
+    stores.ui.omnibar = {
+      ...stores.ui.omnibar,
+      open: true,
+      query: "#planned docs",
+      scope: "all_vaults",
+    };
+
+    await registry.execute(ACTION_IDS.omnibar_set_query, "#planned docs");
+
+    expect(services.search.search_notes_all_vaults).not.toHaveBeenCalled();
+    expect(services.search.search_omnibar).toHaveBeenCalledWith(
+      "#planned docs",
+    );
+    expect(stores.search.omnibar_items).toEqual([
+      {
+        kind: "planned_note",
+        target_path: "docs/planned/a.md",
+        ref_count: 4,
+        score: 4,
+      },
+    ]);
+  });
+
+  it("opens planned-note omnibar hit via wiki-link action", async () => {
+    const { registry, stores } = create_omnibar_actions_harness();
+    const open_wiki_link = vi.fn().mockResolvedValue(undefined);
+    registry.register({
+      id: ACTION_IDS.note_open_wiki_link,
+      label: "Open Wiki Link",
+      execute: open_wiki_link,
+    });
+
+    stores.ui.omnibar = { ...stores.ui.omnibar, open: true };
+
+    await registry.execute(ACTION_IDS.omnibar_confirm_item, {
+      kind: "planned_note",
+      target_path: "docs/planned/a.md",
+      ref_count: 3,
+      score: 3,
+    });
+
+    expect(open_wiki_link).toHaveBeenCalledWith(
+      as_note_path("docs/planned/a.md"),
+    );
+    expect(stores.ui.omnibar.open).toBe(false);
+  });
+
   it("cancels cross-vault open confirmation", async () => {
     const { registry, stores } = create_omnibar_actions_harness();
     stores.ui.cross_vault_open_confirm = {

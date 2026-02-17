@@ -75,6 +75,15 @@ WHERE notes_fts MATCH ?1
 ORDER BY rank
 LIMIT ?2`;
 
+export const PLANNED_SUGGEST_SQL = `SELECT o.target_path, COUNT(*) as ref_count
+FROM outlinks o
+LEFT JOIN notes n ON n.path = o.target_path
+WHERE n.path IS NULL
+  AND lower(o.target_path) LIKE ?1 ESCAPE '\\'
+GROUP BY o.target_path
+ORDER BY ref_count DESC, o.target_path ASC
+LIMIT ?2`;
+
 export function escape_fts_query(query: string): string {
   return query
     .split(/\s+/)
@@ -113,4 +122,14 @@ export function suggest_match_expression(query: string): string {
   const escaped = escape_fts_prefix_query(query.trim());
   if (escaped === "") return "";
   return `{title name path} : ${escaped}`;
+}
+
+export function planned_match_expression(query: string): string {
+  const trimmed = query.trim().toLowerCase();
+  if (trimmed === "") return "";
+  const escaped = trimmed
+    .replaceAll("\\", "\\\\")
+    .replaceAll("%", "\\%")
+    .replaceAll("_", "\\_");
+  return `%${escaped}%`;
 }

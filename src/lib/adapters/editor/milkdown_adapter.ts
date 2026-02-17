@@ -643,7 +643,14 @@ export function create_milkdown_editor_port(args?: {
             view.focus();
           });
         },
-        set_wiki_suggestions(items: Array<{ title: string; path: string }>) {
+        set_wiki_suggestions(
+          items: Array<{
+            title: string;
+            path: string;
+            kind: "existing" | "planned";
+            ref_count?: number | undefined;
+          }>,
+        ) {
           if (!editor) return;
           run_editor_action((ctx) => {
             const view = ctx.get(editorViewCtx);

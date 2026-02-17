@@ -5,11 +5,12 @@
   type Props = {
     title: string;
     path: string;
+    meta?: string;
     external?: boolean;
     onclick: () => void;
   };
 
-  let { title, path, external = false, onclick }: Props = $props();
+  let { title, path, meta, external = false, onclick }: Props = $props();
 </script>
 
 <button type="button" class="LinkItem" {onclick}>
@@ -21,7 +22,12 @@
     {/if}
   </span>
   <span class="LinkItem__text">
-    <span class="LinkItem__title">{title}</span>
+    <span class="LinkItem__titleRow">
+      <span class="LinkItem__title">{title}</span>
+      {#if meta}
+        <span class="LinkItem__meta">{meta}</span>
+      {/if}
+    </span>
     <span class="LinkItem__path">{path}</span>
   </span>
 </button>
@@ -70,6 +76,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .LinkItem__titleRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .LinkItem__meta {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-1);
   }
 
   .LinkItem__path {

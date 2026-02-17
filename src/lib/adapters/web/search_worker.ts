@@ -6,6 +6,7 @@ import type {
   SearchWorkerMessage,
   SearchWorkerRequest,
   WorkerNoteMeta,
+  WorkerPlannedSuggestion,
   WorkerSearchHit,
   WorkerStorageMode,
   WorkerSuggestion,
@@ -22,7 +23,9 @@ import {
   SEARCH_SCHEMA_SQL,
   SEARCH_SQL,
   SUGGEST_SQL,
+  PLANNED_SUGGEST_SQL,
   UPSERT_NOTE_SQL,
+  planned_match_expression,
   search_match_expression,
   suggest_match_expression,
 } from "$lib/db/search_queries";
@@ -463,6 +466,24 @@ async function suggest(
   }));
 }
 
+async function suggest_planned(
+  vault_id: string,
+  query: SearchWorkerRequest & { type: "suggest_planned" },
+): Promise<WorkerPlannedSuggestion[]> {
+  const db = await ensure_db(vault_id);
+  const match_expr = planned_match_expression(query.query);
+  if (match_expr === "") return [];
+
+  const rows = await sql_rows(db, PLANNED_SUGGEST_SQL, [
+    match_expr,
+    normalize_limit(query.limit, 15),
+  ]);
+  return rows.map((row) => ({
+    target_path: to_string(row[0]),
+    ref_count: to_number(row[1]),
+  }));
+}
+
 async function close_all(): Promise<void> {
   const runtime = runtime_state;
   if (!runtime) return;
@@ -560,6 +581,12 @@ async function handle_request_once(
 
   if (request.type === "suggest") {
     const hits = await suggest(request.vault_id, request);
+    post_result(request.id, hits);
+    return;
+  }
+
+  if (request.type === "suggest_planned") {
+    const hits = await suggest_planned(request.vault_id, request);
     post_result(request.id, hits);
     return;
   }

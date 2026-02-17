@@ -12,6 +12,8 @@ export function parse_search_query(raw: string): SearchQuery {
     return { raw, text: "", scope: "all", domain: "notes" };
   }
 
+  const lower = trimmed.toLowerCase();
+
   if (trimmed.startsWith(">")) {
     return {
       raw,
@@ -21,7 +23,15 @@ export function parse_search_query(raw: string): SearchQuery {
     };
   }
 
-  const lower = trimmed.toLowerCase();
+  if (lower === "#planned" || lower.startsWith("#planned ")) {
+    return {
+      raw,
+      text: trimmed.slice("#planned".length).trim(),
+      scope: "all",
+      domain: "planned",
+    };
+  }
+
   for (const { token, scope } of scope_tokens) {
     if (lower.startsWith(token)) {
       return {

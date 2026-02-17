@@ -3,7 +3,7 @@ import type { CommandDefinition } from "$lib/types/command_palette";
 import type { SettingDefinition } from "$lib/types/settings_registry";
 
 export type SearchScope = "all" | "path" | "title" | "content";
-export type SearchDomain = "notes" | "commands";
+export type SearchDomain = "notes" | "commands" | "planned";
 export type OmnibarScope = "current_vault" | "all_vaults";
 
 export type SearchQuery = {
@@ -19,10 +19,27 @@ export type NoteSearchHit = {
   snippet?: string | undefined;
 };
 
-export type WikiSuggestion = {
+export type PlannedLinkSuggestion = {
+  target_path: string;
+  ref_count: number;
+};
+
+export type OrphanLink = PlannedLinkSuggestion;
+
+export type ExistingWikiSuggestion = {
+  kind: "existing";
   note: NoteMeta;
   score: number;
 };
+
+export type PlannedWikiSuggestion = {
+  kind: "planned";
+  target_path: string;
+  ref_count: number;
+  score: number;
+};
+
+export type WikiSuggestion = ExistingWikiSuggestion | PlannedWikiSuggestion;
 
 export type InFileMatch = {
   line: number;
@@ -70,6 +87,12 @@ export type OmnibarItem =
       vault_is_available?: boolean;
       score: number;
       snippet?: string | undefined;
+    }
+  | {
+      kind: "planned_note";
+      target_path: string;
+      ref_count: number;
+      score: number;
     }
   | { kind: "command"; command: CommandDefinition; score: number }
   | { kind: "setting"; setting: SettingDefinition; score: number }

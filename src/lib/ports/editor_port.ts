@@ -16,7 +16,12 @@ export type EditorSession = {
   is_dirty: () => boolean;
   focus: () => void;
   set_wiki_suggestions?: (
-    items: Array<{ title: string; path: string }>,
+    items: Array<{
+      title: string;
+      path: string;
+      kind: "existing" | "planned";
+      ref_count?: number | undefined;
+    }>,
   ) => void;
   open_buffer: (config: BufferConfig) => void;
   close_buffer: (note_path: string) => void;

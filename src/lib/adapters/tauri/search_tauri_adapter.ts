@@ -2,6 +2,7 @@ import type { NoteLinksSnapshot, SearchPort } from "$lib/ports/search_port";
 import type { VaultId, NoteId } from "$lib/types/ids";
 import type {
   NoteSearchHit,
+  PlannedLinkSuggestion,
   SearchQuery,
   WikiSuggestion,
 } from "$lib/types/search";
@@ -27,10 +28,20 @@ type TauriSuggestionHit = {
   score: number;
 };
 
+type TauriPlannedSuggestionHit = {
+  target_path: string;
+  ref_count: number;
+};
+
+type TauriOrphanLink = {
+  target_path: string;
+  ref_count: number;
+};
+
 type TauriLinksSnapshot = {
   backlinks: TauriNoteMeta[];
   outlinks: TauriNoteMeta[];
-  orphan_links: string[];
+  orphan_links: TauriOrphanLink[];
 };
 
 function to_note_meta(hit: TauriNoteMeta) {
@@ -73,8 +84,28 @@ export function create_search_tauri_adapter(): SearchPort {
         limit,
       });
       return hits.map((hit) => ({
+        kind: "existing" as const,
         note: to_note_meta(hit.note),
         score: hit.score,
+      }));
+    },
+
+    async suggest_planned_links(
+      vault_id: VaultId,
+      query: string,
+      limit = 15,
+    ): Promise<PlannedLinkSuggestion[]> {
+      const hits = await tauri_invoke<TauriPlannedSuggestionHit[]>(
+        "index_suggest_planned",
+        {
+          vaultId: vault_id,
+          query,
+          limit,
+        },
+      );
+      return hits.map((hit) => ({
+        target_path: hit.target_path,
+        ref_count: hit.ref_count,
       }));
     },
 
@@ -92,7 +123,10 @@ export function create_search_tauri_adapter(): SearchPort {
       return {
         backlinks: snapshot.backlinks.map(to_note_meta),
         outlinks: snapshot.outlinks.map(to_note_meta),
-        orphan_links: snapshot.orphan_links,
+        orphan_links: snapshot.orphan_links.map((orphan) => ({
+          target_path: orphan.target_path,
+          ref_count: orphan.ref_count,
+        })),
       };
     },
   };

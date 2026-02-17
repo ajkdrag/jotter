@@ -5,6 +5,7 @@ import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { as_note_path } from "$lib/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
 import type { NoteMeta } from "$lib/types/note";
+import type { OrphanLink } from "$lib/types/search";
 
 function note(path: string): NoteMeta {
   return {
@@ -15,6 +16,10 @@ function note(path: string): NoteMeta {
     mtime_ms: 0,
     size_bytes: 0,
   };
+}
+
+function orphan(target_path: string, ref_count = 1): OrphanLink {
+  return { target_path, ref_count };
 }
 
 function create_deferred<T>() {
@@ -32,11 +37,12 @@ describe("LinksService", () => {
     const snapshot = {
       backlinks: [note("a.md")],
       outlinks: [note("b.md")],
-      orphan_links: ["missing/c.md"],
+      orphan_links: [orphan("missing/c.md")],
     };
     const search_port = {
       search_notes: vi.fn().mockResolvedValue([]),
       suggest_wiki_links: vi.fn().mockResolvedValue([]),
+      suggest_planned_links: vi.fn().mockResolvedValue([]),
       get_note_links_snapshot: vi.fn().mockResolvedValue(snapshot),
     };
 
@@ -61,6 +67,7 @@ describe("LinksService", () => {
     const search_port = {
       search_notes: vi.fn(),
       suggest_wiki_links: vi.fn(),
+      suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn(),
     };
 
@@ -69,7 +76,7 @@ describe("LinksService", () => {
     links_store.set_snapshot("old.md", {
       backlinks: [note("x.md")],
       outlinks: [note("y.md")],
-      orphan_links: ["missing/z.md"],
+      orphan_links: [orphan("missing/z.md")],
     });
 
     const service = new LinksService(search_port, vault_store, links_store);
@@ -86,18 +93,19 @@ describe("LinksService", () => {
     const first = create_deferred<{
       backlinks: NoteMeta[];
       outlinks: NoteMeta[];
-      orphan_links: string[];
+      orphan_links: OrphanLink[];
     }>();
     const second = create_deferred<{
       backlinks: NoteMeta[];
       outlinks: NoteMeta[];
-      orphan_links: string[];
+      orphan_links: OrphanLink[];
     }>();
     let call_count = 0;
 
     const search_port = {
       search_notes: vi.fn(),
       suggest_wiki_links: vi.fn(),
+      suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn().mockImplementation(() => {
         call_count += 1;
         return call_count === 1 ? first.promise : second.promise;
@@ -115,14 +123,14 @@ describe("LinksService", () => {
     second.resolve({
       backlinks: [note("b/back.md")],
       outlinks: [note("b/out.md")],
-      orphan_links: ["b/missing.md"],
+      orphan_links: [orphan("b/missing.md")],
     });
     await second_load;
 
     first.resolve({
       backlinks: [note("a/back.md")],
       outlinks: [note("a/out.md")],
-      orphan_links: ["a/missing.md"],
+      orphan_links: [orphan("a/missing.md")],
     });
     await first_load;
 
@@ -133,18 +141,19 @@ describe("LinksService", () => {
     expect(links_store.outlinks.map((entry) => entry.path)).toEqual([
       "b/out.md",
     ]);
-    expect(links_store.orphan_links).toEqual(["b/missing.md"]);
+    expect(links_store.orphan_links).toEqual([orphan("b/missing.md")]);
   });
 
   it("invalidates in-flight loads on clear()", async () => {
     const deferred = create_deferred<{
       backlinks: NoteMeta[];
       outlinks: NoteMeta[];
-      orphan_links: string[];
+      orphan_links: OrphanLink[];
     }>();
     const search_port = {
       search_notes: vi.fn(),
       suggest_wiki_links: vi.fn(),
+      suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn().mockReturnValue(deferred.promise),
     };
 
@@ -159,7 +168,7 @@ describe("LinksService", () => {
     deferred.resolve({
       backlinks: [note("x.md")],
       outlinks: [note("y.md")],
-      orphan_links: ["missing/z.md"],
+      orphan_links: [orphan("missing/z.md")],
     });
     await inflight;
 

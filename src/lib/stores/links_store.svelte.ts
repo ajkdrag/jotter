@@ -1,15 +1,16 @@
 import type { NoteMeta } from "$lib/types/note";
+import type { OrphanLink } from "$lib/types/search";
 
 type LinksSnapshot = {
   backlinks: NoteMeta[];
   outlinks: NoteMeta[];
-  orphan_links: string[];
+  orphan_links: OrphanLink[];
 };
 
 export class LinksStore {
   backlinks = $state<NoteMeta[]>([]);
   outlinks = $state<NoteMeta[]>([]);
-  orphan_links = $state<string[]>([]);
+  orphan_links = $state<OrphanLink[]>([]);
   active_note_path = $state<string | null>(null);
 
   set_snapshot(note_path: string, snapshot: LinksSnapshot) {

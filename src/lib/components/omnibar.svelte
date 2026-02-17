@@ -209,6 +209,8 @@
         return `omni-note-${item.note.id}`;
       case "cross_vault_note":
         return `omni-xv-${item.vault_id}-${item.note.id}`;
+      case "planned_note":
+        return `omni-planned-${encodeURIComponent(item.target_path)}`;
       case "recent_note":
         return `omni-recent-${item.note.id}`;
       case "command":
@@ -496,6 +498,15 @@
                 <span class="Omnibar__badge">{item.setting.category}</span>
               </div>
               <div class="Omnibar__item-desc">{item.setting.description}</div>
+            {:else if item.kind === "planned_note"}
+              <div class="Omnibar__item-row">
+                <LinkIcon />
+                <div class="Omnibar__item-content">
+                  <span class="Omnibar__item-title">{item.target_path}</span>
+                  <span class="Omnibar__item-path">{item.ref_count} refs</span>
+                </div>
+                <span class="Omnibar__badge">Planned</span>
+              </div>
             {/if}
           </button>
         {/each}
