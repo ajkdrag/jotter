@@ -28,7 +28,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Jotter ${{ github.ref_name }}"
           includeUpdaterJson: true
-          args: --target aarch64-apple-darwin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
