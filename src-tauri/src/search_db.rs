@@ -31,6 +31,8 @@ pub struct OrphanLink {
 
 pub(crate) static GFM_LINK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)(!?)\[([^\]]*)\]\(([^)]+)\)").unwrap());
+pub(crate) static WIKI_LINK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)(!?)\[\[([^\]\n]+?)\]\]").unwrap());
 
 fn hex_nibble(byte: u8) -> Option<u8> {
     match byte {
@@ -149,6 +151,124 @@ pub(crate) fn gfm_link_targets(markdown: &str, source_path: &str) -> Vec<String>
         if let Some(resolved) = resolve_relative_path(source_dir, &href) {
             out.push(resolved);
         }
+    }
+    out
+}
+
+fn parse_wiki_link_target(raw_target: &str) -> Option<String> {
+    let trimmed = raw_target.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let before_alias = trimmed
+        .split_once('|')
+        .map(|(target, _)| target)
+        .unwrap_or(trimmed)
+        .trim();
+    if before_alias.is_empty() {
+        return None;
+    }
+
+    let before_fragment = before_alias
+        .split_once('#')
+        .map(|(target, _)| target)
+        .unwrap_or(before_alias)
+        .trim();
+    if before_fragment.is_empty() {
+        return None;
+    }
+
+    let decoded = decode_percent_sequences(before_fragment);
+    let lower = decoded.to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return None;
+    }
+
+    Some(decoded)
+}
+
+fn ensure_md_extension(value: &str) -> String {
+    if value.to_ascii_lowercase().ends_with(".md") {
+        return value.to_string();
+    }
+    format!("{value}.md")
+}
+
+pub(crate) fn wiki_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
+    let source_dir = match source_path.rfind('/') {
+        Some(i) => &source_path[..i],
+        None => "",
+    };
+
+    let mut out = Vec::new();
+    for cap in WIKI_LINK_RE.captures_iter(markdown) {
+        let bang = cap.get(1).map(|m| m.as_str()).unwrap_or_default();
+        if bang == "!" {
+            continue;
+        }
+        let Some(raw_target) = cap.get(2).and_then(|m| parse_wiki_link_target(m.as_str())) else {
+            continue;
+        };
+
+        if raw_target.starts_with('/') {
+            let stripped = raw_target.trim_start_matches('/');
+            if stripped.is_empty() {
+                continue;
+            }
+            let candidate = ensure_md_extension(stripped);
+            if let Some(resolved) = resolve_relative_path("", &candidate) {
+                if !resolved.is_empty() {
+                    out.push(resolved);
+                }
+            }
+            continue;
+        }
+
+        let candidate = ensure_md_extension(&raw_target);
+        if let Some(resolved) = resolve_relative_path(source_dir, &candidate) {
+            if !resolved.is_empty() {
+                out.push(resolved);
+            }
+        }
+    }
+    out
+}
+
+trait LinkExtractionStrategy {
+    fn extract(&self, markdown: &str, source_path: &str) -> Vec<String>;
+}
+
+struct GfmLinkExtractionStrategy;
+
+impl LinkExtractionStrategy for GfmLinkExtractionStrategy {
+    fn extract(&self, markdown: &str, source_path: &str) -> Vec<String> {
+        gfm_link_targets(markdown, source_path)
+    }
+}
+
+struct WikiLinkExtractionStrategy;
+
+impl LinkExtractionStrategy for WikiLinkExtractionStrategy {
+    fn extract(&self, markdown: &str, source_path: &str) -> Vec<String> {
+        wiki_link_targets(markdown, source_path)
+    }
+}
+
+static GFM_LINK_EXTRACTION_STRATEGY: GfmLinkExtractionStrategy = GfmLinkExtractionStrategy;
+static WIKI_LINK_EXTRACTION_STRATEGY: WikiLinkExtractionStrategy = WikiLinkExtractionStrategy;
+
+fn link_extraction_strategy_factory() -> [&'static dyn LinkExtractionStrategy; 2] {
+    [
+        &GFM_LINK_EXTRACTION_STRATEGY,
+        &WIKI_LINK_EXTRACTION_STRATEGY,
+    ]
+}
+
+fn internal_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for strategy in link_extraction_strategy_factory() {
+        out.extend(strategy.extract(markdown, source_path));
     }
     out
 }
@@ -480,7 +600,7 @@ pub fn rebuild_index(
                 }
             };
             upsert_note(conn, &meta, &markdown)?;
-            let targets = gfm_link_targets(&markdown, &meta.path);
+            let targets = internal_link_targets(&markdown, &meta.path);
             if !targets.is_empty() {
                 pending_links.push((meta.path.clone(), targets));
             }
@@ -582,7 +702,7 @@ pub fn sync_index(
                 }
             };
             upsert_note(conn, &meta, &markdown)?;
-            let targets = gfm_link_targets(&markdown, &meta.path);
+            let targets = internal_link_targets(&markdown, &meta.path);
             if !targets.is_empty() {
                 pending_links.push((meta.path.clone(), targets));
             }
@@ -1499,5 +1619,57 @@ mod tests {
     fn gfm_link_targets_decodes_url_encoded_targets() {
         let targets = gfm_link_targets("[Doc](Folder%20Name/child%20note.md)", "root.md");
         assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
+    }
+
+    #[test]
+    fn wiki_link_targets_excludes_embedded_links() {
+        let targets = wiki_link_targets("[[keep]] and ![[skip]]", "root.md");
+        assert_eq!(targets, vec!["keep.md".to_string()]);
+    }
+
+    #[test]
+    fn wiki_link_targets_uses_relative_resolution_for_bare_names() {
+        let targets = wiki_link_targets("[[Note]]", "folder/sub/source.md");
+        assert_eq!(targets, vec!["folder/sub/Note.md".to_string()]);
+    }
+
+    #[test]
+    fn wiki_link_targets_supports_spaces_aliases_and_fragments() {
+        let targets =
+            wiki_link_targets("[[Folder Name/child note#Heading|Alias Label]]", "root.md");
+        assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
+    }
+
+    #[test]
+    fn wiki_link_targets_decodes_url_encoded_targets() {
+        let targets = wiki_link_targets("[[Folder%20Name/child%20note]]", "root.md");
+        assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
+    }
+
+    #[test]
+    fn wiki_link_targets_ignores_targets_that_escape_vault() {
+        let targets = wiki_link_targets("[[../escape]] [[/../escape2]] [[../../escape3]]", "root.md");
+        assert!(targets.is_empty());
+    }
+
+    #[test]
+    fn wiki_link_targets_supports_vault_root_absolute_paths() {
+        let targets = wiki_link_targets("[[/Folder Name/child note]]", "nested/source.md");
+        assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
+    }
+
+    #[test]
+    fn internal_link_targets_collects_gfm_and_wikilinks() {
+        let targets = internal_link_targets(
+            "[A](./gfm target.md) [[wiki target]] ![[embedded]]",
+            "docs/source.md",
+        );
+        assert_eq!(
+            targets,
+            vec![
+                "docs/gfm target.md".to_string(),
+                "docs/wiki target.md".to_string()
+            ]
+        );
     }
 }
