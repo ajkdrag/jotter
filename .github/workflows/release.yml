@@ -17,9 +17,6 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Add Rust targets for universal binary
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -31,7 +28,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Jotter ${{ github.ref_name }}"
           includeUpdaterJson: true
-          args: --target universal-apple-darwin
+          args: --target aarch64-apple-darwin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
