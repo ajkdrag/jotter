@@ -30,7 +30,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-updater = "2"
+tauri-plugin-updater = { version = "2", features = ["native-tls-vendored"] }
 tokio = { version = "1.43.0", features = ["fs", "rt-multi-thread", "sync"] }
 git2 = "0.19"
 walkdir = "2.5.0"
