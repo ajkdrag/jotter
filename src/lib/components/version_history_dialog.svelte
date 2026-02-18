@@ -165,8 +165,8 @@
 
   .VersionHistory__timeline {
     overflow-y: auto;
-    border-right: 1px solid var(--border);
-    padding-right: var(--space-3);
+    border-inline-end: 1px solid var(--border);
+    padding-inline-end: var(--space-3);
     display: flex;
     flex-direction: column;
     gap: var(--space-1);

@@ -244,8 +244,8 @@
 
   .HotkeyRecorder__conflict {
     padding: var(--space-2) var(--space-3);
-    background-color: hsl(var(--warning, 38 92% 50%) / 0.1);
-    border: 1px solid hsl(var(--warning, 38 92% 50%) / 0.3);
+    background-color: color-mix(in oklch, var(--warning) 10%, transparent);
+    border: 1px solid color-mix(in oklch, var(--warning) 30%, transparent);
     border-radius: var(--radius-md);
   }
 

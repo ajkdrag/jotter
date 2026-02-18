@@ -410,7 +410,7 @@
     height: var(--size-touch-xs);
     border: none;
     background: transparent;
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-sm);
     color: transparent;
     cursor: pointer;
     transition: color var(--duration-fast) var(--ease-default);

@@ -40,7 +40,7 @@
     color: var(--foreground);
     background-color: var(--muted);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-sm);
     line-height: 1;
     white-space: nowrap;
     box-shadow: 0 1px 0 var(--border);

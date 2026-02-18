@@ -1,4 +1,4 @@
-<img src="./assets/logo.png" alt="Jotter" width="150">
+<img src="./assets/icon.png" alt="Jotter" width="150">
 
 # Jotter
 

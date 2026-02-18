@@ -33,18 +33,23 @@
     flex-direction: column;
     height: 100%;
     background-color: var(--background);
-    border-left: 1px solid var(--border);
+    border-inline-start: 1px solid var(--border);
   }
 
   .ContextRail__tabs {
     display: flex;
-    border-bottom: 1px solid var(--border);
-    padding: 0 var(--space-2);
+    align-items: center;
+    height: var(--size-touch-lg);
+    border-block-end: 1px solid var(--border);
+    padding-inline: 0;
     flex-shrink: 0;
   }
 
   .ContextRail__tab {
-    padding: var(--space-2) var(--space-3);
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-inline: var(--space-3);
     border: none;
     background: none;
     cursor: pointer;
@@ -53,7 +58,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--muted-foreground);
-    border-bottom: 2px solid transparent;
+    border-block-end: 2px solid transparent;
     transition:
       color var(--duration-fast) var(--ease-default),
       border-color var(--duration-fast) var(--ease-default);
@@ -65,12 +70,13 @@
 
   .ContextRail__tab--active {
     color: var(--interactive);
-    border-bottom-color: var(--interactive);
+    border-block-end-color: var(--interactive);
   }
 
   .ContextRail__panel {
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    padding-block-start: var(--space-2);
   }
 </style>

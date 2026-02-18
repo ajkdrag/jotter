@@ -101,11 +101,11 @@
   }
 
   .DiffView__gutter--old {
-    border-right: 1px solid var(--border);
+    border-inline-end: 1px solid var(--border);
   }
 
   .DiffView__gutter--new {
-    border-right: 1px solid var(--border);
+    border-inline-end: 1px solid var(--border);
   }
 
   .DiffView__content {

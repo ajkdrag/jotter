@@ -413,7 +413,7 @@
     min-width: 12rem;
     padding: var(--space-3);
     gap: var(--space-0-5);
-    border-right: 1px solid var(--border);
+    border-inline-end: 1px solid var(--border);
     overflow-y: auto;
   }
 
@@ -521,7 +521,7 @@
     color: var(--muted-foreground);
     background-color: var(--muted);
     padding: var(--space-0-5) var(--space-2);
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-sm);
   }
 
   :global(.SettingsDialog__footer) {

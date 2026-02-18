@@ -180,7 +180,7 @@
 
   .StatusBar__separator {
     width: 1px;
-    height: 0.625rem;
+    height: var(--space-2-5);
     background-color: currentColor;
     opacity: 0.2;
   }

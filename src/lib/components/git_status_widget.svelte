@@ -104,8 +104,8 @@
   }
 
   .GitStatusWidget__indicator {
-    width: 6px;
-    height: 6px;
+    width: var(--space-1-5);
+    height: var(--space-1-5);
     border-radius: 50%;
     flex-shrink: 0;
     transition: background-color var(--duration-normal) var(--ease-default);

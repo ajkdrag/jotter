@@ -55,8 +55,8 @@
 <style>
   .ThemeToggle {
     display: flex;
-    gap: 1px;
-    padding: 2px;
+    gap: var(--border-width-default);
+    padding: var(--space-0-5);
     background-color: var(--muted);
     border-radius: var(--radius-md);
   }
@@ -67,7 +67,7 @@
     justify-content: center;
     width: var(--size-touch-sm);
     height: var(--size-touch-sm);
-    border-radius: calc(var(--radius-md) - 2px);
+    border-radius: var(--radius-sm);
     color: var(--muted-foreground);
     transition:
       color var(--duration-fast) var(--ease-default),

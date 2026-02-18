@@ -1,27 +1,23 @@
 <script lang="ts">
-  import { Files, LayoutDashboard, Link, Settings, Star } from "@lucide/svelte";
+  import { Files, LayoutDashboard, Settings, Star } from "@lucide/svelte";
 
   type SidebarView = "explorer" | "dashboard" | "starred";
 
   type Props = {
     sidebar_open: boolean;
     active_view: SidebarView;
-    context_rail_open: boolean;
     on_open_explorer: () => void;
     on_open_dashboard: () => void;
     on_open_starred: () => void;
-    on_toggle_context_rail: () => void;
     on_open_settings: () => void;
   };
 
   let {
     sidebar_open,
     active_view,
-    context_rail_open,
     on_open_explorer,
     on_open_dashboard,
     on_open_starred,
-    on_toggle_context_rail,
     on_open_settings,
   }: Props = $props();
 </script>
@@ -66,16 +62,6 @@
   </div>
 
   <div class="ActivityBar__section">
-    <button
-      type="button"
-      class="ActivityBar__button"
-      class:ActivityBar__button--active={context_rail_open}
-      onclick={on_toggle_context_rail}
-      aria-pressed={context_rail_open}
-      aria-label="Links"
-    >
-      <Link class="ActivityBar__icon" />
-    </button>
     <button
       type="button"
       class="ActivityBar__button"

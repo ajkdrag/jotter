@@ -340,7 +340,6 @@
       <ActivityBar
         sidebar_open={stores.ui.sidebar_open}
         active_view={stores.ui.sidebar_view}
-        context_rail_open={stores.ui.context_rail_open}
         on_open_explorer={() => {
           if (stores.ui.sidebar_open && stores.ui.sidebar_view === "explorer") {
             void action_registry.execute(ACTION_IDS.ui_toggle_sidebar);
@@ -374,8 +373,6 @@
             "dashboard",
           );
         }}
-        on_toggle_context_rail={() =>
-          void action_registry.execute(ACTION_IDS.ui_toggle_context_rail)}
         on_open_settings={() =>
           void action_registry.execute(ACTION_IDS.settings_open)}
       />
@@ -389,22 +386,16 @@
               order={1}
             >
               <Sidebar.Root collapsible="none" class="w-full">
-                <Sidebar.Header>
-                  <div
-                    class="flex w-full items-center justify-between gap-2 px-4 py-2"
-                  >
+                <Sidebar.Header class="p-0">
+                  <div class="AppSidebar__header">
                     {#if stores.ui.sidebar_view === "starred"}
-                      <span class="min-w-0 truncate text-left font-semibold">
-                        Starred
-                      </span>
+                      <span class="AppSidebar__title">Starred</span>
                     {:else if stores.ui.sidebar_view === "dashboard"}
-                      <span class="min-w-0 truncate text-left font-semibold">
-                        Dashboard
-                      </span>
+                      <span class="AppSidebar__title">Dashboard</span>
                     {:else}
                       <button
                         type="button"
-                        class="min-w-0 truncate text-left font-semibold transition-colors hover:text-foreground/90"
+                        class="AppSidebar__title AppSidebar__title--button"
                         onclick={() => {
                           void action_registry.execute(
                             ACTION_IDS.ui_select_folder,
@@ -416,7 +407,7 @@
                         {stores.vault.vault.name}
                       </button>
                     {/if}
-                    <div class="flex shrink-0 items-center">
+                    <div class="AppSidebar__header-actions">
                       {#each sidebar_header_actions as action (action.label)}
                         <Tooltip.Root>
                           <Tooltip.Trigger>
@@ -425,7 +416,7 @@
                                 {...props}
                                 variant="ghost"
                                 size="icon"
-                                class="SidebarHeaderButton h-7 w-7"
+                                class="SidebarHeaderButton"
                                 onclick={action.onclick}
                               >
                                 <action.icon class="SidebarHeaderIcon" />
@@ -685,7 +676,44 @@
 {/if}
 
 <style>
+  .AppSidebar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--size-touch-lg);
+    padding-inline: var(--space-3);
+    gap: var(--space-2);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .AppSidebar__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: 600;
+    font-size: var(--text-sm);
+  }
+
+  .AppSidebar__title--button {
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-default);
+  }
+
+  .AppSidebar__title--button:hover {
+    color: var(--foreground);
+  }
+
+  .AppSidebar__header-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
   :global(.SidebarHeaderButton) {
+    width: var(--size-touch-sm);
+    height: var(--size-touch-sm);
     color: var(--muted-foreground);
     transition: color var(--duration-fast) var(--ease-default);
   }

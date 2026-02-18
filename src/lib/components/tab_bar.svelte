@@ -1,7 +1,14 @@
 <script lang="ts">
   import * as ContextMenu from "$lib/components/ui/context-menu";
   import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-  import { Pin, X, ChevronLeft, ChevronRight, FileText } from "@lucide/svelte";
+  import {
+    Pin,
+    X,
+    ChevronLeft,
+    ChevronRight,
+    FileText,
+    PanelRight,
+  } from "@lucide/svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { Tab, TabId } from "$lib/types/tab";
@@ -358,6 +365,20 @@
         <ChevronRight class="TabBar__scroll-icon" />
       </button>
     {/if}
+
+    <div class="TabBar__actions">
+      <button
+        type="button"
+        class="TabBar__action-btn"
+        class:TabBar__action-btn--active={stores.ui.context_rail_open}
+        onclick={() =>
+          void action_registry.execute(ACTION_IDS.ui_toggle_context_rail)}
+        aria-pressed={stores.ui.context_rail_open}
+        aria-label="Toggle links panel"
+      >
+        <PanelRight class="TabBar__action-icon" />
+      </button>
+    </div>
   </div>
 {/if}
 
@@ -514,7 +535,7 @@
     justify-content: center;
     width: var(--size-touch-xs);
     height: var(--size-touch-xs);
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-sm);
     color: var(--muted-foreground);
     opacity: 0;
     flex-shrink: 0;
@@ -537,5 +558,45 @@
   :global(.TabBar__close-icon) {
     width: var(--size-icon-xs);
     height: var(--size-icon-xs);
+  }
+
+  .TabBar__actions {
+    display: flex;
+    align-items: center;
+    padding-inline: var(--space-1);
+    flex-shrink: 0;
+    border-inline-start: 1px solid var(--border);
+  }
+
+  .TabBar__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-touch-sm);
+    height: var(--size-touch-sm);
+    border-radius: var(--radius-sm);
+    color: var(--muted-foreground);
+    transition:
+      color var(--duration-fast) var(--ease-default),
+      background-color var(--duration-fast) var(--ease-default);
+  }
+
+  .TabBar__action-btn:hover {
+    color: var(--foreground);
+    background-color: var(--muted);
+  }
+
+  .TabBar__action-btn--active {
+    color: var(--interactive);
+  }
+
+  .TabBar__action-btn:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  :global(.TabBar__action-icon) {
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
   }
 </style>
