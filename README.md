@@ -39,8 +39,8 @@ That's it. The app opens, you pick or create a vault (any folder on disk), and s
 | Frontend | Svelte 5, SvelteKit, TypeScript |
 | Editor   | Milkdown (ProseMirror)          |
 | Styling  | Tailwind CSS 4, shadcn-svelte   |
-| Search   | Tantivy (Rust)                  |
-| State    | XState 5, Svelte runes          |
+| Search   | SQLite FTS5 (Rust)              |
+| State    | Svelte 5 runes                  |
 
 ## Project structure
 
