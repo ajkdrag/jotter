@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolve_editor_sync_open } from "$lib/reactors/editor_sync.reactor.svelte";
+import {
+  resolve_editor_sync_open,
+  resolve_editor_sync_restore_policy,
+} from "$lib/reactors/editor_sync.reactor.svelte";
 import { as_markdown_text, as_note_path } from "$lib/types/ids";
 
 function open_note(buffer_id: string) {
@@ -53,5 +56,23 @@ describe("editor_sync.reactor", () => {
         last_buffer_id: "notes/a.md",
       }),
     ).toBe(false);
+  });
+
+  it("uses cache restore policy when switching note identity", () => {
+    expect(
+      resolve_editor_sync_restore_policy({
+        open_note_id: "notes/b.md",
+        last_note_id: "notes/a.md",
+      }),
+    ).toBe("reuse_cache");
+  });
+
+  it("uses fresh restore policy for same-note buffer resets", () => {
+    expect(
+      resolve_editor_sync_restore_policy({
+        open_note_id: "notes/a.md",
+        last_note_id: "notes/a.md",
+      }),
+    ).toBe("fresh");
   });
 });

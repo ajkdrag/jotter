@@ -5,7 +5,10 @@ export type BufferConfig = {
   note_path: string;
   vault_id: VaultId | null;
   initial_markdown: string;
+  restore_policy: BufferRestorePolicy;
 };
+
+export type BufferRestorePolicy = "reuse_cache" | "fresh";
 
 export type EditorSession = {
   destroy: () => void;
@@ -24,6 +27,7 @@ export type EditorSession = {
     }>,
   ) => void;
   open_buffer: (config: BufferConfig) => void;
+  rename_buffer: (old_note_path: string, new_note_path: string) => void;
   close_buffer: (note_path: string) => void;
   update_find_state?: (query: string, selected_index: number) => void;
 };

@@ -2,6 +2,7 @@
 .claude/
 .vscode/
 .codex/**
+.env
 node_modules/
 .svelte-kit/
 src-tauri/gen/

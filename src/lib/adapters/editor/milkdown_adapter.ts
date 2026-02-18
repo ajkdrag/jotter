@@ -567,6 +567,8 @@ export function create_milkdown_editor_port(args?: {
         open_buffer(next_config: BufferConfig) {
           if (!editor) return;
 
+          const restore_policy = next_config.restore_policy;
+          const should_reuse_cache = restore_policy === "reuse_cache";
           const is_same_path = next_config.note_path === current_note_path;
           if (!is_same_path) {
             save_current_buffer();
@@ -582,9 +584,9 @@ export function create_milkdown_editor_port(args?: {
             const view = ctx.get(editorViewCtx);
             const parser = ctx.get(parserCtx);
 
-            const saved_entry = is_same_path
-              ? null
-              : buffer_map.get(next_config.note_path);
+            const saved_entry = should_reuse_cache
+              ? buffer_map.get(next_config.note_path)
+              : null;
             if (saved_entry) {
               view.updateState(saved_entry.state);
               current_markdown = saved_entry.markdown;
@@ -614,7 +616,10 @@ export function create_milkdown_editor_port(args?: {
 
             dispatch_editor_context_update(view);
 
-            if (!saved_entry && !is_large_note) {
+            if (
+              (restore_policy === "fresh" || !saved_entry) &&
+              !is_large_note
+            ) {
               dispatch_full_scan(view);
               dispatch_mark_clean(view);
             }
@@ -629,6 +634,33 @@ export function create_milkdown_editor_port(args?: {
 
           on_markdown_change(current_markdown);
           on_dirty_state_change(current_is_dirty);
+        },
+        rename_buffer(old_note_path: string, new_note_path: string) {
+          if (old_note_path === new_note_path) return;
+
+          const entry = buffer_map.get(old_note_path);
+          buffer_map.delete(old_note_path);
+          if (entry) {
+            buffer_map.set(new_note_path, {
+              ...entry,
+              note_path: new_note_path,
+            });
+          }
+
+          if (current_note_path !== old_note_path) return;
+          current_note_path = new_note_path;
+          if (wiki_suggest_config) {
+            wiki_suggest_config.base_note_path = current_note_path;
+          }
+
+          run_editor_action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            dispatch_editor_context_update(view);
+            buffer_map.set(
+              current_note_path,
+              get_buffer_entry_from_view_state(view.state),
+            );
+          });
         },
         close_buffer(note_path_to_close: string) {
           buffer_map.delete(note_path_to_close);

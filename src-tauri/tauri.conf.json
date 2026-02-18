@@ -13,13 +13,20 @@
     "active": true,
     "targets": ["app", "dmg"],
     "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "macOS": {
       "signingIdentity": "-"
     }
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIzQUEyMDJGMUE2MTE5QTgKUldTb0dXRWFMeUNxczBkaFQwdXJSVUJpemtTWkI3bXl1enJiRnpKcVZ3RXI1cEVrbVlKb3VjYkMK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEMkY0REEwMEVGODhEQkYKUldTL2pmZ09vRTB2N1p4bWhJRGxkc2lZLy9ocTU3b2VBT1R5NHVtSzNsWFpzTDVWckQ4cnhSbEsK",
       "endpoints": [
         "https://github.com/ajkdrag/jotter/releases/latest/download/latest.json"
       ]

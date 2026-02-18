@@ -505,6 +505,8 @@ export class NoteService {
     target_path: NotePath,
     overwrite: boolean,
   ) {
+    const old_path = open_note.meta.path;
+
     try {
       const created_meta = await this.notes_port.create_note(
         vault_id,
@@ -513,6 +515,7 @@ export class NoteService {
       );
       await this.index_port.upsert_note(vault_id, created_meta.id);
       this.notes_store.add_note(created_meta);
+      this.editor_service.rename_buffer(old_path, target_path);
       this.editor_store.update_open_note_path(target_path);
       this.editor_store.mark_clean(target_path);
       this.notes_store.add_recent_note(created_meta);
@@ -530,6 +533,7 @@ export class NoteService {
     await this.index_port.upsert_note(vault_id, target_path);
     const written = await this.notes_port.read_note(vault_id, target_path);
     this.notes_store.add_note(written.meta);
+    this.editor_service.rename_buffer(old_path, target_path);
     this.editor_store.update_open_note_path(target_path);
     this.editor_store.mark_clean(target_path);
     this.notes_store.add_recent_note(written.meta);

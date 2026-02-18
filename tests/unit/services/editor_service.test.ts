@@ -48,6 +48,7 @@ function create_session(initial_markdown: string): EditorSession {
     open_buffer: vi.fn((config: BufferConfig) => {
       current_markdown = config.initial_markdown;
     }),
+    rename_buffer: vi.fn(),
     close_buffer: vi.fn(),
   };
 }
@@ -152,6 +153,78 @@ describe("EditorService", () => {
       note_path: as_note_path("docs/beta.md"),
       vault_id: create_test_vault().id,
       initial_markdown: "# Beta",
+      restore_policy: "reuse_cache",
+    });
+  });
+
+  it("forwards explicit fresh restore policy to session buffer open", async () => {
+    const session = create_session("alpha");
+    const { service, editor_store } = create_setup(() =>
+      Promise.resolve(session),
+    );
+    const root = {} as HTMLDivElement;
+    const first_note = create_open_note("docs/alpha.md", "# Alpha");
+    const second_note = create_open_note("docs/beta.md", "# Beta");
+
+    editor_store.set_open_note(first_note);
+    await service.mount({
+      root,
+      note: first_note,
+    });
+
+    editor_store.set_open_note(second_note);
+    service.open_buffer(second_note, "fresh");
+
+    expect(session.open_buffer).toHaveBeenLastCalledWith({
+      note_path: as_note_path("docs/beta.md"),
+      vault_id: create_test_vault().id,
+      initial_markdown: "# Beta",
+      restore_policy: "fresh",
+    });
+  });
+
+  it("forwards rename_buffer to session", async () => {
+    const session = create_session("alpha");
+    const { service, editor_store } = create_setup(() =>
+      Promise.resolve(session),
+    );
+    const root = {} as HTMLDivElement;
+    const note = create_open_note("docs/alpha.md", "# Alpha");
+
+    editor_store.set_open_note(note);
+    await service.mount({ root, note });
+
+    service.rename_buffer(
+      as_note_path("docs/alpha.md"),
+      as_note_path("docs/beta.md"),
+    );
+
+    expect(session.rename_buffer).toHaveBeenCalledWith(
+      as_note_path("docs/alpha.md"),
+      as_note_path("docs/beta.md"),
+    );
+  });
+
+  it("updates active note identity when renaming buffer", async () => {
+    const session = create_session("# Alpha");
+    const { service, editor_store } = create_setup(() =>
+      Promise.resolve(session),
+    );
+    const root = {} as HTMLDivElement;
+    const note = create_open_note("docs/alpha.md", "# Alpha");
+
+    editor_store.set_open_note(note);
+    await service.mount({ root, note });
+
+    service.rename_buffer(
+      as_note_path("docs/alpha.md"),
+      as_note_path("docs/beta.md"),
+    );
+
+    const flushed = service.flush();
+    expect(flushed).toEqual({
+      note_id: as_note_path("docs/beta.md"),
+      markdown: as_markdown_text("# Alpha"),
     });
   });
 

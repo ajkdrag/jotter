@@ -59,6 +59,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -119,6 +120,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -171,6 +173,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -236,6 +239,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -299,6 +303,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -354,6 +359,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -409,6 +415,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -457,6 +464,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -531,6 +539,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
       open_buffer: vi.fn(),
     } as unknown as EditorService;
 
@@ -634,6 +643,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
     const search_port = {
       search_notes: vi.fn(),
@@ -713,6 +723,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -776,6 +787,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -828,6 +840,7 @@ describe("NoteService", () => {
       resolve_asset_url: vi.fn(),
       write_image_asset: vi.fn(),
     } as unknown as AssetsPort;
+    const rename_buffer = vi.fn();
 
     const editor_service = {
       flush: vi.fn().mockReturnValue({
@@ -835,6 +848,7 @@ describe("NoteService", () => {
         markdown: as_markdown_text("draft"),
       }),
       mark_clean: vi.fn(),
+      rename_buffer,
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -862,6 +876,10 @@ describe("NoteService", () => {
       note_path: as_note_path("docs/my-note.md"),
       markdown: as_markdown_text("draft"),
     });
+    expect(rename_buffer).toHaveBeenCalledWith(
+      as_note_path("Untitled-1"),
+      as_note_path("docs/my-note.md"),
+    );
     expect(editor_store.open_note?.meta.path).toBe(
       as_note_path("docs/my-note.md"),
     );
@@ -897,6 +915,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -965,6 +984,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1023,6 +1043,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1080,6 +1101,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1135,6 +1157,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1173,6 +1196,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1218,6 +1242,7 @@ describe("NoteService", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1270,6 +1295,7 @@ describe("NoteService rename case-insensitive handling", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(
@@ -1332,6 +1358,7 @@ describe("NoteService rename case-insensitive handling", () => {
     const editor_service = {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
+      rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
     const service = new NoteService(

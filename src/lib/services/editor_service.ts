@@ -1,4 +1,8 @@
-import type { EditorPort, EditorSession } from "$lib/ports/editor_port";
+import type {
+  BufferRestorePolicy,
+  EditorPort,
+  EditorSession,
+} from "$lib/ports/editor_port";
 import type {
   OpenNoteState,
   CursorInfo,
@@ -79,7 +83,10 @@ export class EditorService {
     this.active_note = null;
   }
 
-  open_buffer(note: OpenNoteState): void {
+  open_buffer(
+    note: OpenNoteState,
+    restore_policy: BufferRestorePolicy = "reuse_cache",
+  ): void {
     this.active_note = note;
 
     if (!this.host_root || !this.session) return;
@@ -88,8 +95,26 @@ export class EditorService {
       note_path: note.meta.path,
       vault_id: this.vault_store.vault?.id ?? null,
       initial_markdown: note.markdown,
+      restore_policy,
     });
     this.focus();
+  }
+
+  rename_buffer(old_note_path: NotePath, new_note_path: NotePath) {
+    if (this.active_note?.meta.path === old_note_path) {
+      const name = note_name_from_path(new_note_path);
+      this.active_note = {
+        ...this.active_note,
+        meta: {
+          ...this.active_note.meta,
+          id: new_note_path,
+          path: new_note_path,
+          name,
+          title: name,
+        },
+      };
+    }
+    this.session?.rename_buffer(old_note_path, new_note_path);
   }
 
   insert_text(text: string) {

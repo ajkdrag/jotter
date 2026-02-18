@@ -38,6 +38,7 @@ function create_session_with_find(initial_markdown: string): EditorSession {
     is_dirty: vi.fn(() => false),
     focus: vi.fn(),
     open_buffer: vi.fn(),
+    rename_buffer: vi.fn(),
     close_buffer: vi.fn(),
     update_find_state: vi.fn(),
   };
