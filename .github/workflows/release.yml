@@ -5,7 +5,32 @@ on:
     tags: ["v*"]
 
 jobs:
+  signing_preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Verify updater signing credentials
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          tmp_file="$(mktemp)"
+          printf 'signing-preflight\n' > "$tmp_file"
+          pnpm tauri signer sign "$tmp_file" >/dev/null
+          rm -f "$tmp_file" "$tmp_file.sig"
+
   release:
+    needs: signing_preflight
     runs-on: macos-latest
     permissions:
       contents: write
@@ -26,9 +51,6 @@ jobs:
 
       - run: pnpm install
 
-      - name: Build frontend
-        run: pnpm build
-
       - uses: tauri-apps/tauri-action@v0.6.1
         with:
           tagName: ${{ github.ref_name }}
@@ -37,3 +59,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
