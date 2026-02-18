@@ -150,7 +150,7 @@ pub fn handle_asset_request(app: &AppHandle, req: Request<Vec<u8>>) -> Response<
         Err(_) => return Response::builder().status(404).body(Vec::new()).unwrap(),
     };
 
-    let abs = match crate::notes_service::safe_vault_abs(&vault_path, &asset_rel) {
+    let abs = match crate::features::notes::service::safe_vault_abs(&vault_path, &asset_rel) {
         Ok(p) => p,
         Err(_) => return Response::builder().status(403).body(Vec::new()).unwrap(),
     };

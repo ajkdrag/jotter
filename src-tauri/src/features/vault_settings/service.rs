@@ -1,5 +1,5 @@
-use crate::constants;
-use crate::storage::{load_store, vault_path_by_id};
+use crate::shared::constants;
+use crate::shared::storage::{load_store, vault_path_by_id};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -25,7 +25,7 @@ fn load_vault_settings(app: &AppHandle, vault_id: &str) -> Result<HashMap<String
     parse_vault_settings(&bytes)
 }
 
-fn parse_vault_settings(bytes: &[u8]) -> Result<HashMap<String, Value>, String> {
+pub(crate) fn parse_vault_settings(bytes: &[u8]) -> Result<HashMap<String, Value>, String> {
     let mut stream = serde_json::Deserializer::from_slice(bytes).into_iter::<Value>();
     let first = stream
         .next()
@@ -82,46 +82,4 @@ pub async fn set_vault_setting(
     settings.insert(key, value);
     save_vault_settings(&app, &vault_id, &settings)?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse_vault_settings;
-
-    #[test]
-    fn parse_vault_settings_accepts_trailing_json_payload() {
-        let bytes = br#"{
-  \"editor_settings\": {
-    \"theme\": \"system\"
-  }
-}
-{
-  \"stale_payload\": true
-}
-"#;
-
-        let parsed = parse_vault_settings(bytes).expect("expected parse to succeed");
-        let editor_settings = parsed
-            .get("editor_settings")
-            .expect("editor_settings should be present")
-            .as_object()
-            .expect("editor_settings should be object");
-        let theme = editor_settings
-            .get("theme")
-            .expect("theme key should be present")
-            .as_str()
-            .expect("theme should be string");
-
-        assert_eq!(theme, "system");
-        assert!(!parsed.contains_key("stale_payload"));
-    }
-
-    #[test]
-    fn parse_vault_settings_rejects_invalid_json() {
-        let bytes = br#"{ invalid json }"#;
-
-        let result = parse_vault_settings(bytes);
-
-        assert!(result.is_err());
-    }
 }

@@ -1,5 +1,5 @@
-use crate::storage;
-use crate::storage::{Vault, VaultEntry, VaultStore};
+use crate::shared::storage;
+use crate::shared::storage::{Vault, VaultEntry, VaultStore};
 use serde::Deserialize;
 use std::path::PathBuf;
 use tauri::AppHandle;
@@ -25,7 +25,7 @@ fn is_vault_path_available(path: &str) -> bool {
 }
 
 fn load_note_count(app: &AppHandle, vault_id: &str) -> Option<u64> {
-    match crate::notes_service::list_notes(app.clone(), vault_id.to_string()) {
+    match crate::features::notes::service::list_notes(app.clone(), vault_id.to_string()) {
         Ok(notes) => Some(notes.len() as u64),
         Err(error) => {
             log::warn!(

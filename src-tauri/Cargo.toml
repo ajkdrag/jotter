@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "Local-first markdown vault"
 authors = ["altamkhan"]
 edition = "2021"
+autotests = false
 
 [lib]
 name = "jotter_lib"

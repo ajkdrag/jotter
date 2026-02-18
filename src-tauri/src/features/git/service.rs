@@ -56,7 +56,8 @@ fn open_repo(vault_path: &str) -> Result<Repository, String> {
 }
 
 fn default_signature() -> Result<Signature<'static>, String> {
-    Signature::now("Jotter", "jotter@local").map_err(|e| format!("failed to create signature: {}", e))
+    Signature::now("Jotter", "jotter@local")
+        .map_err(|e| format!("failed to create signature: {}", e))
 }
 
 fn status_string(s: git2::Status) -> &'static str {
@@ -68,7 +69,11 @@ fn status_string(s: git2::Status) -> &'static str {
         "untracked"
     } else if s.is_wt_deleted() || s.is_index_deleted() {
         "deleted"
-    } else if s.is_wt_modified() || s.is_index_modified() || s.is_wt_renamed() || s.is_index_renamed() {
+    } else if s.is_wt_modified()
+        || s.is_index_modified()
+        || s.is_wt_renamed()
+        || s.is_index_renamed()
+    {
         "modified"
     } else {
         "untracked"
@@ -82,8 +87,7 @@ pub fn git_has_repo(vault_path: String) -> Result<bool, String> {
 
 #[tauri::command]
 pub fn git_init_repo(vault_path: String) -> Result<(), String> {
-    let repo = Repository::init(&vault_path)
-        .map_err(|e| format!("failed to init repo: {}", e))?;
+    let repo = Repository::init(&vault_path).map_err(|e| format!("failed to init repo: {}", e))?;
 
     let gitignore_path = Path::new(&vault_path).join(".gitignore");
     if !gitignore_path.exists() {
@@ -94,11 +98,15 @@ pub fn git_init_repo(vault_path: String) -> Result<(), String> {
         .map_err(|e| format!("failed to write .gitignore: {}", e))?;
     }
 
-    let mut index = repo.index().map_err(|e| format!("failed to get index: {}", e))?;
+    let mut index = repo
+        .index()
+        .map_err(|e| format!("failed to get index: {}", e))?;
     index
         .add_all(["*"].iter(), IndexAddOption::DEFAULT, None)
         .map_err(|e| format!("failed to add files: {}", e))?;
-    index.write().map_err(|e| format!("failed to write index: {}", e))?;
+    index
+        .write()
+        .map_err(|e| format!("failed to write index: {}", e))?;
 
     let tree_oid = index
         .write_tree()
@@ -119,10 +127,7 @@ pub fn git_status(vault_path: String) -> Result<GitStatus, String> {
     let repo = open_repo(&vault_path)?;
 
     let branch = match repo.head() {
-        Ok(head) => head
-            .shorthand()
-            .unwrap_or("HEAD")
-            .to_string(),
+        Ok(head) => head.shorthand().unwrap_or("HEAD").to_string(),
         Err(_) => "HEAD".to_string(),
     };
 
@@ -165,9 +170,9 @@ pub fn git_status(vault_path: String) -> Result<GitStatus, String> {
 
 fn compute_ahead_behind(repo: &Repository) -> Result<(usize, usize), git2::Error> {
     let head = repo.head()?;
-    let local_oid = head.target().ok_or_else(|| {
-        git2::Error::from_str("HEAD has no target")
-    })?;
+    let local_oid = head
+        .target()
+        .ok_or_else(|| git2::Error::from_str("HEAD has no target"))?;
 
     let branch_name = head
         .shorthand()
@@ -189,7 +194,9 @@ pub fn git_stage_and_commit(
     files: Option<Vec<String>>,
 ) -> Result<String, String> {
     let repo = open_repo(&vault_path)?;
-    let mut index = repo.index().map_err(|e| format!("failed to get index: {}", e))?;
+    let mut index = repo
+        .index()
+        .map_err(|e| format!("failed to get index: {}", e))?;
 
     match files {
         Some(paths) => {
@@ -224,7 +231,9 @@ pub fn git_stage_and_commit(
         }
     }
 
-    index.write().map_err(|e| format!("failed to write index: {}", e))?;
+    index
+        .write()
+        .map_err(|e| format!("failed to write index: {}", e))?;
     let tree_oid = index
         .write_tree()
         .map_err(|e| format!("failed to write tree: {}", e))?;
@@ -271,9 +280,15 @@ pub fn git_log(
 ) -> Result<Vec<GitCommit>, String> {
     let repo = open_repo(&vault_path)?;
 
-    let mut revwalk = repo.revwalk().map_err(|e| format!("failed to create revwalk: {}", e))?;
-    revwalk.push_head().map_err(|e| format!("failed to push HEAD: {}", e))?;
-    revwalk.set_sorting(Sort::TIME).map_err(|e| format!("failed to set sorting: {}", e))?;
+    let mut revwalk = repo
+        .revwalk()
+        .map_err(|e| format!("failed to create revwalk: {}", e))?;
+    revwalk
+        .push_head()
+        .map_err(|e| format!("failed to push HEAD: {}", e))?;
+    revwalk
+        .set_sorting(Sort::TIME)
+        .map_err(|e| format!("failed to set sorting: {}", e))?;
 
     let mut commits = Vec::new();
 
@@ -331,10 +346,11 @@ fn commit_touches_file(repo: &Repository, commit: &git2::Commit, path: &str) -> 
         let mut diff_opts = DiffOptions::new();
         diff_opts.pathspec(path);
 
-        let diff = match repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(&mut diff_opts)) {
-            Ok(d) => d,
-            Err(_) => continue,
-        };
+        let diff =
+            match repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(&mut diff_opts)) {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
 
         if diff.stats().map(|s| s.files_changed()).unwrap_or(0) > 0 {
             return true;
@@ -463,7 +479,8 @@ pub fn git_restore_file(
     file_path: String,
     commit_hash: String,
 ) -> Result<String, String> {
-    let content = git_show_file_at_commit(vault_path.clone(), file_path.clone(), commit_hash.clone())?;
+    let content =
+        git_show_file_at_commit(vault_path.clone(), file_path.clone(), commit_hash.clone())?;
     let abs = Path::new(&vault_path).join(&file_path);
 
     if let Some(parent) = abs.parent() {
@@ -473,7 +490,11 @@ pub fn git_restore_file(
 
     std::fs::write(&abs, &content).map_err(|e| format!("failed to write file: {}", e))?;
 
-    let short_hash = if commit_hash.len() >= 7 { &commit_hash[..7] } else { &commit_hash };
+    let short_hash = if commit_hash.len() >= 7 {
+        &commit_hash[..7]
+    } else {
+        &commit_hash
+    };
     let title = Path::new(&file_path)
         .file_stem()
         .and_then(|s| s.to_str())

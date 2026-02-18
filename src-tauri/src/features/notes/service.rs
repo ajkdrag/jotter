@@ -1,5 +1,5 @@
-use crate::constants;
-use crate::storage;
+use crate::shared::constants;
+use crate::shared::storage;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -105,14 +105,17 @@ pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBu
     resolve_under_vault_root(vault_root, &rel)
 }
 
-fn safe_vault_abs_for_write(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+pub(crate) fn safe_vault_abs_for_write(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
     let rel = parse_safe_relative_path(note_rel)?;
     let base = canonical_vault_root(vault_root)?;
     reject_symlink_components(&base, &rel)?;
     resolve_under_vault_root(&base, &rel)
 }
 
-fn safe_vault_rename_target_abs(vault_root: &Path, target_rel: &str) -> Result<PathBuf, String> {
+pub(crate) fn safe_vault_rename_target_abs(
+    vault_root: &Path,
+    target_rel: &str,
+) -> Result<PathBuf, String> {
     let rel = parse_safe_relative_path(target_rel)?;
     let leaf = rel
         .file_name()
@@ -292,7 +295,11 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
 
 #[tauri::command]
 pub fn write_note(args: NoteWriteArgs, app: AppHandle) -> Result<(), String> {
-    log::debug!("Writing note vault_id={} note_id={}", args.vault_id, args.note_id);
+    log::debug!(
+        "Writing note vault_id={} note_id={}",
+        args.vault_id,
+        args.note_id
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs_for_write(&root, &args.note_id)?;
     atomic_write(&abs, &args.markdown)?;
@@ -308,7 +315,11 @@ pub struct NoteCreateArgs {
 
 #[tauri::command]
 pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, String> {
-    log::info!("Creating note vault_id={} note_path={}", args.vault_id, args.note_path);
+    log::info!(
+        "Creating note vault_id={} note_path={}",
+        args.vault_id,
+        args.note_path
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs_for_write(&root, &args.note_path)?;
     let dir = abs.parent().ok_or("invalid note path")?;
@@ -398,7 +409,11 @@ fn sanitize_stem(value: &str) -> String {
 
 #[tauri::command]
 pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<String, String> {
-    log::debug!("Writing image asset vault_id={} note_path={}", args.vault_id, args.note_path);
+    log::debug!(
+        "Writing image asset vault_id={} note_path={}",
+        args.vault_id,
+        args.note_path
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     let _ = safe_vault_abs_for_write(&root, &args.note_path)?;
 
@@ -464,7 +479,7 @@ pub struct NoteRenameArgs {
     pub to: String,
 }
 
-fn rename_with_temp_path(from_abs: &Path, to_abs: &Path) -> Result<(), String> {
+pub(crate) fn rename_with_temp_path(from_abs: &Path, to_abs: &Path) -> Result<(), String> {
     if from_abs == to_abs {
         return Ok(());
     }
@@ -505,7 +520,12 @@ fn rename_with_temp_path(from_abs: &Path, to_abs: &Path) -> Result<(), String> {
 
 #[tauri::command]
 pub fn rename_note(args: NoteRenameArgs, app: AppHandle) -> Result<(), String> {
-    log::info!("Renaming note vault_id={} from={} to={}", args.vault_id, args.from, args.to);
+    log::info!(
+        "Renaming note vault_id={} from={} to={}",
+        args.vault_id,
+        args.from,
+        args.to
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     let from_abs = safe_vault_abs(&root, &args.from)?;
     let to_abs = safe_vault_rename_target_abs(&root, &args.to)?;
@@ -535,9 +555,9 @@ pub struct NoteDeleteArgs {
 }
 
 #[derive(Debug, Clone)]
-struct FolderEntry {
-    name: String,
-    is_dir: bool,
+pub(crate) struct FolderEntry {
+    pub(crate) name: String,
+    pub(crate) is_dir: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -556,7 +576,7 @@ fn folder_cache() -> &'static Mutex<HashMap<String, FolderCacheEntry>> {
     FOLDER_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn folder_cache_key(vault_id: &str, folder_path: &str) -> String {
+pub(crate) fn folder_cache_key(vault_id: &str, folder_path: &str) -> String {
     format!("{}:{}", vault_id, folder_path)
 }
 
@@ -578,7 +598,7 @@ fn evict_folder_cache_if_needed(cache: &mut HashMap<String, FolderCacheEntry>) {
     }
 }
 
-fn invalidate_folder_cache(vault_id: &str, folder_path: &str) {
+pub(crate) fn invalidate_folder_cache(vault_id: &str, folder_path: &str) {
     let key = folder_cache_key(vault_id, folder_path);
     if let Ok(mut cache) = folder_cache().lock() {
         cache.remove(&key);
@@ -601,7 +621,7 @@ fn invalidate_folder_parent_cache(vault_id: &str, folder_path: &str) {
     invalidate_folder_cache(vault_id, &parent);
 }
 
-fn scan_folder_entries(target: &Path) -> Result<Vec<FolderEntry>, String> {
+pub(crate) fn scan_folder_entries(target: &Path) -> Result<Vec<FolderEntry>, String> {
     let mut items = Vec::new();
 
     for entry in std::fs::read_dir(target).map_err(|e| e.to_string())? {
@@ -633,7 +653,7 @@ fn scan_folder_entries(target: &Path) -> Result<Vec<FolderEntry>, String> {
     Ok(items)
 }
 
-fn get_or_scan_folder_entries(
+pub(crate) fn get_or_scan_folder_entries(
     cache_key: &str,
     target: &Path,
 ) -> Result<Arc<[FolderEntry]>, String> {
@@ -681,7 +701,11 @@ pub struct FolderStats {
 
 #[tauri::command]
 pub fn delete_note(args: NoteDeleteArgs, app: AppHandle) -> Result<(), String> {
-    log::info!("Deleting note vault_id={} note_id={}", args.vault_id, args.note_id);
+    log::info!(
+        "Deleting note vault_id={} note_id={}",
+        args.vault_id,
+        args.note_id
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     let abs = safe_vault_abs(&root, &args.note_id)?;
     std::fs::remove_file(&abs).map_err(|e| e.to_string())?;
@@ -727,7 +751,12 @@ pub struct FolderCreateArgs {
 
 #[tauri::command]
 pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), String> {
-    log::debug!("Creating folder vault_id={} parent_path={} folder_name={}", args.vault_id, args.parent_path, args.folder_name);
+    log::debug!(
+        "Creating folder vault_id={} parent_path={} folder_name={}",
+        args.vault_id,
+        args.parent_path,
+        args.folder_name
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     let parent = if args.parent_path.is_empty() {
         root.clone()
@@ -758,7 +787,12 @@ pub struct FolderRenameArgs {
 
 #[tauri::command]
 pub fn rename_folder(args: FolderRenameArgs, app: AppHandle) -> Result<(), String> {
-    log::debug!("Renaming folder vault_id={} from_path={} to_path={}", args.vault_id, args.from_path, args.to_path);
+    log::debug!(
+        "Renaming folder vault_id={} from_path={} to_path={}",
+        args.vault_id,
+        args.from_path,
+        args.to_path
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     if args.from_path.is_empty() || args.to_path.is_empty() {
         return Err("cannot rename vault root".to_string());
@@ -789,7 +823,11 @@ pub struct FolderDeleteArgs {
 
 #[tauri::command]
 pub fn delete_folder(args: FolderDeleteArgs, app: AppHandle) -> Result<(), String> {
-    log::debug!("Deleting folder vault_id={} folder_path={}", args.vault_id, args.folder_path);
+    log::debug!(
+        "Deleting folder vault_id={} folder_path={}",
+        args.vault_id,
+        args.folder_path
+    );
     let root = storage::vault_path(&app, &args.vault_id)?;
     if args.folder_path.is_empty() {
         return Err("cannot delete vault root".to_string());
@@ -812,7 +850,11 @@ pub fn list_folder_contents(
     offset: usize,
     limit: usize,
 ) -> Result<FolderContents, String> {
-    log::debug!("Listing folder contents vault_id={} folder_path={}", vault_id, folder_path);
+    log::debug!(
+        "Listing folder contents vault_id={} folder_path={}",
+        vault_id,
+        folder_path
+    );
     let root = storage::vault_path(&app, &vault_id)?;
     let target = if folder_path.is_empty() {
         root.clone()
@@ -872,7 +914,11 @@ pub fn get_folder_stats(
     vault_id: String,
     folder_path: String,
 ) -> Result<FolderStats, String> {
-    log::debug!("Getting folder stats vault_id={} folder_path={}", vault_id, folder_path);
+    log::debug!(
+        "Getting folder stats vault_id={} folder_path={}",
+        vault_id,
+        folder_path
+    );
     let root = storage::vault_path(&app, &vault_id)?;
     let target = if folder_path.is_empty() {
         root.clone()
@@ -916,190 +962,4 @@ pub fn get_folder_stats(
         note_count,
         folder_count,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[cfg(unix)]
-    use std::os::unix::fs as unix_fs;
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
-
-    fn mk_temp_dir() -> PathBuf {
-        let counter = TEST_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let dir =
-            std::env::temp_dir().join(format!("jotter-test-{}-{}", storage::now_ms(), counter));
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
-
-    fn clear_folder_cache() {
-        if let Ok(mut cache) = folder_cache().lock() {
-            cache.clear();
-        }
-    }
-
-    #[test]
-    fn safe_vault_abs_rejects_traversal() {
-        let root = mk_temp_dir();
-        assert!(safe_vault_abs(&root, "../x.md").is_err());
-        assert!(safe_vault_abs(&root, "a/../x.md").is_err());
-        assert!(safe_vault_abs(&root, "/abs/x.md").is_err());
-        assert!(safe_vault_abs(&root, "a/b.md").is_ok());
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn write_note_target_rejects_symlink_escape() {
-        let root = mk_temp_dir();
-        let outside = mk_temp_dir();
-        let link = root.join("notes");
-        unix_fs::symlink(&outside, &link).unwrap();
-
-        let result = safe_vault_abs_for_write(&root, "notes/escape.md");
-        assert!(result.is_err());
-
-        let _ = std::fs::remove_dir_all(&outside);
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn create_note_target_rejects_symlink_escape() {
-        let root = mk_temp_dir();
-        let outside = mk_temp_dir();
-        let link = root.join("drafts");
-        unix_fs::symlink(&outside, &link).unwrap();
-
-        let result = safe_vault_abs_for_write(&root, "drafts/new-note.md");
-        assert!(result.is_err());
-
-        let _ = std::fs::remove_dir_all(&outside);
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn write_image_asset_target_rejects_symlink_escape() {
-        let root = mk_temp_dir();
-        std::fs::write(root.join("note.md"), "# test").unwrap();
-        let outside = mk_temp_dir();
-        let assets_link = root.join(".assets");
-        unix_fs::symlink(&outside, &assets_link).unwrap();
-
-        let result = safe_vault_abs_for_write(&root, ".assets/clip.png");
-        assert!(result.is_err());
-
-        let _ = std::fs::remove_dir_all(&outside);
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn rename_with_temp_path_renames_file() {
-        let root = mk_temp_dir();
-        let from = root.join("x.md");
-        let to = root.join("y.md");
-        std::fs::write(&from, "# test").unwrap();
-
-        rename_with_temp_path(&from, &to).unwrap();
-
-        assert!(!from.exists());
-        assert!(to.exists());
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn rename_with_temp_path_supports_case_only_rename() {
-        let root = mk_temp_dir();
-        std::fs::write(root.join("x.md"), "# test").unwrap();
-        let from = safe_vault_abs(&root, "x.md").unwrap();
-        let to = safe_vault_rename_target_abs(&root, "X.md").unwrap();
-
-        rename_with_temp_path(&from, &to).unwrap();
-
-        assert!(to.exists());
-        let names: Vec<String> = std::fs::read_dir(&root)
-            .unwrap()
-            .filter_map(|entry| entry.ok())
-            .map(|entry| entry.file_name().to_string_lossy().to_string())
-            .collect();
-        assert!(names.iter().any(|name| name == "X.md"));
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn rename_with_temp_path_supports_case_only_folder_rename() {
-        let root = mk_temp_dir();
-        std::fs::create_dir(root.join("docs")).unwrap();
-        let from = safe_vault_abs(&root, "docs").unwrap();
-        let to = safe_vault_rename_target_abs(&root, "Docs").unwrap();
-
-        rename_with_temp_path(&from, &to).unwrap();
-
-        assert!(to.exists());
-        let names: Vec<String> = std::fs::read_dir(&root)
-            .unwrap()
-            .filter_map(|entry| entry.ok())
-            .map(|entry| entry.file_name().to_string_lossy().to_string())
-            .collect();
-        assert!(names.iter().any(|name| name == "Docs"));
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn scan_folder_entries_filters_and_sorts() {
-        let root = mk_temp_dir();
-        std::fs::create_dir_all(root.join(".git")).unwrap();
-        std::fs::create_dir_all(root.join("zeta")).unwrap();
-        std::fs::create_dir_all(root.join("alpha")).unwrap();
-        std::fs::write(root.join("b.md"), "b").unwrap();
-        std::fs::write(root.join("a.md"), "a").unwrap();
-        std::fs::write(root.join("readme.txt"), "ignored").unwrap();
-
-        let entries = scan_folder_entries(&root).unwrap();
-        let names: Vec<String> = entries.iter().map(|entry| entry.name.clone()).collect();
-        let dirs_first = entries
-            .iter()
-            .map(|entry| (entry.name.clone(), entry.is_dir))
-            .collect::<Vec<(String, bool)>>();
-
-        assert_eq!(names, vec!["alpha", "zeta", "a.md", "b.md"]);
-        assert_eq!(
-            dirs_first,
-            vec![
-                ("alpha".to_string(), true),
-                ("zeta".to_string(), true),
-                ("a.md".to_string(), false),
-                ("b.md".to_string(), false)
-            ]
-        );
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn folder_entries_cache_hit_and_invalidation() {
-        clear_folder_cache();
-        let root = mk_temp_dir();
-        std::fs::write(root.join("a.md"), "a").unwrap();
-
-        let vault_id = "v1";
-        let folder_path = "";
-        let key = folder_cache_key(vault_id, folder_path);
-        let first = get_or_scan_folder_entries(&key, &root).unwrap();
-        assert_eq!(first.len(), 1);
-
-        std::fs::write(root.join("b.md"), "b").unwrap();
-        let second = get_or_scan_folder_entries(&key, &root).unwrap();
-        assert_eq!(second.len(), 1);
-
-        invalidate_folder_cache(vault_id, folder_path);
-        let third = get_or_scan_folder_entries(&key, &root).unwrap();
-        assert_eq!(third.len(), 2);
-
-        clear_folder_cache();
-        let _ = std::fs::remove_dir_all(&root);
-    }
 }

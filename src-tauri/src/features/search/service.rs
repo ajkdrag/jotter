@@ -1,6 +1,7 @@
-use crate::notes_service;
-use crate::search_db;
-use crate::storage;
+use crate::features::notes::service as notes_service;
+use crate::features::search::db as search_db;
+use crate::features::search::model::{IndexNoteMeta, SearchHit, SearchScope};
+use crate::shared::storage;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -12,37 +13,11 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct IndexNoteMeta {
-    pub id: String,
-    pub path: String,
-    pub title: String,
-    pub name: String,
-    pub mtime_ms: i64,
-    pub size_bytes: i64,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SearchHit {
-    pub note: IndexNoteMeta,
-    pub score: f32,
-    pub snippet: Option<String>,
-}
-
 #[derive(Debug, Serialize)]
 pub struct NoteLinksSnapshot {
     pub backlinks: Vec<IndexNoteMeta>,
     pub outlinks: Vec<IndexNoteMeta>,
     pub orphan_links: Vec<search_db::OrphanLink>,
-}
-
-#[derive(Debug, Deserialize, Clone, Copy)]
-#[serde(rename_all = "snake_case")]
-pub enum SearchScope {
-    All,
-    Path,
-    Title,
-    Content,
 }
 
 #[derive(Debug, Deserialize)]
@@ -659,7 +634,11 @@ pub fn index_suggest(
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<search_db::SuggestionHit>, String> {
-    log::debug!("Suggesting from index vault_id={} query={}", vault_id, query);
+    log::debug!(
+        "Suggesting from index vault_id={} query={}",
+        vault_id,
+        query
+    );
     with_read_conn(&app, &vault_id, |conn| {
         search_db::suggest(conn, &query, limit.unwrap_or(15))
     })
