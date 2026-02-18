@@ -21,6 +21,12 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+if grep -q 'artifactory\|npm\.corp' pnpm-lock.yaml 2>/dev/null; then
+  echo "Error: pnpm-lock.yaml contains corporate registry URLs."
+  echo "Run: rm pnpm-lock.yaml && pnpm install"
+  exit 1
+fi
+
 TAG="v$VERSION"
 
 if git rev-parse "$TAG" >/dev/null 2>&1; then
