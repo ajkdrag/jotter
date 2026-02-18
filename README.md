@@ -1,35 +1,74 @@
 <img src="./assets/icon.png" alt="Jotter" width="150">
 
+[![Release](https://github.com/ajkdrag/jotter/actions/workflows/release.yml/badge.svg)](https://github.com/ajkdrag/jotter/actions/workflows/release.yml)
+
 # Jotter
 
-A local-first markdown vault for your notes. No cloud, no accounts, no sync — just your files on your machine.
+A local-first markdown note-taking app for people who want their data to stay on their machine. No accounts, no cloud dependency, no sync fees — just a folder of markdown files you fully own.
 
 <p>
   <img src="./assets/editor-screenshot.png" style="width: 49%; display: inline-block;">
   <img src="./assets/editor-screenshot-light.png" style="width: 49%; display: inline-block;">
 </p>
 
-## Quickstart
 
-You'll need [Node.js 20+](https://nodejs.org/), [pnpm](https://pnpm.io/), and a [Rust toolchain](https://rustup.rs/).
+## Why Jotter
+
+Most note-taking apps make a trade-off you shouldn't have to accept: either you get good UX with cloud lock-in, or you get local-first with a heavy Electron shell and plugin-hunting to fill feature gaps.
+
+Jotter is built on [Tauri](https://tauri.app/) instead of Electron. The app size is small, starts pretty fast and doesn't eat up your RAM. Your notes are plain markdown files in a folder you control. If you ever want to stop using Jotter, your notes work fine in any other editor.
+
+## Features
+
+- **Vault-based organization** — a vault is just a folder. No proprietary database, no hidden metadata. Open the same folder in VS Code, sync it with git (already supported natively in Jotter), whatever you want.
+- **Tab system** — open multiple notes side by side, switch between them, restore closed tabs.
+- **WYSIWYG markdown editing** — headings, lists, tables, task lists, code blocks with syntax highlighting, inline formatting. The editor (Milkdown/ProseMirror) renders as you type without switching modes.
+- **Wiki-style links** — `[[note-name]]` links between notes. Backlinks and outlinks are tracked automatically and shown in a side panel.
+- **Full-text search** — powered by SQLite FTS5. `Cmd+P` opens the command palette; `Cmd+O` searches notes by name. Both run through a single omnibar.
+- **Git integration** — view repo status, stage changes, commit with a message, and inspect diffs from within the app.
+- **Image support** — paste images from clipboard or drag them in. Assets are stored in a `.assets` folder alongside your markdown.
+- **Customizable hotkeys** — every action has a rebindable shortcut. Edit from the settings panel.
+- **Dark and light themes** — switchable from the toolbar.
+
+## Building locally
+
+**Prerequisites:**
+
+- [Node.js 20+](https://nodejs.org/)
+- [pnpm](https://pnpm.io/) — `npm install -g pnpm`
+- [Rust toolchain](https://rustup.rs/) — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+- On **Linux**: `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, and the standard build tools (`build-essential`, `curl`, `wget`, `file`, `libxdo-dev`, `libssl-dev`, `librsvg2-dev`). See the [Tauri prerequisites guide](https://tauri.app/start/prerequisites/).
+- On **Windows**: Microsoft C++ Build Tools and WebView2 (usually already present on Windows 11).
+
+**Run in development:**
 
 ```bash
 pnpm install
 pnpm tauri dev
 ```
 
-That's it. The app opens, you pick or create a vault (any folder on disk), and start writing.
+The app opens a window. Pick an existing folder or create a new vault to start writing.
 
-## What it does
+**Build a distributable:**
 
-- **Vault-based organization** — each vault is just a folder of markdown files. No proprietary formats.
-- **Rich markdown editing** — headings, lists, tables, task lists, code blocks with syntax highlighting. Powered by Milkdown/ProseMirror.
-- **Full-text search** — backed by Tantivy (same engine family as Lucene, but in Rust). Searches across all notes in a vault instantly.
-- **Wiki-style links** — use `[[note-name]]` to link between notes. Backlinks and outlinks are tracked automatically.
-- **File tree + command palette** — navigate notes visually or hit `Cmd+K` to jump anywhere.
-- **Image support** — paste images directly into notes. Assets are stored alongside your markdown.
-- **Dark and light themes** — switch from the editor toolbar.
-- **Keyboard-driven** — most actions have shortcuts. Status bar shows cursor position and document stats.
+```bash
+pnpm tauri build
+```
+
+Outputs a signed installer to `src-tauri/target/release/bundle/`.
+
+### Validation commands
+
+```bash
+pnpm check           # Svelte/TypeScript type checking
+pnpm lint            # oxlint
+pnpm format          # Prettier (writes formatting in place)
+pnpm format:check    # Prettier (exits non-zero if formatting differs)
+pnpm test            # Vitest unit tests
+cd src-tauri && cargo check  # Rust type checking
+```
+
+Run all of these before submitting a pull request.
 
 ## Stack
 
@@ -39,7 +78,7 @@ That's it. The app opens, you pick or create a vault (any folder on disk), and s
 | Frontend | Svelte 5, SvelteKit, TypeScript |
 | Editor   | Milkdown (ProseMirror)          |
 | Styling  | Tailwind CSS 4, shadcn-svelte   |
-| Search   | SQLite FTS5 (Rust)              |
+| Search   | SQLite FTS5 — rusqlite (desktop), wa-sqlite (web) |
 | State    | Svelte 5 runes                  |
 
 ## Project structure
@@ -48,58 +87,38 @@ That's it. The app opens, you pick or create a vault (any folder on disk), and s
 src/               Frontend (Svelte/TS)
   lib/
     ports/         Interface contracts
-    adapters/      Platform implementations (web, tauri, editor)
-    use_cases/     Business IO (returns domain events)
-    commands/      Command schema + command handlers
+    adapters/      Platform implementations (tauri/, web/)
+    actions/       Typed action IDs and registry
+    services/      Business logic (stateless)
     stores/        Global state (Svelte 5 runes)
-    flows/         State machines (XState)
-    runtime/       Runtime context + UI effects
+    reactors/      Side-effect coordinators (autosave, sync, etc.)
+    domain/        Domain utilities and pure logic
+    context/       App context and lifecycle hooks
+    db/            SQLite schema and query constants
+    di/            Dependency injection / port wiring
     components/    Presentational UI
+    types/         TypeScript types
+    utils/         Utility functions
 src-tauri/         Backend (Rust)
   src/
-    notes_service  Note CRUD
-    vault_service  Vault management
-    index_service  Full-text search (Tantivy)
-    assets_service Asset handling
+    notes_service        Note CRUD
+    vault_service        Vault management
+    index_service        Tauri command layer for search
+    search_db            SQLite FTS5 engine
+    git_service          Git operations (status, commit, diff)
+    settings_service     App settings
+    vault_settings_service  Per-vault settings
+    watcher_service      File system watching
 tests/             Unit and integration tests
 ```
 
 Architecture follows a hexagonal (ports/adapters) pattern. See [architecture.md](./architecture.md) for the full breakdown.
 
-## Development
-
-```bash
-pnpm dev             # frontend dev server only
-pnpm tauri dev       # full app (frontend + Rust backend)
-pnpm build           # build frontend
-pnpm tauri build     # build distributable
-```
-
-### Validation
-
-Run all of these before submitting changes:
-
-```bash
-pnpm check           # Svelte/TypeScript type checking
-pnpm lint            # oxlint
-pnpm format:check    # Prettier (fails if files need formatting)
-pnpm format          # Prettier (writes formatting)
-pnpm test            # Vitest
-cd src-tauri && cargo check  # Rust type checking
-```
-
-For CI: run `pnpm format:check` in a job; it exits non-zero when any file is not formatted. Optionally run `pnpm format` in a separate job and commit the result, or require branches to pass `format:check` before merge.
-
-### Tests
-
-Tests live in the top-level `tests/` directory, not alongside source files. Run with `pnpm test` or `pnpm test:watch` for watch mode.
-
 ## Contributing
 
-The codebase is opinionated. A few things worth knowing before jumping in:
+The codebase is opinionated. A few things worth knowing:
 
-- Files are always `snake_case`.
-- Business IO goes in `use_cases/`. UI components read stores and dispatch commands.
-- Every user-facing flow is modeled as an XState machine in `flows/`.
+- Business logic goes in `services/`. Stores hold state. Reactors wire side effects. UI components read stores and dispatch actions.
 - See [UI.md](./UI.md) for the design system, tokens, and BEM naming conventions.
 - See [architecture.md](./architecture.md) for data flow and layering rules.
+- Tests live in `tests/`, not alongside source files.
