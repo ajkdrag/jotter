@@ -16,11 +16,8 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Error: Working tree is dirty. Commit or stash changes first."
-  exit 1
-fi
 
+TAG="v$VERSION"
 
 if git rev-parse "$TAG" >/dev/null 2>&1; then
   #
