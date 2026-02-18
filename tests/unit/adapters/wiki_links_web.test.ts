@@ -63,4 +63,18 @@ describe("gfm_link_targets", () => {
       "Folder Name/child note.md",
     ]);
   });
+
+  it("captures angle-bracket markdown targets with spaces", () => {
+    const md = "[Doc](<Folder Name/child note.md>)";
+    expect(gfm_link_targets(md, "root.md")).toEqual([
+      "Folder Name/child note.md",
+    ]);
+  });
+
+  it("decodes URL-encoded markdown link targets", () => {
+    const md = "[Doc](Folder%20Name/child%20note.md)";
+    expect(gfm_link_targets(md, "root.md")).toEqual([
+      "Folder Name/child note.md",
+    ]);
+  });
 });

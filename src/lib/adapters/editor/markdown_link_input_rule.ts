@@ -7,7 +7,7 @@ import type {
   Mark,
 } from "@milkdown/kit/prose/model";
 
-const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)\s]+)\)/;
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)\n]+?\.md|[^)\s]+)\)/i;
 const ZERO_WIDTH_SPACE = "\u200B";
 
 type Segment = {
@@ -73,9 +73,9 @@ function contains_link_mark(
   });
 }
 
-export const markdown_link_input_rule_plugin = $prose((ctx) => {
-  const link_type = linkSchema.type(ctx);
-
+export function create_markdown_link_input_rule_prose_plugin(input: {
+  link_type: MarkType;
+}) {
   return new Plugin({
     key: new PluginKey("markdown-link-converter"),
     appendTransaction(transactions, _oldState, newState) {
@@ -89,7 +89,7 @@ export const markdown_link_input_rule_plugin = $prose((ctx) => {
       const { segments, combined, has_non_text_inline } = build_segments({
         text_block,
         block_start: from.start(),
-        link_type,
+        link_type: input.link_type,
       });
       if (has_non_text_inline) return null;
       if (combined === "") return null;
@@ -106,6 +106,8 @@ export const markdown_link_input_rule_plugin = $prose((ctx) => {
 
       const [full_match, link_text, href] = match;
       if (!link_text || !href) return null;
+      const normalized_href = href.trim();
+      if (normalized_href === "") return null;
 
       const match_start_index = window_start + match.index;
       if (match_start_index > 0 && combined[match_start_index - 1] === "!")
@@ -120,7 +122,9 @@ export const markdown_link_input_rule_plugin = $prose((ctx) => {
 
       const tr = newState.tr;
       tr.replaceWith(start, start + full_match.length, [
-        newState.schema.text(link_text, [link_type.create({ href })]),
+        newState.schema.text(link_text, [
+          input.link_type.create({ href: normalized_href }),
+        ]),
         newState.schema.text(ZERO_WIDTH_SPACE),
       ]);
       tr.setSelection(
@@ -131,4 +135,9 @@ export const markdown_link_input_rule_plugin = $prose((ctx) => {
       return tr;
     },
   });
+}
+
+export const markdown_link_input_rule_plugin = $prose((ctx) => {
+  const link_type = linkSchema.type(ctx);
+  return create_markdown_link_input_rule_prose_plugin({ link_type });
 });

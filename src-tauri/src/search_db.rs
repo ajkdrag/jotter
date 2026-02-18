@@ -30,7 +30,82 @@ pub struct OrphanLink {
 }
 
 pub(crate) static GFM_LINK_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)(!?)\[([^\]]*)\]\(([^)]+\.md)\)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?m)(!?)\[([^\]]*)\]\(([^)]+)\)").unwrap());
+
+fn hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn decode_percent_sequences(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0usize;
+
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(high), Some(low)) = (hex_nibble(bytes[i + 1]), hex_nibble(bytes[i + 2])) {
+                out.push((high << 4) | low);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn parse_markdown_href_target(raw_href: &str) -> Option<String> {
+    let trimmed = raw_href.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let mut href = if trimmed.starts_with('<') {
+        let close = trimmed.find('>')?;
+        trimmed[1..close].trim().to_string()
+    } else {
+        let lower = trimmed.to_ascii_lowercase();
+        let md_end = lower.find(".md").map(|idx| idx + 3)?;
+        let trailing = trimmed[md_end..].trim_start();
+        if !trailing.is_empty() {
+            let lead = trailing.chars().next()?;
+            if lead != '"' && lead != '\'' && lead != '(' {
+                return None;
+            }
+        }
+        trimmed[..md_end].to_string()
+    };
+
+    let lower = href.to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return None;
+    }
+
+    if let Some(hash) = href.find('#') {
+        href.truncate(hash);
+    }
+    if let Some(query) = href.find('?') {
+        href.truncate(query);
+    }
+
+    href = decode_percent_sequences(href.trim());
+    if !href.to_ascii_lowercase().ends_with(".md") {
+        return None;
+    }
+
+    if href.is_empty() {
+        return None;
+    }
+
+    Some(href)
+}
 
 pub(crate) fn resolve_relative_path(source_dir: &str, target: &str) -> Option<String> {
     let source_parts: Vec<&str> = if source_dir.is_empty() {
@@ -68,11 +143,10 @@ pub(crate) fn gfm_link_targets(markdown: &str, source_path: &str) -> Vec<String>
         if bang == "!" {
             continue;
         }
-        let href = cap.get(3).map(|m| m.as_str().trim()).unwrap_or_default();
-        if href.starts_with("http://") || href.starts_with("https://") {
+        let Some(href) = cap.get(3).and_then(|m| parse_markdown_href_target(m.as_str())) else {
             continue;
-        }
-        if let Some(resolved) = resolve_relative_path(source_dir, href) {
+        };
+        if let Some(resolved) = resolve_relative_path(source_dir, &href) {
             out.push(resolved);
         }
     }
@@ -1412,6 +1486,18 @@ mod tests {
     #[test]
     fn gfm_link_targets_allows_spaces_in_folder_names() {
         let targets = gfm_link_targets("[Doc](Folder Name/child note.md)", "root.md");
+        assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
+    }
+
+    #[test]
+    fn gfm_link_targets_parses_angle_bracket_targets_with_spaces() {
+        let targets = gfm_link_targets("[Doc](<Folder Name/child note.md>)", "root.md");
+        assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
+    }
+
+    #[test]
+    fn gfm_link_targets_decodes_url_encoded_targets() {
+        let targets = gfm_link_targets("[Doc](Folder%20Name/child%20note.md)", "root.md");
         assert_eq!(targets, vec!["Folder Name/child note.md".to_string()]);
     }
 }
