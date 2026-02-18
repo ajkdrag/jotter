@@ -103,6 +103,9 @@ async function execute_command(
     case "toggle_links_panel":
       await registry.execute(ACTION_IDS.ui_toggle_context_rail);
       break;
+    case "check_for_updates":
+      await registry.execute(ACTION_IDS.app_check_for_updates);
+      break;
   }
 }
 

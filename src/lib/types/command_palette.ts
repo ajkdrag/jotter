@@ -8,7 +8,8 @@ export type CommandId =
   | "git_version_history"
   | "git_create_checkpoint"
   | "git_init_repo"
-  | "toggle_links_panel";
+  | "toggle_links_panel"
+  | "check_for_updates";
 
 export type CommandIcon =
   | "file-plus"
@@ -18,7 +19,8 @@ export type CommandIcon =
   | "git-branch"
   | "history"
   | "bookmark"
-  | "link";
+  | "link"
+  | "refresh-cw";
 
 export type CommandDefinition = {
   id: CommandId;

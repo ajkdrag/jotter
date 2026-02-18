@@ -3,6 +3,11 @@ import type { ActionRegistrationInput } from "$lib/actions/action_registration_i
 import type { OpenNoteState } from "$lib/types/editor";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
 import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
+import { is_tauri } from "$lib/utils/detect_platform";
+import { toast } from "svelte-sonner";
+import { create_logger } from "$lib/utils/logger";
+
+const log = create_logger("app_actions");
 
 export function register_app_actions(input: ActionRegistrationInput) {
   const { registry, stores, services, default_mount_config } = input;
@@ -79,6 +84,37 @@ export function register_app_actions(input: ActionRegistrationInput) {
     label: "Editor Unmount",
     execute: () => {
       services.editor.unmount();
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.app_check_for_updates,
+    label: "Check for Updates",
+    execute: async () => {
+      if (!is_tauri) {
+        toast.info("Updates are only available in the desktop app");
+        return;
+      }
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const toastId = toast.loading("Checking for updates...");
+      try {
+        const update = await check();
+        toast.dismiss(toastId);
+        if (!update) {
+          toast.success("Jotter is up to date");
+          return;
+        }
+        toast.loading(`Downloading update v${update.version}...`, {
+          id: toastId,
+        });
+        await update.downloadAndInstall();
+        toast.dismiss(toastId);
+        toast.success("Update installed — restart Jotter to apply");
+      } catch (error) {
+        toast.dismiss(toastId);
+        toast.error("Failed to check for updates");
+        log.error("Update check failed", { error: String(error) });
+      }
     },
   });
 }

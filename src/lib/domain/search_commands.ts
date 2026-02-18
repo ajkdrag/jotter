@@ -79,4 +79,11 @@ export const COMMANDS_REGISTRY: CommandDefinition[] = [
     keywords: ["links", "backlinks", "outlinks", "context", "panel", "sidebar"],
     icon: "link",
   },
+  {
+    id: "check_for_updates",
+    label: "Check for Updates",
+    description: "Check if a new version of Jotter is available",
+    keywords: ["update", "upgrade", "version", "release", "new version"],
+    icon: "refresh-cw",
+  },
 ];

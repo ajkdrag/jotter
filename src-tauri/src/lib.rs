@@ -49,6 +49,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(log_builder.build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             vault_service::open_vault,
             vault_service::open_vault_by_id,

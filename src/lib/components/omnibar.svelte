@@ -15,6 +15,7 @@
   import BookmarkIcon from "@lucide/svelte/icons/bookmark";
   import KeyboardIcon from "@lucide/svelte/icons/keyboard";
   import LinkIcon from "@lucide/svelte/icons/link";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import type { OmnibarItem, OmnibarScope } from "$lib/types/search";
   import type { NoteMeta } from "$lib/types/note";
@@ -31,6 +32,7 @@
     history: HistoryIcon,
     bookmark: BookmarkIcon,
     link: LinkIcon,
+    "refresh-cw": RefreshCwIcon,
   };
 
   const SCOPES: OmnibarScope[] = ["current_vault", "all_vaults"];

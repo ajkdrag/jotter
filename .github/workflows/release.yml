@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Add Rust targets for universal binary
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install
+
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Jotter ${{ github.ref_name }}"
+          includeUpdaterJson: true
+          args: --target universal-apple-darwin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
