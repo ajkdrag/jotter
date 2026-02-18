@@ -59,3 +59,9 @@
   width: var(--size-icon-xs);
   height: var(--size-icon-xs);
 }
+
+/* Vault dialog — override shadcn dialog sizing */
+.VaultDialog {
+  max-width: var(--size-dialog-xl);
+  padding: var(--space-8);
+}

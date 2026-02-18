@@ -55,10 +55,3 @@
     />
   </Dialog.Content>
 </Dialog.Root>
-
-<style>
-  :global(.VaultDialog) {
-    max-width: var(--size-dialog-xl);
-    padding: var(--space-8);
-  }
-</style>
