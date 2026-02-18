@@ -19,7 +19,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDM0RGNzg2ODMwQ0FBMjUKUldRbHFneURodmM5M09ycnNiTjNQdlROdjRzM2MrQ3lzRmU2Q3Bac1ZJVGV1UU4vOW5zMWc3dE0K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIzQUEyMDJGMUE2MTE5QTgKUldTb0dXRWFMeUNxczBkaFQwdXJSVUJpemtTWkI3bXl1enJiRnpKcVZ3RXI1cEVrbVlKb3VjYkMK",
       "endpoints": [
         "https://github.com/ajkdrag/jotter/releases/latest/download/latest.json"
       ]

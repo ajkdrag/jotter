@@ -22,10 +22,14 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          save-if: ${{ github.event_name == 'push' }}
 
       - run: pnpm install
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build frontend
+        run: pnpm build
+
+      - uses: tauri-apps/tauri-action@v0.6.1
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Jotter ${{ github.ref_name }}"
@@ -33,4 +37,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
