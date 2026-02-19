@@ -83,32 +83,34 @@ Run all of these before submitting a pull request.
 ## Project structure
 
 ```
-src/               Frontend (Svelte/TS)
+src/                   Frontend (Svelte/TS)
   lib/
-    ports/         Interface contracts
-    adapters/      Platform implementations (tauri/, test/, shared/)
-    actions/       Typed action IDs and registry
-    services/      Business logic (stateless)
-    stores/        Global state (Svelte 5 runes)
-    reactors/      Side-effect coordinators (autosave, sync, etc.)
-    domain/        Domain utilities and pure logic
-    context/       App context and lifecycle hooks
-    db/            SQLite schema and query constants
-    di/            Dependency injection / port wiring
-    components/    Presentational UI
-    types/         TypeScript types
-    utils/         Utility functions
-src-tauri/         Backend (Rust)
-  src/
-    notes_service        Note CRUD
-    vault_service        Vault management
-    index_service        Tauri command layer for search
-    search_db            SQLite FTS5 engine
-    git_service          Git operations (status, commit, diff)
-    settings_service     App settings
-    vault_settings_service  Per-vault settings
-    watcher_service      File system watching
-tests/             Unit and integration tests
+    ports/             Interface contracts
+    adapters/          Platform implementations (tauri/, test/, shared/)
+    actions/           Typed action IDs and registry
+    services/          Business logic (stateless)
+    stores/            Global state (Svelte 5 runes)
+    reactors/          Side-effect coordinators (autosave, sync, etc.)
+    domain/            Domain utilities and pure logic
+    context/           App context and lifecycle hooks
+    db/                SQLite schema and query constants
+    di/                Dependency injection / port wiring
+    components/        Presentational UI
+    types/             TypeScript types
+    utils/             Utility functions
+src-tauri/src/         Backend (Rust)
+  app/                 Tauri builder, plugin and command handler wiring
+  features/            One module per capability domain
+    vault/             Vault registry management
+    notes/             Note CRUD and folder operations
+    search/            FTS index (build, search, suggest, sync)
+    settings/          App-level settings
+    vault_settings/    Per-vault settings
+    git/               Git operations (status, commit, diff, restore)
+    watcher/           Filesystem watcher
+  shared/              Cross-feature utilities (vault store, constants, asset handler)
+  tests/               Integration test entry points
+tests/                 Frontend unit and integration tests
 ```
 
 Architecture follows a hexagonal (ports/adapters) pattern. See [architecture.md](./architecture.md) for the full breakdown.
