@@ -1,0 +1,314 @@
+use comrak::nodes::{AstNode, NodeCode, NodeLink, NodeValue, NodeWikiLink};
+use comrak::{Arena, Options, parse_document};
+use serde::Serialize;
+use std::collections::HashSet;
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ExternalLink {
+    pub url: String,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct LocalLinksSnapshot {
+    pub outlink_paths: Vec<String>,
+    pub external_links: Vec<ExternalLink>,
+}
+
+#[derive(Default)]
+struct ParsedLinks {
+    markdown_targets: Vec<String>,
+    wiki_targets: Vec<String>,
+    external_links: Vec<ExternalLink>,
+}
+
+fn markdown_options() -> Options<'static> {
+    let mut options = Options::default();
+    options.extension.autolink = true;
+    options.extension.table = true;
+    options.extension.tasklist = true;
+    options.extension.strikethrough = true;
+    options.extension.wikilinks_title_after_pipe = true;
+    options
+}
+
+fn hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn decode_percent_sequences(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0usize;
+
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(high), Some(low)) = (hex_nibble(bytes[i + 1]), hex_nibble(bytes[i + 2])) {
+                out.push((high << 4) | low);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn is_external_url(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    lower.starts_with("http://") || lower.starts_with("https://")
+}
+
+pub(crate) fn resolve_relative_path(source_dir: &str, target: &str) -> Option<String> {
+    let source_parts: Vec<&str> = if source_dir.is_empty() {
+        Vec::new()
+    } else {
+        source_dir.split('/').collect()
+    };
+
+    let mut segments = source_parts;
+
+    for part in target.split('/') {
+        match part {
+            "." | "" => {}
+            ".." => {
+                if segments.pop().is_none() {
+                    return None;
+                }
+            }
+            _ => segments.push(part),
+        }
+    }
+
+    let joined = segments.join("/");
+    if joined.is_empty() {
+        return None;
+    }
+    Some(joined)
+}
+
+fn source_dir_from_path(source_path: &str) -> &str {
+    match source_path.rfind('/') {
+        Some(i) => &source_path[..i],
+        None => "",
+    }
+}
+
+fn parse_internal_markdown_target(raw_href: &str) -> Option<String> {
+    let trimmed = raw_href.trim();
+    if trimmed.is_empty() || is_external_url(trimmed) {
+        return None;
+    }
+
+    let mut href = decode_percent_sequences(trimmed);
+    if let Some(hash) = href.find('#') {
+        href.truncate(hash);
+    }
+    if let Some(query) = href.find('?') {
+        href.truncate(query);
+    }
+
+    let href = href.trim();
+    if href.is_empty() || !href.to_ascii_lowercase().ends_with(".md") {
+        return None;
+    }
+    Some(href.to_string())
+}
+
+fn parse_wiki_link_target(raw_target: &str) -> Option<String> {
+    let trimmed = raw_target.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let before_fragment = trimmed
+        .split_once('#')
+        .map(|(target, _)| target)
+        .unwrap_or(trimmed)
+        .trim();
+    if before_fragment.is_empty() {
+        return None;
+    }
+
+    let decoded = decode_percent_sequences(before_fragment);
+    if decoded.is_empty() || is_external_url(&decoded) {
+        return None;
+    }
+    Some(decoded)
+}
+
+fn ensure_md_extension(value: &str) -> String {
+    if value.to_ascii_lowercase().ends_with(".md") {
+        return value.to_string();
+    }
+    format!("{value}.md")
+}
+
+fn resolve_wiki_target(source_path: &str, raw_target: &str) -> Option<String> {
+    let source_dir = source_dir_from_path(source_path);
+    if raw_target.starts_with('/') {
+        let stripped = raw_target.trim_start_matches('/');
+        if stripped.is_empty() {
+            return None;
+        }
+        let candidate = ensure_md_extension(stripped);
+        return resolve_relative_path("", &candidate);
+    }
+
+    let candidate = ensure_md_extension(raw_target);
+    resolve_relative_path(source_dir, &candidate)
+}
+
+fn collect_plain_text<'a>(node: &'a AstNode<'a>) -> String {
+    let mut out = String::new();
+    for descendant in node.descendants().skip(1) {
+        match &descendant.data.borrow().value {
+            NodeValue::Text(text) => out.push_str(text.as_ref()),
+            NodeValue::Code(NodeCode { literal, .. }) => out.push_str(literal),
+            NodeValue::SoftBreak | NodeValue::LineBreak => out.push(' '),
+            _ => {}
+        }
+    }
+    out.trim().to_string()
+}
+
+fn ends_with_unescaped_bang(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    if bytes.last() != Some(&b'!') {
+        return false;
+    }
+
+    let mut slash_count = 0usize;
+    let mut index = bytes.len().saturating_sub(1);
+    while index > 0 && bytes[index - 1] == b'\\' {
+        slash_count += 1;
+        index -= 1;
+    }
+    slash_count % 2 == 0
+}
+
+fn is_embedded_wikilink(node: &AstNode<'_>) -> bool {
+    let Some(prev) = node.previous_sibling() else {
+        return false;
+    };
+    let borrowed = prev.data.borrow();
+    if let NodeValue::Text(text) = &borrowed.value {
+        return ends_with_unescaped_bang(text.as_ref());
+    }
+    false
+}
+
+fn parse_link_node(link: &NodeLink, source_path: &str) -> Option<String> {
+    let parsed = parse_internal_markdown_target(&link.url)?;
+    resolve_relative_path(source_dir_from_path(source_path), &parsed)
+}
+
+fn parse_wikilink_node(link: &NodeWikiLink, source_path: &str) -> Option<String> {
+    let raw_target = parse_wiki_link_target(&link.url)?;
+    resolve_wiki_target(source_path, &raw_target)
+}
+
+fn parse_all_links(markdown: &str, source_path: &str) -> ParsedLinks {
+    let arena = Arena::new();
+    let options = markdown_options();
+    let root = parse_document(&arena, markdown, &options);
+    let mut parsed = ParsedLinks::default();
+
+    for node in root.descendants() {
+        match &node.data.borrow().value {
+            NodeValue::Link(link) => {
+                if is_external_url(&link.url) {
+                    let text = collect_plain_text(node);
+                    let label = if text.is_empty() {
+                        link.url.clone()
+                    } else {
+                        text
+                    };
+                    parsed.external_links.push(ExternalLink {
+                        url: link.url.clone(),
+                        text: label,
+                    });
+                    continue;
+                }
+
+                if let Some(target) = parse_link_node(link, source_path) {
+                    parsed.markdown_targets.push(target);
+                }
+            }
+            NodeValue::WikiLink(link) => {
+                if is_embedded_wikilink(node) {
+                    continue;
+                }
+                if let Some(target) = parse_wikilink_node(link, source_path) {
+                    parsed.wiki_targets.push(target);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    parsed
+}
+
+fn dedupe_preserve_order(values: Vec<String>) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut out = Vec::new();
+    for value in values {
+        if seen.insert(value.clone()) {
+            out.push(value);
+        }
+    }
+    out
+}
+
+fn dedupe_external_links(values: Vec<ExternalLink>) -> Vec<ExternalLink> {
+    let mut seen = HashSet::new();
+    let mut out = Vec::new();
+    for value in values {
+        if seen.insert(value.url.clone()) {
+            out.push(value);
+        }
+    }
+    out
+}
+
+#[allow(dead_code)]
+pub(crate) fn gfm_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
+    parse_all_links(markdown, source_path).markdown_targets
+}
+
+#[allow(dead_code)]
+pub(crate) fn wiki_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
+    parse_all_links(markdown, source_path).wiki_targets
+}
+
+pub(crate) fn internal_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
+    let parsed = parse_all_links(markdown, source_path);
+    let mut out = parsed.markdown_targets;
+    out.extend(parsed.wiki_targets);
+    out
+}
+
+pub(crate) fn extract_local_links_snapshot(markdown: &str, source_path: &str) -> LocalLinksSnapshot {
+    let parsed = parse_all_links(markdown, source_path);
+    let mut combined = parsed.markdown_targets;
+    combined.extend(parsed.wiki_targets);
+    let outlink_paths = dedupe_preserve_order(
+        combined
+            .into_iter()
+            .filter(|path| path != source_path)
+            .collect(),
+    );
+
+    LocalLinksSnapshot {
+        outlink_paths,
+        external_links: dedupe_external_links(parsed.external_links),
+    }
+}

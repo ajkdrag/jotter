@@ -1,46 +1,54 @@
 /* ============================================
-   JOTTER DESIGN TOKENS
+   JOTTER DESIGN TOKENS — Nordic Minimal
    ============================================
    Extended design system that builds on shadcn-svelte.
    Import this AFTER app.css in your layout.
 
    Rationale: app.css is managed by shadcn-svelte CLI,
-   so we extend rather than modify it.
+   so we extend and override rather than modify it.
    ============================================ */
 
 :root {
   /* ----------------------------------------
-     ACCENT COLOR: Teal/Cyan
-     ----------------------------------------
-     A distinctive yet professional accent that
-     differentiates from generic shadcn while
-     maintaining the neutral minimal aesthetic.
+     FONT FAMILY
      ---------------------------------------- */
-  --accent-hue: 175;
-  --accent-chroma: 0.12;
+  --font-family-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-family-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
 
   /* ----------------------------------------
-     TEAL SCALE (50-900)
+     ACCENT COLOR: Spruce Green
+     ----------------------------------------
+     A refined forest/spruce green that evokes
+     Nordic landscapes — richer than the muted
+     forest tone, warmer than teal.
+     ---------------------------------------- */
+  --accent-hue: 155;
+  --accent-chroma: 0.11;
+
+  /* ----------------------------------------
+     SPRUCE SCALE (50-900)
      ---------------------------------------- */
   --teal-50: oklch(0.97 0.02 var(--accent-hue));
   --teal-100: oklch(0.94 0.03 var(--accent-hue));
   --teal-200: oklch(0.88 0.05 var(--accent-hue));
-  --teal-300: oklch(0.78 0.08 var(--accent-hue));
-  --teal-400: oklch(0.68 0.1 var(--accent-hue));
-  --teal-500: oklch(0.55 0.12 var(--accent-hue));
-  --teal-600: oklch(0.5 0.12 var(--accent-hue));
-  --teal-700: oklch(0.42 0.1 var(--accent-hue));
-  --teal-800: oklch(0.32 0.08 var(--accent-hue));
-  --teal-900: oklch(0.22 0.06 var(--accent-hue));
+  --teal-300: oklch(0.78 0.07 var(--accent-hue));
+  --teal-400: oklch(0.65 0.09 var(--accent-hue));
+  --teal-500: oklch(0.48 var(--accent-chroma) var(--accent-hue));
+  --teal-600: oklch(0.43 var(--accent-chroma) var(--accent-hue));
+  --teal-700: oklch(0.37 0.09 var(--accent-hue));
+  --teal-800: oklch(0.3 0.07 var(--accent-hue));
+  --teal-900: oklch(0.22 0.05 var(--accent-hue));
 
-  /* Interactive accent - used for focus, selection, primary actions */
-  --interactive: oklch(0.55 var(--accent-chroma) var(--accent-hue));
-  --interactive-hover: oklch(0.5 var(--accent-chroma) var(--accent-hue));
+  /* Interactive accent — focus, selection, primary actions */
+  --interactive: oklch(0.48 var(--accent-chroma) var(--accent-hue));
+  --interactive-hover: oklch(0.43 var(--accent-chroma) var(--accent-hue));
   --interactive-muted: oklch(
     0.55 calc(var(--accent-chroma) * 0.5) var(--accent-hue)
   );
-  --interactive-bg: oklch(0.96 0.02 var(--accent-hue));
-  --interactive-bg-hover: oklch(0.93 0.025 var(--accent-hue));
+  --interactive-bg: oklch(0.96 0.025 var(--accent-hue));
+  --interactive-bg-hover: oklch(0.93 0.03 var(--accent-hue));
 
   /* Semantic border tokens */
   --interactive-border: var(--teal-300);
@@ -55,8 +63,8 @@
   --interactive-disabled: var(--teal-300);
   --interactive-disabled-bg: var(--teal-50);
 
-  /* Focus ring - teal-tinted for visibility */
-  --focus-ring: oklch(0.65 0.1 var(--accent-hue));
+  /* Focus ring */
+  --focus-ring: oklch(0.6 0.1 var(--accent-hue));
   --focus-ring-offset: oklch(1 0 0);
 
   /* Selection highlight */
@@ -65,25 +73,75 @@
   /* Warning semantic color */
   --warning: oklch(0.8 0.14 85);
 
+  /* Status indicators */
+  --indicator-dirty: oklch(0.62 0.12 44);
+  --indicator-clean: var(--interactive);
+
+  /* ----------------------------------------
+     SHADCN BASE TOKEN OVERRIDES
+     ----------------------------------------
+     Warm Nordic palette: stone/birch/charcoal
+     tones replace the default neutral grays.
+     ---------------------------------------- */
+  --background: oklch(0.985 0.004 82);
+  --foreground: oklch(0.25 0.012 66);
+  --card: oklch(0.985 0.004 82);
+  --card-foreground: oklch(0.25 0.012 66);
+  --popover: oklch(0.99 0.003 82);
+  --popover-foreground: oklch(0.25 0.012 66);
+  --secondary: oklch(0.965 0.008 82);
+  --secondary-foreground: oklch(0.25 0.012 66);
+  --muted: oklch(0.965 0.008 82);
+  --muted-foreground: oklch(0.55 0.01 64);
+  --border: oklch(0.92 0.008 80);
+  --input: oklch(0.92 0.008 80);
+  --ring: var(--focus-ring);
+  --sidebar: oklch(0.985 0.004 82);
+  --sidebar-foreground: oklch(0.25 0.012 66);
+  --sidebar-primary: var(--teal-500);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.965 0.008 82);
+  --sidebar-accent-foreground: oklch(0.25 0.012 66);
+  --sidebar-border: oklch(0.94 0.006 82);
+  --sidebar-ring: var(--focus-ring);
+  --background-surface-2: oklch(0.965 0.008 82);
+  --background-surface-3: oklch(0.94 0.012 80);
+  --foreground-tertiary: oklch(0.62 0.008 64);
+  --border-strong: oklch(0.86 0.01 78);
+  --border-subtle: oklch(0.95 0.005 82);
+  --accent-hover: oklch(0.94 0.01 82);
+
+  /* Shadcn token remapping to spruce accent */
+  --primary: var(--teal-500);
+  --primary-foreground: oklch(1 0 0);
+  --accent: var(--teal-100);
+  --accent-foreground: var(--teal-700);
+
+  /* ----------------------------------------
+     SCROLLBAR
+     ---------------------------------------- */
+  --scrollbar-width: 5px;
+  --scrollbar-thumb: oklch(0.89 0.008 80);
+  --scrollbar-thumb-hover: oklch(0.83 0.01 78);
+
   /* ----------------------------------------
      DEPTH SYSTEM
      ----------------------------------------
-     Consistent elevation through subtle shadows.
-     Uses color-mix for theme-aware shadows.
+     Warm-tinted shadows for cohesion.
      ---------------------------------------- */
-  --shadow-color: oklch(0.2 0 0);
+  --shadow-color: oklch(0.25 0.01 66);
 
   --shadow-xs: 0 1px 2px
     color-mix(in oklch, var(--shadow-color) 5%, transparent);
   --shadow-sm:
-    0 1px 3px color-mix(in oklch, var(--shadow-color) 8%, transparent),
-    0 1px 2px color-mix(in oklch, var(--shadow-color) 6%, transparent);
+    0 1px 3px color-mix(in oklch, var(--shadow-color) 7%, transparent),
+    0 1px 2px color-mix(in oklch, var(--shadow-color) 5%, transparent);
   --shadow-md:
-    0 4px 6px -1px color-mix(in oklch, var(--shadow-color) 8%, transparent),
-    0 2px 4px -2px color-mix(in oklch, var(--shadow-color) 6%, transparent);
+    0 4px 6px -1px color-mix(in oklch, var(--shadow-color) 7%, transparent),
+    0 2px 4px -2px color-mix(in oklch, var(--shadow-color) 5%, transparent);
   --shadow-lg:
-    0 10px 15px -3px color-mix(in oklch, var(--shadow-color) 8%, transparent),
-    0 4px 6px -4px color-mix(in oklch, var(--shadow-color) 6%, transparent);
+    0 10px 15px -3px color-mix(in oklch, var(--shadow-color) 7%, transparent),
+    0 4px 6px -4px color-mix(in oklch, var(--shadow-color) 5%, transparent);
 
   /* ----------------------------------------
      SPACING SCALE
@@ -106,8 +164,6 @@
 
   /* ----------------------------------------
      TYPOGRAPHY SCALE
-     ----------------------------------------
-     Consistent font sizes across the UI.
      ---------------------------------------- */
   --text-xs: 0.6875rem; /* 11px - status bar, badges, section headers */
   --text-sm: 0.8125rem; /* 13px - secondary text, descriptions */
@@ -117,8 +173,6 @@
 
   /* ----------------------------------------
      COMPONENT DIMENSIONS
-     ----------------------------------------
-     Consistent sizes for interactive elements.
      ---------------------------------------- */
   --size-icon-xs: 0.75rem; /* 12px */
   --size-icon-sm: 0.875rem; /* 14px */
@@ -132,17 +186,11 @@
   --size-touch-md: 2.25rem; /* 36px */
   --size-touch-lg: 2.5rem; /* 40px */
 
-  /* Activity bar specific */
   --size-activity-bar: 2.75rem; /* 44px */
   --size-activity-icon: 1.25rem; /* 20px */
+  --size-status-bar: 1.625rem; /* 26px — slightly taller to match mockup */
+  --size-tree-row: 1.875rem; /* 30px */
 
-  /* Status bar */
-  --size-status-bar: 1.375rem; /* 22px */
-
-  /* File tree row */
-  --size-tree-row: 1.875rem; /* 30px - slightly smaller than 32 */
-
-  /* Dialog sizing */
   --size-dialog-sm: 24rem;
   --size-dialog-md: 28rem;
   --size-dialog-lg: 32rem;
@@ -150,19 +198,18 @@
   --size-dialog-list-height: 20rem;
   --size-dialog-list-height-lg: 28rem;
 
-  /* Tree dimensions */
   --size-tree-indent: 1rem;
   --size-tree-base-padding: 0.5rem;
 
-  /* Editor dimensions */
-  --editor-heading-1: 2.25em;
-  --editor-heading-2: 1.75em;
-  --editor-heading-3: 1.375em;
-  --editor-heading-4: 1.125em;
+  /* Editor dimensions — refined Nordic sizing */
+  --editor-heading-1: 1.75em;
+  --editor-heading-2: 1.1875em;
+  --editor-heading-3: 1.125em;
+  --editor-heading-4: 1.0625em;
   --editor-heading-5: 1em;
   --editor-heading-6: 0.875em;
-  --editor-bullet-size: 5px;
-  --editor-bullet-nested-size: 4px;
+  --editor-bullet-size: 4px;
+  --editor-bullet-nested-size: 3px;
   --editor-checkbox-size: 14px;
   --editor-checkmark-width: 4px;
   --editor-checkmark-height: 7px;
@@ -198,41 +245,29 @@
   --z-modal: 40;
   --z-popover: 50;
   --z-tooltip: 60;
-
-  /* ----------------------------------------
-     SHADCN TOKEN REMAPPING
-     ----------------------------------------
-     Remap shadcn's base tokens to teal for
-     consistent theming across all components.
-     ---------------------------------------- */
-  --primary: var(--teal-500);
-  --primary-foreground: oklch(1 0 0);
-  --ring: var(--focus-ring);
-  --accent: var(--teal-100);
-  --accent-foreground: var(--teal-700);
 }
 
 .dark {
-  /* Inverted teal scale for dark mode */
+  /* Inverted spruce scale for dark mode */
   --teal-50: oklch(0.22 0.04 var(--accent-hue));
   --teal-100: oklch(0.26 0.05 var(--accent-hue));
   --teal-200: oklch(0.32 0.06 var(--accent-hue));
-  --teal-300: oklch(0.42 0.08 var(--accent-hue));
-  --teal-400: oklch(0.55 0.1 var(--accent-hue));
-  --teal-500: oklch(0.7 0.12 var(--accent-hue));
-  --teal-600: oklch(0.75 0.12 var(--accent-hue));
-  --teal-700: oklch(0.82 0.1 var(--accent-hue));
-  --teal-800: oklch(0.9 0.06 var(--accent-hue));
-  --teal-900: oklch(0.96 0.03 var(--accent-hue));
+  --teal-300: oklch(0.42 0.07 var(--accent-hue));
+  --teal-400: oklch(0.55 0.09 var(--accent-hue));
+  --teal-500: oklch(0.68 var(--accent-chroma) var(--accent-hue));
+  --teal-600: oklch(0.73 var(--accent-chroma) var(--accent-hue));
+  --teal-700: oklch(0.8 0.09 var(--accent-hue));
+  --teal-800: oklch(0.88 0.06 var(--accent-hue));
+  --teal-900: oklch(0.95 0.03 var(--accent-hue));
 
   /* Adjusted interactive colors for dark mode */
-  --interactive: oklch(0.7 var(--accent-chroma) var(--accent-hue));
-  --interactive-hover: oklch(0.75 var(--accent-chroma) var(--accent-hue));
+  --interactive: oklch(0.68 var(--accent-chroma) var(--accent-hue));
+  --interactive-hover: oklch(0.73 var(--accent-chroma) var(--accent-hue));
   --interactive-muted: oklch(
-    0.65 calc(var(--accent-chroma) * 0.6) var(--accent-hue)
+    0.62 calc(var(--accent-chroma) * 0.6) var(--accent-hue)
   );
-  --interactive-bg: oklch(0.25 0.03 var(--accent-hue));
-  --interactive-bg-hover: oklch(0.3 0.035 var(--accent-hue));
+  --interactive-bg: oklch(0.24 0.035 var(--accent-hue));
+  --interactive-bg-hover: oklch(0.28 0.04 var(--accent-hue));
 
   /* Inverted semantic tokens */
   --interactive-text-on-bg: var(--teal-800);
@@ -242,22 +277,62 @@
   --interactive-disabled: var(--teal-400);
   --interactive-disabled-bg: var(--teal-100);
 
-  --focus-ring: oklch(0.7 0.12 var(--accent-hue));
-  --focus-ring-offset: oklch(0.145 0 0);
+  --focus-ring: oklch(0.68 0.11 var(--accent-hue));
+  --focus-ring-offset: oklch(0.175 0 0);
 
-  --selection-bg: oklch(0.3 0.05 var(--accent-hue));
+  --selection-bg: oklch(0.28 0.05 var(--accent-hue));
 
   --warning: oklch(0.86 0.12 90);
 
-  /* Shadows are more subtle in dark mode */
-  --shadow-color: oklch(0 0 0);
+  /* ----------------------------------------
+     SHADCN BASE TOKEN OVERRIDES — Dark
+     ----------------------------------------
+     Warm dark palette: deep charcoal tones
+     with subtle warmth replacing cold grays.
+     ---------------------------------------- */
+  --background: oklch(0.18 0.008 68);
+  --foreground: oklch(0.92 0.008 78);
+  --card: oklch(0.22 0.008 68);
+  --card-foreground: oklch(0.92 0.008 78);
+  --popover: oklch(0.22 0.008 68);
+  --popover-foreground: oklch(0.92 0.008 78);
+  --secondary: oklch(0.265 0.008 68);
+  --secondary-foreground: oklch(0.92 0.008 78);
+  --muted: oklch(0.265 0.008 68);
+  --muted-foreground: oklch(0.58 0.008 70);
+  --border: oklch(0.31 0.006 68);
+  --input: oklch(0.33 0.006 68);
+  --ring: var(--focus-ring);
+  --sidebar: oklch(0.19 0.008 68);
+  --sidebar-foreground: oklch(0.92 0.008 78);
+  --sidebar-primary: var(--teal-500);
+  --sidebar-primary-foreground: oklch(0.1 0 0);
+  --sidebar-accent: oklch(0.265 0.008 68);
+  --sidebar-accent-foreground: oklch(0.92 0.008 78);
+  --sidebar-border: oklch(0.28 0.006 68);
+  --sidebar-ring: var(--focus-ring);
+  --background-surface-2: oklch(0.225 0.008 68);
+  --background-surface-3: oklch(0.255 0.008 68);
+  --foreground-tertiary: oklch(0.55 0.008 68);
+  --border-strong: oklch(0.38 0.006 68);
+  --border-subtle: oklch(0.225 0.005 68);
+  --accent-hover: oklch(0.3 0.008 68);
 
   /* Shadcn token remapping for dark mode */
   --primary: var(--teal-500);
   --primary-foreground: oklch(0.1 0 0);
-  --ring: var(--focus-ring);
   --accent: var(--teal-200);
   --accent-foreground: var(--teal-800);
+
+  /* Scrollbar dark */
+  --scrollbar-thumb: oklch(0.33 0.006 68);
+  --scrollbar-thumb-hover: oklch(0.4 0.006 68);
+
+  /* Shadows more subtle in dark mode */
+  --shadow-color: oklch(0.05 0 0);
+
+  --indicator-dirty: oklch(0.7 0.1 44);
+  --indicator-clean: var(--interactive);
 }
 
 /* ============================================
@@ -265,6 +340,12 @@
    ============================================ */
 
 @theme inline {
+  /* Font family */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+
   /* Interactive colors */
   --color-interactive: var(--interactive);
   --color-interactive-hover: var(--interactive-hover);
@@ -284,7 +365,7 @@
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
 
-  /* Teal scale */
+  /* Spruce scale */
   --color-teal-50: var(--teal-50);
   --color-teal-100: var(--teal-100);
   --color-teal-200: var(--teal-200);
@@ -299,21 +380,49 @@
 
 /* ============================================
    GLOBAL OVERRIDES
-   ============================================
-   These override shadcn defaults with our
-   accent color for better visual identity.
    ============================================ */
 
 @layer base {
-  /* Focus ring uses our teal accent */
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus ring uses spruce accent */
   *:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
-  /* Text selection uses teal tint */
+  /* Text selection uses spruce tint */
   ::selection {
     background: var(--selection-bg);
+  }
+
+  /* Refined scrollbar — thin, warm-tinted */
+  ::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+    height: var(--scrollbar-width);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 }
 
@@ -331,7 +440,7 @@
     background-color: var(--interactive-bg-hover);
   }
 
-  /* Active/selected states with teal accent */
+  /* Active/selected states with accent */
   .is-active {
     background-color: var(--interactive-bg);
     color: var(--interactive);

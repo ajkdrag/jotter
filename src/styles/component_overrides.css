@@ -21,7 +21,7 @@
 
 /* Toast overrides — align sonner with design system */
 [data-sonner-toaster] {
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 
 [data-sonner-toast] {

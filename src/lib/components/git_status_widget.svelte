@@ -112,11 +112,11 @@
   }
 
   .GitStatusWidget__indicator--dirty {
-    background-color: var(--warning);
+    background-color: var(--indicator-dirty);
   }
 
   .GitStatusWidget__indicator--clean {
-    background-color: var(--chart-2);
+    background-color: var(--indicator-clean);
   }
 
   .GitStatusWidget__badge {

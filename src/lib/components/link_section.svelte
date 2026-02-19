@@ -93,5 +93,6 @@
     display: flex;
     flex-direction: column;
     padding-bottom: var(--space-2);
+    padding-left: var(--space-3);
   }
 </style>

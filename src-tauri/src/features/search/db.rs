@@ -1,14 +1,13 @@
 use crate::features::notes::service as notes_service;
+use crate::features::search::link_parser;
 use crate::features::search::model::{IndexNoteMeta, SearchHit, SearchScope};
 use crate::shared::constants;
 use crate::shared::storage;
-use regex::Regex;
 use rusqlite::{params, Connection};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::LazyLock;
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
@@ -29,251 +28,24 @@ pub struct OrphanLink {
     pub ref_count: i64,
 }
 
-pub(crate) static GFM_LINK_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)(!?)\[([^\]]*)\]\(([^)]+)\)").unwrap());
-pub(crate) static WIKI_LINK_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)(!?)\[\[([^\]\n]+?)\]\]").unwrap());
-
-fn hex_nibble(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + 10),
-        b'A'..=b'F' => Some(byte - b'A' + 10),
-        _ => None,
-    }
-}
-
-fn decode_percent_sequences(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
-    let mut i = 0usize;
-
-    while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (hex_nibble(bytes[i + 1]), hex_nibble(bytes[i + 2])) {
-                out.push((high << 4) | low);
-                i += 3;
-                continue;
-            }
-        }
-        out.push(bytes[i]);
-        i += 1;
-    }
-
-    String::from_utf8_lossy(&out).into_owned()
-}
-
-fn parse_markdown_href_target(raw_href: &str) -> Option<String> {
-    let trimmed = raw_href.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    let mut href = if trimmed.starts_with('<') {
-        let close = trimmed.find('>')?;
-        trimmed[1..close].trim().to_string()
-    } else {
-        let lower = trimmed.to_ascii_lowercase();
-        let md_end = lower.find(".md").map(|idx| idx + 3)?;
-        let trailing = trimmed[md_end..].trim_start();
-        if !trailing.is_empty() {
-            let lead = trailing.chars().next()?;
-            if lead != '"' && lead != '\'' && lead != '(' {
-                return None;
-            }
-        }
-        trimmed[..md_end].to_string()
-    };
-
-    let lower = href.to_ascii_lowercase();
-    if lower.starts_with("http://") || lower.starts_with("https://") {
-        return None;
-    }
-
-    if let Some(hash) = href.find('#') {
-        href.truncate(hash);
-    }
-    if let Some(query) = href.find('?') {
-        href.truncate(query);
-    }
-
-    href = decode_percent_sequences(href.trim());
-    if !href.to_ascii_lowercase().ends_with(".md") {
-        return None;
-    }
-
-    if href.is_empty() {
-        return None;
-    }
-
-    Some(href)
-}
-
-pub(crate) fn resolve_relative_path(source_dir: &str, target: &str) -> Option<String> {
-    let source_parts: Vec<&str> = if source_dir.is_empty() {
-        Vec::new()
-    } else {
-        source_dir.split('/').collect()
-    };
-
-    let mut segments = source_parts;
-
-    for part in target.split('/') {
-        match part {
-            "." | "" => {}
-            ".." => {
-                if segments.pop().is_none() {
-                    return None;
-                }
-            }
-            _ => segments.push(part),
-        }
-    }
-
-    Some(segments.join("/"))
-}
-
+#[allow(dead_code)]
 pub(crate) fn gfm_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
-    let source_dir = match source_path.rfind('/') {
-        Some(i) => &source_path[..i],
-        None => "",
-    };
-
-    let mut out = Vec::new();
-    for cap in GFM_LINK_RE.captures_iter(markdown) {
-        let bang = cap.get(1).map(|m| m.as_str()).unwrap_or_default();
-        if bang == "!" {
-            continue;
-        }
-        let Some(href) = cap
-            .get(3)
-            .and_then(|m| parse_markdown_href_target(m.as_str()))
-        else {
-            continue;
-        };
-        if let Some(resolved) = resolve_relative_path(source_dir, &href) {
-            out.push(resolved);
-        }
-    }
-    out
+    link_parser::gfm_link_targets(markdown, source_path)
 }
 
-fn parse_wiki_link_target(raw_target: &str) -> Option<String> {
-    let trimmed = raw_target.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    let before_alias = trimmed
-        .split_once('|')
-        .map(|(target, _)| target)
-        .unwrap_or(trimmed)
-        .trim();
-    if before_alias.is_empty() {
-        return None;
-    }
-
-    let before_fragment = before_alias
-        .split_once('#')
-        .map(|(target, _)| target)
-        .unwrap_or(before_alias)
-        .trim();
-    if before_fragment.is_empty() {
-        return None;
-    }
-
-    let decoded = decode_percent_sequences(before_fragment);
-    let lower = decoded.to_ascii_lowercase();
-    if lower.starts_with("http://") || lower.starts_with("https://") {
-        return None;
-    }
-
-    Some(decoded)
-}
-
-fn ensure_md_extension(value: &str) -> String {
-    if value.to_ascii_lowercase().ends_with(".md") {
-        return value.to_string();
-    }
-    format!("{value}.md")
-}
-
+#[allow(dead_code)]
 pub(crate) fn wiki_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
-    let source_dir = match source_path.rfind('/') {
-        Some(i) => &source_path[..i],
-        None => "",
-    };
-
-    let mut out = Vec::new();
-    for cap in WIKI_LINK_RE.captures_iter(markdown) {
-        let bang = cap.get(1).map(|m| m.as_str()).unwrap_or_default();
-        if bang == "!" {
-            continue;
-        }
-        let Some(raw_target) = cap.get(2).and_then(|m| parse_wiki_link_target(m.as_str())) else {
-            continue;
-        };
-
-        if raw_target.starts_with('/') {
-            let stripped = raw_target.trim_start_matches('/');
-            if stripped.is_empty() {
-                continue;
-            }
-            let candidate = ensure_md_extension(stripped);
-            if let Some(resolved) = resolve_relative_path("", &candidate) {
-                if !resolved.is_empty() {
-                    out.push(resolved);
-                }
-            }
-            continue;
-        }
-
-        let candidate = ensure_md_extension(&raw_target);
-        if let Some(resolved) = resolve_relative_path(source_dir, &candidate) {
-            if !resolved.is_empty() {
-                out.push(resolved);
-            }
-        }
-    }
-    out
-}
-
-trait LinkExtractionStrategy {
-    fn extract(&self, markdown: &str, source_path: &str) -> Vec<String>;
-}
-
-struct GfmLinkExtractionStrategy;
-
-impl LinkExtractionStrategy for GfmLinkExtractionStrategy {
-    fn extract(&self, markdown: &str, source_path: &str) -> Vec<String> {
-        gfm_link_targets(markdown, source_path)
-    }
-}
-
-struct WikiLinkExtractionStrategy;
-
-impl LinkExtractionStrategy for WikiLinkExtractionStrategy {
-    fn extract(&self, markdown: &str, source_path: &str) -> Vec<String> {
-        wiki_link_targets(markdown, source_path)
-    }
-}
-
-static GFM_LINK_EXTRACTION_STRATEGY: GfmLinkExtractionStrategy = GfmLinkExtractionStrategy;
-static WIKI_LINK_EXTRACTION_STRATEGY: WikiLinkExtractionStrategy = WikiLinkExtractionStrategy;
-
-fn link_extraction_strategy_factory() -> [&'static dyn LinkExtractionStrategy; 2] {
-    [
-        &GFM_LINK_EXTRACTION_STRATEGY,
-        &WIKI_LINK_EXTRACTION_STRATEGY,
-    ]
+    link_parser::wiki_link_targets(markdown, source_path)
 }
 
 pub(crate) fn internal_link_targets(markdown: &str, source_path: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    for strategy in link_extraction_strategy_factory() {
-        out.extend(strategy.extract(markdown, source_path));
-    }
-    out
+    link_parser::internal_link_targets(markdown, source_path)
+}
+
+pub type LocalLinksSnapshot = link_parser::LocalLinksSnapshot;
+
+pub fn extract_local_links_snapshot(markdown: &str, source_path: &str) -> LocalLinksSnapshot {
+    link_parser::extract_local_links_snapshot(markdown, source_path)
 }
 
 pub(crate) fn list_markdown_files(root: &Path) -> Vec<PathBuf> {

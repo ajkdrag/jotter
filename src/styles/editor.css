@@ -5,22 +5,27 @@
 :root {
   /* Runtime-configurable tokens (modified via settings) */
   --editor-font-size: 1rem;
-  --editor-line-height: 1.75;
-  --editor-max-width: 70ch;
+  --editor-line-height: 1.85;
+  --editor-max-width: min(85ch, 90%);
   --editor-spacing: 1.5rem;
   --editor-heading-color: var(--foreground);
 
-  /* Semantic mappings (reference shadcn tokens from app.css) */
-  --editor-text: var(--foreground);
+  /* Body text — warm gray, softer than foreground for comfortable reading */
+  --editor-text: oklch(0.46 0.01 55);
   --editor-text-muted: var(--muted-foreground);
   --editor-code-bg: var(--muted);
   --editor-code-text: var(--foreground);
-  --editor-code-inline-bg: color-mix(in oklch, var(--accent) 60%, transparent);
+  --editor-code-inline-bg: var(--background-surface-3);
   --editor-code-inline-border: var(--border);
   --editor-blockquote-border: var(--border-strong);
   --editor-blockquote-bg: color-mix(in oklch, var(--muted) 40%, transparent);
   --editor-link: var(--primary);
-  --editor-link-underline: color-mix(in oklch, var(--primary) 30%, transparent);
+  --editor-link-underline: color-mix(in oklch, var(--primary) 25%, transparent);
+  --editor-link-underline-hover: color-mix(
+    in oklch,
+    var(--primary) 55%,
+    transparent
+  );
   --editor-table-border: var(--border);
   --editor-table-header-bg: var(--background-surface-2);
   --editor-table-stripe: color-mix(in oklch, var(--muted) 25%, transparent);
@@ -35,62 +40,63 @@
   --editor-find-match-bg: oklch(0.93 0.09 90);
   --editor-find-match-selected-bg: oklch(0.82 0.15 75);
 
-  /* Syntax highlighting tokens - Light mode */
-  --syntax-comment: oklch(0.55 0.02 240);
-  --syntax-punctuation: oklch(0.45 0.03 240);
-  --syntax-property: oklch(0.45 0.08 240);
-  --syntax-selector: oklch(0.4 0.12 160);
-  --syntax-operator: oklch(0.45 0.08 240);
-  --syntax-keyword: oklch(0.45 0.1 280);
-  --syntax-function: oklch(0.45 0.12 240);
-  --syntax-variable: oklch(0.4 0.08 20);
-  --syntax-string: oklch(0.45 0.1 140);
-  --syntax-number: oklch(0.5 0.12 140);
-  --syntax-boolean: oklch(0.45 0.12 280);
-  --syntax-constant: oklch(0.4 0.1 20);
-  --syntax-class: oklch(0.45 0.1 60);
-  --syntax-tag: oklch(0.45 0.12 340);
-  --syntax-attr-name: oklch(0.45 0.1 60);
-  --syntax-attr-value: oklch(0.45 0.1 140);
-  --syntax-namespace: oklch(0.45 0.08 60);
-  --syntax-regex: oklch(0.4 0.12 340);
-  --syntax-important: oklch(0.4 0.12 20);
-  --syntax-deleted: oklch(0.45 0.12 20);
-  --syntax-inserted: oklch(0.45 0.12 140);
+  /* Syntax highlighting — warm Nordic palette */
+  --syntax-comment: oklch(0.58 0.01 55);
+  --syntax-punctuation: oklch(0.48 0.02 55);
+  --syntax-property: oklch(0.45 0.07 200);
+  --syntax-selector: oklch(0.42 0.1 155);
+  --syntax-operator: oklch(0.48 0.06 55);
+  --syntax-keyword: oklch(0.45 0.08 280);
+  --syntax-function: oklch(0.42 0.09 200);
+  --syntax-variable: oklch(0.42 0.07 25);
+  --syntax-string: oklch(0.42 0.1 155);
+  --syntax-number: oklch(0.48 0.1 155);
+  --syntax-boolean: oklch(0.45 0.08 280);
+  --syntax-constant: oklch(0.42 0.08 25);
+  --syntax-class: oklch(0.45 0.08 65);
+  --syntax-tag: oklch(0.45 0.1 340);
+  --syntax-attr-name: oklch(0.45 0.08 65);
+  --syntax-attr-value: oklch(0.42 0.1 155);
+  --syntax-namespace: oklch(0.48 0.06 65);
+  --syntax-regex: oklch(0.42 0.1 340);
+  --syntax-important: oklch(0.42 0.1 25);
+  --syntax-deleted: oklch(0.48 0.1 25);
+  --syntax-inserted: oklch(0.42 0.1 155);
 }
 
 .dark {
-  --editor-code-inline-bg: color-mix(in oklch, var(--accent) 40%, transparent);
+  --editor-text: oklch(0.775 0.01 72);
+  --editor-code-inline-bg: var(--background-surface-3);
   --editor-blockquote-bg: color-mix(in oklch, var(--muted) 30%, transparent);
   --editor-mark-bg: oklch(0.35 0.1 85);
   --editor-mark-text: oklch(0.85 0.08 85);
 
-  /* Find-in-file match highlighting - dark mode */
+  /* Find-in-file match highlighting — dark mode */
   --editor-find-match-bg: oklch(0.38 0.08 80);
   --editor-find-match-selected-bg: oklch(0.52 0.14 75);
 
-  /* Syntax highlighting tokens - Dark mode */
-  --syntax-comment: oklch(0.55 0.02 240);
-  --syntax-punctuation: oklch(0.65 0.03 240);
-  --syntax-property: oklch(0.75 0.08 200);
-  --syntax-selector: oklch(0.75 0.12 160);
-  --syntax-operator: oklch(0.75 0.08 240);
-  --syntax-keyword: oklch(0.75 0.1 280);
-  --syntax-function: oklch(0.8 0.12 220);
-  --syntax-variable: oklch(0.8 0.08 40);
-  --syntax-string: oklch(0.75 0.1 140);
-  --syntax-number: oklch(0.75 0.12 140);
-  --syntax-boolean: oklch(0.75 0.12 280);
-  --syntax-constant: oklch(0.8 0.1 40);
-  --syntax-class: oklch(0.8 0.1 80);
-  --syntax-tag: oklch(0.75 0.12 340);
-  --syntax-attr-name: oklch(0.8 0.1 80);
-  --syntax-attr-value: oklch(0.75 0.1 140);
-  --syntax-namespace: oklch(0.8 0.08 80);
-  --syntax-regex: oklch(0.75 0.12 340);
-  --syntax-important: oklch(0.8 0.12 20);
-  --syntax-deleted: oklch(0.75 0.12 20);
-  --syntax-inserted: oklch(0.75 0.12 140);
+  /* Syntax highlighting — dark mode warm tones */
+  --syntax-comment: oklch(0.55 0.01 55);
+  --syntax-punctuation: oklch(0.62 0.02 55);
+  --syntax-property: oklch(0.72 0.07 200);
+  --syntax-selector: oklch(0.72 0.1 155);
+  --syntax-operator: oklch(0.7 0.06 55);
+  --syntax-keyword: oklch(0.72 0.08 280);
+  --syntax-function: oklch(0.76 0.09 200);
+  --syntax-variable: oklch(0.78 0.07 40);
+  --syntax-string: oklch(0.72 0.1 155);
+  --syntax-number: oklch(0.72 0.1 155);
+  --syntax-boolean: oklch(0.72 0.08 280);
+  --syntax-constant: oklch(0.78 0.08 40);
+  --syntax-class: oklch(0.78 0.08 80);
+  --syntax-tag: oklch(0.72 0.1 340);
+  --syntax-attr-name: oklch(0.78 0.08 80);
+  --syntax-attr-value: oklch(0.72 0.1 155);
+  --syntax-namespace: oklch(0.78 0.06 80);
+  --syntax-regex: oklch(0.72 0.1 340);
+  --syntax-important: oklch(0.78 0.1 25);
+  --syntax-deleted: oklch(0.72 0.1 25);
+  --syntax-inserted: oklch(0.72 0.1 155);
 }
 
 /* ============================================
@@ -111,7 +117,8 @@
   color: var(--editor-text);
   outline: none;
   max-width: var(--editor-max-width);
-  padding: calc(var(--editor-spacing) * 2) var(--editor-spacing);
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-8);
   font-feature-settings:
     "liga" 1,
     "calt" 1,
@@ -122,20 +129,20 @@
 }
 
 /* ============================================
-   TYPOGRAPHY - HEADINGS
+   TYPOGRAPHY — HEADINGS
+   ============================================
+   Sans-serif headings with restrained weight.
+   Hierarchy through size and space, not boldness.
    ============================================ */
 
 .ProseMirror h1 {
   font-size: var(--editor-heading-1);
-  font-weight: 700;
-  line-height: 1.15;
+  font-weight: 500;
+  line-height: 1.2;
   margin-top: calc(var(--editor-spacing) * 2);
-  margin-bottom: calc(var(--editor-spacing) * 0.75);
+  margin-bottom: var(--editor-spacing);
   color: var(--editor-heading-color);
-  letter-spacing: -0.02em;
-  font-family:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    monospace;
+  letter-spacing: -0.01em;
 }
 
 .ProseMirror h1:first-child {
@@ -144,42 +151,36 @@
 
 .ProseMirror h2 {
   font-size: var(--editor-heading-2);
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 500;
+  line-height: 1.3;
   margin-top: calc(var(--editor-spacing) * 1.75);
-  margin-bottom: calc(var(--editor-spacing) * 0.65);
+  margin-bottom: calc(var(--editor-spacing) * 0.85);
   color: var(--editor-heading-color);
-  letter-spacing: -0.015em;
-  font-family:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    monospace;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: calc(var(--editor-spacing) * 0.35);
+  letter-spacing: -0.005em;
 }
 
 .ProseMirror h3 {
   font-size: var(--editor-heading-3);
-  font-weight: 650;
-  line-height: 1.35;
+  font-weight: 500;
+  line-height: 1.4;
   margin-top: calc(var(--editor-spacing) * 1.5);
-  margin-bottom: calc(var(--editor-spacing) * 0.5);
-  color: var(--editor-heading-color);
-  letter-spacing: -0.01em;
-}
-
-.ProseMirror h4 {
-  font-size: var(--editor-heading-4);
-  font-weight: 650;
-  line-height: 1.45;
-  margin-top: calc(var(--editor-spacing) * 1.25);
   margin-bottom: calc(var(--editor-spacing) * 0.5);
   color: var(--editor-heading-color);
   letter-spacing: -0.005em;
 }
 
+.ProseMirror h4 {
+  font-size: var(--editor-heading-4);
+  font-weight: 500;
+  line-height: 1.45;
+  margin-top: calc(var(--editor-spacing) * 1.25);
+  margin-bottom: calc(var(--editor-spacing) * 0.5);
+  color: var(--editor-heading-color);
+}
+
 .ProseMirror h5 {
   font-size: var(--editor-heading-5);
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.55;
   margin-top: calc(var(--editor-spacing) * 1);
   margin-bottom: calc(var(--editor-spacing) * 0.4);
@@ -190,7 +191,7 @@
 
 .ProseMirror h6 {
   font-size: var(--editor-heading-6);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.6;
   margin-top: calc(var(--editor-spacing) * 0.75);
   margin-bottom: calc(var(--editor-spacing) * 0.4);
@@ -200,18 +201,17 @@
 }
 
 /* ============================================
-   TYPOGRAPHY - PARAGRAPHS & INLINE
+   TYPOGRAPHY — PARAGRAPHS & INLINE
    ============================================ */
 
 .ProseMirror p {
   margin-top: 0;
-  margin-bottom: calc(var(--editor-spacing) * 0.85);
-  max-width: 75ch;
+  margin-bottom: var(--editor-spacing);
 }
 
 .ProseMirror strong {
-  font-weight: 650;
-  color: var(--editor-text);
+  font-weight: 600;
+  color: var(--foreground);
   letter-spacing: -0.01em;
 }
 
@@ -225,12 +225,10 @@
   color: var(--editor-code-text);
   padding: 0.15rem 0.45rem;
   border-radius: calc(var(--radius) * 0.4);
-  font-size: 0.9em;
-  font-family:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    monospace;
+  font-size: 0.88em;
+  font-family: var(--font-mono);
   border: 1px solid var(--editor-code-inline-border);
-  font-weight: 500;
+  font-weight: 450;
   letter-spacing: -0.01em;
 }
 
@@ -243,17 +241,23 @@
 
 .ProseMirror a {
   color: var(--editor-link);
-  text-decoration: underline;
-  text-decoration-color: var(--editor-link-underline);
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid var(--editor-link-underline);
+  transition: border-color var(--duration-normal) var(--ease-default);
 }
 
 .ProseMirror a:hover {
-  text-decoration-color: var(--editor-link);
-  text-decoration-thickness: 2px;
+  border-bottom-color: var(--editor-link-underline-hover);
+}
+
+.ProseMirror a[href$=".md"]::before {
+  content: "[[";
+  opacity: 0.6;
+}
+
+.ProseMirror a[href$=".md"]::after {
+  content: "]]";
+  opacity: 0.6;
 }
 
 /* ============================================
@@ -263,18 +267,18 @@
 .ProseMirror ul,
 .ProseMirror ol {
   margin-top: 0;
-  margin-bottom: calc(var(--editor-spacing) * 0.85);
-  padding-left: calc(var(--editor-spacing) * 0.5);
+  margin-bottom: var(--editor-spacing);
+  padding-left: var(--space-1);
   list-style: none;
 }
 
 .ProseMirror li {
-  margin-bottom: calc(var(--editor-spacing) * 0.35);
-  line-height: 1.65;
+  margin-bottom: var(--space-2);
+  line-height: 1.75;
 }
 
 .ProseMirror li > p {
-  margin-bottom: calc(var(--editor-spacing) * 0.35);
+  margin-bottom: var(--space-2);
 }
 
 .ProseMirror ul ul,
@@ -305,8 +309,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.65em;
+  width: 1rem;
+  height: 1.7em;
   user-select: none;
   cursor: default;
 }
@@ -329,8 +333,8 @@
 }
 
 .milkdown-list-item-block > .list-item > .label-wrapper .label.ordered {
-  font-size: 0.9em;
-  font-weight: 600;
+  font-size: 0.88em;
+  font-weight: 500;
   color: var(--editor-text-muted);
   font-feature-settings: "tnum" 1;
 }
@@ -465,7 +469,7 @@
   margin-bottom: calc(var(--editor-spacing) * 1.25);
   margin-left: calc(var(--editor-spacing) * 0.5);
   padding: calc(var(--editor-spacing) * 0.75) calc(var(--editor-spacing) * 1);
-  border-left: 3px solid var(--editor-blockquote-border);
+  border-left: 2px solid var(--editor-blockquote-border);
   background: var(--editor-blockquote-bg);
   border-radius: 0 calc(var(--radius) * 0.5) calc(var(--radius) * 0.5) 0;
   color: var(--editor-text-muted);
@@ -489,37 +493,17 @@
   background: var(--editor-code-bg);
   color: var(--editor-code-text);
   border-radius: calc(var(--radius) * 0.75);
-  padding: calc(var(--editor-spacing) * 1.125);
+  padding: calc(var(--editor-spacing) * 1);
   margin-top: calc(var(--editor-spacing) * 0.75);
   margin-bottom: calc(var(--editor-spacing) * 1.25);
   overflow-x: auto;
-  font-family:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    monospace;
-  font-size: 0.9em;
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
   line-height: 1.65;
   border: 1px solid var(--border);
-  box-shadow:
-    0 1px 3px 0 color-mix(in oklch, var(--foreground) 5%, transparent),
-    0 1px 2px -1px color-mix(in oklch, var(--foreground) 5%, transparent);
-  font-weight: 450;
+  font-weight: 400;
   letter-spacing: -0.01em;
   position: relative;
-}
-
-.ProseMirror pre::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in oklch, var(--foreground) 8%, transparent) 50%,
-    transparent
-  );
 }
 
 .ProseMirror pre code {
@@ -644,7 +628,7 @@
 /* Important and deleted text */
 .ProseMirror .token.important,
 .ProseMirror .token.bold {
-  font-weight: 650;
+  font-weight: 600;
   color: var(--syntax-important);
 }
 
@@ -681,7 +665,7 @@
   );
   margin-top: calc(var(--editor-spacing) * 2.5);
   margin-bottom: calc(var(--editor-spacing) * 2.5);
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 /* ============================================
@@ -716,7 +700,7 @@
 
 .ProseMirror th {
   background: var(--editor-table-header-bg);
-  font-weight: 650;
+  font-weight: 500;
   color: var(--editor-text);
   font-size: 0.875em;
   text-transform: uppercase;
@@ -734,7 +718,7 @@
 
 .ProseMirror tbody tr:hover td {
   background: color-mix(in oklch, var(--muted) 35%, transparent);
-  transition: background 0.15s ease;
+  transition: background var(--duration-fast) var(--ease-default);
 }
 
 /* ============================================
@@ -746,9 +730,6 @@
   height: auto;
   border-radius: calc(var(--radius) * 0.75);
   border: 1px solid var(--border);
-  box-shadow:
-    0 4px 6px -1px color-mix(in oklch, var(--foreground) 5%, transparent),
-    0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent);
 }
 
 /* ============================================
@@ -781,7 +762,7 @@
   right: 0.5rem;
   top: 0.5rem;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--duration-normal) var(--ease-default);
 }
 
 .ProseMirror .milkdown-image-block:hover > .image-wrapper .operation {
@@ -815,7 +796,7 @@
   background: var(--border);
   border-radius: 2px;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--duration-normal) var(--ease-default);
   cursor: row-resize;
 }
 
@@ -950,9 +931,7 @@
   z-index: 50;
   overflow: hidden;
   border-radius: calc(var(--radius) * 0.5);
-  box-shadow:
-    0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
-    0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--border);
   background: var(--popover);
 }
@@ -1004,7 +983,7 @@
   border-radius: calc(var(--radius) * 0.35);
   color: var(--muted-foreground);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-normal) var(--ease-default);
   flex-shrink: 0;
 }
 
@@ -1023,9 +1002,7 @@
   z-index: 50;
   overflow: hidden;
   border-radius: calc(var(--radius) * 0.5);
-  box-shadow:
-    0 4px 12px -2px color-mix(in oklch, var(--foreground) 12%, transparent),
-    0 2px 6px -2px color-mix(in oklch, var(--foreground) 8%, transparent);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--border);
   background: var(--popover);
 }
@@ -1064,7 +1041,7 @@
   display: flex;
   align-items: center;
   color: var(--muted-foreground);
-  transition: all 0.15s ease;
+  transition: all var(--duration-normal) var(--ease-default);
 }
 
 .milkdown-link-edit > .link-edit > .button svg {

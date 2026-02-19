@@ -19,15 +19,4 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
   },
-  optimizeDeps: {
-    include: [
-      // Force these to be discovered upfront so Vite never
-      // re-optimizes mid-session
-      "@journeyapps/wa-sqlite",
-      "@journeyapps/wa-sqlite/dist/wa-sqlite-async.mjs",
-      "@journeyapps/wa-sqlite/src/examples/OPFSAdaptiveVFS.js",
-      "@journeyapps/wa-sqlite/src/examples/IDBBatchAtomicVFS.js",
-      "@journeyapps/wa-sqlite/src/examples/MemoryAsyncVFS.js",
-    ],
-  },
 });

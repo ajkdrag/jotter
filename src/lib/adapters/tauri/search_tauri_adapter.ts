@@ -1,4 +1,8 @@
-import type { NoteLinksSnapshot, SearchPort } from "$lib/ports/search_port";
+import type {
+  LocalNoteLinksSnapshot,
+  NoteLinksSnapshot,
+  SearchPort,
+} from "$lib/ports/search_port";
 import type { VaultId, NoteId } from "$lib/types/ids";
 import type {
   NoteSearchHit,
@@ -42,6 +46,16 @@ type TauriLinksSnapshot = {
   backlinks: TauriNoteMeta[];
   outlinks: TauriNoteMeta[];
   orphan_links: TauriOrphanLink[];
+};
+
+type TauriExternalLink = {
+  url: string;
+  text: string;
+};
+
+type TauriLocalLinksSnapshot = {
+  outlink_paths: string[];
+  external_links: TauriExternalLink[];
 };
 
 function to_note_meta(hit: TauriNoteMeta) {
@@ -126,6 +140,28 @@ export function create_search_tauri_adapter(): SearchPort {
         orphan_links: snapshot.orphan_links.map((orphan) => ({
           target_path: orphan.target_path,
           ref_count: orphan.ref_count,
+        })),
+      };
+    },
+
+    async extract_local_note_links(
+      vault_id: VaultId,
+      note_path: string,
+      markdown: string,
+    ): Promise<LocalNoteLinksSnapshot> {
+      const snapshot = await tauri_invoke<TauriLocalLinksSnapshot>(
+        "index_extract_local_note_links",
+        {
+          vaultId: vault_id,
+          noteId: note_path,
+          markdown,
+        },
+      );
+      return {
+        outlink_paths: snapshot.outlink_paths,
+        external_links: snapshot.external_links.map((link) => ({
+          url: link.url,
+          text: link.text,
         })),
       };
     },

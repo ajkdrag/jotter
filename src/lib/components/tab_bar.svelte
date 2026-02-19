@@ -6,7 +6,6 @@
     X,
     ChevronLeft,
     ChevronRight,
-    FileText,
     PanelRight,
   } from "@lucide/svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
@@ -196,13 +195,11 @@
                         }
                       }}
                     >
-                      <span class="TabBar__tab-icon">
-                        {#if tab.is_pinned}
+                      {#if tab.is_pinned}
+                        <span class="TabBar__tab-icon">
                           <Pin class="TabBar__icon TabBar__icon--pin" />
-                        {:else}
-                          <FileText class="TabBar__icon" />
-                        {/if}
-                      </span>
+                        </span>
+                      {/if}
                       <span class="TabBar__tab-title">{tab.title}</span>
                       {#if tab.is_dirty}
                         <span
@@ -467,8 +464,8 @@
   }
 
   .TabBar__tab--active {
-    background-color: var(--interactive-bg);
-    color: var(--interactive);
+    color: var(--foreground);
+    font-weight: 500;
   }
 
   .TabBar__tab--active::after {
@@ -477,11 +474,11 @@
     inset-inline: 0;
     bottom: 0;
     height: 2px;
-    background-color: var(--interactive);
+    background-color: var(--foreground);
   }
 
   .TabBar__tab--active:hover {
-    background-color: var(--interactive-bg-hover);
+    background-color: var(--muted);
   }
 
   .TabBar__tab--dragging {
@@ -523,7 +520,8 @@
     width: var(--space-1-5);
     height: var(--space-1-5);
     border-radius: 50%;
-    background-color: var(--foreground);
+    background-color: var(--indicator-dirty);
+    opacity: 0.7;
     flex-shrink: 0;
     align-self: center;
     margin-inline: var(--space-0-5);

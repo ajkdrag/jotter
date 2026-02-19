@@ -59,6 +59,7 @@ pub fn run() {
             features::search::service::index_rename_note,
             features::search::service::index_rename_folder,
             features::search::service::index_note_links_snapshot,
+            features::search::service::index_extract_local_note_links,
             features::notes::service::list_notes,
             features::notes::service::list_folders,
             features::notes::service::read_note,

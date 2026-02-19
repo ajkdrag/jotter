@@ -10,6 +10,7 @@ import { create_git_autocommit_reactor } from "$lib/reactors/git_autocommit.reac
 import { create_recent_commands_persist_reactor } from "$lib/reactors/recent_commands_persist.reactor.svelte";
 import { create_find_in_file_reactor } from "$lib/reactors/find_in_file.reactor.svelte";
 import { create_backlinks_sync_reactor } from "$lib/reactors/backlinks_sync.reactor.svelte";
+import { create_local_links_sync_reactor } from "$lib/reactors/local_links_sync.reactor.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
@@ -25,6 +26,7 @@ import type { GitStore } from "$lib/stores/git_store.svelte";
 import type { GitService } from "$lib/services/git_service";
 import type { LinksService } from "$lib/services/links_service";
 import type { SearchStore } from "$lib/stores/search_store.svelte";
+import type { LinksStore } from "$lib/stores/links_store.svelte";
 
 export type ReactorContext = {
   editor_store: EditorStore;
@@ -35,6 +37,7 @@ export type ReactorContext = {
   vault_store: VaultStore;
   tab_store: TabStore;
   git_store: GitStore;
+  links_store: LinksStore;
   editor_service: EditorService;
   note_service: NoteService;
   vault_service: VaultService;
@@ -85,10 +88,16 @@ export function mount_reactors(context: ReactorContext): () => void {
       context.settings_service,
     ),
     create_find_in_file_reactor(context.ui_store, context.editor_service),
+    create_local_links_sync_reactor(
+      context.editor_store,
+      context.ui_store,
+      context.links_service,
+    ),
     create_backlinks_sync_reactor(
       context.editor_store,
       context.ui_store,
       context.search_store,
+      context.links_store,
       context.links_service,
     ),
   ];

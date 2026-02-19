@@ -62,6 +62,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -96,6 +99,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -136,6 +142,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -172,6 +181,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -226,6 +238,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -276,6 +291,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -347,6 +365,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -406,6 +427,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();
@@ -443,6 +467,9 @@ describe("SearchService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     };
 
     const vault_store = new VaultStore();

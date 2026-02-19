@@ -1,3 +1,4 @@
 pub mod db;
+pub mod link_parser;
 pub mod model;
 pub mod service;

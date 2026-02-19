@@ -9,12 +9,6 @@ import {
 } from "$lib/types/ids";
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
 import type { FolderContents } from "$lib/types/filetree";
-import { create_logger } from "$lib/utils/logger";
-
-const log = create_logger("test_notes_adapter");
-
-const TEST_FILES_BASE = "/test/files";
-const TEST_FILES_INDEX = "/test/files/index.json";
 
 function derive_note_meta(
   note_path: NotePath,
@@ -53,69 +47,10 @@ const FALLBACK_TEST_NOTES = new Map<
   ],
 ]);
 
-function resolve_test_url(path: string): string | null {
-  if (typeof window !== "undefined" && window.location.origin) {
-    return new URL(path, window.location.origin).toString();
-  }
-
-  return null;
-}
-
-async function discover_test_files(): Promise<string[]> {
-  const url = resolve_test_url(TEST_FILES_INDEX);
-  if (!url || typeof fetch === "undefined") {
-    return ["welcome.md", "getting-started.md"];
-  }
-
-  try {
-    const response = await fetch(url);
-    if (response.ok) {
-      const files = (await response.json()) as string[];
-      return files;
-    }
-  } catch (error) {
-    log.warn("Failed to discover test files, using fallback list", { error });
-  }
-  return ["welcome.md", "getting-started.md"];
-}
-
-async function load_base_files(): Promise<
+function load_base_files(): Promise<
   Map<NotePath, { markdown: MarkdownText; mtime_ms: number }>
 > {
-  const base_url = resolve_test_url(TEST_FILES_BASE);
-  if (!base_url || typeof fetch === "undefined") {
-    return new Map(FALLBACK_TEST_NOTES);
-  }
-
-  const notes = new Map<
-    NotePath,
-    { markdown: MarkdownText; mtime_ms: number }
-  >();
-  const test_files = await discover_test_files();
-
-  for (const file_name of test_files) {
-    try {
-      const response = await fetch(`${base_url}/${file_name}`, {
-        cache: "no-store",
-      });
-      if (response.ok) {
-        const content = await response.text();
-        const note_path = as_note_path(file_name);
-        notes.set(note_path, {
-          markdown: as_markdown_text(content),
-          mtime_ms: Date.now(),
-        });
-      }
-    } catch (error) {
-      log.warn("Failed to load test file", { file_name, error });
-    }
-  }
-
-  if (notes.size === 0) {
-    return new Map(FALLBACK_TEST_NOTES);
-  }
-
-  return notes;
+  return Promise.resolve(new Map(FALLBACK_TEST_NOTES));
 }
 
 export function create_test_notes_adapter(): NotesPort {
@@ -209,13 +144,17 @@ export function create_test_notes_adapter(): NotesPort {
       return Promise.resolve();
     },
 
-    async rename_note(
+    rename_note(
       _vault_id: VaultId,
       _from: NotePath,
       _to: NotePath,
-    ): Promise<void> {},
+    ): Promise<void> {
+      return Promise.resolve();
+    },
 
-    async delete_note(_vault_id: VaultId, _note_id: NoteId): Promise<void> {},
+    delete_note(_vault_id: VaultId, _note_id: NoteId): Promise<void> {
+      return Promise.resolve();
+    },
 
     async list_folder_contents(
       _vault_id: VaultId,

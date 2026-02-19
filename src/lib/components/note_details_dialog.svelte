@@ -100,7 +100,7 @@
   }
 
   .NoteDetailsDialog__value--mono {
-    font-family: monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-sm);
   }
 </style>

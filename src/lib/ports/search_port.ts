@@ -7,11 +7,17 @@ import type {
   WikiSuggestion,
 } from "$lib/types/search";
 import type { NoteMeta } from "$lib/types/note";
+import type { ExternalLink } from "$lib/types/link";
 
 export type NoteLinksSnapshot = {
   backlinks: NoteMeta[];
   outlinks: NoteMeta[];
   orphan_links: OrphanLink[];
+};
+
+export type LocalNoteLinksSnapshot = {
+  outlink_paths: string[];
+  external_links: ExternalLink[];
 };
 
 export interface SearchPort {
@@ -34,4 +40,9 @@ export interface SearchPort {
     vault_id: VaultId,
     note_path: string,
   ): Promise<NoteLinksSnapshot>;
+  extract_local_note_links(
+    vault_id: VaultId,
+    note_path: string,
+    markdown: string,
+  ): Promise<LocalNoteLinksSnapshot>;
 }

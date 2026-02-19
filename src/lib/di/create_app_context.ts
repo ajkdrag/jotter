@@ -178,6 +178,7 @@ export function create_app_context(input: {
     vault_store: stores.vault,
     tab_store: stores.tab,
     git_store: stores.git,
+    links_store: stores.links,
     editor_service,
     note_service,
     vault_service,

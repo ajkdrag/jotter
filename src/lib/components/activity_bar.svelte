@@ -99,15 +99,14 @@
     width: var(--size-activity-bar);
     height: var(--size-activity-bar);
     color: var(--sidebar-foreground);
-    opacity: 0.7;
+    opacity: 0.35;
     transition:
-      opacity var(--duration-fast) var(--ease-default),
+      opacity var(--duration-normal) var(--ease-default),
       background-color var(--duration-fast) var(--ease-default);
   }
 
   .ActivityBar__button:hover {
     opacity: 1;
-    background-color: var(--sidebar-accent);
   }
 
   .ActivityBar__button:focus-visible {
@@ -117,9 +116,7 @@
   }
 
   .ActivityBar__button--active {
-    opacity: 1;
-    background-color: var(--interactive-bg);
-    color: var(--interactive);
+    opacity: 0.9;
   }
 
   .ActivityBar__button--active::before {

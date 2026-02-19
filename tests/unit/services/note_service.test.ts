@@ -554,6 +554,9 @@ describe("NoteService", () => {
       suggest_wiki_links: vi.fn(),
       suggest_planned_links: vi.fn(),
       get_note_links_snapshot,
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     } as unknown as SearchPort;
 
     const service = new NoteService(
@@ -654,6 +657,9 @@ describe("NoteService", () => {
         outlinks: [],
         orphan_links: [],
       }),
+      extract_local_note_links: vi
+        .fn()
+        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
     } as unknown as SearchPort;
 
     const service = new NoteService(

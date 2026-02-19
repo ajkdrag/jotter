@@ -317,7 +317,7 @@ fn handle_upsert(
     search_db::upsert_note(conn, &meta, &markdown)?;
     notes_cache.insert(meta.path.clone(), meta.clone());
 
-    let targets = search_db::gfm_link_targets(&markdown, &meta.path);
+    let targets = search_db::internal_link_targets(&markdown, &meta.path);
     let mut resolved: BTreeSet<String> = BTreeSet::new();
     for target in targets {
         if target != meta.path {
@@ -749,5 +749,17 @@ pub fn index_note_links_snapshot(
             outlinks: search_db::get_outlinks(conn, &note_id)?,
             orphan_links: search_db::get_orphan_outlinks(conn, &note_id)?,
         })
+    })
+}
+
+#[tauri::command]
+pub fn index_extract_local_note_links(
+    app: AppHandle,
+    vault_id: String,
+    note_id: String,
+    markdown: String,
+) -> Result<search_db::LocalLinksSnapshot, String> {
+    with_read_conn(&app, &vault_id, |_conn| {
+        Ok(search_db::extract_local_links_snapshot(&markdown, &note_id))
     })
 }

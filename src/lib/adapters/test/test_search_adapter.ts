@@ -40,5 +40,16 @@ export function create_test_search_adapter(): SearchPort {
         orphan_links: [],
       });
     },
+
+    extract_local_note_links(
+      _vault_id: VaultId,
+      _note_path: string,
+      _markdown: string,
+    ) {
+      return Promise.resolve({
+        outlink_paths: [],
+        external_links: [],
+      });
+    },
   };
 }

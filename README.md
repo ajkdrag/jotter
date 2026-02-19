@@ -11,7 +11,6 @@ A local-first markdown note-taking app for people who want their data to stay on
   <img src="./assets/editor-screenshot-light.png" style="width: 49%; display: inline-block;">
 </p>
 
-
 ## Why Jotter
 
 Most note-taking apps make a trade-off you shouldn't have to accept: either you get good UX with cloud lock-in, or you get local-first with a heavy Electron shell and plugin-hunting to fill feature gaps.
@@ -78,7 +77,7 @@ Run all of these before submitting a pull request.
 | Frontend | Svelte 5, SvelteKit, TypeScript |
 | Editor   | Milkdown (ProseMirror)          |
 | Styling  | Tailwind CSS 4, shadcn-svelte   |
-| Search   | SQLite FTS5 — rusqlite (desktop), wa-sqlite (web) |
+| Search   | SQLite FTS5 — rusqlite          |
 | State    | Svelte 5 runes                  |
 
 ## Project structure
@@ -87,7 +86,7 @@ Run all of these before submitting a pull request.
 src/               Frontend (Svelte/TS)
   lib/
     ports/         Interface contracts
-    adapters/      Platform implementations (tauri/, web/)
+    adapters/      Platform implementations (tauri/, test/, shared/)
     actions/       Typed action IDs and registry
     services/      Business logic (stateless)
     stores/        Global state (Svelte 5 runes)

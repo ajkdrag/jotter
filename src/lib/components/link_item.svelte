@@ -1,24 +1,35 @@
 <script lang="ts">
-  import FileTextIcon from "@lucide/svelte/icons/file-text";
+  import ArrowDownLeftIcon from "@lucide/svelte/icons/arrow-down-left";
+  import ArrowUpRightIcon from "@lucide/svelte/icons/arrow-up-right";
   import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
 
   type Props = {
     title: string;
     path: string;
     meta?: string;
+    backlink?: boolean;
     external?: boolean;
     onclick: () => void;
   };
 
-  let { title, path, meta, external = false, onclick }: Props = $props();
+  let {
+    title,
+    path,
+    meta,
+    backlink = false,
+    external = false,
+    onclick,
+  }: Props = $props();
 </script>
 
 <button type="button" class="LinkItem" {onclick}>
   <span class="LinkItem__icon">
     {#if external}
       <ExternalLinkIcon />
+    {:else if backlink}
+      <ArrowDownLeftIcon />
     {:else}
-      <FileTextIcon />
+      <ArrowUpRightIcon />
     {/if}
   </span>
   <span class="LinkItem__text">
@@ -53,9 +64,10 @@
 
   .LinkItem__icon {
     flex-shrink: 0;
-    width: var(--size-icon-sm);
-    height: var(--size-icon-sm);
+    width: var(--size-icon-xs);
+    height: var(--size-icon-xs);
     color: var(--muted-foreground);
+    opacity: 0.6;
   }
 
   .LinkItem__icon :global(svg) {

@@ -372,7 +372,7 @@
   .VaultDashboard__recent-path {
     font-size: var(--text-xs);
     color: var(--muted-foreground);
-    font-family: monospace;
+    font-family: var(--font-mono);
     flex-shrink: 0;
     max-width: 40%;
     overflow: hidden;
@@ -440,7 +440,7 @@
   }
 
   .VaultDashboard__info-value--mono {
-    font-family: monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
   }
 

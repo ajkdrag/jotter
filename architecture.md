@@ -139,7 +139,7 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 ### `src/lib/adapters`
 
-- concrete web/tauri/test implementations of ports (e.g. `editor/`, `web/`, `tauri/`, `shared/`, `test/`)
+- concrete tauri/test implementations of ports (e.g. `editor/`, `tauri/`, `shared/`, `test/`)
 
 ### `src/lib/db`
 
@@ -184,12 +184,14 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 
 ## Folder structure
 
+### Frontend (`src/`)
+
 ```
 src/
 ├── lib/
 │   ├── types/           # Shared domain and UI-safe types
 │   ├── ports/           # Interface contracts for IO boundaries
-│   ├── adapters/        # Concrete web/tauri/test implementations (editor/, web/, tauri/, shared/, test/)
+│   ├── adapters/        # Concrete tauri/test implementations (editor/, tauri/, shared/, test/)
 │   ├── db/              # Search schema and query constants
 │   ├── stores/          # Synchronous app state classes
 │   ├── services/        # Async use-case orchestration
@@ -202,9 +204,97 @@ src/
 │   ├── domain/          # Domain-aware utilities
 │   ├── utils/           # Pure, domain-agnostic utilities
 │   └── ...
-├── routes/              # Entrypoints (+page.svelte, test/+page.svelte)
+├── routes/              # Entrypoint (+page.svelte)
 └── ...
 ```
+
+### Backend (`src-tauri/src/`)
+
+```
+src-tauri/src/
+├── lib.rs               # Module declarations + pub fn run() entry point
+├── main.rs              # Binary entry point
+├── app/
+│   └── mod.rs           # Tauri builder, plugin registration, command handler wiring
+├── features/
+│   ├── mod.rs           # Re-exports all feature modules
+│   ├── vault/           # Vault registry: open, list, register, remove
+│   ├── notes/           # Note CRUD: list, read, write, create, rename, delete
+│   ├── search/          # FTS index: build, rebuild, search, suggest, upsert, remove
+│   │   ├── db.rs        # SQLite FTS schema and query constants
+│   │   ├── model.rs     # Search domain types (IndexNoteMeta, SearchHit, SearchScope)
+│   │   └── service.rs   # Tauri command handlers + SearchDbState managed state
+│   ├── settings/        # App-level settings: get/set
+│   ├── vault_settings/  # Per-vault settings: get/set
+│   ├── git/             # Git operations: init, status, commit, log, diff, restore, tag
+│   └── watcher/         # Filesystem watcher: watch/unwatch vault + WatcherState managed state
+├── shared/
+│   ├── constants.rs     # Excluded folder names (APP_DIR, GIT_DIR)
+│   └── storage.rs       # Vault registry persistence (Vault, VaultStore), asset request handler
+└── tests/
+    └── mod.rs           # Integration test modules linked via #[path] to top-level tests/
+```
+
+## Backend architecture (Rust / Tauri)
+
+The backend is a Tauri native process. Its sole job is to expose native capabilities to the frontend via IPC commands. There is no service layer, no event bus, and no domain state management — those all live on the frontend.
+
+### Module roles
+
+| Module      | Responsibility                                                                                       |
+| ----------- | ---------------------------------------------------------------------------------------------------- |
+| `app/`      | Composition root. Builds the Tauri app: registers plugins, managed state, and all command handlers.  |
+| `features/` | One sub-module per capability domain. Each feature owns its command handlers and any managed state.  |
+| `shared/`   | Cross-feature utilities: vault registry persistence, path helpers, constants, asset request handler. |
+| `tests/`    | Integration test entry points, linked to the top-level `tests/` directory via `#[path]`.             |
+
+### Feature module pattern
+
+Each feature is a module under `features/` with a consistent layout:
+
+```
+features/<name>/
+├── mod.rs       # Module declarations (pub mod service; etc.)
+└── service.rs   # #[tauri::command] handlers
+```
+
+Richer features add domain types and persistence alongside:
+
+```
+features/search/
+├── mod.rs
+├── db.rs        # SQLite FTS schema + BM25 query constants
+├── model.rs     # Serializable domain types (IndexNoteMeta, SearchHit, SearchScope)
+└── service.rs   # Command handlers + SearchDbState managed state
+```
+
+### Managed state
+
+Stateful services (watcher, search index) use Tauri's `.manage()` system. State structs are declared in `service.rs` and registered in `app/mod.rs`:
+
+```rust
+.manage(features::watcher::service::WatcherState::default())
+.manage(features::search::service::SearchDbState::default())
+```
+
+Commands receive state via Tauri's dependency injection:
+
+```rust
+#[tauri::command]
+pub async fn watch_vault(state: tauri::State<'_, WatcherState>, ...) { ... }
+```
+
+### Shared storage
+
+`shared/storage.rs` owns the vault registry (a JSON file at `<app_config_dir>/jotter/vaults.json`). It also handles the `jotter-asset://` custom URI scheme for serving binary assets (images) from the vault filesystem directly to the WebView.
+
+### Backend invariants
+
+1. All native capabilities are exposed exclusively through `#[tauri::command]` functions. No direct channel bypasses.
+2. Managed state structs live in the feature's `service.rs`. No global statics.
+3. Cross-feature shared code (types, utilities) goes in `shared/`, not inside a feature module.
+4. `app/mod.rs` is the only place that registers plugins, state, and command handlers.
+5. Backend holds no domain state between calls (exception: `WatcherState` and `SearchDbState` which are explicit lifecycle-managed service state).
 
 ## Decision tree: where does new code go?
 
@@ -241,14 +331,13 @@ START
 
 ## Composition root
 
-Entrypoints:
+Entrypoint:
 
-- `src/routes/+page.svelte` — production (uses `create_prod_ports`)
-- `src/routes/test/+page.svelte` — test harness (uses `create_test_ports`)
+- `src/routes/+page.svelte` — app shell (uses `create_prod_ports`)
 
-Bootstrap sequence (per entrypoint):
+Bootstrap sequence:
 
-1. Create production or test ports
+1. Create production ports
 2. Create app context (`create_app_context`) — registers actions and mounts reactors internally
 3. Provide context (`provide_app_context`)
 4. Render `AppShell`

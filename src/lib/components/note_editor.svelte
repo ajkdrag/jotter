@@ -46,8 +46,7 @@
   }
 
   .NoteEditor__content {
-    max-width: 65ch;
-    padding: var(--space-6);
+    width: 100%;
   }
 
   .NoteEditor__empty {
