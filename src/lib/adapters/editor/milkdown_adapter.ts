@@ -69,6 +69,7 @@ import {
   find_highlight_plugin,
   find_highlight_plugin_key,
 } from "./find_highlight_plugin";
+import { code_block_copy_plugin } from "./code_block_copy_plugin";
 import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
 
@@ -338,6 +339,7 @@ export function create_milkdown_editor_port(args?: {
         })
         .use(gfm)
         .use(prism)
+        .use(code_block_copy_plugin)
         .use(indent)
         .use(linkTooltipPlugin)
         .use(listItemBlockComponent)

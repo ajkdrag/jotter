@@ -446,6 +446,73 @@ describe("TabStore", () => {
     });
   });
 
+  describe("find_evictable_tab", () => {
+    it("returns first non-pinned non-dirty non-active tab", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+      store.open_tab(np("b.md"), "b");
+      store.open_tab(np("c.md"), "c");
+      store.activate_tab("c.md");
+
+      expect(store.find_evictable_tab()?.id).toBe("a.md");
+    });
+
+    it("skips pinned tabs", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+      store.pin_tab("a.md");
+      store.open_tab(np("b.md"), "b");
+      store.open_tab(np("c.md"), "c");
+      store.activate_tab("c.md");
+
+      expect(store.find_evictable_tab()?.id).toBe("b.md");
+    });
+
+    it("skips dirty tabs", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+      store.set_dirty("a.md", true);
+      store.open_tab(np("b.md"), "b");
+      store.open_tab(np("c.md"), "c");
+      store.activate_tab("c.md");
+
+      expect(store.find_evictable_tab()?.id).toBe("b.md");
+    });
+
+    it("skips the active tab", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+      store.open_tab(np("b.md"), "b");
+      store.activate_tab("a.md");
+
+      expect(store.find_evictable_tab()?.id).toBe("b.md");
+    });
+
+    it("returns null when all tabs are dirty or pinned", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+      store.set_dirty("a.md", true);
+      store.open_tab(np("b.md"), "b");
+      store.pin_tab("b.md");
+      store.activate_tab("a.md");
+
+      expect(store.find_evictable_tab()).toBeNull();
+    });
+
+    it("returns null when only active tab remains", () => {
+      const store = new TabStore();
+      store.open_tab(np("a.md"), "a");
+
+      expect(store.find_evictable_tab()).toBeNull();
+    });
+
+    it("returns null when empty", () => {
+      const store = new TabStore();
+
+      expect(store.find_evictable_tab()).toBeNull();
+    });
+  });
+
   describe("closed tab history", () => {
     it("pushes and pops closed tab entries", () => {
       const store = new TabStore();

@@ -516,6 +516,47 @@
   font-weight: inherit;
 }
 
+/* ── Code block copy button ── */
+
+.ProseMirror pre .code-block-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--radius) * 0.5);
+  background: color-mix(in oklch, var(--foreground) 8%, transparent);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-normal) var(--ease-default),
+    background var(--duration-fast) var(--ease-default);
+}
+
+.ProseMirror pre:hover .code-block-copy {
+  opacity: 1;
+}
+
+.ProseMirror pre .code-block-copy:hover {
+  background: color-mix(in oklch, var(--foreground) 15%, transparent);
+  color: var(--foreground);
+}
+
+.ProseMirror pre .code-block-copy--copied {
+  color: var(--syntax-selector);
+}
+
+.ProseMirror pre .code-block-copy svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
 /* ============================================
    SYNTAX HIGHLIGHTING (PRISM)
    ============================================ */

@@ -5,23 +5,41 @@ import type { NotePath } from "$lib/types/ids";
 import { parent_folder_path } from "$lib/utils/path";
 import { toast } from "svelte-sonner";
 
+export function ensure_tab_capacity(input: ActionRegistrationInput): boolean {
+  const { stores, services } = input;
+  const max = stores.ui.editor_settings.max_open_tabs;
+  if (stores.tab.tabs.length < max) return true;
+
+  const victim = stores.tab.find_evictable_tab();
+  if (!victim) {
+    toast.error("All tabs have unsaved changes. Save or close a tab first.");
+    return false;
+  }
+
+  const snapshot = stores.tab.get_snapshot(victim.id);
+  stores.tab.push_closed_history({
+    note_path: victim.note_path,
+    title: victim.title,
+    scroll_top: snapshot?.scroll_top ?? 0,
+    cursor: snapshot?.cursor ?? null,
+  });
+  stores.tab.close_tab(victim.id);
+  services.editor.close_buffer?.(victim.note_path);
+  return true;
+}
+
 export function try_open_tab(
-  stores: ActionRegistrationInput["stores"],
+  input: ActionRegistrationInput,
   note_path: NotePath,
   title: string,
 ): Tab | null {
+  const { stores } = input;
   const existing = stores.tab.find_tab_by_path(note_path);
   if (existing) {
     stores.tab.activate_tab(existing.id);
     return existing;
   }
-  const max = stores.ui.editor_settings.max_open_tabs;
-  if (stores.tab.tabs.length >= max) {
-    toast.error(
-      `Tab limit reached (max ${String(max)}). Close a tab to open a new one.`,
-    );
-    return null;
-  }
+  if (!ensure_tab_capacity(input)) return null;
   return stores.tab.open_tab(note_path, title);
 }
 
@@ -197,7 +215,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       if (!entry) return;
 
       await capture_active_tab_snapshot(input);
-      const tab = try_open_tab(stores, entry.note_path, entry.title);
+      const tab = try_open_tab(input, entry.note_path, entry.title);
       if (!tab) return;
 
       const result = await services.note.open_note(entry.note_path, false);

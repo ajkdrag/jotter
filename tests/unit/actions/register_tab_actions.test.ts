@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { ActionRegistry } from "$lib/actions/registry";
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import { register_folder_actions } from "$lib/actions/register_folder_actions";
-import { register_tab_actions } from "$lib/actions/register_tab_actions";
+import {
+  register_tab_actions,
+  ensure_tab_capacity,
+} from "$lib/actions/register_tab_actions";
 import { UIStore } from "$lib/stores/ui_store.svelte";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { NotesStore } from "$lib/stores/notes_store.svelte";
@@ -448,6 +451,84 @@ describe("register_tab_actions", () => {
 
       expect(stores.ui.tab_close_confirm.open).toBe(false);
       expect(stores.tab.tabs).toHaveLength(1);
+    });
+  });
+
+  describe("ensure_tab_capacity", () => {
+    it("returns true when under limit", () => {
+      const { stores, services } = create_tab_actions_harness();
+      stores.ui.editor_settings = {
+        ...stores.ui.editor_settings,
+        max_open_tabs: 5,
+      };
+      stores.tab.open_tab(np("a.md"), "a");
+
+      const result = ensure_tab_capacity({
+        registry: new ActionRegistry(),
+        stores,
+        services: services as never,
+        default_mount_config: {
+          reset_app_state: true,
+          bootstrap_default_vault_path: null,
+        },
+      });
+
+      expect(result).toBe(true);
+      expect(stores.tab.tabs).toHaveLength(1);
+    });
+
+    it("evicts oldest clean tab when at limit", () => {
+      const { stores, services } = create_tab_actions_harness();
+      stores.ui.editor_settings = {
+        ...stores.ui.editor_settings,
+        max_open_tabs: 3,
+      };
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.open_tab(np("c.md"), "c");
+      stores.tab.activate_tab("c.md");
+
+      const result = ensure_tab_capacity({
+        registry: new ActionRegistry(),
+        stores,
+        services: services as never,
+        default_mount_config: {
+          reset_app_state: true,
+          bootstrap_default_vault_path: null,
+        },
+      });
+
+      expect(result).toBe(true);
+      expect(stores.tab.tabs).toHaveLength(2);
+      expect(stores.tab.find_tab_by_path(np("a.md"))).toBeNull();
+      expect(stores.tab.closed_tab_history).toHaveLength(1);
+      expect(stores.tab.closed_tab_history[0]?.note_path).toBe("a.md");
+    });
+
+    it("returns false when all tabs are dirty or pinned", () => {
+      const { stores, services } = create_tab_actions_harness();
+      stores.ui.editor_settings = {
+        ...stores.ui.editor_settings,
+        max_open_tabs: 2,
+      };
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.set_dirty("a.md", true);
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.pin_tab("b.md");
+      stores.tab.activate_tab("a.md");
+
+      const result = ensure_tab_capacity({
+        registry: new ActionRegistry(),
+        stores,
+        services: services as never,
+        default_mount_config: {
+          reset_app_state: true,
+          bootstrap_default_vault_path: null,
+        },
+      });
+
+      expect(result).toBe(false);
+      expect(stores.tab.tabs).toHaveLength(2);
     });
   });
 

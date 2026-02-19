@@ -2,6 +2,7 @@ import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
 import {
   capture_active_tab_snapshot,
+  ensure_tab_capacity,
   try_open_tab,
 } from "$lib/actions/register_tab_actions";
 import { clear_folder_filetree_state } from "$lib/actions/filetree_state";
@@ -132,13 +133,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
           ? folder_prefix
           : stores.ui.selected_folder_path;
 
-      const max = stores.ui.editor_settings.max_open_tabs;
-      if (stores.tab.tabs.length >= max) {
-        toast.error(
-          `Tab limit reached (max ${String(max)}). Close a tab to open a new one.`,
-        );
-        return;
-      }
+      if (!ensure_tab_capacity(input)) return;
 
       await capture_active_tab_snapshot(input);
 
@@ -179,13 +174,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
         return;
       }
 
-      const max = stores.ui.editor_settings.max_open_tabs;
-      if (stores.tab.tabs.length >= max) {
-        toast.error(
-          `Tab limit reached (max ${String(max)}). Close a tab to open a new one.`,
-        );
-        return;
-      }
+      if (!ensure_tab_capacity(input)) return;
 
       await capture_active_tab_snapshot(input);
 
@@ -215,15 +204,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       const path_str = String(note_path);
 
       const existing_tab = stores.tab.find_tab_by_path(path_str as NotePath);
-      if (!existing_tab) {
-        const max = stores.ui.editor_settings.max_open_tabs;
-        if (stores.tab.tabs.length >= max) {
-          toast.error(
-            `Tab limit reached (max ${String(max)}). Close a tab to open a new one.`,
-          );
-          return;
-        }
-      }
+      if (!existing_tab && !ensure_tab_capacity(input)) return;
 
       await capture_active_tab_snapshot(input);
 
@@ -231,7 +212,7 @@ export function register_note_actions(input: ActionRegistrationInput) {
       if (result.status === "opened") {
         const opened_path = stores.editor.open_note?.meta.path ?? path_str;
         const title = note_name_from_path(opened_path);
-        const tab = try_open_tab(stores, opened_path as NotePath, title);
+        const tab = try_open_tab(input, opened_path as NotePath, title);
         if (!tab) return;
         stores.ui.set_selected_folder_path(result.selected_folder_path);
         clear_folder_filetree_state(input, result.selected_folder_path);

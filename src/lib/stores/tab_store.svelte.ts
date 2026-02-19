@@ -344,6 +344,14 @@ export class TabStore {
     return entry;
   }
 
+  find_evictable_tab(): Tab | null {
+    return (
+      this.tabs.find(
+        (t) => !t.is_pinned && !t.is_dirty && t.id !== this.active_tab_id,
+      ) ?? null
+    );
+  }
+
   get_dirty_tabs(): Tab[] {
     return this.tabs.filter((t) => t.is_dirty);
   }
