@@ -16,6 +16,7 @@
   import VersionHistoryDialog from "$lib/components/version_history_dialog.svelte";
   import CheckpointDialog from "$lib/components/checkpoint_dialog.svelte";
   import HotkeyRecorderDialog from "$lib/components/hotkey_recorder_dialog.svelte";
+  import HelpDialog from "$lib/components/help_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem } from "$lib/types/search";
@@ -393,6 +394,12 @@
     void action_registry.execute(ACTION_IDS.git_confirm_checkpoint)}
   on_cancel={() =>
     void action_registry.execute(ACTION_IDS.git_cancel_checkpoint)}
+/>
+
+<HelpDialog
+  open={stores.ui.help_dialog.open}
+  hotkeys_config={stores.ui.hotkeys_config}
+  on_close={() => void action_registry.execute(ACTION_IDS.help_close)}
 />
 
 <HotkeyRecorderDialog

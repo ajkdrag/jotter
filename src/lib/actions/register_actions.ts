@@ -10,6 +10,7 @@ import { register_find_in_file_actions } from "$lib/actions/register_find_in_fil
 import { register_tab_actions } from "$lib/actions/register_tab_actions";
 import { register_git_actions } from "$lib/actions/register_git_actions";
 import { register_hotkey_actions } from "$lib/actions/register_hotkey_actions";
+import { register_help_actions } from "$lib/actions/register_help_actions";
 
 export function register_actions(input: ActionRegistrationInput) {
   register_app_actions(input);
@@ -23,4 +24,5 @@ export function register_actions(input: ActionRegistrationInput) {
   register_tab_actions(input);
   register_git_actions(input);
   register_hotkey_actions(input);
+  register_help_actions(input);
 }

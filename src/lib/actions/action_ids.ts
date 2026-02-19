@@ -73,6 +73,9 @@ export const ACTION_IDS = {
   ui_open_vault_dashboard: "ui.open_vault_dashboard",
   ui_close_vault_dashboard: "ui.close_vault_dashboard",
 
+  help_open: "help.open",
+  help_close: "help.close",
+
   settings_open: "settings.open",
   settings_close: "settings.close",
   settings_update: "settings.update",

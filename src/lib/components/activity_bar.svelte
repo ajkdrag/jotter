@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { Files, LayoutDashboard, Settings, Star } from "@lucide/svelte";
+  import {
+    Files,
+    LayoutDashboard,
+    Settings,
+    Star,
+    CircleHelp,
+  } from "@lucide/svelte";
 
   type SidebarView = "explorer" | "dashboard" | "starred";
 
@@ -9,6 +15,7 @@
     on_open_explorer: () => void;
     on_open_dashboard: () => void;
     on_open_starred: () => void;
+    on_open_help: () => void;
     on_open_settings: () => void;
   };
 
@@ -18,6 +25,7 @@
     on_open_explorer,
     on_open_dashboard,
     on_open_starred,
+    on_open_help,
     on_open_settings,
   }: Props = $props();
 </script>
@@ -62,6 +70,14 @@
   </div>
 
   <div class="ActivityBar__section">
+    <button
+      type="button"
+      class="ActivityBar__button"
+      onclick={on_open_help}
+      aria-label="Help"
+    >
+      <CircleHelp class="ActivityBar__icon" />
+    </button>
     <button
       type="button"
       class="ActivityBar__button"

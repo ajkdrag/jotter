@@ -92,6 +92,10 @@ const INITIAL_CROSS_VAULT_OPEN_CONFIRM = {
   note_path: null,
 } as const;
 
+const INITIAL_HELP_DIALOG = {
+  open: false,
+} as const;
+
 const INITIAL_VAULT_DASHBOARD = {
   open: false,
 } as const;
@@ -261,6 +265,8 @@ export class UIStore {
     note_path: NotePath | null;
   }>({ ...INITIAL_CROSS_VAULT_OPEN_CONFIRM });
 
+  help_dialog = $state<{ open: boolean }>({ ...INITIAL_HELP_DIALOG });
+
   vault_dashboard = $state<{
     open: boolean;
   }>({ ...INITIAL_VAULT_DASHBOARD });
@@ -364,6 +370,7 @@ export class UIStore {
     this.filetree = initial_filetree();
     this.image_paste_dialog = { ...INITIAL_IMAGE_PASTE_DIALOG };
     this.cross_vault_open_confirm = { ...INITIAL_CROSS_VAULT_OPEN_CONFIRM };
+    this.help_dialog = { ...INITIAL_HELP_DIALOG };
     this.vault_dashboard = { ...INITIAL_VAULT_DASHBOARD };
     this.tab_close_confirm = { ...INITIAL_TAB_CLOSE_CONFIRM };
     this.version_history_dialog = { ...INITIAL_VERSION_HISTORY_DIALOG };

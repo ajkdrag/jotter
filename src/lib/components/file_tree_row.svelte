@@ -164,7 +164,6 @@
         </button>
       {/if}
     {:else}
-      <span class="TreeRow__spacer"></span>
       <File class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
       {#if is_starred}

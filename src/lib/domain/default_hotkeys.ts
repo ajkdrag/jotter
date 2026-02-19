@@ -11,6 +11,14 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
     category: "general",
   },
   {
+    action_id: ACTION_IDS.help_open,
+    key: "F1",
+    phase: "capture",
+    label: "Open Help",
+    description: "Open the help dialog",
+    category: "general",
+  },
+  {
     action_id: ACTION_IDS.omnibar_open,
     key: "CmdOrCtrl+O",
     phase: "capture",
@@ -28,7 +36,7 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
   },
   {
     action_id: ACTION_IDS.ui_toggle_sidebar,
-    key: "CmdOrCtrl+B",
+    key: "CmdOrCtrl+Shift+B",
     phase: "capture",
     label: "Toggle Sidebar",
     description: "Show or hide the sidebar",

@@ -373,6 +373,7 @@
             "dashboard",
           );
         }}
+        on_open_help={() => void action_registry.execute(ACTION_IDS.help_open)}
         on_open_settings={() =>
           void action_registry.execute(ACTION_IDS.settings_open)}
       />

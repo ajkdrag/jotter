@@ -147,7 +147,7 @@ describe("HotkeyService", () => {
       const sidebar = config.bindings.find(
         (b) => b.action_id === "ui.toggle_sidebar",
       );
-      expect(sidebar?.key).toBe("CmdOrCtrl+B");
+      expect(sidebar?.key).toBe("CmdOrCtrl+Shift+B");
     });
 
     it("ignores overrides for unknown action_ids (deprecated shortcuts)", () => {
@@ -250,7 +250,7 @@ describe("HotkeyService", () => {
     it("detects conflict with existing binding", () => {
       const config = service.merge_config(DEFAULT_HOTKEYS, []);
       const conflict = service.detect_conflict(
-        "CmdOrCtrl+B",
+        "CmdOrCtrl+Shift+B",
         "capture",
         "note.request_save",
         config,
