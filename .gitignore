@@ -10,7 +10,6 @@ build/
 dist/
 .DS_Store
 src-tauri/target/
-src-tauri/Cargo.lock
 .pnpm-store/
 devlog/
 .design-engineer/
