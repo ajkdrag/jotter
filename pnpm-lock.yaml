@@ -20,9 +20,6 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.11
         version: 6.39.14
-      '@journeyapps/wa-sqlite':
-        specifier: 1.4.1
-        version: 1.4.1
       '@milkdown/kit':
         specifier: ^7.18.0
         version: 7.18.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.4)(@codemirror/view@6.39.14)(typescript@5.9.3)
@@ -561,9 +558,6 @@ packages:
 
   '@internationalized/date@3.11.0':
     resolution: {integrity: sha512-BOx5huLAWhicM9/ZFs84CzP+V3gBW6vlpM02yzsdYC7TGlZJX1OJiEEHcSayF00Z+3jLlm4w79amvSt6RqKN3Q==}
-
-  '@journeyapps/wa-sqlite@1.4.1':
-    resolution: {integrity: sha512-xAWys6opteBpWaKmHG1pZvBmQViEKFK/46YVEkYlWxa4F9VAG0gIjCpfIdcQvXdqZf7X3ByADGmNBcR/cJ1DqQ==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -3765,8 +3759,6 @@ snapshots:
   '@internationalized/date@3.11.0':
     dependencies:
       '@swc/helpers': 0.5.18
-
-  '@journeyapps/wa-sqlite@1.4.1': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
