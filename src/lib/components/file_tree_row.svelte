@@ -112,6 +112,7 @@
   <div
     class="TreeRow"
     class:TreeRow--selected={is_selected}
+    class:TreeRow--folder={node.is_folder}
     style="--tree-depth: {node.depth}"
     role="treeitem"
     tabindex="0"
@@ -164,6 +165,7 @@
         </button>
       {/if}
     {:else}
+      <span class="TreeRow__spacer"></span>
       <File class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
       {#if is_starred}
@@ -322,6 +324,7 @@
 
 <style>
   .TreeRow {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-1);
@@ -339,6 +342,24 @@
     transition:
       background-color var(--duration-fast) var(--ease-default),
       color var(--duration-fast) var(--ease-default);
+  }
+
+  .TreeRow::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(
+      var(--size-tree-base-padding) + var(--size-icon-md) / 2
+    );
+    width: calc(var(--tree-depth) * var(--size-tree-indent));
+    pointer-events: none;
+    background-image: linear-gradient(
+      to right,
+      var(--border-subtle) 0,
+      var(--border-subtle) 1px,
+      transparent 1px
+    );
+    background-size: var(--size-tree-indent) 100%;
   }
 
   .TreeRow:hover {
@@ -404,6 +425,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .TreeRow--folder .TreeRow__label {
+    font-weight: 500;
   }
 
   .TreeRow__label--muted {
