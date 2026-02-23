@@ -72,7 +72,9 @@ export function create_app_context(input: {
     stores.editor,
     stores.tab,
     now_ms,
-    (path) => editor_service.close_buffer(path),
+    (path) => {
+      editor_service.close_buffer(path);
+    },
   );
 
   const note_service = new NoteService(

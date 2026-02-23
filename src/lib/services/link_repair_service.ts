@@ -100,30 +100,25 @@ export class LinkRepairService {
 
       const rewritten = as_markdown_text(result.markdown);
 
-      if (open_note && is_open && open_note.is_dirty) {
+      if (is_open) {
+        const repair_buffer_id = `${open_note.buffer_id}:repair-links:${String(this.now_ms())}`;
         this.editor_store.set_open_note({
           ...open_note,
           markdown: rewritten,
-          buffer_id: `${open_note.buffer_id}:repair-links:${String(this.now_ms())}`,
-          is_dirty: true,
+          buffer_id: repair_buffer_id,
+          is_dirty: open_note.is_dirty,
         });
+        if (!open_note.is_dirty) {
+          await this.notes_port.write_note(vault_id, note_path, rewritten);
+          await this.index_port.upsert_note(vault_id, note_path);
+        }
         return;
       }
 
       await this.notes_port.write_note(vault_id, note_path, rewritten);
       await this.index_port.upsert_note(vault_id, note_path);
-
-      if (open_note && is_open) {
-        this.editor_store.set_open_note({
-          ...open_note,
-          markdown: rewritten,
-          buffer_id: `${open_note.buffer_id}:repair-links:${String(this.now_ms())}`,
-          is_dirty: false,
-        });
-      } else {
-        this.tab_store.invalidate_cache_by_path(note_path);
-        this.close_editor_buffer(note_path);
-      }
+      this.tab_store.invalidate_cache_by_path(note_path);
+      this.close_editor_buffer(note_path);
     } catch (error) {
       log.warn("Rewrite links failed", {
         note_path,

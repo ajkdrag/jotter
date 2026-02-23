@@ -11,17 +11,36 @@ import {
 import type { SearchPort } from "$lib/ports/search_port";
 
 const VAULT_ID = create_test_vault().id;
+const SOURCE_PATH = "docs/source.md";
+const RENAME_MAP = new Map([["docs/old.md", "docs/new.md"]]);
 
-function create_mock_search_port(overrides?: Partial<SearchPort>) {
+const SOURCE_NOTE = {
+  id: as_note_path(SOURCE_PATH),
+  path: as_note_path(SOURCE_PATH),
+  name: "source",
+  title: "source",
+  mtime_ms: 0,
+  size_bytes: 0,
+};
+
+const BACKLINKS_SNAPSHOT = {
+  backlinks: [{ path: SOURCE_PATH }],
+  outlinks: [],
+  orphan_links: [],
+};
+
+const EMPTY_SNAPSHOT = {
+  backlinks: [],
+  outlinks: [],
+  orphan_links: [],
+};
+
+function create_mock_search_port(overrides?: Partial<SearchPort>): SearchPort {
   return {
     search_notes: vi.fn(),
     suggest_wiki_links: vi.fn(),
     suggest_planned_links: vi.fn(),
-    get_note_links_snapshot: vi.fn().mockResolvedValue({
-      backlinks: [],
-      outlinks: [],
-      orphan_links: [],
-    }),
+    get_note_links_snapshot: vi.fn().mockResolvedValue(EMPTY_SNAPSHOT),
     extract_local_note_links: vi.fn(),
     rewrite_note_links: vi
       .fn()
@@ -32,6 +51,12 @@ function create_mock_search_port(overrides?: Partial<SearchPort>) {
   } as unknown as SearchPort;
 }
 
+function rewrite_always_changed() {
+  return vi
+    .fn()
+    .mockResolvedValue({ markdown: "See [Old](new.md)", changed: true });
+}
+
 describe("LinkRepairService", () => {
   it("rewrites inbound backlink sources on disk", async () => {
     const editor_store = new EditorStore();
@@ -39,50 +64,24 @@ describe("LinkRepairService", () => {
     const notes_port = create_mock_notes_port();
     const index_port = create_mock_index_port();
 
-    const source_note = {
-      id: as_note_path("docs/source.md"),
-      path: as_note_path("docs/source.md"),
-      name: "source",
-      title: "source",
-      mtime_ms: 0,
-      size_bytes: 0,
-    };
-
     notes_port.read_note = vi
       .fn()
       .mockImplementation((_vid: unknown, note_id: NoteId) => {
-        if (String(note_id) === "docs/source.md") {
+        if (String(note_id) === SOURCE_PATH) {
           return Promise.resolve({
-            meta: source_note,
+            meta: SOURCE_NOTE,
             markdown: as_markdown_text("See [Old](old.md)"),
           });
         }
         return Promise.resolve({
-          meta: { ...source_note, id: note_id, path: as_note_path(note_id) },
+          meta: { ...SOURCE_NOTE, id: note_id, path: as_note_path(note_id) },
           markdown: as_markdown_text("# Content"),
         });
       });
 
     const search_port = create_mock_search_port({
-      get_note_links_snapshot: vi.fn().mockResolvedValue({
-        backlinks: [{ path: "docs/source.md" }],
-        outlinks: [],
-        orphan_links: [],
-      }),
-      rewrite_note_links: vi
-        .fn()
-        .mockImplementation(
-          (
-            _markdown: string,
-            _old: string,
-            _new: string,
-            _map: Record<string, string>,
-          ) =>
-            Promise.resolve({
-              markdown: "See [Old](new.md)",
-              changed: true,
-            }),
-        ),
+      get_note_links_snapshot: vi.fn().mockResolvedValue(BACKLINKS_SNAPSHOT),
+      rewrite_note_links: rewrite_always_changed(),
     });
 
     const service = new LinkRepairService(
@@ -94,17 +93,16 @@ describe("LinkRepairService", () => {
       () => 1,
     );
 
-    const path_map = new Map([["docs/old.md", "docs/new.md"]]);
-    await service.repair_links(VAULT_ID, path_map);
+    await service.repair_links(VAULT_ID, RENAME_MAP);
 
     expect(notes_port._calls.write_note).toContainEqual({
       vault_id: VAULT_ID,
-      note_id: as_note_path("docs/source.md"),
+      note_id: as_note_path(SOURCE_PATH),
       markdown: as_markdown_text("See [Old](new.md)"),
     });
     expect(index_port._calls.upsert_note).toContainEqual({
       vault_id: VAULT_ID,
-      note_id: as_note_path("docs/source.md"),
+      note_id: as_note_path(SOURCE_PATH),
     });
   });
 
@@ -114,28 +112,15 @@ describe("LinkRepairService", () => {
     const notes_port = create_mock_notes_port();
     const index_port = create_mock_index_port();
 
-    const source_note = {
-      id: as_note_path("docs/source.md"),
-      path: as_note_path("docs/source.md"),
-      name: "source",
-      title: "source",
-      mtime_ms: 0,
-      size_bytes: 0,
-    };
-
     editor_store.set_open_note({
-      meta: source_note,
+      meta: SOURCE_NOTE,
       markdown: as_markdown_text("See [Old](old.md)"),
       buffer_id: "source-buffer",
       is_dirty: true,
     });
 
     const search_port = create_mock_search_port({
-      get_note_links_snapshot: vi.fn().mockResolvedValue({
-        backlinks: [{ path: "docs/source.md" }],
-        outlinks: [],
-        orphan_links: [],
-      }),
+      get_note_links_snapshot: vi.fn().mockResolvedValue(BACKLINKS_SNAPSHOT),
       rewrite_note_links: vi
         .fn()
         .mockImplementation(
@@ -165,8 +150,7 @@ describe("LinkRepairService", () => {
       () => 1,
     );
 
-    const path_map = new Map([["docs/old.md", "docs/new.md"]]);
-    await service.repair_links(VAULT_ID, path_map);
+    await service.repair_links(VAULT_ID, RENAME_MAP);
 
     expect(editor_store.open_note?.markdown).toBe(
       as_markdown_text("See [Old](new.md)"),
@@ -183,39 +167,22 @@ describe("LinkRepairService", () => {
     const index_port = create_mock_index_port();
     const close_editor_buffer = vi.fn();
 
-    const source_note = {
-      id: as_note_path("docs/source.md"),
-      path: as_note_path("docs/source.md"),
-      name: "source",
-      title: "source",
-      mtime_ms: 0,
-      size_bytes: 0,
-    };
-
-    const source_tab = tab_store.open_tab(source_note.path, source_note.title);
+    const source_tab = tab_store.open_tab(SOURCE_NOTE.path, SOURCE_NOTE.title);
     tab_store.set_cached_note(source_tab.id, {
-      meta: source_note,
+      meta: SOURCE_NOTE,
       markdown: as_markdown_text("See [Old](old.md)"),
       buffer_id: "source-buffer",
       is_dirty: false,
     });
 
     notes_port.read_note = vi.fn().mockResolvedValue({
-      meta: source_note,
+      meta: SOURCE_NOTE,
       markdown: as_markdown_text("See [Old](old.md)"),
     });
 
     const search_port = create_mock_search_port({
-      get_note_links_snapshot: vi.fn().mockResolvedValue({
-        backlinks: [{ path: "docs/source.md" }],
-        outlinks: [],
-        orphan_links: [],
-      }),
-      rewrite_note_links: vi
-        .fn()
-        .mockImplementation(() =>
-          Promise.resolve({ markdown: "See [Old](new.md)", changed: true }),
-        ),
+      get_note_links_snapshot: vi.fn().mockResolvedValue(BACKLINKS_SNAPSHOT),
+      rewrite_note_links: rewrite_always_changed(),
     });
 
     const service = new LinkRepairService(
@@ -228,13 +195,10 @@ describe("LinkRepairService", () => {
       close_editor_buffer,
     );
 
-    const path_map = new Map([["docs/old.md", "docs/new.md"]]);
-    await service.repair_links(VAULT_ID, path_map);
+    await service.repair_links(VAULT_ID, RENAME_MAP);
 
     expect(tab_store.get_cached_note(source_tab.id)).toBeNull();
-    expect(close_editor_buffer).toHaveBeenCalledWith(
-      as_note_path("docs/source.md"),
-    );
+    expect(close_editor_buffer).toHaveBeenCalledWith(as_note_path(SOURCE_PATH));
   });
 
   it("does nothing when path map has no backlinks", async () => {
@@ -245,11 +209,7 @@ describe("LinkRepairService", () => {
 
     const rewrite_note_links = vi.fn();
     const search_port = create_mock_search_port({
-      get_note_links_snapshot: vi.fn().mockResolvedValue({
-        backlinks: [],
-        outlinks: [],
-        orphan_links: [],
-      }),
+      get_note_links_snapshot: vi.fn().mockResolvedValue(EMPTY_SNAPSHOT),
       rewrite_note_links,
     });
 
@@ -262,8 +222,7 @@ describe("LinkRepairService", () => {
       () => 1,
     );
 
-    const path_map = new Map([["docs/old.md", "docs/new.md"]]);
-    await service.repair_links(VAULT_ID, path_map);
+    await service.repair_links(VAULT_ID, RENAME_MAP);
 
     expect(notes_port._calls.write_note).toEqual([]);
     expect(rewrite_note_links).toHaveBeenCalled();
