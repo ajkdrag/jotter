@@ -101,11 +101,6 @@ describe("VaultService", () => {
       delete_vault_setting: vi.fn(),
     };
 
-    const theme_port = {
-      get_theme: vi.fn().mockReturnValue("system"),
-      set_theme: vi.fn(),
-    };
-
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();
     const editor_store = new EditorStore();
@@ -119,7 +114,6 @@ describe("VaultService", () => {
       watcher_port as never,
       settings_port as never,
       vault_settings_port as never,
-      theme_port as never,
       vault_store,
       notes_store,
       editor_store,
@@ -204,11 +198,6 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn().mockResolvedValue(undefined),
         delete_vault_setting: vi.fn(),
       };
-      const theme_port = {
-        get_theme: vi.fn().mockReturnValue("system"),
-        set_theme: vi.fn(),
-      };
-
       const service = new VaultService(
         vault_port as never,
         notes_port as never,
@@ -216,7 +205,7 @@ describe("VaultService", () => {
         watcher_port as never,
         settings_port as never,
         vault_settings_port as never,
-        theme_port as never,
+
         new VaultStore(),
         new NotesStore(),
         new EditorStore(),
@@ -318,10 +307,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn().mockResolvedValue(undefined),
         delete_vault_setting: vi.fn(),
       } as never,
-      {
-        get_theme: vi.fn().mockReturnValue("system"),
-        set_theme: vi.fn(),
-      } as never,
+
       new VaultStore(),
       new NotesStore(),
       new EditorStore(),
@@ -370,7 +356,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn().mockResolvedValue(undefined),
         delete_vault_setting: vi.fn(),
       } as never,
-      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+
       new VaultStore(),
       new NotesStore(),
       new EditorStore(),
@@ -452,10 +438,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn().mockResolvedValue(undefined),
         delete_vault_setting: vi.fn(),
       } as never,
-      {
-        get_theme: vi.fn().mockReturnValue("system"),
-        set_theme: vi.fn(),
-      } as never,
+
       new VaultStore(),
       new NotesStore(),
       new EditorStore(),
@@ -539,10 +522,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn().mockResolvedValue(undefined),
         delete_vault_setting: vi.fn(),
       } as never,
-      {
-        get_theme: vi.fn().mockReturnValue("system"),
-        set_theme: vi.fn(),
-      } as never,
+
       new VaultStore(),
       new NotesStore(),
       new EditorStore(),
@@ -628,11 +608,6 @@ describe("VaultService", () => {
       set_vault_setting: vi.fn().mockResolvedValue(undefined),
       delete_vault_setting: vi.fn(),
     };
-    const theme_port = {
-      get_theme: vi.fn().mockReturnValue("system"),
-      set_theme: vi.fn(),
-    };
-
     const service = new VaultService(
       vault_port as never,
       notes_port as never,
@@ -640,7 +615,7 @@ describe("VaultService", () => {
       watcher_port as never,
       settings_port as never,
       vault_settings_port as never,
-      theme_port as never,
+
       new VaultStore(),
       new NotesStore(),
       new EditorStore(),
@@ -711,7 +686,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn(),
         delete_vault_setting: vi.fn(),
       } as never,
-      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+
       vault_store,
       new NotesStore(),
       new EditorStore(),
@@ -790,10 +765,7 @@ describe("VaultService", () => {
           set_vault_setting: vi.fn().mockResolvedValue(undefined),
           delete_vault_setting: vi.fn(),
         } as never,
-        {
-          get_theme: vi.fn().mockReturnValue("system"),
-          set_theme: vi.fn(),
-        } as never,
+
         new VaultStore(),
         new NotesStore(),
         new EditorStore(),
@@ -891,7 +863,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn(),
         delete_vault_setting: vi.fn(),
       } as never,
-      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+
       vault_store,
       new NotesStore(),
       new EditorStore(),
@@ -961,7 +933,7 @@ describe("VaultService", () => {
         set_vault_setting: vi.fn(),
         delete_vault_setting: vi.fn(),
       } as never,
-      { get_theme: vi.fn(), set_theme: vi.fn() } as never,
+
       vault_store,
       new NotesStore(),
       new EditorStore(),

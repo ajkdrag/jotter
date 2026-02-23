@@ -15,6 +15,7 @@ import { ShellService } from "$lib/services/shell_service";
 import { TabService } from "$lib/services/tab_service";
 import { GitService } from "$lib/services/git_service";
 import { HotkeyService } from "$lib/services/hotkey_service";
+import { ThemeService } from "$lib/services/theme_service";
 import { LinkRepairService } from "$lib/services/link_repair_service";
 import { LinksService } from "$lib/services/links_service";
 import { mount_reactors } from "$lib/reactors";
@@ -139,6 +140,12 @@ export function create_app_context(input: {
     now_ms,
   );
 
+  const theme_service = new ThemeService(
+    input.ports.settings,
+    stores.op,
+    now_ms,
+  );
+
   const vault_service = new VaultService(
     input.ports.vault,
     input.ports.notes,
@@ -146,7 +153,6 @@ export function create_app_context(input: {
     input.ports.watcher,
     input.ports.settings,
     input.ports.vault_settings,
-    input.ports.theme,
     stores.vault,
     stores.notes,
     stores.editor,
@@ -179,6 +185,7 @@ export function create_app_context(input: {
       tab: tab_service,
       git: git_service,
       hotkey: hotkey_service,
+      theme: theme_service,
     },
     default_mount_config: input.default_mount_config,
   });

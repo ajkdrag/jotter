@@ -52,6 +52,9 @@ export const code_block_copy_plugin = $prose(
       props: {
         nodeViews: {
           code_block: (node) => {
+            const wrapper = document.createElement("div");
+            wrapper.className = "code-block-wrapper";
+
             const pre = document.createElement("pre");
             const code = document.createElement("code");
 
@@ -60,10 +63,11 @@ export const code_block_copy_plugin = $prose(
             }
 
             pre.appendChild(code);
-            pre.appendChild(create_copy_button(code));
+            wrapper.appendChild(pre);
+            wrapper.appendChild(create_copy_button(code));
 
             return {
-              dom: pre,
+              dom: wrapper,
               contentDOM: code,
               update: (updated) => {
                 if (updated.type.name !== "code_block") return false;

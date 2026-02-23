@@ -247,7 +247,7 @@
   --z-tooltip: 60;
 }
 
-.dark {
+[data-color-scheme="dark"] {
   /* Inverted spruce scale for dark mode */
   --teal-50: oklch(0.22 0.04 var(--accent-hue));
   --teal-100: oklch(0.26 0.05 var(--accent-hue));

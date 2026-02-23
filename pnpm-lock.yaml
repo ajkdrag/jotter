@@ -62,9 +62,6 @@ importers:
       lucide-static:
         specifier: ^0.563.0
         version: 0.563.0
-      mode-watcher:
-        specifier: ^1.1.0
-        version: 1.1.0(svelte@5.51.3)
       prismjs:
         specifier: ^1.30.0
         version: 1.30.0
@@ -2455,11 +2452,6 @@ packages:
   minimisted@2.0.1:
     resolution: {integrity: sha512-1oPjfuLQa2caorJUM8HV8lGgWCc0qqAO1MNv/k05G4qslmsndV/5WdNZrqCiyqiz3wohia2Ij2B7w2Dr7/IyrA==}
 
-  mode-watcher@1.1.0:
-    resolution: {integrity: sha512-mUT9RRGPDYenk59qJauN1rhsIMKBmWA3xMF+uRwE8MW/tjhaDSCCARqkSuDTq8vr4/2KcAxIGVjACxTjdk5C3g==}
-    peerDependencies:
-      svelte: ^5.27.0
-
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
     engines: {node: '>=4'}
@@ -2757,11 +2749,6 @@ packages:
     peerDependencies:
       svelte: ^5.7.0
 
-  runed@0.25.0:
-    resolution: {integrity: sha512-7+ma4AG9FT2sWQEA0Egf6mb7PBT2vHyuHail1ie8ropfSjvZGtEAx8YTmUjv/APCsdRRxEVvArNjALk9zFSOrg==}
-    peerDependencies:
-      svelte: ^5.7.0
-
   runed@0.28.0:
     resolution: {integrity: sha512-k2xx7RuO9hWcdd9f+8JoBeqWtYrm5CALfgpkg2YDB80ds/QE4w0qqu34A7fqiAwiBBSBQOid7TLxwxVC27ymWQ==}
     peerDependencies:
@@ -2961,12 +2948,6 @@ packages:
     engines: {node: '>=18', pnpm: '>=8.7.0'}
     peerDependencies:
       svelte: ^5.0.0-next.126
-
-  svelte-toolbelt@0.7.1:
-    resolution: {integrity: sha512-HcBOcR17Vx9bjaOceUvxkY3nGmbBmCBBbuWLLEWO6jtmWH8f/QoWmbyUfQZrpDINH39en1b8mptfPQT9VKQ1xQ==}
-    engines: {node: '>=18', pnpm: '>=8.7.0'}
-    peerDependencies:
-      svelte: ^5.0.0
 
   svelte-toolbelt@0.9.3:
     resolution: {integrity: sha512-HCSWxCtVmv+c6g1ACb8LTwHVbDqLKJvHpo6J8TaqwUme2hj9ATJCpjCPNISR1OCq2Q4U1KT41if9ON0isINQZw==}
@@ -5931,12 +5912,6 @@ snapshots:
     dependencies:
       minimist: 1.2.8
 
-  mode-watcher@1.1.0(svelte@5.51.3):
-    dependencies:
-      runed: 0.25.0(svelte@5.51.3)
-      svelte: 5.51.3
-      svelte-toolbelt: 0.7.1(svelte@5.51.3)
-
   mri@1.2.0: {}
 
   mrmime@2.0.1: {}
@@ -6307,11 +6282,6 @@ snapshots:
       esm-env: 1.2.2
       svelte: 5.51.3
 
-  runed@0.25.0(svelte@5.51.3):
-    dependencies:
-      esm-env: 1.2.2
-      svelte: 5.51.3
-
   runed@0.28.0(svelte@5.51.3):
     dependencies:
       esm-env: 1.2.2
@@ -6550,13 +6520,6 @@ snapshots:
   svelte-toolbelt@0.5.0(svelte@5.51.3):
     dependencies:
       clsx: 2.1.1
-      style-to-object: 1.0.14
-      svelte: 5.51.3
-
-  svelte-toolbelt@0.7.1(svelte@5.51.3):
-    dependencies:
-      clsx: 2.1.1
-      runed: 0.23.4(svelte@5.51.3)
       style-to-object: 1.0.14
       svelte: 5.51.3
 

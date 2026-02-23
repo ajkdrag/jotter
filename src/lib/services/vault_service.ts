@@ -4,7 +4,6 @@ import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
 import type { WatcherPort } from "$lib/ports/watcher_port";
 import type { SettingsPort } from "$lib/ports/settings_port";
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
-import type { ThemePort } from "$lib/ports/theme_port";
 import {
   as_note_path,
   as_vault_id,
@@ -26,7 +25,6 @@ import {
   type EditorSettings,
 } from "$lib/types/editor_settings";
 import type {
-  ThemeSetResult,
   VaultChoosePathResult,
   VaultInitializeResult,
   VaultOpenResult,
@@ -34,7 +32,6 @@ import type {
 import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
-import type { ThemeMode } from "$lib/types/theme";
 import { PAGE_SIZE } from "$lib/constants/pagination";
 import type { IndexChange } from "$lib/ports/workspace_index_port";
 import type { VaultFsEvent } from "$lib/types/watcher";
@@ -66,7 +63,6 @@ export class VaultService {
     private readonly watcher_port: WatcherPort,
     private readonly settings_port: SettingsPort,
     private readonly vault_settings_port: VaultSettingsPort,
-    private readonly theme_port: ThemePort,
     private readonly vault_store: VaultStore,
     private readonly notes_store: NotesStore,
     private readonly editor_store: EditorStore,
@@ -87,8 +83,6 @@ export class VaultService {
   private watcher_remove_paths_buffer = new Set<string>();
 
   async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
-    const theme = this.get_theme();
-
     if (config.reset_app_state) {
       this.reset_app_state();
     }
@@ -125,7 +119,6 @@ export class VaultService {
 
       return {
         status: "ready",
-        theme,
         has_vault: this.vault_store.vault !== null,
         editor_settings,
       };
@@ -135,14 +128,9 @@ export class VaultService {
       this.op_store.fail("app.startup", message);
       return {
         status: "error",
-        theme,
         error: message,
       };
     }
-  }
-
-  get_theme(): ThemeMode {
-    return this.theme_port.get_theme();
   }
 
   async choose_vault_path(): Promise<VaultChoosePathResult> {
@@ -181,24 +169,6 @@ export class VaultService {
         ),
       "Select vault failed",
     );
-  }
-
-  set_theme(theme: ThemeMode): ThemeSetResult {
-    this.op_store.start("theme.set", this.now_ms());
-
-    try {
-      this.theme_port.set_theme(theme);
-      this.op_store.succeed("theme.set");
-      return { status: "success" };
-    } catch (error) {
-      const message = error_message(error);
-      log.error("Set theme failed", { error: message });
-      this.op_store.fail("theme.set", message);
-      return {
-        status: "failed",
-        error: message,
-      };
-    }
   }
 
   async toggle_vault_pin(

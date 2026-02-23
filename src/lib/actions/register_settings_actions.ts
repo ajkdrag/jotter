@@ -15,7 +15,7 @@ export function register_settings_actions(input: ActionRegistrationInput) {
     label: "Open Settings",
     execute: async (arg: unknown) => {
       const category = (
-        typeof arg === "string" ? arg : "typography"
+        typeof arg === "string" ? arg : "theme"
       ) as SettingsCategory;
       const open_revision = ++settings_open_revision;
       const snapshot = { ...stores.ui.editor_settings };
@@ -78,6 +78,7 @@ export function register_settings_actions(input: ActionRegistrationInput) {
         hotkey_draft_overrides: saved_overrides,
         hotkey_draft_config: saved_config,
       };
+      void registry.execute(ACTION_IDS.theme_revert);
       services.settings.reset_load_operation();
       services.settings.reset_save_operation();
     },
@@ -125,6 +126,8 @@ export function register_settings_actions(input: ActionRegistrationInput) {
         ...stores.ui.settings_dialog,
         hotkey_draft_config: new_config,
       };
+
+      await registry.execute(ACTION_IDS.theme_save);
     },
   });
 }

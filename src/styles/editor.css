@@ -9,12 +9,21 @@
   --editor-max-width: min(85ch, 90%);
   --editor-spacing: 1.5rem;
   --editor-heading-color: var(--foreground);
+  --editor-heading-weight: 500;
+  --editor-bold-weight: 600;
+  --editor-bold-color: var(--foreground);
+  --editor-italic-color: inherit;
+  --editor-blockquote-text: var(--muted-foreground);
+  --editor-code-border: var(--border);
+  --editor-code-block-max-height: 24rem;
 
   /* Body text — warm gray, softer than foreground for comfortable reading */
   --editor-text: oklch(0.46 0.01 55);
   --editor-text-muted: var(--muted-foreground);
   --editor-code-bg: var(--muted);
   --editor-code-text: var(--foreground);
+  --editor-code-block-text: var(--editor-code-text);
+  --editor-code-inline-text: var(--editor-code-text);
   --editor-code-inline-bg: var(--background-surface-3);
   --editor-code-inline-border: var(--border);
   --editor-blockquote-border: var(--border-strong);
@@ -64,7 +73,7 @@
   --syntax-inserted: oklch(0.42 0.1 155);
 }
 
-.dark {
+[data-color-scheme="dark"] {
   --editor-text: oklch(0.775 0.01 72);
   --editor-code-inline-bg: var(--background-surface-3);
   --editor-blockquote-bg: color-mix(in oklch, var(--muted) 30%, transparent);
@@ -137,7 +146,7 @@
 
 .ProseMirror h1 {
   font-size: var(--editor-heading-1);
-  font-weight: 500;
+  font-weight: var(--editor-heading-weight);
   line-height: 1.2;
   margin-top: calc(var(--editor-spacing) * 2);
   margin-bottom: var(--editor-spacing);
@@ -151,7 +160,7 @@
 
 .ProseMirror h2 {
   font-size: var(--editor-heading-2);
-  font-weight: 500;
+  font-weight: var(--editor-heading-weight);
   line-height: 1.3;
   margin-top: calc(var(--editor-spacing) * 1.75);
   margin-bottom: calc(var(--editor-spacing) * 0.85);
@@ -161,7 +170,7 @@
 
 .ProseMirror h3 {
   font-size: var(--editor-heading-3);
-  font-weight: 500;
+  font-weight: var(--editor-heading-weight);
   line-height: 1.4;
   margin-top: calc(var(--editor-spacing) * 1.5);
   margin-bottom: calc(var(--editor-spacing) * 0.5);
@@ -171,7 +180,7 @@
 
 .ProseMirror h4 {
   font-size: var(--editor-heading-4);
-  font-weight: 500;
+  font-weight: var(--editor-heading-weight);
   line-height: 1.45;
   margin-top: calc(var(--editor-spacing) * 1.25);
   margin-bottom: calc(var(--editor-spacing) * 0.5);
@@ -180,7 +189,7 @@
 
 .ProseMirror h5 {
   font-size: var(--editor-heading-5);
-  font-weight: 500;
+  font-weight: var(--editor-heading-weight);
   line-height: 1.55;
   margin-top: calc(var(--editor-spacing) * 1);
   margin-bottom: calc(var(--editor-spacing) * 0.4);
@@ -191,7 +200,7 @@
 
 .ProseMirror h6 {
   font-size: var(--editor-heading-6);
-  font-weight: 500;
+  font-weight: var(--editor-heading-weight);
   line-height: 1.6;
   margin-top: calc(var(--editor-spacing) * 0.75);
   margin-bottom: calc(var(--editor-spacing) * 0.4);
@@ -210,19 +219,20 @@
 }
 
 .ProseMirror strong {
-  font-weight: 600;
-  color: var(--foreground);
+  font-weight: var(--editor-bold-weight);
+  color: var(--editor-bold-color);
   letter-spacing: -0.01em;
 }
 
 .ProseMirror em {
   font-style: italic;
+  color: var(--editor-italic-color);
   letter-spacing: 0.005em;
 }
 
 .ProseMirror code {
   background: var(--editor-code-inline-bg);
-  color: var(--editor-code-text);
+  color: var(--editor-code-inline-text);
   padding: 0.15rem 0.45rem;
   border-radius: calc(var(--radius) * 0.4);
   font-size: 0.88em;
@@ -472,7 +482,7 @@
   border-left: 2px solid var(--editor-blockquote-border);
   background: var(--editor-blockquote-bg);
   border-radius: 0 calc(var(--radius) * 0.5) calc(var(--radius) * 0.5) 0;
-  color: var(--editor-text-muted);
+  color: var(--editor-blockquote-text);
   font-style: italic;
   letter-spacing: 0.01em;
 }
@@ -489,21 +499,26 @@
    CODE BLOCKS
    ============================================ */
 
-.ProseMirror pre {
-  background: var(--editor-code-bg);
-  color: var(--editor-code-text);
-  border-radius: calc(var(--radius) * 0.75);
-  padding: calc(var(--editor-spacing) * 1);
+.code-block-wrapper {
+  position: relative;
   margin-top: calc(var(--editor-spacing) * 0.75);
   margin-bottom: calc(var(--editor-spacing) * 1.25);
+}
+
+.ProseMirror pre {
+  background: var(--editor-code-bg);
+  color: var(--editor-code-block-text);
+  border-radius: calc(var(--radius) * 0.75);
+  padding: calc(var(--editor-spacing) * 1);
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: var(--editor-code-block-max-height);
   font-family: var(--font-mono);
   font-size: 0.8125em;
   line-height: 1.65;
-  border: 1px solid var(--border);
+  border: 1px solid var(--editor-code-border);
   font-weight: 400;
   letter-spacing: -0.01em;
-  position: relative;
 }
 
 .ProseMirror pre code {
@@ -518,7 +533,7 @@
 
 /* ── Code block copy button ── */
 
-.ProseMirror pre .code-block-copy {
+.code-block-wrapper .code-block-copy {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
@@ -539,20 +554,20 @@
     background var(--duration-fast) var(--ease-default);
 }
 
-.ProseMirror pre:hover .code-block-copy {
+.code-block-wrapper:hover .code-block-copy {
   opacity: 1;
 }
 
-.ProseMirror pre .code-block-copy:hover {
+.code-block-wrapper .code-block-copy:hover {
   background: color-mix(in oklch, var(--foreground) 15%, transparent);
   color: var(--foreground);
 }
 
-.ProseMirror pre .code-block-copy--copied {
+.code-block-wrapper .code-block-copy--copied {
   color: var(--syntax-selector);
 }
 
-.ProseMirror pre .code-block-copy svg {
+.code-block-wrapper .code-block-copy svg {
   width: 0.875rem;
   height: 0.875rem;
 }

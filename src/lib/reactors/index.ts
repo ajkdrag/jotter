@@ -1,5 +1,5 @@
 import { create_editor_sync_reactor } from "$lib/reactors/editor_sync.reactor.svelte";
-import { create_editor_styles_reactor } from "$lib/reactors/editor_styles.reactor.svelte";
+import { create_theme_reactor } from "$lib/reactors/theme.reactor.svelte";
 import { create_autosave_reactor } from "$lib/reactors/autosave.reactor.svelte";
 import { create_op_toast_reactor } from "$lib/reactors/op_toast.reactor.svelte";
 import { create_recent_notes_persist_reactor } from "$lib/reactors/recent_notes_persist.reactor.svelte";
@@ -55,7 +55,7 @@ export function mount_reactors(context: ReactorContext): () => void {
       context.ui_store,
       context.note_service,
     ),
-    create_editor_styles_reactor(context.ui_store),
+    create_theme_reactor(context.ui_store),
     create_op_toast_reactor(context.op_store),
     create_recent_notes_persist_reactor(
       context.notes_store,

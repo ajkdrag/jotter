@@ -39,7 +39,7 @@ function make_service(overrides: {
 describe("SettingsService", () => {
   it("loads global-only settings from global port, not vault", async () => {
     const { service } = make_service({
-      vault_get: { font_size: 1.2 },
+      vault_get: { max_open_tabs: 8 },
       global_get: (key) => {
         if (key === "show_vault_dashboard_on_open") return false;
         if (key === "autosave_enabled") return false;
@@ -57,7 +57,7 @@ describe("SettingsService", () => {
     expect(result.settings.show_vault_dashboard_on_open).toBe(false);
     expect(result.settings.autosave_enabled).toBe(false);
     expect(result.settings.git_autocommit_enabled).toBe(true);
-    expect(result.settings.font_size).toBe(1.2);
+    expect(result.settings.max_open_tabs).toBe(8);
   });
 
   it("saves global-only settings to global port only", async () => {
@@ -79,7 +79,7 @@ describe("SettingsService", () => {
     expect(saved_vault).not.toHaveProperty("show_vault_dashboard_on_open");
     expect(saved_vault).not.toHaveProperty("autosave_enabled");
     expect(saved_vault).not.toHaveProperty("git_autocommit_enabled");
-    expect(saved_vault).toHaveProperty("font_size");
+    expect(saved_vault).toHaveProperty("max_open_tabs");
 
     expect(settings_port.set_setting).toHaveBeenCalledWith(
       "show_vault_dashboard_on_open",
@@ -98,7 +98,7 @@ describe("SettingsService", () => {
   it("sanitizes stale global-only keys from vault settings during load", async () => {
     const { service, vault_settings_port } = make_service({
       vault_get: {
-        font_size: 1.5,
+        max_open_tabs: 7,
         autosave_enabled: true,
         show_vault_dashboard_on_open: true,
         git_autocommit_enabled: true,
@@ -117,12 +117,12 @@ describe("SettingsService", () => {
     expect(written_vault).not.toHaveProperty("show_vault_dashboard_on_open");
     expect(written_vault).not.toHaveProperty("autosave_enabled");
     expect(written_vault).not.toHaveProperty("git_autocommit_enabled");
-    expect(written_vault).toHaveProperty("font_size", 1.5);
+    expect(written_vault).toHaveProperty("max_open_tabs", 7);
   });
 
   it("uses fallback defaults when no global value is stored", async () => {
     const { service } = make_service({
-      vault_get: { font_size: 1.2 },
+      vault_get: { max_open_tabs: 3 },
       global_get: () => null,
     });
 

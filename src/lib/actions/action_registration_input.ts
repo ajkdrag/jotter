@@ -11,6 +11,7 @@ import type { ShellService } from "$lib/services/shell_service";
 import type { TabService } from "$lib/services/tab_service";
 import type { GitService } from "$lib/services/git_service";
 import type { HotkeyService } from "$lib/services/hotkey_service";
+import type { ThemeService } from "$lib/services/theme_service";
 import type { UIStore } from "$lib/stores/ui_store.svelte";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
@@ -44,6 +45,7 @@ export type ActionRegistrationInput = {
     tab: TabService;
     git: GitService;
     hotkey: HotkeyService;
+    theme: ThemeService;
   };
   default_mount_config: AppMountConfig;
 };

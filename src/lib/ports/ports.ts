@@ -4,7 +4,6 @@ import type { EditorPort } from "$lib/ports/editor_port";
 import type { NotesPort } from "$lib/ports/notes_port";
 import type { SearchPort } from "$lib/ports/search_port";
 import type { SettingsPort } from "$lib/ports/settings_port";
-import type { ThemePort } from "$lib/ports/theme_port";
 import type { VaultPort } from "$lib/ports/vault_port";
 import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
@@ -21,7 +20,6 @@ export type Ports = {
   vault_settings: VaultSettingsPort;
   assets: AssetsPort;
   editor: EditorPort;
-  theme: ThemePort;
   clipboard: ClipboardPort;
   watcher: WatcherPort;
   shell: ShellPort;

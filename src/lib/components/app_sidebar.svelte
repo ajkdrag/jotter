@@ -691,7 +691,6 @@
       has_note={!!stores.editor.open_note}
       index_progress={stores.search.index_progress}
       vault_name={stores.vault.vault?.name ?? null}
-      theme_mode={stores.ui.theme}
       git_enabled={stores.git.enabled}
       git_branch={stores.git.branch}
       git_is_dirty={stores.git.is_dirty}
@@ -702,8 +701,6 @@
       on_info_click={() => (details_dialog_open = true)}
       on_git_click={() =>
         void action_registry.execute(ACTION_IDS.git_open_history)}
-      on_theme_change={(mode) =>
-        void action_registry.execute(ACTION_IDS.ui_set_theme, mode)}
     />
   </div>
 

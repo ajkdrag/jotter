@@ -2,7 +2,7 @@
 
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is([data-color-scheme="dark"] *));
 
 :root {
   --radius: 0.625rem;
@@ -45,7 +45,7 @@
   --accent-hover: oklch(0.95 0 0);
 }
 
-.dark {
+[data-color-scheme="dark"] {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

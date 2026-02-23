@@ -28,6 +28,7 @@
   } from "$lib/types/editor_settings";
   import type { VaultId } from "$lib/types/ids";
   import type { HotkeyBinding } from "$lib/types/hotkey_config";
+  import type { Theme } from "$lib/types/theme";
 
   type Props = {
     hide_choose_vault_button?: boolean;
@@ -75,7 +76,7 @@
     const hotkey_changed =
       JSON.stringify(hotkey_draft_overrides) !==
       JSON.stringify(stores.ui.hotkey_overrides);
-    return editor_changed || hotkey_changed;
+    return editor_changed || hotkey_changed || stores.ui.theme_has_draft;
   });
 
   const delete_folder_status = $derived.by(() => {
@@ -269,6 +270,8 @@
   has_unsaved_changes={settings_has_unsaved_changes}
   error={settings_error}
   hotkeys_config={stores.ui.settings_dialog.hotkey_draft_config}
+  user_themes={stores.ui.user_themes}
+  active_theme={stores.ui.active_theme}
   on_update_settings={(settings: EditorSettings) =>
     void action_registry.execute(ACTION_IDS.settings_update, settings)}
   on_category_change={(category: SettingsCategory) => {
@@ -288,6 +291,18 @@
     void action_registry.execute(ACTION_IDS.hotkey_reset_single, action_id)}
   on_hotkey_reset_all={() =>
     void action_registry.execute(ACTION_IDS.hotkey_reset_all)}
+  on_theme_switch={(id: string) =>
+    void action_registry.execute(ACTION_IDS.theme_switch, id)}
+  on_theme_create={(name: string, base: Theme) =>
+    void action_registry.execute(ACTION_IDS.theme_create, { name, base })}
+  on_theme_duplicate={(id: string) =>
+    void action_registry.execute(ACTION_IDS.theme_duplicate, id)}
+  on_theme_rename={(id: string, name: string) =>
+    void action_registry.execute(ACTION_IDS.theme_rename, { id, name })}
+  on_theme_delete={(id: string) =>
+    void action_registry.execute(ACTION_IDS.theme_delete, id)}
+  on_theme_update={(theme: Theme) =>
+    void action_registry.execute(ACTION_IDS.theme_update, theme)}
 />
 
 <CreateFolderDialog

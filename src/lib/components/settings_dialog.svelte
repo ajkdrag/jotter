@@ -1,21 +1,22 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
-  import * as Slider from "$lib/components/ui/slider/index.js";
   import * as Switch from "$lib/components/ui/switch/index.js";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import TypeIcon from "@lucide/svelte/icons/type";
+  import PaletteIcon from "@lucide/svelte/icons/palette";
   import LayoutIcon from "@lucide/svelte/icons/layout-template";
   import FolderIcon from "@lucide/svelte/icons/folder";
   import GitBranchIcon from "@lucide/svelte/icons/git-branch";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import KeyboardIcon from "@lucide/svelte/icons/keyboard";
   import HotkeysPanel from "$lib/components/hotkeys_panel.svelte";
+  import ThemeSettings from "$lib/components/theme_settings.svelte";
   import type {
     EditorSettings,
     SettingsCategory,
   } from "$lib/types/editor_settings";
+  import type { Theme } from "$lib/types/theme";
   import type { HotkeyConfig, HotkeyBinding } from "$lib/types/hotkey_config";
 
   type Props = {
@@ -26,6 +27,8 @@
     has_unsaved_changes: boolean;
     error: string | null;
     hotkeys_config: HotkeyConfig;
+    user_themes: Theme[];
+    active_theme: Theme;
     on_update_settings: (settings: EditorSettings) => void;
     on_category_change: (category: SettingsCategory) => void;
     on_save: () => void;
@@ -34,6 +37,12 @@
     on_hotkey_clear: (action_id: string) => void;
     on_hotkey_reset_single: (action_id: string) => void;
     on_hotkey_reset_all: () => void;
+    on_theme_switch: (theme_id: string) => void;
+    on_theme_create: (name: string, base: Theme) => void;
+    on_theme_duplicate: (theme_id: string) => void;
+    on_theme_rename: (id: string, name: string) => void;
+    on_theme_delete: (theme_id: string) => void;
+    on_theme_update: (theme: Theme) => void;
   };
 
   let {
@@ -44,6 +53,8 @@
     has_unsaved_changes,
     error,
     hotkeys_config,
+    user_themes,
+    active_theme,
     on_update_settings,
     on_category_change,
     on_save,
@@ -52,11 +63,18 @@
     on_hotkey_clear,
     on_hotkey_reset_single,
     on_hotkey_reset_all,
+    on_theme_switch,
+    on_theme_create,
+    on_theme_duplicate,
+    on_theme_rename,
+    on_theme_delete,
+    on_theme_update,
   }: Props = $props();
 
-  let font_size_value = $derived(editor_settings.font_size);
-  let line_height_value = $derived(editor_settings.line_height);
-  let max_open_tabs_value = $derived(editor_settings.max_open_tabs);
+  const tab_count_options = Array.from({ length: 10 }, (_, i) => ({
+    value: String(i + 1),
+    label: String(i + 1),
+  }));
 
   function update<K extends keyof EditorSettings>(
     key: K,
@@ -65,36 +83,17 @@
     on_update_settings({ ...editor_settings, [key]: value });
   }
 
-  function update_select<K extends keyof EditorSettings>(
-    key: K,
-    value: string | undefined,
-  ) {
-    if (value) update(key, value as EditorSettings[K]);
-  }
-
   const categories: {
     id: SettingsCategory;
     label: string;
-    icon: typeof TypeIcon;
+    icon: typeof PaletteIcon;
   }[] = [
-    { id: "typography", label: "Typography", icon: TypeIcon },
+    { id: "theme", label: "Theme", icon: PaletteIcon },
     { id: "layout", label: "Layout", icon: LayoutIcon },
     { id: "files", label: "Files", icon: FolderIcon },
     { id: "git", label: "Git", icon: GitBranchIcon },
     { id: "misc", label: "Misc", icon: SlidersIcon },
     { id: "hotkeys", label: "Hotkeys", icon: KeyboardIcon },
-  ];
-
-  const heading_color_options = [
-    { value: "inherit", label: "Inherit" },
-    { value: "primary", label: "Primary" },
-    { value: "accent", label: "Accent" },
-  ];
-
-  const spacing_options = [
-    { value: "compact", label: "Compact" },
-    { value: "normal", label: "Normal" },
-    { value: "spacious", label: "Spacious" },
   ];
 </script>
 
@@ -129,132 +128,48 @@
       </nav>
 
       <div class="SettingsDialog__content">
-        {#if active_category === "typography"}
-          <h2 class="SettingsDialog__content-header">Typography</h2>
+        {#if active_category === "theme"}
+          <h2 class="SettingsDialog__content-header">Theme</h2>
 
-          <div class="SettingsDialog__section-content">
-            <div class="SettingsDialog__row--stacked">
-              <div class="flex items-center justify-between">
-                <span class="SettingsDialog__label">Font Size</span>
-                <span class="SettingsDialog__badge"
-                  >{editor_settings.font_size.toFixed(2)}rem</span
-                >
-              </div>
-              <Slider.Root
-                type="single"
-                value={font_size_value}
-                onValueChange={(v: number) => {
-                  update("font_size", v);
-                }}
-                min={0.875}
-                max={1.25}
-                step={0.0625}
-                class="w-full"
-              />
-            </div>
-
-            <div class="SettingsDialog__row--stacked">
-              <div class="flex items-center justify-between">
-                <span class="SettingsDialog__label">Line Height</span>
-                <span class="SettingsDialog__badge"
-                  >{editor_settings.line_height.toFixed(2)}</span
-                >
-              </div>
-              <Slider.Root
-                type="single"
-                value={line_height_value}
-                onValueChange={(v: number) => {
-                  update("line_height", v);
-                }}
-                min={1.5}
-                max={2.0}
-                step={0.05}
-                class="w-full"
-              />
-            </div>
-
-            <div class="SettingsDialog__row">
-              <span class="SettingsDialog__label">Heading Color</span>
-              <Select.Root
-                type="single"
-                value={editor_settings.heading_color}
-                onValueChange={(v: string | undefined) => {
-                  update_select("heading_color", v);
-                }}
-              >
-                <Select.Trigger class="w-32">
-                  <span data-slot="select-value">
-                    {heading_color_options.find(
-                      (o) => o.value === editor_settings.heading_color,
-                    )?.label}
-                  </span>
-                </Select.Trigger>
-                <Select.Content>
-                  {#each heading_color_options as option (option.value)}
-                    <Select.Item value={option.value}
-                      >{option.label}</Select.Item
-                    >
-                  {/each}
-                </Select.Content>
-              </Select.Root>
-            </div>
-          </div>
+          <ThemeSettings
+            {user_themes}
+            {active_theme}
+            on_switch={on_theme_switch}
+            on_create={on_theme_create}
+            on_duplicate={on_theme_duplicate}
+            on_rename={on_theme_rename}
+            on_delete={on_theme_delete}
+            on_update={on_theme_update}
+          />
         {:else if active_category === "layout"}
           <h2 class="SettingsDialog__content-header">Layout</h2>
 
           <div class="SettingsDialog__section-content">
             <div class="SettingsDialog__row">
-              <span class="SettingsDialog__label">Content Spacing</span>
+              <div class="SettingsDialog__label-group">
+                <span class="SettingsDialog__label">Max Open Tabs</span>
+                <span class="SettingsDialog__description"
+                  >Limit the number of tabs for better performance</span
+                >
+              </div>
               <Select.Root
                 type="single"
-                value={editor_settings.spacing}
+                value={String(editor_settings.max_open_tabs)}
                 onValueChange={(v: string | undefined) => {
-                  update_select("spacing", v);
+                  if (v) update("max_open_tabs", Number(v));
                 }}
               >
-                <Select.Trigger class="w-32">
-                  <span data-slot="select-value">
-                    {spacing_options.find(
-                      (o) => o.value === editor_settings.spacing,
-                    )?.label}
-                  </span>
+                <Select.Trigger class="w-20">
+                  <span data-slot="select-value"
+                    >{editor_settings.max_open_tabs}</span
+                  >
                 </Select.Trigger>
                 <Select.Content>
-                  {#each spacing_options as option (option.value)}
-                    <Select.Item value={option.value}
-                      >{option.label}</Select.Item
-                    >
+                  {#each tab_count_options as opt (opt.value)}
+                    <Select.Item value={opt.value}>{opt.label}</Select.Item>
                   {/each}
                 </Select.Content>
               </Select.Root>
-            </div>
-
-            <div class="SettingsDialog__row--stacked">
-              <div class="flex items-center justify-between">
-                <div class="SettingsDialog__label-group">
-                  <span class="SettingsDialog__label">Max Open Tabs</span>
-                  <span class="SettingsDialog__description"
-                    >Limit the number of tabs for better performance (1–10)</span
-                  >
-                </div>
-                <span class="SettingsDialog__badge"
-                  >{editor_settings.max_open_tabs}</span
-                >
-              </div>
-              <Slider.Root
-                type="single"
-                value={max_open_tabs_value}
-                onValueChange={(v: number) => {
-                  update(
-                    "max_open_tabs",
-                    Math.min(10, Math.max(1, Math.round(v))),
-                  );
-                }}
-                min={1}
-                max={10}
-                step={1}
-                class="w-full"
-              />
             </div>
           </div>
         {:else if active_category === "files"}
@@ -491,12 +406,6 @@
     gap: var(--space-4);
   }
 
-  .SettingsDialog__row--stacked {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
   .SettingsDialog__label {
     font-size: var(--text-sm);
     font-weight: 500;
@@ -513,15 +422,6 @@
     font-size: var(--text-xs);
     color: var(--muted-foreground);
     line-height: 1.4;
-  }
-
-  .SettingsDialog__badge {
-    font-size: var(--text-xs);
-    font-family: var(--font-mono, ui-monospace, monospace);
-    color: var(--muted-foreground);
-    background-color: var(--muted);
-    padding: var(--space-0-5) var(--space-2);
-    border-radius: var(--radius-sm);
   }
 
   :global(.SettingsDialog__footer) {

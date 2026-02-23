@@ -13,16 +13,30 @@
     />
     <script>
       (function () {
-        const theme = localStorage.getItem("otterly_theme") || "system";
-        const mode =
-          theme === "system"
-            ? window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light"
-            : theme;
-        if (mode === "dark") {
-          document.documentElement.classList.add("dark");
-        }
+        try {
+          var raw = localStorage.getItem("otterly_active_theme_cache");
+          if (!raw) return;
+          var cache = JSON.parse(raw);
+          if (cache.color_scheme) {
+            document.documentElement.setAttribute(
+              "data-color-scheme",
+              cache.color_scheme,
+            );
+            document.documentElement.style.setProperty(
+              "color-scheme",
+              cache.color_scheme,
+            );
+          }
+          if (cache.tokens) {
+            var keys = Object.keys(cache.tokens);
+            for (var i = 0; i < keys.length; i++) {
+              document.documentElement.style.setProperty(
+                keys[i],
+                cache.tokens[keys[i]],
+              );
+            }
+          }
+        } catch (e) {}
       })();
     </script>
     %sveltekit.head%

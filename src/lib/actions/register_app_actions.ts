@@ -21,12 +21,15 @@ export function register_app_actions(input: ActionRegistrationInput) {
         error: null,
       };
 
-      const [result, recent_command_ids, hotkey_overrides] = await Promise.all([
-        services.vault.initialize(default_mount_config),
-        services.settings.load_recent_command_ids(),
-        services.hotkey.load_hotkey_overrides(),
-      ]);
-      stores.ui.set_theme(result.theme);
+      const [result, recent_command_ids, hotkey_overrides, theme_result] =
+        await Promise.all([
+          services.vault.initialize(default_mount_config),
+          services.settings.load_recent_command_ids(),
+          services.hotkey.load_hotkey_overrides(),
+          services.theme.load_themes(),
+        ]);
+      stores.ui.set_user_themes(theme_result.user_themes);
+      stores.ui.set_active_theme_id(theme_result.active_theme_id);
       stores.ui.set_recent_command_ids(recent_command_ids);
 
       stores.ui.hotkey_overrides = hotkey_overrides;

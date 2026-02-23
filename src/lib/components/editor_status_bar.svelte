@@ -1,10 +1,8 @@
 <script lang="ts">
   import { Info, FolderOpen, RefreshCw } from "@lucide/svelte";
-  import ThemeToggle from "$lib/components/theme_toggle.svelte";
   import GitStatusWidget from "$lib/components/git_status_widget.svelte";
   import type { CursorInfo } from "$lib/types/editor";
   import type { IndexProgress } from "$lib/stores/search_store.svelte";
-  import type { ThemeMode } from "$lib/types/theme";
   import type { GitSyncStatus } from "$lib/types/git";
 
   interface Props {
@@ -14,7 +12,6 @@
     has_note: boolean;
     index_progress: IndexProgress;
     vault_name: string | null;
-    theme_mode: ThemeMode;
     git_enabled: boolean;
     git_branch: string;
     git_is_dirty: boolean;
@@ -23,7 +20,6 @@
     on_vault_click: () => void;
     on_info_click: () => void;
     on_git_click: () => void;
-    on_theme_change: (mode: ThemeMode) => void;
   }
 
   let {
@@ -33,7 +29,6 @@
     has_note,
     index_progress,
     vault_name,
-    theme_mode,
     git_enabled,
     git_branch,
     git_is_dirty,
@@ -42,7 +37,6 @@
     on_vault_click,
     on_info_click,
     on_git_click,
-    on_theme_change,
   }: Props = $props();
 
   const line = $derived(cursor_info?.line ?? null);
@@ -135,8 +129,6 @@
         on_click={on_git_click}
       />
     {/if}
-    <span class="StatusBar__separator" aria-hidden="true"></span>
-    <ThemeToggle mode={theme_mode} on_change={on_theme_change} />
   </div>
 </div>
 
@@ -251,20 +243,6 @@
   :global(.StatusBar__item svg),
   :global(.StatusBar__action svg),
   :global(.StatusBar__vault-action svg) {
-    width: var(--size-icon-xs);
-    height: var(--size-icon-xs);
-  }
-
-  :global(.StatusBar .ThemeToggle) {
-    padding: 1px;
-  }
-
-  :global(.StatusBar .ThemeToggle__option) {
-    width: var(--size-touch-xs);
-    height: var(--size-touch-xs);
-  }
-
-  :global(.StatusBar .ThemeToggle__option svg) {
     width: var(--size-icon-xs);
     height: var(--size-icon-xs);
   }

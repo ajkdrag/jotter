@@ -4,7 +4,6 @@
   import "../styles/design_tokens.css";
   import "../styles/component_overrides.css";
   import "../styles/editor.css";
-  import { ModeWatcher } from "mode-watcher";
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
   import { create_logger } from "$lib/utils/logger";
@@ -39,7 +38,6 @@
 </script>
 
 <main class="h-full">
-  <ModeWatcher />
   <Toaster
     position="bottom-right"
     offset={36}

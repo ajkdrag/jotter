@@ -42,7 +42,6 @@
     "formsnap": "^2.0.1",
     "isomorphic-git": "^1.37.1",
     "lucide-static": "^0.563.0",
-    "mode-watcher": "^1.1.0",
     "prismjs": "^1.30.0",
     "svelte-themes": "^2.0.10"
   },

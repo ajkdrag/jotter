@@ -1,4 +1,9 @@
-import type { ThemeMode } from "$lib/types/theme";
+import type { Theme } from "$lib/types/theme";
+import {
+  DEFAULT_THEME_ID,
+  get_all_themes,
+  resolve_theme,
+} from "$lib/types/theme";
 import type {
   EditorSettings,
   SettingsCategory,
@@ -152,14 +157,19 @@ function initial_settings_dialog(settings: EditorSettings) {
     current_settings: { ...settings },
     persisted_settings: { ...settings },
     has_unsaved_changes: false,
-    active_category: "typography" as SettingsCategory,
+    active_category: "theme" as SettingsCategory,
     hotkey_draft_overrides: [] as HotkeyOverride[],
     hotkey_draft_config: { bindings: [] } as HotkeyConfig,
   };
 }
 
 export class UIStore {
-  theme = $state<ThemeMode>("system");
+  user_themes = $state<Theme[]>([]);
+  active_theme_id = $state<string>(DEFAULT_THEME_ID);
+  active_theme = $derived<Theme>(
+    resolve_theme(get_all_themes(this.user_themes), this.active_theme_id),
+  );
+
   sidebar_open = $state(true);
   sidebar_view = $state<SidebarView>("explorer");
   selected_folder_path = $state("");
@@ -233,6 +243,8 @@ export class UIStore {
     items: MoveItem[];
     conflicts: { path: string; new_path: string; error: string }[];
   }>({ ...INITIAL_FILETREE_MOVE_CONFLICT_DIALOG });
+
+  theme_has_draft = $state(false);
 
   settings_dialog = $state<{
     open: boolean;
@@ -319,8 +331,12 @@ export class UIStore {
     ...INITIAL_HOTKEY_RECORDER,
   });
 
-  set_theme(theme: ThemeMode) {
-    this.theme = theme;
+  set_active_theme_id(id: string) {
+    this.active_theme_id = id;
+  }
+
+  set_user_themes(themes: Theme[]) {
+    this.user_themes = themes;
   }
 
   toggle_sidebar() {

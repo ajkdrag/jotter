@@ -17,7 +17,7 @@ For adding/updating any feature, always refer to the decision tree in the archit
 - Ask for clarification instead of assuming
 - Value authenticity over excessive agreeableness
 
-## Architect Rules
+## Architect Rules (Important)
 
 - Prefer composition over inheritance
 - Prefer explicitness over implicitness
@@ -64,7 +64,6 @@ For adding/updating any feature, always refer to the decision tree in the archit
 ## Agentic guidelines
 
 - You MUST proactively invoke relevant skills (call skill tool)
-
 
 ## Web automation
 

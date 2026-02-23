@@ -6,13 +6,31 @@
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
 	import { Toaster as Sonner, type ToasterProps as SonnerProps } from "svelte-sonner";
-	import { mode } from "mode-watcher";
 
 	let { ...restProps }: SonnerProps = $props();
+
+	function get_color_scheme(): "light" | "dark" {
+		if (typeof document === "undefined") return "light";
+		return (document.documentElement.getAttribute("data-color-scheme") as "light" | "dark") ?? "light";
+	}
+
+	let resolved_theme = $state<"light" | "dark">(get_color_scheme());
+
+	$effect(() => {
+		const observer = new MutationObserver(() => {
+			resolved_theme = get_color_scheme();
+		});
+		observer.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["data-color-scheme"],
+		});
+		resolved_theme = get_color_scheme();
+		return () => observer.disconnect();
+	});
 </script>
 
 <Sonner
-	theme={mode.current ?? "system"}
+	theme={resolved_theme}
 	class="toaster group"
 	style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border);"
 	{...restProps}

@@ -229,7 +229,7 @@
         </button>
       {/if}
     {:else}
-      <FileText class="TreeRow__type-icon TreeRow__type-icon--after" />
+      <FileText class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
       {#if is_starred}
         <Star class="TreeRow__star-icon" />
@@ -564,6 +564,9 @@
     height: var(--size-icon-sm);
     flex-shrink: 0;
     opacity: 0.5;
+    --_offset: calc((var(--size-icon-md) - var(--size-icon-sm)) / 2);
+    margin-inline-start: var(--_offset);
+    margin-inline-end: var(--_offset);
   }
 
   :global(.TreeRow__star-icon) {

@@ -30,7 +30,6 @@ describe("register_ui_actions", () => {
       stores,
       services: {
         shell: { open_url: async () => {} },
-        vault: { set_theme: () => ({ status: "success" as const }) },
       } as never,
       default_mount_config: {
         reset_app_state: true,
@@ -65,7 +64,6 @@ describe("register_ui_actions", () => {
       stores,
       services: {
         shell: { open_url: async () => {} },
-        vault: { set_theme: () => ({ status: "success" as const }) },
       } as never,
       default_mount_config: {
         reset_app_state: true,
