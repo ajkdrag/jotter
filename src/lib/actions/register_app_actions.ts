@@ -101,7 +101,7 @@ export function register_app_actions(input: ActionRegistrationInput) {
         const update = await check();
         toast.dismiss(toastId);
         if (!update) {
-          toast.success("Jotter is up to date");
+          toast.success("Otterly is up to date");
           return;
         }
         toast.loading(`Downloading update v${update.version}...`, {
@@ -109,7 +109,7 @@ export function register_app_actions(input: ActionRegistrationInput) {
         });
         await update.downloadAndInstall();
         toast.dismiss(toastId);
-        toast.success("Update installed — restart Jotter to apply");
+        toast.success("Update installed — restart Otterly to apply");
       } catch (error) {
         toast.dismiss(toastId);
         toast.error("Failed to check for updates");

@@ -54,7 +54,7 @@ jobs:
       - uses: tauri-apps/tauri-action@v0.6.1
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "Jotter ${{ github.ref_name }}"
+          releaseName: "Otterly ${{ github.ref_name }}"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

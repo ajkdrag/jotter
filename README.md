@@ -1,8 +1,8 @@
-<img src="./assets/icon.png" alt="Jotter" width="150">
+<img src="./assets/icon.png" alt="Otterly" width="150">
 
-[![Release](https://github.com/ajkdrag/jotter/actions/workflows/release.yml/badge.svg)](https://github.com/ajkdrag/jotter/actions/workflows/release.yml)
+[![Release](https://github.com/ajkdrag/otterly/actions/workflows/release.yml/badge.svg)](https://github.com/ajkdrag/otterly/actions/workflows/release.yml)
 
-# Jotter
+# Otterly
 
 A local-first markdown note-taking app for people who want their data to stay on their machine. No accounts, no cloud dependency, no sync fees — just a folder of markdown files you fully own.
 
@@ -11,15 +11,15 @@ A local-first markdown note-taking app for people who want their data to stay on
   <img src="./assets/editor-screenshot-light.png" style="width: 49%; display: inline-block;">
 </p>
 
-## Why Jotter
+## Why Otterly
 
 Most note-taking apps make a trade-off you shouldn't have to accept: either you get good UX with cloud lock-in, or you get local-first with a heavy Electron shell and plugin-hunting to fill feature gaps.
 
-Jotter is built on [Tauri](https://tauri.app/) instead of Electron. The app size is small, starts pretty fast and doesn't eat up your RAM. Your notes are plain markdown files in a folder you control. If you ever want to stop using Jotter, your notes work fine in any other editor.
+Otterly is built on [Tauri](https://tauri.app/) instead of Electron. The app size is small, starts pretty fast and doesn't eat up your RAM. Your notes are plain markdown files in a folder you control. If you ever want to stop using Otterly, your notes work fine in any other editor.
 
 ## Features
 
-- **Vault-based organization** — a vault is just a folder. No proprietary database, no hidden metadata. Open the same folder in VS Code, sync it with git (already supported natively in Jotter), whatever you want.
+- **Vault-based organization** — a vault is just a folder. No proprietary database, no hidden metadata. Open the same folder in VS Code, sync it with git (already supported natively in Otterly), whatever you want.
 - **Tab system** — open multiple notes side by side, switch between them, restore closed tabs.
 - **WYSIWYG markdown editing** — headings, lists, tables, task lists, code blocks with syntax highlighting, inline formatting. The editor (Milkdown/ProseMirror) renders as you type without switching modes.
 - **Wiki-style links** — `[[note-name]]` links between notes. Backlinks and outlinks are tracked automatically and shown in a side panel.

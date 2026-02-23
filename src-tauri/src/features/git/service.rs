@@ -56,7 +56,7 @@ fn open_repo(vault_path: &str) -> Result<Repository, String> {
 }
 
 fn default_signature() -> Result<Signature<'static>, String> {
-    Signature::now("Jotter", "jotter@local")
+    Signature::now("Otterly", "otterly@local")
         .map_err(|e| format!("failed to create signature: {}", e))
 }
 
@@ -93,7 +93,7 @@ pub fn git_init_repo(vault_path: String) -> Result<(), String> {
     if !gitignore_path.exists() {
         std::fs::write(
             &gitignore_path,
-            "node_modules/\n.DS_Store\n*.tmp\n.env\nThumbs.db\n.jotter/\n",
+            "node_modules/\n.DS_Store\n*.tmp\n.env\nThumbs.db\n.otterly/\n",
         )
         .map_err(|e| format!("failed to write .gitignore: {}", e))?;
     }

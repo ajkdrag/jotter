@@ -1,10 +1,10 @@
 # Architecture
 
-This is the source-of-truth architecture for Jotter.
+This is the source-of-truth architecture for Otterly.
 
 ## Core model
 
-Jotter is built on four primary layers:
+Otterly is built on four primary layers:
 
 - Ports + adapters for all external IO boundaries
 - `$state` store classes for app state
@@ -286,7 +286,7 @@ pub async fn watch_vault(state: tauri::State<'_, WatcherState>, ...) { ... }
 
 ### Shared storage
 
-`shared/storage.rs` owns the vault registry (a JSON file at `<app_config_dir>/jotter/vaults.json`). It also handles the `jotter-asset://` custom URI scheme for serving binary assets (images) from the vault filesystem directly to the WebView.
+`shared/storage.rs` owns the vault registry (a JSON file at `<app_config_dir>/otterly/vaults.json`). It also handles the `otterly-asset://` custom URI scheme for serving binary assets (images) from the vault filesystem directly to the WebView.
 
 ### Backend invariants
 

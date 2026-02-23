@@ -2295,33 +2295,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jotter"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "blake3",
- "comrak",
- "filetime",
- "git2",
- "log",
- "mime_guess",
- "notify",
- "openssl",
- "rusqlite",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-plugin-opener",
- "tauri-plugin-updater",
- "tempfile",
- "tokio",
- "walkdir",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.85"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3131,6 +3104,33 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "otterly"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "comrak",
+ "filetime",
+ "git2",
+ "log",
+ "mime_guess",
+ "notify",
+ "openssl",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-plugin-opener",
+ "tauri-plugin-updater",
+ "tempfile",
+ "tokio",
+ "walkdir",
 ]
 
 [[package]]

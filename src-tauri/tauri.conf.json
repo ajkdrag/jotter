@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "jotter",
+  "productName": "otterly",
   "version": "0.1.3",
-  "identifier": "com.jotter.app",
+  "identifier": "com.otterly.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
@@ -28,7 +28,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEMkY0REEwMEVGODhEQkYKUldTL2pmZ09vRTB2N1p4bWhJRGxkc2lZLy9ocTU3b2VBT1R5NHVtSzNsWFpzTDVWckQ4cnhSbEsK",
       "endpoints": [
-        "https://github.com/ajkdrag/jotter/releases/latest/download/latest.json"
+        "https://github.com/ajkdrag/otterly/releases/latest/download/latest.json"
       ]
     }
   },
@@ -36,7 +36,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "jotter",
+        "title": "otterly",
         "width": 1200,
         "height": 820,
         "resizable": true,
@@ -44,7 +44,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: blob: jotter-asset:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; img-src 'self' data: blob: otterly-asset:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost"
     }
   }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "jotter"
+name = "otterly"
 version = "0.0.0"
 description = "Local-first markdown vault"
 authors = ["altamkhan"]
@@ -7,11 +7,11 @@ edition = "2021"
 autotests = false
 
 [lib]
-name = "jotter_lib"
+name = "otterly_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "jotter"
+name = "otterly"
 path = "src/main.rs"
 
 [build-dependencies]
