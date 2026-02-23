@@ -17,6 +17,7 @@
   import CheckpointDialog from "$lib/components/checkpoint_dialog.svelte";
   import HotkeyRecorderDialog from "$lib/components/hotkey_recorder_dialog.svelte";
   import HelpDialog from "$lib/components/help_dialog.svelte";
+  import FiletreeMoveConflictDialog from "$lib/components/filetree_move_conflict_dialog.svelte";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OmnibarItem } from "$lib/types/search";
@@ -229,6 +230,18 @@
   on_cancel={() =>
     void action_registry.execute(ACTION_IDS.folder_cancel_rename)}
   on_retry={() => void action_registry.execute(ACTION_IDS.folder_retry_rename)}
+/>
+
+<FiletreeMoveConflictDialog
+  open={stores.ui.filetree_move_conflict_dialog.open}
+  target_folder={stores.ui.filetree_move_conflict_dialog.target_folder}
+  conflicts={stores.ui.filetree_move_conflict_dialog.conflicts}
+  on_overwrite={() =>
+    void action_registry.execute(ACTION_IDS.filetree_confirm_move_overwrite)}
+  on_skip={() =>
+    void action_registry.execute(ACTION_IDS.filetree_skip_move_conflicts)}
+  on_cancel={() =>
+    void action_registry.execute(ACTION_IDS.filetree_cancel_move_conflicts)}
 />
 
 <SaveNoteDialog

@@ -440,7 +440,13 @@
                             .filetree_revealed_note_path}
                           open_note_path={stores.editor.open_note?.meta.path ??
                             ""}
+                          selected_items={Array.from(stores.ui.selected_items)}
                           starred_paths={stores.notes.starred_paths}
+                          on_select_item={(payload) =>
+                            void action_registry.execute(
+                              ACTION_IDS.filetree_select_item,
+                              payload,
+                            )}
                           on_toggle_folder={(path: string) =>
                             void action_registry.execute(
                               ACTION_IDS.folder_toggle,
@@ -482,6 +488,15 @@
                             void action_registry.execute(
                               ACTION_IDS.folder_load_more,
                               path,
+                            )}
+                          on_move_items={(items, target_folder, overwrite) =>
+                            void action_registry.execute(
+                              ACTION_IDS.filetree_move_items,
+                              {
+                                items,
+                                target_folder,
+                                overwrite,
+                              },
                             )}
                         />
                       </Sidebar.GroupContent>
@@ -531,7 +546,13 @@
                           .filetree_revealed_note_path}
                         open_note_path={stores.editor.open_note?.meta.path ??
                           ""}
+                        selected_items={Array.from(stores.ui.selected_items)}
                         starred_paths={stores.notes.starred_paths}
+                        on_select_item={(payload) =>
+                          void action_registry.execute(
+                            ACTION_IDS.filetree_select_item,
+                            payload,
+                          )}
                         on_toggle_folder={(path: string) =>
                           void action_registry.execute(
                             ACTION_IDS.folder_toggle,
@@ -592,6 +613,15 @@
                           void action_registry.execute(
                             ACTION_IDS.folder_load_more,
                             path,
+                          )}
+                        on_move_items={(items, target_folder, overwrite) =>
+                          void action_registry.execute(
+                            ACTION_IDS.filetree_move_items,
+                            {
+                              items,
+                              target_folder,
+                              overwrite,
+                            },
                           )}
                       />
                     </Sidebar.GroupContent>

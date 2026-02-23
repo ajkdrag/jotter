@@ -1,6 +1,10 @@
 import type { MarkdownText, NoteId, NotePath, VaultId } from "$lib/types/ids";
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
-import type { FolderContents } from "$lib/types/filetree";
+import type {
+  FolderContents,
+  MoveItem,
+  MoveItemResult,
+} from "$lib/types/filetree";
 
 export type FolderStats = {
   note_count: number;
@@ -44,4 +48,10 @@ export interface NotesPort {
     vault_id: VaultId,
     folder_path: string,
   ): Promise<FolderStats>;
+  move_items(
+    vault_id: VaultId,
+    items: MoveItem[],
+    target_folder: string,
+    overwrite: boolean,
+  ): Promise<MoveItemResult[]>;
 }

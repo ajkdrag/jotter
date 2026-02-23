@@ -134,27 +134,43 @@ function is_large_markdown(text: string): boolean {
   return count_lines(text) >= LARGE_DOC_LINE_THRESHOLD;
 }
 
-function count_doc_words(doc: ProseNode): number {
-  const text = doc.textBetween(0, doc.content.size, " ", " ");
-  return count_words(text);
+function count_newlines(text: string): number {
+  let n = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) n++;
+  }
+  return n;
 }
 
-function calculate_cursor_info(view: EditorView, markdown: string): CursorInfo {
+function doc_text(doc: ProseNode): string {
+  return doc.textBetween(0, doc.content.size, "\n");
+}
+
+function count_doc_words(doc: ProseNode): number {
+  return count_words(doc_text(doc).replaceAll("\n", " "));
+}
+
+function count_doc_lines(doc: ProseNode): number {
+  return count_newlines(doc_text(doc)) + 1;
+}
+
+function line_from_pos(doc: ProseNode, pos: number): number {
+  return count_newlines(doc.textBetween(0, pos, "\n")) + 1;
+}
+
+function calculate_cursor_info(view: EditorView): CursorInfo {
   const { doc, selection } = view.state;
   const $from = selection?.$from;
-  const line = $from ? $from.index(0) + 1 : 1;
+  const line = $from ? line_from_pos(doc, $from.pos) : 1;
   const column = $from ? $from.parentOffset + 1 : 1;
-  const total_lines = count_lines(markdown);
+  const total_lines = count_doc_lines(doc);
   const total_words = count_doc_words(doc);
   return { line, column, total_lines, total_words };
 }
 
 const cursor_plugin_key = new PluginKey("cursor-tracker");
 
-function create_cursor_plugin(
-  on_cursor_change: (info: CursorInfo) => void,
-  get_markdown: () => string,
-) {
+function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
   return $prose(
     () =>
       new Plugin({
@@ -174,12 +190,13 @@ function create_cursor_plugin(
               prev_doc = view.state.doc;
 
               if (doc_changed) {
-                cached = calculate_cursor_info(view, get_markdown());
+                cached = calculate_cursor_info(view);
               } else {
+                const { doc } = view.state;
                 const $from = view.state.selection?.$from;
                 cached = {
                   ...cached,
-                  line: $from ? $from.index(0) + 1 : 1,
+                  line: $from ? line_from_pos(doc, $from.pos) : 1,
                   column: $from ? $from.parentOffset + 1 : 1,
                 };
               }
@@ -416,9 +433,7 @@ export function create_milkdown_editor_port(args?: {
       }
 
       if (on_cursor_change) {
-        builder = builder.use(
-          create_cursor_plugin(on_cursor_change, () => current_markdown),
-        );
+        builder = builder.use(create_cursor_plugin(on_cursor_change));
       }
 
       if (on_image_paste_requested) {

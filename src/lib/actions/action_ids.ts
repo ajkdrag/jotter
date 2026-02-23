@@ -62,6 +62,12 @@ export const ACTION_IDS = {
   folder_retry_rename: "folder.retry_rename",
   folder_toggle_star: "folder.toggle_star",
   filetree_reveal_note: "filetree.reveal_note",
+  filetree_select_item: "filetree.select_item",
+  filetree_clear_selection: "filetree.clear_selection",
+  filetree_move_items: "filetree.move_items",
+  filetree_confirm_move_overwrite: "filetree.confirm_move_overwrite",
+  filetree_skip_move_conflicts: "filetree.skip_move_conflicts",
+  filetree_cancel_move_conflicts: "filetree.cancel_move_conflicts",
 
   shell_open_url: "shell.open_url",
 

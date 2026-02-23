@@ -70,6 +70,7 @@ pub fn run() {
             features::notes::service::rename_note,
             features::notes::service::delete_note,
             features::notes::service::rename_folder,
+            features::notes::service::move_items,
             features::notes::service::delete_folder,
             features::notes::service::list_folder_contents,
             features::notes::service::get_folder_stats,

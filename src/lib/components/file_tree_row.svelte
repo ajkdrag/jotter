@@ -20,7 +20,29 @@
   type Props = {
     node: FlatTreeNode;
     is_selected: boolean;
+    is_multi_selected?: boolean;
     is_starred?: boolean;
+    drag_over_state?: "none" | "valid" | "invalid";
+    is_drag_source?: boolean;
+    on_row_pointer?:
+      | ((node: FlatTreeNode, event: MouseEvent) => void)
+      | undefined;
+    on_row_keydown?:
+      | ((node: FlatTreeNode, event: KeyboardEvent) => void)
+      | undefined;
+    on_drag_start_row?:
+      | ((node: FlatTreeNode, event: DragEvent) => void)
+      | undefined;
+    on_drag_over_row?:
+      | ((node: FlatTreeNode, event: DragEvent) => void)
+      | undefined;
+    on_drag_leave_row?:
+      | ((node: FlatTreeNode, event: DragEvent) => void)
+      | undefined;
+    on_drop_row?: ((node: FlatTreeNode, event: DragEvent) => void) | undefined;
+    on_drag_end_row?:
+      | ((node: FlatTreeNode, event: DragEvent) => void)
+      | undefined;
     on_toggle_folder: (path: string) => void;
     on_toggle_folder_node?: ((node: FlatTreeNode) => void) | undefined;
     on_select_note: (path: string) => void;
@@ -39,7 +61,17 @@
   let {
     node,
     is_selected,
+    is_multi_selected = false,
     is_starred = false,
+    drag_over_state = "none",
+    is_drag_source = false,
+    on_row_pointer,
+    on_row_keydown,
+    on_drag_start_row,
+    on_drag_over_row,
+    on_drag_leave_row,
+    on_drop_row,
+    on_drag_end_row,
     on_toggle_folder,
     on_toggle_folder_node,
     on_select_note,
@@ -55,7 +87,7 @@
     on_retry_load_more,
   }: Props = $props();
 
-  function handle_click() {
+  function activate_row() {
     if (node.is_folder) {
       if (on_toggle_folder_node) {
         on_toggle_folder_node(node);
@@ -68,14 +100,41 @@
     }
   }
 
+  function handle_click(event: MouseEvent) {
+    if (on_row_pointer) {
+      on_row_pointer(node, event);
+    }
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
+      return;
+    }
+    activate_row();
+  }
+
+  function handle_keydown(e: KeyboardEvent) {
+    if (on_row_keydown) {
+      on_row_keydown(node, e);
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (e.shiftKey || e.metaKey || e.ctrlKey) {
+        return;
+      }
+      activate_row();
+    }
+  }
+
   function handle_toggle(e: MouseEvent) {
     e.stopPropagation();
-    if (on_toggle_folder_node) {
-      on_toggle_folder_node(node);
-    } else {
-      on_toggle_folder(node.path);
+    if (node.is_folder) {
+      if (on_toggle_folder_node) {
+        on_toggle_folder_node(node);
+      } else {
+        on_toggle_folder(node.path);
+      }
+      on_select_folder(node.path);
+    } else if (node.note) {
+      on_select_note(node.path);
     }
-    on_select_folder(node.path);
   }
 
   function handle_retry(e: MouseEvent) {
@@ -85,13 +144,6 @@
 
   function handle_retry_load_more() {
     on_retry_load_more(node.parent_path ?? "");
-  }
-
-  function handle_keydown(e: KeyboardEvent) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handle_click();
-    }
   }
 
   function handle_toggle_keydown(e: KeyboardEvent) {
@@ -111,13 +163,23 @@
   <div
     class="TreeRow"
     class:TreeRow--selected={is_selected}
+    class:TreeRow--multi-selected={is_multi_selected}
     class:TreeRow--folder={node.is_folder}
+    class:TreeRow--drag-source={is_drag_source}
+    class:TreeRow--drag-over={drag_over_state === "valid"}
+    class:TreeRow--drag-invalid={drag_over_state === "invalid"}
     style="--tree-depth: {node.depth}"
     role="treeitem"
     tabindex="0"
+    draggable={!node.is_load_more}
     aria-selected={is_selected}
-    onclick={handle_click}
+    onclick={(event) => handle_click(event)}
     onkeydown={handle_keydown}
+    ondragstart={(event) => on_drag_start_row?.(node, event)}
+    ondragover={(event) => on_drag_over_row?.(node, event)}
+    ondragleave={(event) => on_drag_leave_row?.(node, event)}
+    ondrop={(event) => on_drop_row?.(node, event)}
+    ondragend={(event) => on_drag_end_row?.(node, event)}
   >
     {#if node.is_folder}
       {#if node.has_error}
@@ -373,8 +435,27 @@
     color: var(--interactive);
   }
 
+  .TreeRow--multi-selected:not(.TreeRow--selected) {
+    background-color: var(--muted);
+  }
+
   .TreeRow--selected:hover {
     background-color: var(--interactive-bg-hover);
+  }
+
+  .TreeRow--drag-source {
+    opacity: 0.65;
+  }
+
+  .TreeRow--drag-over {
+    background-color: var(--sidebar-accent);
+    outline: 1px solid var(--ring);
+    outline-offset: -1px;
+  }
+
+  .TreeRow--drag-invalid {
+    outline: 1px solid var(--destructive);
+    outline-offset: -1px;
   }
 
   .TreeRow--load-more {

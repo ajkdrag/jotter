@@ -2,7 +2,11 @@ import type { NotesPort, FolderStats } from "$lib/ports/notes_port";
 import { tauri_invoke } from "$lib/adapters/tauri/tauri_invoke";
 import type { MarkdownText, NoteId, NotePath, VaultId } from "$lib/types/ids";
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
-import type { FolderContents } from "$lib/types/filetree";
+import type {
+  FolderContents,
+  MoveItem,
+  MoveItemResult,
+} from "$lib/types/filetree";
 
 export function create_notes_tauri_adapter(): NotesPort {
   return {
@@ -89,6 +93,16 @@ export function create_notes_tauri_adapter(): NotesPort {
       return await tauri_invoke<FolderStats>("get_folder_stats", {
         vaultId: vault_id,
         folderPath: folder_path,
+      });
+    },
+    async move_items(
+      vault_id: VaultId,
+      items: MoveItem[],
+      target_folder: string,
+      overwrite: boolean,
+    ): Promise<MoveItemResult[]> {
+      return await tauri_invoke<MoveItemResult[]>("move_items", {
+        args: { vault_id, items, target_folder, overwrite },
       });
     },
   };

@@ -4,15 +4,20 @@ import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
+import type { TabStore } from "$lib/stores/tab_store.svelte";
 import type {
   FolderDeleteStatsResult,
   FolderLoadResult,
+  FolderMoveResult,
   FolderMutationResult,
 } from "$lib/types/folder_service_result";
+import type { MoveItem } from "$lib/types/filetree";
 import { PAGE_SIZE } from "$lib/constants/pagination";
 import { error_message } from "$lib/utils/error_message";
 import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { create_logger } from "$lib/utils/logger";
+import { move_destination_path } from "$lib/domain/filetree";
+import { as_note_path } from "$lib/types/ids";
 
 const log = create_logger("folder_service");
 
@@ -23,6 +28,7 @@ export class FolderService {
     private readonly vault_store: VaultStore,
     private readonly notes_store: NotesStore,
     private readonly editor_store: EditorStore,
+    private readonly tab_store: TabStore,
     private readonly op_store: OpStore,
     private readonly now_ms: () => number,
   ) {}
@@ -166,6 +172,89 @@ export class FolderService {
     }
   }
 
+  async move_items(
+    items: MoveItem[],
+    target_folder: string,
+    overwrite: boolean,
+  ): Promise<FolderMoveResult> {
+    const vault_id = this.vault_store.vault?.id;
+    if (!vault_id || items.length === 0) {
+      return { status: "skipped" };
+    }
+
+    this.op_store.start("folder.move", this.now_ms());
+
+    try {
+      const results = await this.notes_port.move_items(
+        vault_id,
+        items,
+        target_folder,
+        overwrite,
+      );
+
+      for (const result of results) {
+        if (!result.success) {
+          continue;
+        }
+        const item = items.find((candidate) => candidate.path === result.path);
+        if (!item) {
+          continue;
+        }
+        if (item.is_folder) {
+          this.notes_store.rename_folder(result.path, result.new_path);
+          this.editor_store.update_open_note_path_prefix(
+            `${result.path}/`,
+            `${result.new_path}/`,
+          );
+          this.notes_store.update_recent_note_path_prefix(
+            `${result.path}/`,
+            `${result.new_path}/`,
+          );
+          this.tab_store.update_tab_path_prefix(
+            `${result.path}/`,
+            `${result.new_path}/`,
+          );
+          await this.index_port.rename_folder_paths(
+            vault_id,
+            `${result.path}/`,
+            `${result.new_path}/`,
+          );
+          continue;
+        }
+
+        const old_note_path = as_note_path(result.path);
+        const new_note_path = as_note_path(result.new_path);
+        this.notes_store.rename_note(old_note_path, new_note_path);
+        if (this.editor_store.open_note?.meta.id === old_note_path) {
+          this.editor_store.update_open_note_path(new_note_path);
+        }
+        const renamed_note = this.notes_store.notes.find(
+          (note) => note.path === new_note_path,
+        );
+        if (renamed_note) {
+          this.notes_store.rename_recent_note(old_note_path, renamed_note);
+        }
+        this.tab_store.update_tab_path(old_note_path, new_note_path);
+        await this.index_port.rename_note_path(
+          vault_id,
+          old_note_path,
+          new_note_path,
+        );
+      }
+
+      this.op_store.succeed("folder.move");
+      return { status: "success", results };
+    } catch (error) {
+      const message = error_message(error);
+      log.error("Move items failed", { error: message, target_folder });
+      this.op_store.fail("folder.move", message);
+      return {
+        status: "failed",
+        error: message,
+      };
+    }
+  }
+
   apply_folder_rename(folder_path: string, new_path: string): void {
     this.notes_store.rename_folder(folder_path, new_path);
     this.editor_store.update_open_note_path_prefix(
@@ -298,5 +387,12 @@ export class FolderService {
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) return;
     await this.index_port.rename_folder_paths(vault_id, old_prefix, new_prefix);
+  }
+
+  build_move_preview(items: MoveItem[], target_folder: string) {
+    return items.map((item) => ({
+      ...item,
+      new_path: move_destination_path(item.path, target_folder),
+    }));
   }
 }

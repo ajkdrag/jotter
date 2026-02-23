@@ -84,6 +84,7 @@ export function create_app_context(input: {
     stores.vault,
     stores.notes,
     stores.editor,
+    stores.tab,
     stores.op,
     now_ms,
   );

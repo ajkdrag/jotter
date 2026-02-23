@@ -11,7 +11,11 @@ import type {
 } from "$lib/types/ids";
 import type { Vault } from "$lib/types/vault";
 import type { NoteMeta } from "$lib/types/note";
-import type { FolderContents } from "$lib/types/filetree";
+import type {
+  FolderContents,
+  MoveItem,
+  MoveItemResult,
+} from "$lib/types/filetree";
 
 export function create_mock_vault_port(): VaultPort & {
   _calls: {
@@ -87,6 +91,12 @@ export function create_mock_notes_port(): NotesPort & {
     rename_folder: { vault_id: VaultId; from_path: string; to_path: string }[];
     delete_folder: { vault_id: VaultId; folder_path: string }[];
     get_folder_stats: { vault_id: VaultId; folder_path: string }[];
+    move_items: {
+      vault_id: VaultId;
+      items: MoveItem[];
+      target_folder: string;
+      overwrite: boolean;
+    }[];
   };
 } {
   const mock = {
@@ -117,6 +127,12 @@ export function create_mock_notes_port(): NotesPort & {
       }[],
       delete_folder: [] as { vault_id: VaultId; folder_path: string }[],
       get_folder_stats: [] as { vault_id: VaultId; folder_path: string }[],
+      move_items: [] as {
+        vault_id: VaultId;
+        items: MoveItem[];
+        target_folder: string;
+        overwrite: boolean;
+      }[],
     },
     list_notes(vault_id: VaultId) {
       return Promise.resolve(mock._mock_notes.get(vault_id) || []);
@@ -281,6 +297,100 @@ export function create_mock_notes_port(): NotesPort & {
     ): Promise<FolderStats> {
       mock._calls.get_folder_stats.push({ vault_id, folder_path });
       return Promise.resolve({ note_count: 0, folder_count: 0 });
+    },
+    move_items(
+      vault_id: VaultId,
+      items: MoveItem[],
+      target_folder: string,
+      overwrite: boolean,
+    ): Promise<MoveItemResult[]> {
+      mock._calls.move_items.push({
+        vault_id,
+        items,
+        target_folder,
+        overwrite,
+      });
+      const folder_prefix = target_folder ? `${target_folder}/` : "";
+      const current_notes = mock._mock_notes.get(vault_id) || [];
+      const current_folders = mock._mock_folders.get(vault_id) || [];
+
+      const next_notes = [...current_notes];
+      const next_folders = [...current_folders];
+      const results: MoveItemResult[] = [];
+
+      for (const item of items) {
+        const leaf = item.path.split("/").at(-1) ?? item.path;
+        const new_path = `${folder_prefix}${leaf}`;
+        if (item.path === new_path) {
+          results.push({
+            path: item.path,
+            new_path,
+            success: false,
+            error: "item already in target folder",
+          });
+          continue;
+        }
+
+        if (item.is_folder) {
+          const old_prefix = `${item.path}/`;
+          const new_prefix = `${new_path}/`;
+          for (let i = 0; i < next_folders.length; i += 1) {
+            const folder = next_folders[i];
+            if (!folder) continue;
+            if (folder === item.path) {
+              next_folders[i] = new_path;
+            } else if (folder.startsWith(old_prefix)) {
+              next_folders[i] =
+                `${new_prefix}${folder.slice(old_prefix.length)}`;
+            }
+          }
+          for (let i = 0; i < next_notes.length; i += 1) {
+            const note = next_notes[i];
+            if (!note || !note.path.startsWith(old_prefix)) continue;
+            const updated_path = `${new_prefix}${note.path.slice(old_prefix.length)}`;
+            next_notes[i] = {
+              ...note,
+              id: updated_path as NoteId,
+              path: updated_path as NotePath,
+            };
+          }
+          results.push({
+            path: item.path,
+            new_path,
+            success: true,
+            error: null,
+          });
+          continue;
+        }
+
+        const note_index = next_notes.findIndex(
+          (note) => note.path === item.path,
+        );
+        if (note_index < 0) {
+          results.push({
+            path: item.path,
+            new_path,
+            success: false,
+            error: "source not found",
+          });
+          continue;
+        }
+        const note = next_notes[note_index];
+        if (!note) continue;
+        next_notes[note_index] = {
+          ...note,
+          id: new_path as NoteId,
+          path: new_path as NotePath,
+        };
+        results.push({ path: item.path, new_path, success: true, error: null });
+      }
+
+      mock._mock_notes.set(vault_id, next_notes);
+      mock._mock_folders.set(
+        vault_id,
+        Array.from(new Set(next_folders)).sort((a, b) => a.localeCompare(b)),
+      );
+      return Promise.resolve(results);
     },
   };
   return mock;

@@ -1,6 +1,21 @@
+import type { MoveItemResult } from "$lib/types/filetree";
+
 export type FolderMutationResult =
   | {
       status: "success";
+    }
+  | {
+      status: "skipped";
+    }
+  | {
+      status: "failed";
+      error: string;
+    };
+
+export type FolderMoveResult =
+  | {
+      status: "success";
+      results: MoveItemResult[];
     }
   | {
       status: "skipped";

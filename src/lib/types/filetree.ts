@@ -30,3 +30,15 @@ export type FolderPaginationState = {
   load_state: "idle" | "loading" | "error";
   error_message: string | null;
 };
+
+export type MoveItem = {
+  path: string;
+  is_folder: boolean;
+};
+
+export type MoveItemResult = {
+  path: string;
+  new_path: string;
+  success: boolean;
+  error: string | null;
+};

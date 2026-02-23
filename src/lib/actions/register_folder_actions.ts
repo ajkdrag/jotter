@@ -6,9 +6,11 @@ import { PAGE_SIZE } from "$lib/constants/pagination";
 import type {
   FolderLoadState,
   FolderPaginationState,
+  MoveItem,
 } from "$lib/types/filetree";
 import { create_logger } from "$lib/utils/logger";
 import { parent_folder_path } from "$lib/utils/path";
+import { get_invalid_drop_reason } from "$lib/domain/filetree";
 
 const log = create_logger("folder_actions");
 
@@ -209,6 +211,32 @@ function remap_expanded_paths(
   );
 }
 
+function remap_ui_paths_after_move(
+  input: ActionRegistrationInput,
+  old_path: string,
+  new_path: string,
+  is_folder: boolean,
+) {
+  if (is_folder) {
+    input.stores.ui.selected_folder_path = remap_path(
+      input.stores.ui.selected_folder_path,
+      old_path,
+      new_path,
+    );
+    input.stores.ui.filetree_revealed_note_path = remap_path(
+      input.stores.ui.filetree_revealed_note_path,
+      old_path,
+      new_path,
+    );
+    remap_expanded_paths(input, old_path, new_path);
+    return;
+  }
+
+  if (input.stores.ui.filetree_revealed_note_path === old_path) {
+    input.stores.ui.filetree_revealed_note_path = new_path;
+  }
+}
+
 async function load_folder(
   input: ActionRegistrationInput,
   path: string,
@@ -243,6 +271,15 @@ export function register_folder_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
   const loading_more = new Set<string>();
 
+  function close_move_conflict_dialog() {
+    stores.ui.filetree_move_conflict_dialog = {
+      open: false,
+      target_folder: "",
+      items: [],
+      conflicts: [],
+    };
+  }
+
   registry.register({
     id: ACTION_IDS.folder_request_create,
     label: "Request Create Folder",
@@ -257,10 +294,205 @@ export function register_folder_actions(input: ActionRegistrationInput) {
   });
 
   registry.register({
+    id: ACTION_IDS.filetree_select_item,
+    label: "Select File Tree Item",
+    execute: (payload: unknown) => {
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+      const record = payload as Record<string, unknown>;
+      const path = typeof record.path === "string" ? record.path : "";
+      const ordered_paths = Array.isArray(record.ordered_paths)
+        ? record.ordered_paths.filter(
+            (item): item is string => typeof item === "string",
+          )
+        : [];
+      const shift_key = Boolean(record.shift_key);
+      const additive_key = Boolean(record.additive_key);
+      if (!path) {
+        return;
+      }
+      if (shift_key) {
+        stores.ui.select_item_range(ordered_paths, path);
+        return;
+      }
+      if (additive_key) {
+        stores.ui.toggle_selected_item(path);
+        return;
+      }
+      stores.ui.set_single_selected_item(path);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.filetree_clear_selection,
+    label: "Clear File Tree Selection",
+    execute: () => {
+      stores.ui.clear_selected_items();
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.folder_update_create_name,
     label: "Update Create Folder Name",
     execute: (name: unknown) => {
       stores.ui.create_folder_dialog.folder_name = String(name);
+    },
+  });
+
+  async function execute_move_items(
+    items: MoveItem[],
+    target_folder: string,
+    overwrite: boolean,
+  ) {
+    const invalid_reason = get_invalid_drop_reason(items, target_folder);
+    if (invalid_reason) {
+      log.warn("Invalid drop target", { target_folder, invalid_reason });
+      return;
+    }
+
+    const moving_paths = new Set(items.map((item) => item.path.toLowerCase()));
+    const conflict_entries = services.folder
+      .build_move_preview(items, target_folder)
+      .filter((item) => {
+        if (moving_paths.has(item.new_path.toLowerCase())) {
+          return false;
+        }
+        if (item.is_folder) {
+          return stores.notes.folder_paths.some(
+            (folder_path) =>
+              folder_path.toLowerCase() === item.new_path.toLowerCase(),
+          );
+        }
+        return stores.notes.notes.some(
+          (note) => note.path.toLowerCase() === item.new_path.toLowerCase(),
+        );
+      })
+      .map((item) => ({
+        path: item.path,
+        new_path: item.new_path,
+        error: "target already exists",
+      }));
+
+    if (conflict_entries.length > 0 && !overwrite) {
+      stores.ui.filetree_move_conflict_dialog = {
+        open: true,
+        target_folder,
+        items,
+        conflicts: conflict_entries,
+      };
+      return;
+    }
+
+    const result = await services.folder.move_items(
+      items,
+      target_folder,
+      overwrite,
+    );
+    if (result.status !== "success") {
+      return;
+    }
+
+    stores.vault.bump_generation();
+    close_move_conflict_dialog();
+
+    for (const move_result of result.results) {
+      const item = items.find((entry) => entry.path === move_result.path);
+      if (!item || !move_result.success) {
+        continue;
+      }
+
+      remap_ui_paths_after_move(
+        input,
+        move_result.path,
+        move_result.new_path,
+        item.is_folder,
+      );
+
+      if (item.is_folder) {
+        clear_folder_filetree_state(input, move_result.path);
+        clear_folder_filetree_state(input, move_result.new_path);
+      }
+      clear_folder_filetree_state(input, parent_folder_path(move_result.path));
+      clear_folder_filetree_state(
+        input,
+        parent_folder_path(move_result.new_path),
+      );
+    }
+
+    stores.ui.clear_selected_items();
+  }
+
+  registry.register({
+    id: ACTION_IDS.filetree_move_items,
+    label: "Move File Tree Items",
+    execute: async (payload: unknown) => {
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+      const record = payload as Record<string, unknown>;
+      const target_folder =
+        typeof record.target_folder === "string" ? record.target_folder : "";
+      const overwrite = Boolean(record.overwrite);
+      const input_items = Array.isArray(record.items) ? record.items : [];
+      const items: MoveItem[] = input_items
+        .filter(
+          (entry): entry is { path: string; is_folder: boolean } =>
+            !!entry &&
+            typeof entry === "object" &&
+            "path" in entry &&
+            "is_folder" in entry,
+        )
+        .map((entry) => ({
+          path: entry.path,
+          is_folder: entry.is_folder,
+        }));
+      if (items.length === 0) {
+        return;
+      }
+      await execute_move_items(items, target_folder, overwrite);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.filetree_confirm_move_overwrite,
+    label: "Confirm File Tree Move Overwrite",
+    execute: async () => {
+      const dialog = stores.ui.filetree_move_conflict_dialog;
+      if (!dialog.open) {
+        return;
+      }
+      await execute_move_items(dialog.items, dialog.target_folder, true);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.filetree_skip_move_conflicts,
+    label: "Skip File Tree Move Conflicts",
+    execute: async () => {
+      const dialog = stores.ui.filetree_move_conflict_dialog;
+      if (!dialog.open) {
+        return;
+      }
+      const blocked = new Set(
+        dialog.conflicts.map((entry) => entry.path.toLowerCase()),
+      );
+      const items = dialog.items.filter(
+        (entry) => !blocked.has(entry.path.toLowerCase()),
+      );
+      if (items.length === 0) {
+        close_move_conflict_dialog();
+        return;
+      }
+      await execute_move_items(items, dialog.target_folder, false);
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.filetree_cancel_move_conflicts,
+    label: "Cancel File Tree Move Conflicts",
+    execute: () => {
+      close_move_conflict_dialog();
     },
   });
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createVirtualizer } from "@tanstack/svelte-virtual";
-  import type { FlatTreeNode } from "$lib/types/filetree";
+  import { get_invalid_drop_reason } from "$lib/domain/filetree";
+  import type { FlatTreeNode, MoveItem } from "$lib/types/filetree";
   import type { NoteMeta } from "$lib/types/note";
   import FileTreeRow from "$lib/components/file_tree_row.svelte";
 
@@ -9,7 +10,16 @@
     selected_path: string;
     revealed_note_path: string;
     open_note_path: string;
+    selected_items?: string[];
     starred_paths?: string[];
+    on_select_item?:
+      | ((payload: {
+          path: string;
+          ordered_paths: string[];
+          shift_key: boolean;
+          additive_key: boolean;
+        }) => void)
+      | undefined;
     on_toggle_folder: (path: string) => void;
     on_toggle_folder_node?: ((node: FlatTreeNode) => void) | undefined;
     on_select_note: (path: string) => void;
@@ -24,6 +34,11 @@
     on_retry_load: (path: string) => void;
     on_load_more: (folder_path: string) => void;
     on_retry_load_more: (folder_path: string) => void;
+    on_move_items: (
+      items: MoveItem[],
+      target_folder: string,
+      overwrite: boolean,
+    ) => void;
   };
 
   let {
@@ -31,7 +46,9 @@
     selected_path,
     revealed_note_path,
     open_note_path,
+    selected_items = [],
     starred_paths = [],
+    on_select_item,
     on_toggle_folder,
     on_toggle_folder_node,
     on_select_note,
@@ -46,6 +63,7 @@
     on_retry_load,
     on_load_more,
     on_retry_load_more,
+    on_move_items,
   }: Props = $props();
 
   const ROW_HEIGHT = 30;
@@ -54,6 +72,10 @@
   let scroll_container: HTMLDivElement | null = $state(null);
   let pending_load_more_scroll_top: number | null = $state(null);
   let previous_nodes_count = -1;
+  let dragging_items = $state<MoveItem[]>([]);
+  let drag_source_paths = $state(new Set<string>());
+  let drag_over_target = $state<string | null>(null);
+  let drag_over_invalid = $state(false);
 
   function restore_scroll_top(min_scroll_top: number) {
     if (min_scroll_top <= 0) {
@@ -133,6 +155,20 @@
     return v.getTotalSize();
   });
 
+  const ordered_paths = $derived.by(() =>
+    nodes.filter((node) => !node.is_load_more).map((node) => node.path),
+  );
+
+  const node_by_path = $derived.by(() => {
+    const lookup = new Map<string, FlatTreeNode>();
+    for (const node of nodes) {
+      if (!node.is_load_more) {
+        lookup.set(node.path, node);
+      }
+    }
+    return lookup;
+  });
+
   $effect(() => {
     const v = $virtualizer;
     if (!v) return;
@@ -150,13 +186,159 @@
       break;
     }
   });
+
+  function reset_drag_state() {
+    dragging_items = [];
+    drag_source_paths = new Set<string>();
+    drag_over_target = null;
+    drag_over_invalid = false;
+  }
+
+  function handle_row_pointer(node: FlatTreeNode, event: MouseEvent) {
+    on_select_item?.({
+      path: node.path,
+      ordered_paths,
+      shift_key: event.shiftKey,
+      additive_key: event.metaKey || event.ctrlKey,
+    });
+  }
+
+  function handle_row_keydown(node: FlatTreeNode, event: KeyboardEvent) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    on_select_item?.({
+      path: node.path,
+      ordered_paths,
+      shift_key: event.shiftKey,
+      additive_key: event.metaKey || event.ctrlKey,
+    });
+  }
+
+  function handle_drag_start_row(node: FlatTreeNode, event: DragEvent) {
+    if (node.is_load_more) {
+      event.preventDefault();
+      return;
+    }
+    const selected_set = new Set(selected_items);
+    const source_paths =
+      selected_set.has(node.path) && selected_items.length > 0
+        ? selected_items.filter((path) => node_by_path.has(path))
+        : [node.path];
+
+    const items: MoveItem[] = source_paths
+      .map((path) => node_by_path.get(path))
+      .filter((entry): entry is FlatTreeNode => !!entry)
+      .map((entry) => ({
+        path: entry.path,
+        is_folder: entry.is_folder,
+      }));
+    if (items.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    dragging_items = items;
+    drag_source_paths = new Set(items.map((item) => item.path));
+    drag_over_target = null;
+    drag_over_invalid = false;
+
+    event.dataTransfer?.setData(
+      "text/plain",
+      items.map((item) => item.path).join("\n"),
+    );
+    event.dataTransfer?.setData(
+      "application/x-otterly-filetree-count",
+      String(items.length),
+    );
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+    }
+  }
+
+  function handle_drag_over_target(target_folder: string, event: DragEvent) {
+    if (dragging_items.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    drag_over_target = target_folder;
+    drag_over_invalid =
+      get_invalid_drop_reason(dragging_items, target_folder) !== null;
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = drag_over_invalid ? "none" : "move";
+    }
+  }
+
+  function handle_drop_target(target_folder: string, event: DragEvent) {
+    if (dragging_items.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const invalid = get_invalid_drop_reason(dragging_items, target_folder);
+    if (!invalid) {
+      on_move_items(dragging_items, target_folder, false);
+    }
+    reset_drag_state();
+  }
+
+  function handle_drag_over_row(node: FlatTreeNode, event: DragEvent) {
+    if (!node.is_folder) {
+      return;
+    }
+    handle_drag_over_target(node.path, event);
+  }
+
+  function handle_drag_leave_row(node: FlatTreeNode, _event: DragEvent) {
+    if (drag_over_target === node.path) {
+      drag_over_target = null;
+      drag_over_invalid = false;
+    }
+  }
+
+  function handle_drop_row(node: FlatTreeNode, event: DragEvent) {
+    if (!node.is_folder) {
+      return;
+    }
+    handle_drop_target(node.path, event);
+  }
+
+  function handle_drag_end(_node: FlatTreeNode, _event: DragEvent) {
+    reset_drag_state();
+  }
+
+  function handle_container_drag_over(event: DragEvent) {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest(".TreeRow")) {
+      return;
+    }
+    handle_drag_over_target("", event);
+  }
+
+  function handle_container_drop(event: DragEvent) {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest(".TreeRow")) {
+      return;
+    }
+    handle_drop_target("", event);
+  }
 </script>
 
 <div
   bind:this={scroll_container}
   class="virtual-file-tree h-full w-full overflow-auto"
   role="tree"
+  tabindex="0"
   aria-label="File tree"
+  ondragover={handle_container_drag_over}
+  ondrop={handle_container_drop}
+  ondragleave={() => {
+    if (drag_over_target === "") {
+      drag_over_target = null;
+      drag_over_invalid = false;
+    }
+  }}
 >
   <div class="relative w-full" style="height: {total_size}px">
     {#each virtual_items as virtual_row (virtual_row.key)}
@@ -172,7 +354,21 @@
               ? selected_path === node.path
               : revealed_note_path === node.path ||
                 open_note_path === node.path}
+            is_multi_selected={selected_items.includes(node.path)}
             is_starred={starred_paths.includes(node.path)}
+            drag_over_state={drag_over_target === node.path
+              ? drag_over_invalid
+                ? "invalid"
+                : "valid"
+              : "none"}
+            is_drag_source={drag_source_paths.has(node.path)}
+            on_row_pointer={handle_row_pointer}
+            on_row_keydown={handle_row_keydown}
+            on_drag_start_row={handle_drag_start_row}
+            on_drag_over_row={handle_drag_over_row}
+            on_drag_leave_row={handle_drag_leave_row}
+            on_drop_row={handle_drop_row}
+            on_drag_end_row={handle_drag_end}
             {on_toggle_folder}
             {on_toggle_folder_node}
             {on_select_note}

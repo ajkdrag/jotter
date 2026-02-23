@@ -1,4 +1,5 @@
 import type { NoteMeta } from "$lib/types/note";
+import type { MoveItem } from "$lib/types/filetree";
 
 export type FileTreeNode = {
   name: string;
@@ -91,4 +92,90 @@ export function sort_tree(node: FileTreeNode): FileTreeNode {
     ...node,
     children: sorted_children,
   };
+}
+
+export function parent_path(path: string): string {
+  const index = path.lastIndexOf("/");
+  if (index < 0) {
+    return "";
+  }
+  return path.slice(0, index);
+}
+
+export function move_destination_path(
+  source_path: string,
+  target_folder: string,
+): string {
+  const leaf = source_path.split("/").at(-1) ?? source_path;
+  if (!target_folder) {
+    return leaf;
+  }
+  return `${target_folder}/${leaf}`;
+}
+
+export function is_path_same_or_descendant(
+  path: string,
+  parent: string,
+): boolean {
+  if (!parent) {
+    return false;
+  }
+  return path === parent || path.startsWith(`${parent}/`);
+}
+
+export function is_valid_drop_target(
+  dragged_paths: string[],
+  target_folder: string,
+): boolean {
+  if (dragged_paths.length === 0) {
+    return false;
+  }
+
+  for (const source_path of dragged_paths) {
+    const next_path = move_destination_path(source_path, target_folder);
+    if (next_path === source_path) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function get_invalid_drop_reason(
+  dragged_items: MoveItem[],
+  target_folder: string,
+): string | null {
+  if (dragged_items.length === 0) {
+    return "no items selected";
+  }
+
+  for (const item of dragged_items) {
+    if (!item.path) {
+      return "invalid source path";
+    }
+    if (
+      item.is_folder &&
+      is_path_same_or_descendant(target_folder, item.path)
+    ) {
+      return "cannot move folder into itself";
+    }
+    const next_path = move_destination_path(item.path, target_folder);
+    if (next_path === item.path) {
+      return "item already in target folder";
+    }
+  }
+
+  const folder_items = dragged_items.filter((item) => item.is_folder);
+  for (const folder_item of folder_items) {
+    for (const other of dragged_items) {
+      if (other.path === folder_item.path) {
+        continue;
+      }
+      if (is_path_same_or_descendant(other.path, folder_item.path)) {
+        return "selection contains nested folder items";
+      }
+    }
+  }
+
+  return null;
 }

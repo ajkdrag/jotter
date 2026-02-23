@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { build_filetree, sort_tree } from "$lib/domain/filetree";
+import {
+  build_filetree,
+  get_invalid_drop_reason,
+  is_valid_drop_target,
+  move_destination_path,
+  sort_tree,
+} from "$lib/domain/filetree";
 import { parent_folder_path } from "$lib/utils/path";
 import type { NoteMeta } from "$lib/types/note";
 import { as_note_path } from "$lib/types/ids";
@@ -203,5 +209,38 @@ describe("parent_folder_path", () => {
 
   test("returns parent for nested path", () => {
     expect(parent_folder_path("a/b/c.md")).toBe("a/b");
+  });
+});
+
+describe("filetree move helpers", () => {
+  test("builds destination path at root and nested targets", () => {
+    expect(move_destination_path("docs/note.md", "")).toBe("note.md");
+    expect(move_destination_path("docs/note.md", "archive")).toBe(
+      "archive/note.md",
+    );
+  });
+
+  test("rejects no-op drops", () => {
+    expect(is_valid_drop_target(["docs/note.md"], "docs")).toBe(false);
+    expect(is_valid_drop_target(["note.md"], "")).toBe(false);
+  });
+
+  test("detects descendant folder drops", () => {
+    const reason = get_invalid_drop_reason(
+      [{ path: "a", is_folder: true }],
+      "a/b",
+    );
+    expect(reason).toBe("cannot move folder into itself");
+  });
+
+  test("detects nested selections", () => {
+    const reason = get_invalid_drop_reason(
+      [
+        { path: "a", is_folder: true },
+        { path: "a/b/note.md", is_folder: false },
+      ],
+      "archive",
+    );
+    expect(reason).toBe("selection contains nested folder items");
   });
 });

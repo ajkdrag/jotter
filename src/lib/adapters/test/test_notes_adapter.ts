@@ -8,7 +8,11 @@ import {
   type VaultId,
 } from "$lib/types/ids";
 import type { NoteDoc, NoteMeta } from "$lib/types/note";
-import type { FolderContents } from "$lib/types/filetree";
+import type {
+  FolderContents,
+  MoveItem,
+  MoveItemResult,
+} from "$lib/types/filetree";
 
 function derive_note_meta(
   note_path: NotePath,
@@ -279,6 +283,71 @@ export function create_test_notes_adapter(): NotesPort {
       }
 
       return { note_count, folder_count };
+    },
+
+    move_items(
+      _vault_id: VaultId,
+      items: MoveItem[],
+      target_folder: string,
+      _overwrite: boolean,
+    ): Promise<MoveItemResult[]> {
+      const target_prefix = target_folder ? `${target_folder}/` : "";
+      const results: MoveItemResult[] = [];
+
+      for (const item of items) {
+        const leaf = item.path.split("/").at(-1) ?? item.path;
+        const new_path = `${target_prefix}${leaf}`;
+
+        if (item.is_folder) {
+          const old_prefix = `${item.path}/`;
+          const new_prefix = `${new_path}/`;
+          for (const [path, data] of user_notes.entries()) {
+            if (!path.startsWith(old_prefix)) continue;
+            user_notes.delete(path);
+            user_notes.set(
+              as_note_path(`${new_prefix}${path.slice(old_prefix.length)}`),
+              data,
+            );
+          }
+          for (const folder of Array.from(created_folders)) {
+            if (folder === item.path) {
+              created_folders.delete(folder);
+              created_folders.add(new_path);
+              continue;
+            }
+            if (!folder.startsWith(old_prefix)) continue;
+            created_folders.delete(folder);
+            created_folders.add(
+              `${new_prefix}${folder.slice(old_prefix.length)}`,
+            );
+          }
+          results.push({
+            path: item.path,
+            new_path,
+            success: true,
+            error: null,
+          });
+          continue;
+        }
+
+        const source = as_note_path(item.path);
+        const next = as_note_path(new_path);
+        const data = user_notes.get(source);
+        if (!data) {
+          results.push({
+            path: item.path,
+            new_path,
+            success: false,
+            error: "source not found",
+          });
+          continue;
+        }
+        user_notes.delete(source);
+        user_notes.set(next, data);
+        results.push({ path: item.path, new_path, success: true, error: null });
+      }
+
+      return Promise.resolve(results);
     },
   };
 }
