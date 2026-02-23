@@ -8,12 +8,14 @@
   import Plus from "@lucide/svelte/icons/plus";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import type { Theme } from "$lib/types/theme";
+  import { get_all_themes } from "$lib/types/theme";
   import {
-    get_all_themes,
+    parse_hsl,
+    format_hsl,
     SANS_FONT_OPTIONS,
     MONO_FONT_OPTIONS,
     COLOR_PRESETS,
-  } from "$lib/types/theme";
+  } from "$lib/utils/theme_helpers";
 
   type Props = {
     user_themes: Theme[];
@@ -60,23 +62,8 @@
     }
   }
 
-  type HSL = { h: number; s: number; l: number };
-
-  const HSL_RE = /^hsl\(\s*(\d+)\s*,\s*(\d+)%?\s*,\s*(\d+)%?\s*\)$/i;
-
-  function parse_hsl(value: string | null): HSL | null {
-    if (!value) return null;
-    const m = HSL_RE.exec(value);
-    if (!m) return null;
-    return { h: Number(m[1]), s: Number(m[2]), l: Number(m[3]) };
-  }
-
-  function format_hsl(hsl: HSL): string {
-    return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
-  }
-
-  function clamp(v: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, Math.round(v)));
+  function clamp(v: number, lo: number, hi: number): number {
+    return Math.max(lo, Math.min(hi, Math.round(v)));
   }
 
   const accent_preview_style = $derived(
@@ -153,7 +140,8 @@
         {/if}
       </div>
       <div class="ColorField__header-right">
-        <span class="ColorField__channel-label ColorField__channel-label--pad"></span>
+        <span class="ColorField__channel-label ColorField__channel-label--pad"
+        ></span>
         <span class="ColorField__channel-label">H</span>
         <span class="ColorField__channel-label">S</span>
         <span class="ColorField__channel-label">L</span>
@@ -166,7 +154,7 @@
             type="button"
             class="ColorField__swatch"
             class:ColorField__swatch--active={current_value === preset.value}
-            style="background: {preset.swatch}"
+            style="background: {preset.value}"
             title={preset.label}
             onclick={() => update(key, preset.value as never)}
             disabled={locked}

@@ -1,5 +1,5 @@
 import type { Theme } from "$lib/types/theme";
-import { resolve_font_stack } from "$lib/types/theme";
+import { resolve_font_stack } from "$lib/utils/theme_helpers";
 
 const SPACING_MAP: Record<string, string> = {
   compact: "1rem",

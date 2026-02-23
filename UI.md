@@ -19,19 +19,27 @@ This document defines the design system, conventions, and standards for otterly'
 src/
 ├── app.css                    # shadcn-svelte tokens (DO NOT MODIFY)
 ├── styles/
-│   ├── design_tokens.css      # Extended design system tokens (teal accent, spacing, typography)
+│   ├── design_tokens.css      # Extended design system tokens (accent, spacing, typography)
 │   ├── component_overrides.css # BEM patterns, toast overrides, DialogSection
 │   └── editor.css             # Milkdown/ProseMirror editor styles
+├── lib/types/
+│   └── theme.ts               # Theme type, built-in themes, defaults
 ├── lib/utils/
-│   └── apply_editor_styles.ts # Applies editor CSS variables from settings
+│   ├── apply_theme.ts         # Applies theme CSS variables to :root
+│   └── theme_helpers.ts       # HSL parsing, font stacks, color/font presets
+├── lib/services/
+│   └── theme_service.ts       # Theme CRUD, load/save via SettingsPort
+├── lib/reactors/
+│   └── theme.reactor.svelte.ts # Watches active theme, calls apply_theme()
 └── lib/components/
     ├── ui/                    # shadcn-svelte primitives
+    ├── theme_settings.svelte  # Theme panel in settings dialog
     └── *.svelte               # Application components
 ```
 
 **Important**: Never modify `app.css` directly — it's managed by shadcn-svelte CLI. Extend tokens in `design_tokens.css`.
 
-Editor style settings are reflected at runtime by `src/lib/reactors/editor_styles.reactor.svelte.ts`, which calls `src/lib/utils/apply_editor_styles.ts`.
+Theme settings (accent color, fonts, editor typography, element styles) are applied at runtime by `src/lib/reactors/theme.reactor.svelte.ts`, which calls `src/lib/utils/apply_theme.ts`. Themes are global (cross-vault), stored via `SettingsPort`.
 
 **Design token usage**: Default to shadcn semantic utilities (`bg-card`, `text-foreground`, `border-border`, etc.). Use custom tokens from `design_tokens.css` only when shadcn lacks the specific token (e.g. `--interactive-bg`, `--focus-ring`, `--size-tree-row`).
 
@@ -440,17 +448,22 @@ Pass classes, don't modify the source:
 
 ---
 
-## Dark Mode
+## Theming
 
-All design tokens have dark mode variants in `design_tokens.css`. The system auto-switches via `.dark` class.
+Themes replace the traditional light/dark toggle. Each theme is a complete visual identity with parametric tokens (accent color, fonts, sizes) and a `color_scheme` metadata field (`"dark"` or `"light"`) for shadcn `dark:` utility compatibility.
+
+- Themes are applied via `[data-color-scheme="dark"]` attribute on `<html>`, not a `.dark` class
+- CSS files use `[data-color-scheme="dark"] { }` selectors for dark-mode token overrides
+- Tailwind's `@custom-variant dark` targets `[data-color-scheme="dark"]`
+- Built-in themes ("Nordic Light", "Nordic Dark") are code constants; user themes persist via `SettingsPort`
 
 ### Testing
 
-Always verify both modes:
+Always verify across theme variants:
 
 1. Light backgrounds should have sufficient contrast
-2. Interactive teal should be visible in both modes
-3. Shadows are more subtle in dark mode
+2. Interactive accent should be visible in both light and dark themes
+3. Shadows are more subtle in dark themes
 
 ---
 

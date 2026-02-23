@@ -1,11 +1,7 @@
 import type { SettingsPort } from "$lib/ports/settings_port";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import type { Theme } from "$lib/types/theme";
-import {
-  BUILTIN_THEMES,
-  DEFAULT_THEME_ID,
-  create_user_theme,
-} from "$lib/types/theme";
+import { DEFAULT_THEME_ID, create_user_theme } from "$lib/types/theme";
 import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
 
@@ -69,11 +65,6 @@ export class ThemeService {
 
   duplicate_theme(name: string, base: Theme): Theme {
     return create_user_theme(name, base);
-  }
-
-  is_valid_theme_id(id: string, user_themes: Theme[]): boolean {
-    if (BUILTIN_THEMES.some((t) => t.id === id)) return true;
-    return user_themes.some((t) => t.id === id);
   }
 }
 
