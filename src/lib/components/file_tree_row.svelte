@@ -5,8 +5,7 @@
   import {
     ChevronRight,
     ChevronDown,
-    Folder,
-    File,
+    FileText,
     Trash2,
     Pencil,
     LoaderCircle,
@@ -149,7 +148,6 @@
           {/if}
         </button>
       {/if}
-      <Folder class="TreeRow__type-icon" />
       <span class="TreeRow__label">{node.name}</span>
       {#if is_starred}
         <Star class="TreeRow__star-icon" />
@@ -165,8 +163,7 @@
         </button>
       {/if}
     {:else}
-      <span class="TreeRow__spacer"></span>
-      <File class="TreeRow__type-icon" />
+      <FileText class="TreeRow__type-icon TreeRow__type-icon--after" />
       <span class="TreeRow__label">{node.name}</span>
       {#if is_starred}
         <Star class="TreeRow__star-icon" />
@@ -466,10 +463,10 @@
   }
 
   :global(.TreeRow__type-icon) {
-    width: var(--size-icon);
-    height: var(--size-icon);
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
     flex-shrink: 0;
-    opacity: 0.7;
+    opacity: 0.5;
   }
 
   :global(.TreeRow__star-icon) {
