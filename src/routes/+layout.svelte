@@ -17,13 +17,15 @@
   onMount(() => {
     const on_error = (event: ErrorEvent) => {
       event.preventDefault();
-      log.error("Unhandled error", { error: event.error });
+      if (!event.error) return;
+      log.error("Unhandled error", { error: error_message(event.error) });
       toast.error("Something went wrong");
     };
 
     const on_rejection = (event: PromiseRejectionEvent) => {
       event.preventDefault();
-      log.error("Unhandled rejection", { error: event.reason });
+      if (!event.reason) return;
+      log.error("Unhandled rejection", { error: error_message(event.reason) });
       toast.error("Something went wrong");
     };
 
