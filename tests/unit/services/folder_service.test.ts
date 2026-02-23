@@ -12,6 +12,7 @@ import {
   create_mock_index_port,
   create_mock_notes_port,
 } from "../helpers/mock_ports";
+import type { LinkRepairService } from "$lib/services/link_repair_service";
 
 function create_note(index: number) {
   const file = `note-${String(index).padStart(3, "0")}.md`;
@@ -568,6 +569,112 @@ describe("FolderService", () => {
     expect(result.status).toBe("success");
     expect(editor_store.open_note?.meta.path).toBe("docs/second.md");
     expect(editor_store.open_note?.markdown).toBe("SECOND_CONTENT");
+  });
+
+  it("rename_folder calls link repair with correct path map", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const tab_store = new TabStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const note_in_folder = {
+      ...create_note(1),
+      path: as_note_path("docs/note-001.md"),
+      id: as_note_path("docs/note-001.md"),
+    };
+    notes_store.set_notes([note_in_folder]);
+
+    const repair_links = vi.fn().mockResolvedValue(undefined);
+    const link_repair = { repair_links } as unknown as LinkRepairService;
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      tab_store,
+      op_store,
+      () => 1,
+      link_repair,
+    );
+
+    await service.rename_folder("docs", "archive");
+
+    expect(repair_links).toHaveBeenCalledWith(
+      vault.id,
+      new Map([["docs/note-001.md", "archive/note-001.md"]]),
+    );
+  });
+
+  it("move_items calls link repair with filtered path map for successful moves", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const tab_store = new TabStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const note_meta = {
+      ...create_note(1),
+      path: as_note_path("docs/note-001.md"),
+      id: as_note_path("docs/note-001.md"),
+    };
+    notes_store.set_notes([note_meta]);
+
+    notes_port.move_items = vi.fn().mockResolvedValue([
+      {
+        path: "docs/note-001.md",
+        new_path: "archive/note-001.md",
+        success: true,
+        error: null,
+      },
+      {
+        path: "missing.md",
+        new_path: "archive/missing.md",
+        success: false,
+        error: "source not found",
+      },
+    ]);
+
+    const repair_links = vi.fn().mockResolvedValue(undefined);
+    const link_repair = { repair_links } as unknown as LinkRepairService;
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      tab_store,
+      op_store,
+      () => 1,
+      link_repair,
+    );
+
+    await service.move_items(
+      [
+        { path: "docs/note-001.md", is_folder: false },
+        { path: "missing.md", is_folder: false },
+      ],
+      "archive",
+      false,
+    );
+
+    expect(repair_links).toHaveBeenCalledWith(
+      vault.id,
+      new Map([["docs/note-001.md", "archive/note-001.md"]]),
+    );
   });
 
   it("apply_folder_rename updates stores with new paths", () => {

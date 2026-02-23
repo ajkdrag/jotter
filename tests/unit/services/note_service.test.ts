@@ -3,7 +3,6 @@ import { NoteService } from "$lib/services/note_service";
 import { VaultStore } from "$lib/stores/vault_store.svelte";
 import { NotesStore } from "$lib/stores/notes_store.svelte";
 import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { TabStore } from "$lib/stores/tab_store.svelte";
 import { OpStore } from "$lib/stores/op_store.svelte";
 import { as_asset_path, as_markdown_text, as_note_path } from "$lib/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
@@ -13,7 +12,7 @@ import {
 } from "../helpers/mock_ports";
 import type { EditorService } from "$lib/services/editor_service";
 import type { AssetsPort } from "$lib/ports/assets_port";
-import type { SearchPort } from "$lib/ports/search_port";
+import type { LinkRepairService } from "$lib/services/link_repair_service";
 
 function create_deferred<T>() {
   let resolve: (value: T) => void = () => {};
@@ -492,14 +491,14 @@ describe("NoteService", () => {
     ]);
   });
 
-  it("rewrites backlink source markdown when renaming a note", async () => {
+  it("calls link repair with correct path map when renaming a note", async () => {
     const vault_store = new VaultStore();
     const notes_store = new NotesStore();
     const editor_store = new EditorStore();
     const op_store = new OpStore();
     vault_store.set_vault(create_test_vault());
 
-    const renamed_note = {
+    const note_meta = {
       id: as_note_path("docs/old.md"),
       path: as_note_path("docs/old.md"),
       name: "old",
@@ -507,30 +506,9 @@ describe("NoteService", () => {
       mtime_ms: 0,
       size_bytes: 0,
     };
-    const source_note = {
-      id: as_note_path("docs/source.md"),
-      path: as_note_path("docs/source.md"),
-      name: "source",
-      title: "source",
-      mtime_ms: 0,
-      size_bytes: 0,
-    };
-    notes_store.set_notes([renamed_note, source_note]);
+    notes_store.set_notes([note_meta]);
 
     const notes_port = create_mock_notes_port();
-    notes_port.read_note = vi.fn().mockImplementation((_vault_id, note_id) => {
-      if (String(note_id) === "docs/source.md") {
-        return Promise.resolve({
-          meta: source_note,
-          markdown: as_markdown_text("See [Old](old.md)"),
-        });
-      }
-      return Promise.resolve({
-        meta: renamed_note,
-        markdown: as_markdown_text("# Old"),
-      });
-    });
-
     const index_port = create_mock_index_port();
     const assets_port = {
       resolve_asset_url: vi.fn(),
@@ -540,24 +518,10 @@ describe("NoteService", () => {
       flush: vi.fn().mockReturnValue(null),
       mark_clean: vi.fn(),
       rename_buffer: vi.fn(),
-      open_buffer: vi.fn(),
     } as unknown as EditorService;
 
-    const get_note_links_snapshot = vi.fn().mockResolvedValue({
-      backlinks: [source_note],
-      outlinks: [],
-      orphan_links: [],
-    });
-
-    const search_port = {
-      search_notes: vi.fn(),
-      suggest_wiki_links: vi.fn(),
-      suggest_planned_links: vi.fn(),
-      get_note_links_snapshot,
-      extract_local_note_links: vi
-        .fn()
-        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
-    } as unknown as SearchPort;
+    const repair_links = vi.fn().mockResolvedValue(undefined);
+    const link_repair = { repair_links } as unknown as LinkRepairService;
 
     const service = new NoteService(
       notes_port,
@@ -569,117 +533,15 @@ describe("NoteService", () => {
       op_store,
       editor_service,
       () => 1,
-      search_port,
+      link_repair,
     );
 
-    await service.rename_note(renamed_note, as_note_path("docs/new.md"), false);
+    await service.rename_note(note_meta, as_note_path("docs/new.md"), false);
 
     const vault_id = vault_store.vault?.id;
-    expect(get_note_links_snapshot).toHaveBeenCalledWith(
+    expect(repair_links).toHaveBeenCalledWith(
       vault_id,
-      as_note_path("docs/old.md"),
-    );
-    expect(notes_port._calls.write_note).toContainEqual({
-      vault_id,
-      note_id: as_note_path("docs/source.md"),
-      markdown: as_markdown_text("See [Old](new.md)"),
-    });
-    expect(index_port._calls.upsert_note).toContainEqual({
-      vault_id,
-      note_id: as_note_path("docs/source.md"),
-    });
-  });
-
-  it("updates cached tab note markdown when rename rewrites inbound links", async () => {
-    const vault_store = new VaultStore();
-    const notes_store = new NotesStore();
-    const editor_store = new EditorStore();
-    const tab_store = new TabStore();
-    const op_store = new OpStore();
-    vault_store.set_vault(create_test_vault());
-
-    const renamed_note = {
-      id: as_note_path("docs/old.md"),
-      path: as_note_path("docs/old.md"),
-      name: "old",
-      title: "old",
-      mtime_ms: 0,
-      size_bytes: 0,
-    };
-    const source_note = {
-      id: as_note_path("docs/source.md"),
-      path: as_note_path("docs/source.md"),
-      name: "source",
-      title: "source",
-      mtime_ms: 0,
-      size_bytes: 0,
-    };
-    notes_store.set_notes([renamed_note, source_note]);
-
-    const source_tab = tab_store.open_tab(source_note.path, source_note.title);
-    tab_store.set_cached_note(source_tab.id, {
-      meta: source_note,
-      markdown: as_markdown_text("See [Old](old.md)"),
-      buffer_id: "source-buffer",
-      is_dirty: false,
-    });
-
-    const notes_port = create_mock_notes_port();
-    notes_port.read_note = vi.fn().mockImplementation((_vault_id, note_id) => {
-      if (String(note_id) === "docs/source.md") {
-        return Promise.resolve({
-          meta: source_note,
-          markdown: as_markdown_text("See [Old](old.md)"),
-        });
-      }
-      return Promise.resolve({
-        meta: renamed_note,
-        markdown: as_markdown_text("# Old"),
-      });
-    });
-
-    const index_port = create_mock_index_port();
-    const assets_port = {
-      resolve_asset_url: vi.fn(),
-      write_image_asset: vi.fn(),
-    } as unknown as AssetsPort;
-    const editor_service = {
-      flush: vi.fn().mockReturnValue(null),
-      mark_clean: vi.fn(),
-      rename_buffer: vi.fn(),
-    } as unknown as EditorService;
-    const search_port = {
-      search_notes: vi.fn(),
-      suggest_wiki_links: vi.fn(),
-      suggest_planned_links: vi.fn(),
-      get_note_links_snapshot: vi.fn().mockResolvedValue({
-        backlinks: [source_note],
-        outlinks: [],
-        orphan_links: [],
-      }),
-      extract_local_note_links: vi
-        .fn()
-        .mockResolvedValue({ outlink_paths: [], external_links: [] }),
-    } as unknown as SearchPort;
-
-    const service = new NoteService(
-      notes_port,
-      index_port,
-      assets_port,
-      vault_store,
-      notes_store,
-      editor_store,
-      op_store,
-      editor_service,
-      () => 1,
-      search_port,
-      tab_store,
-    );
-
-    await service.rename_note(renamed_note, as_note_path("docs/new.md"), false);
-
-    expect(tab_store.get_cached_note(source_tab.id)?.markdown).toBe(
-      as_markdown_text("See [Old](new.md)"),
+      new Map([["docs/old.md", "docs/new.md"]]),
     );
   });
 

@@ -20,6 +20,11 @@ export type LocalNoteLinksSnapshot = {
   external_links: ExternalLink[];
 };
 
+export type RewriteResult = {
+  markdown: string;
+  changed: boolean;
+};
+
 export interface SearchPort {
   search_notes(
     vault_id: VaultId,
@@ -45,4 +50,10 @@ export interface SearchPort {
     note_path: string,
     markdown: string,
   ): Promise<LocalNoteLinksSnapshot>;
+  rewrite_note_links(
+    markdown: string,
+    old_source_path: string,
+    new_source_path: string,
+    target_map: Record<string, string>,
+  ): Promise<RewriteResult>;
 }

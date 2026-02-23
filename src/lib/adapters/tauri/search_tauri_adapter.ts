@@ -1,6 +1,7 @@
 import type {
   LocalNoteLinksSnapshot,
   NoteLinksSnapshot,
+  RewriteResult,
   SearchPort,
 } from "$lib/ports/search_port";
 import type { VaultId, NoteId } from "$lib/types/ids";
@@ -164,6 +165,20 @@ export function create_search_tauri_adapter(): SearchPort {
           text: link.text,
         })),
       };
+    },
+
+    async rewrite_note_links(
+      markdown: string,
+      old_source_path: string,
+      new_source_path: string,
+      target_map: Record<string, string>,
+    ): Promise<RewriteResult> {
+      return tauri_invoke<RewriteResult>("rewrite_note_links", {
+        markdown,
+        oldSourcePath: old_source_path,
+        newSourcePath: new_source_path,
+        targetMap: target_map,
+      });
     },
   };
 }

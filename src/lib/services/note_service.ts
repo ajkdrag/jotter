@@ -1,5 +1,4 @@
 import type { NotesPort } from "$lib/ports/notes_port";
-import type { SearchPort } from "$lib/ports/search_port";
 import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
 import {
   as_markdown_text,
@@ -13,7 +12,6 @@ import type { NoteDoc, NoteMeta } from "$lib/types/note";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
 import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { TabStore } from "$lib/stores/tab_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import type { AssetsPort } from "$lib/ports/assets_port";
 import type {
@@ -30,7 +28,7 @@ import {
 import { parent_folder_path } from "$lib/utils/path";
 import { resolve_existing_note_path } from "$lib/domain/note_lookup";
 import { note_path_exists } from "$lib/domain/note_path_exists";
-import { rewrite_note_links } from "$lib/domain/rewrite_note_links";
+import type { LinkRepairService } from "$lib/services/link_repair_service";
 import type { EditorService } from "$lib/services/editor_service";
 import { to_open_note_state, type PastedImagePayload } from "$lib/types/editor";
 import { create_write_queue } from "$lib/utils/write_queue";
@@ -54,8 +52,7 @@ export class NoteService {
     private readonly op_store: OpStore,
     private readonly editor_service: EditorService,
     private readonly now_ms: () => number,
-    private readonly search_port: SearchPort | null = null,
-    private readonly tab_store: TabStore | null = null,
+    private readonly link_repair: LinkRepairService | null = null,
   ) {}
 
   private async read_or_create_note(
@@ -314,10 +311,6 @@ export class NoteService {
     this.op_store.start("note.rename", this.now_ms());
 
     try {
-      const backlink_sources = await this.list_backlink_source_paths(
-        vault_id,
-        note.id,
-      );
       await this.rename_note_with_overwrite_if_needed(
         vault_id,
         note.path,
@@ -325,12 +318,9 @@ export class NoteService {
         overwrite,
       );
       await this.index_port.rename_note_path(vault_id, note.id, new_path);
-      await this.rewrite_inbound_links_after_note_rename(
-        vault_id,
-        backlink_sources,
-        note.id,
-        new_path,
-      );
+
+      const path_map = new Map([[note.id as string, new_path as string]]);
+      await this.link_repair?.repair_links(vault_id, path_map);
 
       this.notes_store.rename_note(note.path, new_path);
       const updated_note = this.notes_store.notes.find(
@@ -572,131 +562,6 @@ export class NoteService {
     this.notes_store.remove_note(to_path);
     this.notes_store.remove_recent_note(to_path);
     await this.notes_port.rename_note(vault_id, from_path, to_path);
-  }
-
-  private async list_backlink_source_paths(
-    vault_id: VaultId,
-    note_path: NotePath,
-  ): Promise<NotePath[]> {
-    if (!this.search_port) {
-      return [];
-    }
-
-    try {
-      const snapshot = await this.search_port.get_note_links_snapshot(
-        vault_id,
-        note_path,
-      );
-      const unique = new Set<NotePath>();
-      for (const backlink of snapshot.backlinks) {
-        unique.add(as_note_path(backlink.path));
-      }
-      return [...unique];
-    } catch (error) {
-      log.warn("Collect backlinks before rename failed", {
-        note_path,
-        error: error_message(error),
-      });
-      return [];
-    }
-  }
-
-  private async rewrite_inbound_links_after_note_rename(
-    vault_id: VaultId,
-    backlink_sources: NotePath[],
-    old_path: NotePath,
-    new_path: NotePath,
-  ): Promise<void> {
-    for (const raw_source_path of backlink_sources) {
-      const source_path =
-        raw_source_path === old_path ? new_path : raw_source_path;
-      const open_note = this.editor_store.open_note;
-      const open_note_matches = open_note?.meta.id === source_path;
-
-      try {
-        const markdown_source = open_note_matches
-          ? open_note.markdown
-          : (await this.notes_port.read_note(vault_id, source_path)).markdown;
-        const rewritten = rewrite_note_links({
-          source_note_path: source_path,
-          markdown: markdown_source,
-          old_target_path: old_path,
-          new_target_path: new_path,
-        });
-
-        if (!rewritten.changed) {
-          continue;
-        }
-
-        if (open_note && open_note_matches && open_note.is_dirty) {
-          this.editor_store.set_open_note({
-            ...open_note,
-            markdown: as_markdown_text(rewritten.markdown),
-            buffer_id: `${open_note.buffer_id}:rename-links:${String(this.now_ms())}`,
-            is_dirty: true,
-          });
-          continue;
-        }
-
-        const rewritten_markdown = as_markdown_text(rewritten.markdown);
-        await this.notes_port.write_note(
-          vault_id,
-          source_path,
-          rewritten_markdown,
-        );
-        await this.index_port.upsert_note(vault_id, source_path);
-
-        if (open_note && open_note_matches) {
-          this.editor_store.set_open_note({
-            ...open_note,
-            markdown: rewritten_markdown,
-            buffer_id: `${open_note.buffer_id}:rename-links:${String(this.now_ms())}`,
-            is_dirty: false,
-          });
-        } else {
-          this.update_cached_tab_note_after_rewrite(
-            source_path,
-            old_path,
-            new_path,
-          );
-        }
-      } catch (error) {
-        log.warn("Rewrite inbound links after rename failed", {
-          source_path,
-          old_path,
-          new_path,
-          error: error_message(error),
-        });
-      }
-    }
-  }
-
-  private update_cached_tab_note_after_rewrite(
-    source_path: NotePath,
-    old_path: NotePath,
-    new_path: NotePath,
-  ) {
-    const store = this.tab_store;
-    if (!store) return;
-
-    const tab = store.find_tab_by_path(source_path);
-    if (!tab) return;
-
-    const cached_note = store.get_cached_note(tab.id);
-    if (!cached_note) return;
-
-    const rewritten_cached = rewrite_note_links({
-      source_note_path: source_path,
-      markdown: cached_note.markdown,
-      old_target_path: old_path,
-      new_target_path: new_path,
-    });
-    if (!rewritten_cached.changed) return;
-
-    store.set_cached_note(tab.id, {
-      ...cached_note,
-      markdown: as_markdown_text(rewritten_cached.markdown),
-    });
   }
 
   private escapes_vault(path: string): boolean {

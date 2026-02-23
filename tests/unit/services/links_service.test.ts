@@ -52,6 +52,11 @@ describe("LinksService", () => {
       suggest_planned_links: vi.fn().mockResolvedValue([]),
       get_note_links_snapshot: vi.fn().mockResolvedValue(snapshot),
       extract_local_note_links: vi.fn().mockResolvedValue(local_snapshot()),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -79,6 +84,11 @@ describe("LinksService", () => {
       suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn(),
       extract_local_note_links: vi.fn().mockResolvedValue(local_snapshot()),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -122,6 +132,11 @@ describe("LinksService", () => {
         return call_count === 1 ? first.promise : second.promise;
       }),
       extract_local_note_links: vi.fn().mockResolvedValue(local_snapshot()),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -169,6 +184,11 @@ describe("LinksService", () => {
       suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn().mockReturnValue(deferred.promise),
       extract_local_note_links: vi.fn().mockResolvedValue(local_snapshot()),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -203,6 +223,11 @@ describe("LinksService", () => {
       suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn(),
       extract_local_note_links,
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
     const vault_store = new VaultStore();
     vault_store.set_vault(create_test_vault());
@@ -243,6 +268,11 @@ describe("LinksService", () => {
       suggest_planned_links: vi.fn(),
       get_note_links_snapshot: vi.fn(),
       extract_local_note_links,
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();

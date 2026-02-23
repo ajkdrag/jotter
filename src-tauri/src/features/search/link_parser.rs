@@ -312,3 +312,233 @@ pub(crate) fn extract_local_links_snapshot(markdown: &str, source_path: &str) ->
         external_links: dedupe_external_links(parsed.external_links),
     }
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RewriteResult {
+    pub markdown: String,
+    pub changed: bool,
+}
+
+fn compute_line_starts(text: &str) -> Vec<usize> {
+    let mut starts = vec![0usize];
+    for (i, byte) in text.bytes().enumerate() {
+        if byte == b'\n' {
+            starts.push(i + 1);
+        }
+    }
+    starts
+}
+
+fn sourcepos_to_byte_range(line_starts: &[usize], pos: Sourcepos) -> Option<(usize, usize)> {
+    if pos.start.line == 0 || pos.end.line == 0 {
+        return None;
+    }
+    let start_offset = *line_starts.get(pos.start.line - 1)?;
+    let end_offset = *line_starts.get(pos.end.line - 1)?;
+    Some((start_offset + pos.start.column - 1, end_offset + pos.end.column))
+}
+
+pub(crate) fn compute_relative_path(from_dir: &str, to_path: &str) -> String {
+    let from_segments: Vec<&str> = if from_dir.is_empty() {
+        Vec::new()
+    } else {
+        from_dir.split('/').collect()
+    };
+    let to_segments: Vec<&str> = to_path.split('/').collect();
+
+    let mut common = 0;
+    while common < from_segments.len()
+        && common < to_segments.len()
+        && from_segments[common] == to_segments[common]
+    {
+        common += 1;
+    }
+
+    let ups = from_segments.len() - common;
+    let remaining = &to_segments[common..];
+
+    if ups == 0 && remaining.len() == 1 {
+        return remaining[0].to_string();
+    }
+    if ups == 0 {
+        return format!("./{}", remaining.join("/"));
+    }
+
+    let mut parts: Vec<&str> = vec![".."; ups];
+    parts.extend(remaining);
+    parts.join("/")
+}
+
+fn strip_md_ext(value: &str) -> &str {
+    if value.to_ascii_lowercase().ends_with(".md") {
+        &value[..value.len() - 3]
+    } else {
+        value
+    }
+}
+
+pub(crate) fn format_wiki_target(source_path: &str, resolved_note_path: &str) -> String {
+    let source_dir = source_dir_from_path(source_path);
+    let stripped = strip_md_ext(resolved_note_path);
+    if source_dir.is_empty() {
+        return stripped.to_string();
+    }
+    compute_relative_path(source_dir, stripped)
+}
+
+pub(crate) fn format_markdown_link_href(source_path: &str, resolved_note_path: &str) -> String {
+    let source_dir = source_dir_from_path(source_path);
+    if source_dir.is_empty() {
+        return resolved_note_path.to_string();
+    }
+    compute_relative_path(source_dir, resolved_note_path)
+}
+
+enum CollectedLink {
+    Markdown { url: String, sourcepos: Sourcepos },
+    Wiki { url: String, sourcepos: Sourcepos },
+}
+
+pub(crate) fn rewrite_links(
+    markdown: &str,
+    old_source_path: &str,
+    new_source_path: &str,
+    target_map: &HashMap<String, String>,
+) -> RewriteResult {
+    let arena = Arena::new();
+    let options = markdown_options();
+    let root = parse_document(&arena, markdown, &options);
+    let line_starts = compute_line_starts(markdown);
+    let old_source_dir = source_dir_from_path(old_source_path);
+    let source_moved = old_source_path != new_source_path;
+    let mut replacements: Vec<(usize, usize, String)> = Vec::new();
+
+    for node in root.descendants() {
+        let collected = {
+            let data = node.data.borrow();
+            let sp = data.sourcepos;
+            match &data.value {
+                NodeValue::Link(link) if !is_external_url(&link.url) => {
+                    Some(CollectedLink::Markdown {
+                        url: link.url.clone(),
+                        sourcepos: sp,
+                    })
+                }
+                NodeValue::WikiLink(link) => Some(CollectedLink::Wiki {
+                    url: link.url.clone(),
+                    sourcepos: sp,
+                }),
+                _ => None,
+            }
+        };
+
+        let collected = match collected {
+            Some(c) => c,
+            None => continue,
+        };
+
+        match collected {
+            CollectedLink::Wiki { .. } if is_embedded_wikilink(node) => continue,
+            CollectedLink::Markdown { url, sourcepos } => {
+                let parsed = match parse_internal_markdown_target(&url) {
+                    Some(p) => p,
+                    None => continue,
+                };
+                let resolved = match resolve_relative_path(old_source_dir, &parsed) {
+                    Some(r) => r,
+                    None => continue,
+                };
+
+                let new_target = if let Some(mapped) = target_map.get(&resolved) {
+                    mapped.clone()
+                } else if source_moved {
+                    resolved
+                } else {
+                    continue;
+                };
+
+                let new_href = format_markdown_link_href(new_source_path, &new_target);
+                let (byte_start, byte_end) =
+                    match sourcepos_to_byte_range(&line_starts, sourcepos) {
+                        Some(range) => range,
+                        None => continue,
+                    };
+                if byte_end > markdown.len() {
+                    continue;
+                }
+                let span = &markdown[byte_start..byte_end];
+                if !span.starts_with('[') || !span.ends_with(')') {
+                    continue;
+                }
+                let label = match span.rfind("](") {
+                    Some(pos) => &span[1..pos],
+                    None => continue,
+                };
+                let replacement = format!("[{label}]({new_href})");
+                if replacement != span {
+                    replacements.push((byte_start, byte_end, replacement));
+                }
+            }
+            CollectedLink::Wiki { url, sourcepos } => {
+                let raw_target = match parse_wiki_link_target(&url) {
+                    Some(t) => t,
+                    None => continue,
+                };
+                let resolved = match resolve_wiki_target(old_source_path, &raw_target) {
+                    Some(r) => r,
+                    None => continue,
+                };
+
+                let new_target = if let Some(mapped) = target_map.get(&resolved) {
+                    mapped.clone()
+                } else if source_moved {
+                    resolved
+                } else {
+                    continue;
+                };
+
+                let new_wiki = format_wiki_target(new_source_path, &new_target);
+                let (byte_start, byte_end) =
+                    match sourcepos_to_byte_range(&line_starts, sourcepos) {
+                        Some(range) => range,
+                        None => continue,
+                    };
+                if byte_end > markdown.len() {
+                    continue;
+                }
+                let span = &markdown[byte_start..byte_end];
+                if !span.starts_with("[[") || !span.ends_with("]]") || span.len() < 5 {
+                    continue;
+                }
+                let inner = &span[2..span.len() - 2];
+                let replacement = if let Some(pipe_pos) = inner.find('|') {
+                    let label = &inner[pipe_pos + 1..];
+                    format!("[[{new_wiki}|{label}]]")
+                } else {
+                    format!("[[{new_wiki}]]")
+                };
+                if replacement != span {
+                    replacements.push((byte_start, byte_end, replacement));
+                }
+            }
+        }
+    }
+
+    if replacements.is_empty() {
+        return RewriteResult {
+            markdown: markdown.to_string(),
+            changed: false,
+        };
+    }
+
+    replacements.sort_by(|a, b| b.0.cmp(&a.0));
+    let mut result = markdown.to_string();
+    for (start, end, replacement) in replacements {
+        result.replace_range(start..end, &replacement);
+    }
+
+    RewriteResult {
+        markdown: result,
+        changed: true,
+    }
+}

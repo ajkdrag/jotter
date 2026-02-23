@@ -15,6 +15,7 @@ import { ShellService } from "$lib/services/shell_service";
 import { TabService } from "$lib/services/tab_service";
 import { GitService } from "$lib/services/git_service";
 import { HotkeyService } from "$lib/services/hotkey_service";
+import { LinkRepairService } from "$lib/services/link_repair_service";
 import { LinksService } from "$lib/services/links_service";
 import { mount_reactors } from "$lib/reactors";
 
@@ -64,6 +65,16 @@ export function create_app_context(input: {
     now_ms,
   );
 
+  const link_repair_service = new LinkRepairService(
+    input.ports.notes,
+    input.ports.search,
+    input.ports.index,
+    stores.editor,
+    stores.tab,
+    now_ms,
+    (path) => editor_service.close_buffer(path),
+  );
+
   const note_service = new NoteService(
     input.ports.notes,
     input.ports.index,
@@ -74,8 +85,7 @@ export function create_app_context(input: {
     stores.op,
     editor_service,
     now_ms,
-    input.ports.search,
-    stores.tab,
+    link_repair_service,
   );
 
   const folder_service = new FolderService(
@@ -87,6 +97,7 @@ export function create_app_context(input: {
     stores.tab,
     stores.op,
     now_ms,
+    link_repair_service,
   );
 
   const shell_service = new ShellService(input.ports.shell);

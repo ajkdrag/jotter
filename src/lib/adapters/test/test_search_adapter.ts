@@ -51,5 +51,14 @@ export function create_test_search_adapter(): SearchPort {
         external_links: [],
       });
     },
+
+    rewrite_note_links(
+      markdown: string,
+      _old_source_path: string,
+      _new_source_path: string,
+      _target_map: Record<string, string>,
+    ) {
+      return Promise.resolve({ markdown, changed: false });
+    },
   };
 }

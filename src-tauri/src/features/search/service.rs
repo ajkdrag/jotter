@@ -1,5 +1,6 @@
 use crate::features::notes::service as notes_service;
 use crate::features::search::db as search_db;
+use crate::features::search::link_parser;
 use crate::features::search::model::{IndexNoteMeta, SearchHit, SearchScope};
 use crate::shared::storage;
 use rusqlite::Connection;
@@ -762,4 +763,14 @@ pub fn index_extract_local_note_links(
     with_read_conn(&app, &vault_id, |_conn| {
         Ok(search_db::extract_local_links_snapshot(&markdown, &note_id))
     })
+}
+
+#[tauri::command]
+pub fn rewrite_note_links(
+    markdown: String,
+    old_source_path: String,
+    new_source_path: String,
+    target_map: HashMap<String, String>,
+) -> link_parser::RewriteResult {
+    link_parser::rewrite_links(&markdown, &old_source_path, &new_source_path, &target_map)
 }

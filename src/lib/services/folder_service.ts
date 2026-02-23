@@ -18,6 +18,7 @@ import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { create_logger } from "$lib/utils/logger";
 import { move_destination_path } from "$lib/domain/filetree";
 import { as_note_path } from "$lib/types/ids";
+import type { LinkRepairService } from "$lib/services/link_repair_service";
 
 const log = create_logger("folder_service");
 
@@ -31,6 +32,7 @@ export class FolderService {
     private readonly tab_store: TabStore,
     private readonly op_store: OpStore,
     private readonly now_ms: () => number,
+    private readonly link_repair: LinkRepairService | null = null,
   ) {}
 
   async create_folder(
@@ -158,7 +160,24 @@ export class FolderService {
     this.op_store.start("folder.rename", this.now_ms());
 
     try {
+      const path_map = new Map<string, string>();
+      const folder_prefix = `${folder_path}/`;
+      const new_prefix = `${new_path}/`;
+      for (const note of this.notes_store.notes) {
+        if (note.path.startsWith(folder_prefix)) {
+          path_map.set(
+            note.path,
+            `${new_prefix}${note.path.slice(folder_prefix.length)}`,
+          );
+        }
+      }
+
       await this.notes_port.rename_folder(vault_id, folder_path, new_path);
+
+      if (path_map.size > 0) {
+        await this.link_repair?.repair_links(vault_id, path_map);
+      }
+
       this.op_store.succeed("folder.rename");
       return { status: "success" };
     } catch (error) {
@@ -191,6 +210,32 @@ export class FolderService {
         target_folder,
         overwrite,
       );
+
+      const path_map = new Map<string, string>();
+      for (const result of results) {
+        if (!result.success) continue;
+        const item = items.find((c) => c.path === result.path);
+        if (!item) continue;
+
+        if (item.is_folder) {
+          const old_prefix = `${result.path}/`;
+          const new_prefix = `${result.new_path}/`;
+          for (const note of this.notes_store.notes) {
+            if (note.path.startsWith(old_prefix)) {
+              path_map.set(
+                note.path,
+                `${new_prefix}${note.path.slice(old_prefix.length)}`,
+              );
+            }
+          }
+        } else {
+          path_map.set(result.path, result.new_path);
+        }
+      }
+
+      if (path_map.size > 0) {
+        await this.link_repair?.repair_links(vault_id, path_map);
+      }
 
       for (const result of results) {
         if (!result.success) {

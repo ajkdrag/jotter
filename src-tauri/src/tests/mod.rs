@@ -6,3 +6,6 @@ mod search_db_behavior;
 
 #[path = "../../tests/vault_settings_service_parse.rs"]
 mod vault_settings_service_parse;
+
+#[path = "../../tests/link_rewrite.rs"]
+mod link_rewrite;

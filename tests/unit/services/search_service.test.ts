@@ -65,6 +65,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -102,6 +107,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -145,6 +155,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -184,6 +199,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -241,6 +261,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -294,6 +319,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -368,6 +398,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -430,6 +465,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
@@ -470,6 +510,11 @@ describe("SearchService", () => {
       extract_local_note_links: vi
         .fn()
         .mockResolvedValue({ outlink_paths: [], external_links: [] }),
+      rewrite_note_links: vi
+        .fn()
+        .mockImplementation((markdown: string) =>
+          Promise.resolve({ markdown, changed: false }),
+        ),
     };
 
     const vault_store = new VaultStore();
