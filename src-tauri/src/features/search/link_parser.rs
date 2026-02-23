@@ -1,7 +1,7 @@
-use comrak::nodes::{AstNode, NodeCode, NodeLink, NodeValue, NodeWikiLink};
+use comrak::nodes::{AstNode, NodeCode, NodeLink, NodeValue, NodeWikiLink, Sourcepos};
 use comrak::{Arena, Options, parse_document};
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct ExternalLink {

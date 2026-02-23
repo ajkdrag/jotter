@@ -78,6 +78,8 @@
   let drag_source_paths = $state(new Set<string>());
   let drag_over_target = $state<string | null>(null);
   let drag_over_invalid = $state(false);
+  let drag_ghost_el: HTMLDivElement | null = $state(null);
+  let drag_ghost_text = $state("");
 
   function restore_scroll_top(min_scroll_top: number) {
     if (min_scroll_top <= 0) {
@@ -271,17 +273,11 @@
     );
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = "move";
-
-      const ghost = document.createElement("div");
-      ghost.textContent =
+      drag_ghost_text =
         items.length === 1 ? node.name : `${items.length} items`;
-      ghost.style.cssText =
-        "position:fixed;top:-1000px;left:-1000px;padding:4px 8px;border-radius:4px;" +
-        "background:var(--sidebar-accent);color:var(--sidebar-foreground);font-size:12px;" +
-        "white-space:nowrap;pointer-events:none;z-index:9999";
-      document.body.appendChild(ghost);
-      event.dataTransfer.setDragImage(ghost, 0, 0);
-      requestAnimationFrame(() => ghost.remove());
+      if (drag_ghost_el) {
+        event.dataTransfer.setDragImage(drag_ghost_el, -24, 12);
+      }
     }
   }
 
@@ -425,4 +421,23 @@
       {/if}
     {/each}
   </div>
+  <div bind:this={drag_ghost_el} class="DragGhost" aria-hidden="true">
+    {drag_ghost_text}
+  </div>
 </div>
+
+<style>
+  .DragGhost {
+    position: fixed;
+    top: -1000px;
+    left: -1000px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background-color: var(--sidebar-accent);
+    color: var(--sidebar-foreground);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 9999;
+  }
+</style>

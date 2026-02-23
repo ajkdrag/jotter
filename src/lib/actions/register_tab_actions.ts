@@ -406,6 +406,8 @@ async function open_active_tab_note(input: ActionRegistrationInput) {
     return;
   }
 
+  stores.ui.clear_selected_items();
+
   const cached = stores.tab.get_cached_note(active_tab.id);
   if (cached) {
     stores.editor.set_open_note(cached);
