@@ -38,7 +38,7 @@ CONF="src-tauri/tauri.conf.json"
 CARGO="src-tauri/Cargo.toml"
 
 sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$CONF"
-sed -i '' "0,/^version = \".*\"/s//version = \"$VERSION\"/" "$CARGO"
+sed -i '' '/^\[package\]/,/^version = /{s/^version = ".*"/version = "'"$VERSION"'"/;}' "$CARGO"
 
 echo "Updated $CONF and $CARGO to $VERSION"
 
