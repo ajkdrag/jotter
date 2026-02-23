@@ -10,6 +10,7 @@ export type CursorInfo = {
   line: number;
   column: number;
   total_lines: number;
+  total_words: number;
 };
 
 export type PastedImagePayload = {

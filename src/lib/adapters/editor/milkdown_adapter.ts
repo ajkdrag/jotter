@@ -11,7 +11,7 @@ import { $prose } from "@milkdown/kit/utils";
 import type { CursorInfo } from "$lib/types/editor";
 import { Slice } from "@milkdown/kit/prose/model";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
-import type { Selection } from "@milkdown/kit/prose/state";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import {
   configureLinkTooltip,
   linkTooltipPlugin,
@@ -71,6 +71,7 @@ import {
 } from "./find_highlight_plugin";
 import { code_block_copy_plugin } from "./code_block_copy_plugin";
 import { error_message } from "$lib/utils/error_message";
+import { count_words } from "$lib/utils/count_words";
 import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("milkdown_adapter");
@@ -133,33 +134,60 @@ function is_large_markdown(text: string): boolean {
   return count_lines(text) >= LARGE_DOC_LINE_THRESHOLD;
 }
 
-function calculate_cursor_info(
-  doc: ProseNode,
-  selection: Selection | null | undefined,
-): CursorInfo {
-  const $from = selection?.$from;
-  if (!$from) return { line: 1, column: 1, total_lines: doc.childCount || 1 };
+function count_doc_words(doc: ProseNode): number {
+  const text = doc.textBetween(0, doc.content.size, " ", " ");
+  return count_words(text);
+}
 
-  const line = $from.index(0) + 1;
-  const column = $from.parentOffset + 1;
-  const total_lines = doc.childCount || 1;
-  return { line, column, total_lines };
+function calculate_cursor_info(view: EditorView, markdown: string): CursorInfo {
+  const { doc, selection } = view.state;
+  const $from = selection?.$from;
+  const line = $from ? $from.index(0) + 1 : 1;
+  const column = $from ? $from.parentOffset + 1 : 1;
+  const total_lines = count_lines(markdown);
+  const total_words = count_doc_words(doc);
+  return { line, column, total_lines, total_words };
 }
 
 const cursor_plugin_key = new PluginKey("cursor-tracker");
 
-function create_cursor_plugin(on_cursor_change: (info: CursorInfo) => void) {
+function create_cursor_plugin(
+  on_cursor_change: (info: CursorInfo) => void,
+  get_markdown: () => string,
+) {
   return $prose(
     () =>
       new Plugin({
         key: cursor_plugin_key,
-        view: () => ({
-          update: (view) => {
-            const { doc, selection } = view.state;
-            const info = calculate_cursor_info(doc, selection);
-            on_cursor_change(info);
-          },
-        }),
+        view: () => {
+          let cached: CursorInfo = {
+            line: 1,
+            column: 1,
+            total_lines: 1,
+            total_words: 0,
+          };
+          let prev_doc: ProseNode | null = null;
+
+          return {
+            update: (view) => {
+              const doc_changed = view.state.doc !== prev_doc;
+              prev_doc = view.state.doc;
+
+              if (doc_changed) {
+                cached = calculate_cursor_info(view, get_markdown());
+              } else {
+                const $from = view.state.selection?.$from;
+                cached = {
+                  ...cached,
+                  line: $from ? $from.index(0) + 1 : 1,
+                  column: $from ? $from.parentOffset + 1 : 1,
+                };
+              }
+
+              on_cursor_change(cached);
+            },
+          };
+        },
       }),
   );
 }
@@ -388,7 +416,9 @@ export function create_milkdown_editor_port(args?: {
       }
 
       if (on_cursor_change) {
-        builder = builder.use(create_cursor_plugin(on_cursor_change));
+        builder = builder.use(
+          create_cursor_plugin(on_cursor_change, () => current_markdown),
+        );
       }
 
       if (on_image_paste_requested) {

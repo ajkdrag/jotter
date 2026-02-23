@@ -10,6 +10,7 @@
   interface Props {
     cursor_info: CursorInfo | null;
     word_count: number;
+    line_count: number;
     has_note: boolean;
     index_progress: IndexProgress;
     vault_name: string | null;
@@ -28,6 +29,7 @@
   let {
     cursor_info,
     word_count,
+    line_count,
     has_note,
     index_progress,
     vault_name,
@@ -45,7 +47,6 @@
 
   const line = $derived(cursor_info?.line ?? null);
   const column = $derived(cursor_info?.column ?? null);
-  const total_lines = $derived(cursor_info?.total_lines ?? null);
   const show_index_counts = $derived(
     index_progress.total > 1 || index_progress.indexed > 0,
   );
@@ -79,7 +80,7 @@
     </span>
     <span class="StatusBar__separator" aria-hidden="true"></span>
     <span class="StatusBar__item">
-      {total_lines ?? "--"} lines
+      {has_note ? line_count : "--"} lines
     </span>
   </div>
   <div class="StatusBar__section">

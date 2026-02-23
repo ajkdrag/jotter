@@ -16,7 +16,6 @@
   import { build_filetree, sort_tree } from "$lib/domain/filetree";
   import { flatten_filetree } from "$lib/domain/flatten_filetree";
   import { as_note_path } from "$lib/types/ids";
-  import { count_words } from "$lib/utils/count_words";
   import { use_app_context } from "$lib/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { NoteMeta } from "$lib/types/note";
@@ -261,9 +260,8 @@
     }
   });
 
-  const word_count = $derived(
-    stores.editor.open_note ? count_words(stores.editor.open_note.markdown) : 0,
-  );
+  const word_count = $derived(stores.editor.cursor?.total_words ?? 0);
+  const line_count = $derived(stores.editor.cursor?.total_lines ?? 0);
 
   let details_dialog_open = $state(false);
 
@@ -648,6 +646,7 @@
     <EditorStatusBar
       cursor_info={stores.editor.cursor}
       {word_count}
+      {line_count}
       has_note={!!stores.editor.open_note}
       index_progress={stores.search.index_progress}
       vault_name={stores.vault.vault?.name ?? null}
@@ -671,7 +670,7 @@
     open={details_dialog_open}
     note={stores.editor.open_note}
     {word_count}
-    line_count={stores.editor.cursor?.total_lines ?? 0}
+    {line_count}
     on_close={() => (details_dialog_open = false)}
   />
 {/if}

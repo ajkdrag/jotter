@@ -286,7 +286,12 @@ describe("EditorService", () => {
     );
     const root = {} as HTMLDivElement;
     const note = create_open_note("docs/alpha.md", "# Alpha");
-    const cursor: CursorInfo = { line: 3, column: 8, total_lines: 12 };
+    const cursor: CursorInfo = {
+      line: 3,
+      column: 8,
+      total_lines: 12,
+      total_words: 0,
+    };
 
     editor_store.set_open_note(note);
     await service.mount({

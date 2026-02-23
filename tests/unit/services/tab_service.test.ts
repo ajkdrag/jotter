@@ -112,8 +112,18 @@ describe("TabService", () => {
       tab_store.open_tab(alpha, "alpha");
       tab_store.open_tab(beta, "beta");
 
-      const alpha_cursor: CursorInfo = { line: 2, column: 3, total_lines: 20 };
-      const beta_cursor: CursorInfo = { line: 9, column: 1, total_lines: 20 };
+      const alpha_cursor: CursorInfo = {
+        line: 2,
+        column: 3,
+        total_lines: 20,
+        total_words: 0,
+      };
+      const beta_cursor: CursorInfo = {
+        line: 9,
+        column: 1,
+        total_lines: 20,
+        total_words: 0,
+      };
       tab_store.set_snapshot(alpha, { scroll_top: 0, cursor: alpha_cursor });
       tab_store.set_snapshot(beta, { scroll_top: 0, cursor: beta_cursor });
 
@@ -253,7 +263,12 @@ describe("TabService", () => {
     it("restores cursor from persisted data to editor snapshots", async () => {
       const { service, tab_store } = create_setup();
 
-      const alpha_cursor: CursorInfo = { line: 5, column: 10, total_lines: 40 };
+      const alpha_cursor: CursorInfo = {
+        line: 5,
+        column: 10,
+        total_lines: 40,
+        total_words: 0,
+      };
       const persisted: PersistedTabState = {
         tabs: [
           {
@@ -336,7 +351,7 @@ describe("TabService", () => {
           {
             note_path: as_note_path("docs/alpha.md"),
             is_pinned: true,
-            cursor: { line: 1, column: 1, total_lines: 1 },
+            cursor: { line: 1, column: 1, total_lines: 1, total_words: 0 },
           },
         ],
         active_tab_path: as_note_path("docs/alpha.md"),
