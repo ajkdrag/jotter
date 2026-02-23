@@ -36,13 +36,14 @@ fi
 
 CONF="src-tauri/tauri.conf.json"
 CARGO="src-tauri/Cargo.toml"
+LOCK="src-tauri/Cargo.lock"
 
 sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$CONF"
 sed -i '' '/^\[package\]/,/^version = /{s/^version = ".*"/version = "'"$VERSION"'"/;}' "$CARGO"
 
-echo "Updated $CONF and $CARGO to $VERSION"
+echo "Updated $CONF, $CARGO and $LOCK to $VERSION"
 
-git add "$CONF" "$CARGO"
+git add "$CONF" "$CARGO" "$LOCK"
 git commit -m "Bump version to $VERSION"
 git tag -a "$TAG" -m "$TAG"
 git push origin HEAD --follow-tags
