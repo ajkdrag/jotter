@@ -17,8 +17,12 @@ import {
   linkTooltipPlugin,
   linkTooltipConfig,
 } from "@milkdown/kit/component/link-tooltip";
-import { commonmark } from "@milkdown/kit/preset/commonmark";
-import { gfm } from "@milkdown/kit/preset/gfm";
+import {
+  commonmark,
+  inlineCodeSchema,
+  linkSchema,
+} from "@milkdown/kit/preset/commonmark";
+import { gfm, strikethroughSchema } from "@milkdown/kit/preset/gfm";
 import { listItemBlockComponent } from "@milkdown/kit/component/list-item-block";
 import {
   imageBlockComponent,
@@ -70,11 +74,23 @@ import {
   find_highlight_plugin_key,
 } from "./find_highlight_plugin";
 import { code_block_copy_plugin } from "./code_block_copy_plugin";
+import { mark_escape_plugin } from "./mark_escape_plugin";
 import { error_message } from "$lib/utils/error_message";
 import { count_words } from "$lib/utils/count_words";
 import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("milkdown_adapter");
+
+const non_inclusive_inline_code = inlineCodeSchema.extendSchema(
+  (prev) => (ctx) => ({ ...prev(ctx), inclusive: false }),
+);
+const non_inclusive_link = linkSchema.extendSchema((prev) => (ctx) => ({
+  ...prev(ctx),
+  inclusive: false,
+}));
+const non_inclusive_strikethrough = strikethroughSchema.extendSchema(
+  (prev) => (ctx) => ({ ...prev(ctx), inclusive: false }),
+);
 
 function create_svg_data_uri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -383,6 +399,10 @@ export function create_milkdown_editor_port(args?: {
           }
         })
         .use(gfm)
+        .use(non_inclusive_inline_code)
+        .use(non_inclusive_link)
+        .use(non_inclusive_strikethrough)
+        .use(mark_escape_plugin)
         .use(prism)
         .use(code_block_copy_plugin)
         .use(indent)

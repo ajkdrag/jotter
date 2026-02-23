@@ -241,7 +241,7 @@ describe("FolderService", () => {
       vault_store,
       notes_store,
       editor_store,
-      tab_store
+      tab_store,
       op_store,
       () => 1,
     );
