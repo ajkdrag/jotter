@@ -895,4 +895,26 @@ export function register_folder_actions(input: ActionRegistrationInput) {
       stores.notes.toggle_star_path(path);
     },
   });
+
+  registry.register({
+    id: ACTION_IDS.filetree_toggle_star_selection,
+    label: "Toggle Star (Selection)",
+    execute: (payload: unknown) => {
+      if (!payload || typeof payload !== "object") return;
+      const record = payload as Record<string, unknown>;
+      const paths = Array.isArray(record.paths)
+        ? record.paths.filter((p): p is string => typeof p === "string")
+        : [];
+      if (paths.length === 0) return;
+      const all_starred = Boolean(record.all_starred);
+      for (const path of paths) {
+        const is_currently_starred = stores.notes.is_starred_path(path);
+        if (all_starred && is_currently_starred) {
+          stores.notes.toggle_star_path(path);
+        } else if (!all_starred && !is_currently_starred) {
+          stores.notes.toggle_star_path(path);
+        }
+      }
+    },
+  });
 }

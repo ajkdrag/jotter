@@ -30,7 +30,9 @@
     on_request_rename_folder?: ((folder_path: string) => void) | undefined;
     on_request_create_note?: ((folder_path: string) => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
-    on_toggle_star?: ((path: string) => void) | undefined;
+    on_toggle_star?:
+      | ((payload: { paths: string[]; all_starred: boolean }) => void)
+      | undefined;
     on_retry_load: (path: string) => void;
     on_load_more: (folder_path: string) => void;
     on_retry_load_more: (folder_path: string) => void;
@@ -159,6 +161,13 @@
     nodes.filter((node) => !node.is_load_more).map((node) => node.path),
   );
 
+  const all_selected_starred = $derived(
+    selected_items.length > 1 &&
+      selected_items.every((path) =>
+        starred_paths.some((sp) => sp.toLowerCase() === path.toLowerCase()),
+      ),
+  );
+
   const node_by_path = $derived.by(() => {
     const lookup = new Map<string, FlatTreeNode>();
     for (const node of nodes) {
@@ -192,6 +201,15 @@
     drag_source_paths = new Set<string>();
     drag_over_target = null;
     drag_over_invalid = false;
+  }
+
+  function handle_toggle_star(path: string) {
+    const is_multi = selected_items.length > 1 && selected_items.includes(path);
+    const paths = is_multi ? [...selected_items] : [path];
+    const is_all_starred = is_multi
+      ? all_selected_starred
+      : starred_paths.some((sp) => sp.toLowerCase() === path.toLowerCase());
+    on_toggle_star?.({ paths, all_starred: is_all_starred });
   }
 
   function handle_row_pointer(node: FlatTreeNode, event: MouseEvent) {
@@ -253,6 +271,17 @@
     );
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = "move";
+
+      const ghost = document.createElement("div");
+      ghost.textContent =
+        items.length === 1 ? node.name : `${items.length} items`;
+      ghost.style.cssText =
+        "position:fixed;top:-1000px;left:-1000px;padding:4px 8px;border-radius:4px;" +
+        "background:var(--sidebar-accent);color:var(--sidebar-foreground);font-size:12px;" +
+        "white-space:nowrap;pointer-events:none;z-index:9999";
+      document.body.appendChild(ghost);
+      event.dataTransfer.setDragImage(ghost, 0, 0);
+      requestAnimationFrame(() => ghost.remove());
     }
   }
 
@@ -285,6 +314,12 @@
 
   function handle_drag_over_row(node: FlatTreeNode, event: DragEvent) {
     if (!node.is_folder) {
+      if (dragging_items.length > 0) {
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = "none";
+        }
+      }
       return;
     }
     handle_drag_over_target(node.path, event);
@@ -350,10 +385,11 @@
         >
           <FileTreeRow
             {node}
-            is_selected={node.is_folder
-              ? selected_path === node.path
-              : revealed_note_path === node.path ||
-                open_note_path === node.path}
+            is_selected={selected_items.length <= 1 &&
+              (node.is_folder
+                ? selected_path === node.path
+                : revealed_note_path === node.path ||
+                  open_note_path === node.path)}
             is_multi_selected={selected_items.includes(node.path)}
             is_starred={starred_paths.includes(node.path)}
             drag_over_state={drag_over_target === node.path
@@ -379,7 +415,9 @@
             {on_request_rename_folder}
             {on_request_create_note}
             {on_request_create_folder}
-            {on_toggle_star}
+            on_toggle_star={on_toggle_star ? handle_toggle_star : undefined}
+            selection_count={selected_items.length}
+            {all_selected_starred}
             {on_retry_load}
             {on_retry_load_more}
           />

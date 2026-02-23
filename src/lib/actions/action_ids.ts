@@ -68,6 +68,7 @@ export const ACTION_IDS = {
   filetree_confirm_move_overwrite: "filetree.confirm_move_overwrite",
   filetree_skip_move_conflicts: "filetree.skip_move_conflicts",
   filetree_cancel_move_conflicts: "filetree.cancel_move_conflicts",
+  filetree_toggle_star_selection: "filetree.toggle_star_selection",
 
   shell_open_url: "shell.open_url",
 

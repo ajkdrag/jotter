@@ -54,6 +54,8 @@
     on_request_create_note?: ((folder_path: string) => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
     on_toggle_star?: ((path: string) => void) | undefined;
+    selection_count?: number;
+    all_selected_starred?: boolean;
     on_retry_load: (path: string) => void;
     on_retry_load_more: (folder_path: string) => void;
   };
@@ -83,6 +85,8 @@
     on_request_create_note,
     on_request_create_folder,
     on_toggle_star,
+    selection_count = 1,
+    all_selected_starred = false,
     on_retry_load,
     on_retry_load_more,
   }: Props = $props();
@@ -265,63 +269,69 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
-        <ContextMenu.Item
-          onSelect={() => {
-            if (on_request_create_note) {
-              on_request_create_note(node.path);
-            }
-          }}
-        >
-          <FilePlus class="mr-2 h-4 w-4" />
-          <span>New Note</span>
-        </ContextMenu.Item>
-        <ContextMenu.Item
-          onSelect={() => {
-            if (on_request_create_folder) {
-              on_request_create_folder(node.path);
-            }
-          }}
-        >
-          <FolderPlus class="mr-2 h-4 w-4" />
-          <span>New Folder</span>
-        </ContextMenu.Item>
-        <ContextMenu.Separator />
-        <ContextMenu.Item
-          onSelect={() => {
-            if (on_toggle_star) {
-              on_toggle_star(node.path);
-            }
-          }}
-        >
-          {#if is_starred}
-            <StarOff class="mr-2 h-4 w-4" />
-            <span>Unstar</span>
-          {:else}
-            <Star class="mr-2 h-4 w-4" />
-            <span>Star</span>
-          {/if}
-        </ContextMenu.Item>
-        {#if on_request_rename_folder || on_request_delete_folder}
+        {#if selection_count > 1 && is_multi_selected}
+          <ContextMenu.Item onSelect={() => on_toggle_star?.(node.path)}>
+            {#if all_selected_starred}
+              <StarOff class="mr-2 h-4 w-4" />
+              <span>Unstar {selection_count} items</span>
+            {:else}
+              <Star class="mr-2 h-4 w-4" />
+              <span>Star {selection_count} items</span>
+            {/if}
+          </ContextMenu.Item>
+        {:else}
+          <ContextMenu.Item
+            onSelect={() => {
+              if (on_request_create_note) {
+                on_request_create_note(node.path);
+              }
+            }}
+          >
+            <FilePlus class="mr-2 h-4 w-4" />
+            <span>New Note</span>
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            onSelect={() => {
+              if (on_request_create_folder) {
+                on_request_create_folder(node.path);
+              }
+            }}
+          >
+            <FolderPlus class="mr-2 h-4 w-4" />
+            <span>New Folder</span>
+          </ContextMenu.Item>
           <ContextMenu.Separator />
-          {#if on_request_rename_folder}
-            <ContextMenu.Item
-              onSelect={() => {
-                on_request_rename_folder(node.path);
-              }}
-            >
-              <Pencil class="mr-2 h-4 w-4" />
-              <span>Rename</span>
-            </ContextMenu.Item>
-          {/if}
-          {#if on_request_delete_folder}
-            <ContextMenu.Item
-              onSelect={() => {
-                on_request_delete_folder(node.path);
-              }}
-            >
-              <Trash2 class="mr-2 h-4 w-4" />
-              <span>Delete</span>
-            </ContextMenu.Item>
+          <ContextMenu.Item onSelect={() => on_toggle_star?.(node.path)}>
+            {#if is_starred}
+              <StarOff class="mr-2 h-4 w-4" />
+              <span>Unstar</span>
+            {:else}
+              <Star class="mr-2 h-4 w-4" />
+              <span>Star</span>
+            {/if}
+          </ContextMenu.Item>
+          {#if on_request_rename_folder || on_request_delete_folder}
+            <ContextMenu.Separator />
+            {#if on_request_rename_folder}
+              <ContextMenu.Item
+                onSelect={() => {
+                  on_request_rename_folder(node.path);
+                }}
+              >
+                <Pencil class="mr-2 h-4 w-4" />
+                <span>Rename</span>
+              </ContextMenu.Item>
+            {/if}
+            {#if on_request_delete_folder}
+              <ContextMenu.Item
+                onSelect={() => {
+                  on_request_delete_folder(node.path);
+                }}
+              >
+                <Trash2 class="mr-2 h-4 w-4" />
+                <span>Delete</span>
+              </ContextMenu.Item>
+            {/if}
           {/if}
         {/if}
       </ContextMenu.Content>
@@ -334,46 +344,52 @@
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Content>
-        <ContextMenu.Item
-          onSelect={() => {
-            if (on_toggle_star) {
-              on_toggle_star(node.path);
-            }
-          }}
-        >
-          {#if is_starred}
-            <StarOff class="mr-2 h-4 w-4" />
-            <span>Unstar</span>
-          {:else}
-            <Star class="mr-2 h-4 w-4" />
-            <span>Star</span>
-          {/if}
-        </ContextMenu.Item>
-        {#if on_request_rename || on_request_delete}
-          <ContextMenu.Separator />
-          {#if on_request_rename}
-            <ContextMenu.Item
-              onSelect={() => {
-                if (node.note) {
-                  on_request_rename(node.note);
-                }
-              }}
-            >
-              <Pencil class="mr-2 h-4 w-4" />
-              <span>Rename</span>
-            </ContextMenu.Item>
-          {/if}
-          {#if on_request_delete}
-            <ContextMenu.Item
-              onSelect={() => {
-                if (node.note) {
-                  on_request_delete(node.note);
-                }
-              }}
-            >
-              <Trash2 class="mr-2 h-4 w-4" />
-              <span>Delete</span>
-            </ContextMenu.Item>
+        {#if selection_count > 1 && is_multi_selected}
+          <ContextMenu.Item onSelect={() => on_toggle_star?.(node.path)}>
+            {#if all_selected_starred}
+              <StarOff class="mr-2 h-4 w-4" />
+              <span>Unstar {selection_count} items</span>
+            {:else}
+              <Star class="mr-2 h-4 w-4" />
+              <span>Star {selection_count} items</span>
+            {/if}
+          </ContextMenu.Item>
+        {:else}
+          <ContextMenu.Item onSelect={() => on_toggle_star?.(node.path)}>
+            {#if is_starred}
+              <StarOff class="mr-2 h-4 w-4" />
+              <span>Unstar</span>
+            {:else}
+              <Star class="mr-2 h-4 w-4" />
+              <span>Star</span>
+            {/if}
+          </ContextMenu.Item>
+          {#if on_request_rename || on_request_delete}
+            <ContextMenu.Separator />
+            {#if on_request_rename}
+              <ContextMenu.Item
+                onSelect={() => {
+                  if (node.note) {
+                    on_request_rename(node.note);
+                  }
+                }}
+              >
+                <Pencil class="mr-2 h-4 w-4" />
+                <span>Rename</span>
+              </ContextMenu.Item>
+            {/if}
+            {#if on_request_delete}
+              <ContextMenu.Item
+                onSelect={() => {
+                  if (node.note) {
+                    on_request_delete(node.note);
+                  }
+                }}
+              >
+                <Trash2 class="mr-2 h-4 w-4" />
+                <span>Delete</span>
+              </ContextMenu.Item>
+            {/if}
           {/if}
         {/if}
       </ContextMenu.Content>
@@ -431,16 +447,16 @@
   }
 
   .TreeRow--selected {
+    background-color: var(--muted);
+  }
+
+  .TreeRow--multi-selected:not(.TreeRow--selected) {
     background-color: var(--interactive-bg);
     color: var(--interactive);
   }
 
-  .TreeRow--multi-selected:not(.TreeRow--selected) {
-    background-color: var(--muted);
-  }
-
   .TreeRow--selected:hover {
-    background-color: var(--interactive-bg-hover);
+    background-color: var(--sidebar-accent);
   }
 
   .TreeRow--drag-source {

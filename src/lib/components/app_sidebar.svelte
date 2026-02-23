@@ -39,12 +39,14 @@
     return path.endsWith(".md");
   }
 
-  function toggle_star_for_path(path: string) {
-    if (is_note_path(path)) {
-      void action_registry.execute(ACTION_IDS.note_toggle_star, path);
-      return;
-    }
-    void action_registry.execute(ACTION_IDS.folder_toggle_star, path);
+  function toggle_star_for_selection(payload: {
+    paths: string[];
+    all_starred: boolean;
+  }) {
+    void action_registry.execute(
+      ACTION_IDS.filetree_toggle_star_selection,
+      payload,
+    );
   }
 
   function toggle_starred_folder_node(node: {
@@ -333,7 +335,16 @@
 </script>
 
 {#if stores.vault.vault}
-  <div class="flex h-screen flex-col">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="flex h-screen flex-col"
+    onpointerdown={(e) => {
+      if (stores.ui.selected_items.size <= 1) return;
+      const target = e.target as HTMLElement;
+      if (target.closest(".TreeRow")) return;
+      void action_registry.execute(ACTION_IDS.filetree_clear_selection);
+    }}
+  >
     <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <ActivityBar
         sidebar_open={stores.ui.sidebar_open}
@@ -473,7 +484,7 @@
                               ACTION_IDS.folder_request_create,
                               folder_path,
                             )}
-                          on_toggle_star={toggle_star_for_path}
+                          on_toggle_star={toggle_star_for_selection}
                           on_retry_load={(path: string) =>
                             void action_registry.execute(
                               ACTION_IDS.folder_retry_load,
@@ -598,7 +609,7 @@
                             ACTION_IDS.folder_request_create,
                             folder_path,
                           )}
-                        on_toggle_star={toggle_star_for_path}
+                        on_toggle_star={toggle_star_for_selection}
                         on_retry_load={(path: string) =>
                           void action_registry.execute(
                             ACTION_IDS.folder_retry_load,
