@@ -40,6 +40,7 @@ LOCK="src-tauri/Cargo.lock"
 
 sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$CONF"
 sed -i '' '/^\[package\]/,/^version = /{s/^version = ".*"/version = "'"$VERSION"'"/;}' "$CARGO"
+cd src-tauri && cargo update -p otterly
 
 echo "Updated $CONF, $CARGO and $LOCK to $VERSION"
 
