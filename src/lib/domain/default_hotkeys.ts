@@ -35,6 +35,14 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
     category: "general",
   },
   {
+    action_id: ACTION_IDS.settings_open,
+    key: "CmdOrCtrl+,",
+    phase: "capture",
+    label: "Open Settings",
+    description: "Open the settings dialog",
+    category: "general",
+  },
+  {
     action_id: ACTION_IDS.ui_toggle_sidebar,
     key: "CmdOrCtrl+Shift+B",
     phase: "capture",
