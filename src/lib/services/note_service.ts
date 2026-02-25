@@ -415,7 +415,10 @@ export class NoteService {
               vault_id,
               latest_open_note.meta.id,
             );
-            this.editor_store.mark_clean(latest_open_note.meta.id);
+            this.editor_store.mark_clean(
+              latest_open_note.meta.id,
+              this.now_ms(),
+            );
           },
         );
       }
@@ -507,7 +510,7 @@ export class NoteService {
       this.notes_store.add_note(created_meta);
       this.editor_service.rename_buffer(old_path, target_path);
       this.editor_store.update_open_note_path(target_path);
-      this.editor_store.mark_clean(target_path);
+      this.editor_store.mark_clean(target_path, this.now_ms());
       this.notes_store.add_recent_note(created_meta);
       return;
     } catch (error) {
@@ -525,7 +528,7 @@ export class NoteService {
     this.notes_store.add_note(written.meta);
     this.editor_service.rename_buffer(old_path, target_path);
     this.editor_store.update_open_note_path(target_path);
-    this.editor_store.mark_clean(target_path);
+    this.editor_store.mark_clean(target_path, this.now_ms());
     this.notes_store.add_recent_note(written.meta);
   }
 

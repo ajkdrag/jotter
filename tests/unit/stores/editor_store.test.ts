@@ -30,4 +30,70 @@ describe("EditorStore", () => {
     expect(store.open_note?.meta.path).toBe(as_note_path("docs/new-name.md"));
     expect(store.open_note?.meta.title).toBe("new-name");
   });
+
+  it("seeds last_saved_at from mtime_ms on set_open_note", () => {
+    const store = new EditorStore();
+    const note = create_test_note("docs/note", "note");
+    note.mtime_ms = 1_700_000_000_000;
+
+    store.set_open_note(create_open_note_state(note));
+
+    expect(store.last_saved_at).toBe(1_700_000_000_000);
+  });
+
+  it("sets last_saved_at to null when mtime_ms is zero", () => {
+    const store = new EditorStore();
+    const note = create_test_note("docs/note", "note");
+    const open_note = create_open_note_state(note);
+
+    store.set_open_note(open_note);
+
+    expect(store.last_saved_at).toBeNull();
+  });
+
+  it("updates last_saved_at and meta.mtime_ms when mark_clean is called with timestamp", () => {
+    const store = new EditorStore();
+    const note = create_test_note("docs/note", "note");
+
+    store.set_open_note(create_open_note_state(note));
+    store.set_dirty(note.id, true);
+    store.mark_clean(note.id, 1_700_000_005_000);
+
+    expect(store.open_note?.is_dirty).toBe(false);
+    expect(store.last_saved_at).toBe(1_700_000_005_000);
+    expect(store.open_note?.meta.mtime_ms).toBe(1_700_000_005_000);
+  });
+
+  it("preserves last_saved_at when mark_clean is called without timestamp", () => {
+    const store = new EditorStore();
+    const note = create_test_note("docs/note", "note");
+    note.mtime_ms = 1_700_000_000_000;
+
+    store.set_open_note(create_open_note_state(note));
+    store.mark_clean(note.id);
+
+    expect(store.last_saved_at).toBe(1_700_000_000_000);
+  });
+
+  it("clears last_saved_at on clear_open_note", () => {
+    const store = new EditorStore();
+    const note = create_test_note("docs/note", "note");
+    note.mtime_ms = 1_700_000_000_000;
+
+    store.set_open_note(create_open_note_state(note));
+    store.clear_open_note();
+
+    expect(store.last_saved_at).toBeNull();
+  });
+
+  it("clears last_saved_at on reset", () => {
+    const store = new EditorStore();
+    const note = create_test_note("docs/note", "note");
+    note.mtime_ms = 1_700_000_000_000;
+
+    store.set_open_note(create_open_note_state(note));
+    store.reset();
+
+    expect(store.last_saved_at).toBeNull();
+  });
 });

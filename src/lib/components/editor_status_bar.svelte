@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Info, FolderOpen, RefreshCw } from "@lucide/svelte";
   import GitStatusWidget from "$lib/components/git_status_widget.svelte";
+  import { format_relative_time } from "$lib/utils/relative_time";
   import type { CursorInfo } from "$lib/types/editor";
   import type { IndexProgress } from "$lib/stores/search_store.svelte";
   import type { GitSyncStatus } from "$lib/types/git";
@@ -10,6 +11,7 @@
     word_count: number;
     line_count: number;
     has_note: boolean;
+    last_saved_at: number | null;
     index_progress: IndexProgress;
     vault_name: string | null;
     git_enabled: boolean;
@@ -27,6 +29,7 @@
     word_count,
     line_count,
     has_note,
+    last_saved_at,
     index_progress,
     vault_name,
     git_enabled,
@@ -61,6 +64,21 @@
       }
     };
   });
+
+  let tick = $state(Date.now());
+
+  $effect(() => {
+    if (!last_saved_at) return;
+    tick = Date.now();
+    const handle = setInterval(() => {
+      tick = Date.now();
+    }, 15_000);
+    return () => clearInterval(handle);
+  });
+
+  const saved_label = $derived(
+    last_saved_at ? `Saved ${format_relative_time(last_saved_at, tick)}` : null,
+  );
 </script>
 
 <div class="StatusBar">
@@ -76,6 +94,10 @@
     <span class="StatusBar__item">
       {has_note ? line_count : "--"} lines
     </span>
+    {#if saved_label}
+      <span class="StatusBar__separator" aria-hidden="true"></span>
+      <span class="StatusBar__item StatusBar__item--saved">{saved_label}</span>
+    {/if}
   </div>
   <div class="StatusBar__section">
     {#if index_progress.status === "indexing"}
@@ -169,6 +191,10 @@
 
   .StatusBar__item--completed {
     color: var(--muted-foreground);
+  }
+
+  .StatusBar__item--saved {
+    opacity: 0.7;
   }
 
   .StatusBar__separator {

@@ -689,6 +689,7 @@
       {word_count}
       {line_count}
       has_note={!!stores.editor.open_note}
+      last_saved_at={stores.editor.last_saved_at}
       index_progress={stores.search.index_progress}
       vault_name={stores.vault.vault?.name ?? null}
       git_enabled={stores.git.enabled}

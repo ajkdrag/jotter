@@ -5,15 +5,18 @@ import { note_name_from_path } from "$lib/utils/path";
 export class EditorStore {
   open_note = $state<OpenNoteState | null>(null);
   cursor = $state<CursorInfo | null>(null);
+  last_saved_at = $state<number | null>(null);
 
   set_open_note(open_note: OpenNoteState) {
     this.open_note = open_note;
     this.cursor = null;
+    this.last_saved_at = open_note.meta.mtime_ms || null;
   }
 
   clear_open_note() {
     this.open_note = null;
     this.cursor = null;
+    this.last_saved_at = null;
   }
 
   set_markdown(note_id: NoteId, markdown: OpenNoteState["markdown"]) {
@@ -34,8 +37,19 @@ export class EditorStore {
     };
   }
 
-  mark_clean(note_id: NoteId) {
-    this.set_dirty(note_id, false);
+  mark_clean(note_id: NoteId, saved_at_ms?: number) {
+    if (!this.open_note) return;
+    if (this.open_note.meta.id !== note_id) return;
+    this.open_note = {
+      ...this.open_note,
+      is_dirty: false,
+      ...(saved_at_ms !== undefined && {
+        meta: { ...this.open_note.meta, mtime_ms: saved_at_ms },
+      }),
+    };
+    if (saved_at_ms !== undefined) {
+      this.last_saved_at = saved_at_ms;
+    }
   }
 
   update_open_note_path(new_path: NotePath) {
@@ -82,5 +96,6 @@ export class EditorStore {
   reset() {
     this.open_note = null;
     this.cursor = null;
+    this.last_saved_at = null;
   }
 }
