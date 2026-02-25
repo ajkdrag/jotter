@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import AppShellDialogs from "$lib/components/app_shell_dialogs.svelte";
-  import AppSidebar from "$lib/components/app_sidebar.svelte";
+  import WorkspaceLayout from "$lib/components/workspace_layout.svelte";
   import VaultSelectionPanel from "$lib/components/vault_selection_panel.svelte";
   import { use_keyboard_shortcuts } from "$lib/hooks/use_keyboard_shortcuts.svelte";
   import { use_external_links } from "$lib/hooks/use_external_links.svelte";
@@ -100,7 +100,7 @@
   </div>
 {:else}
   <main>
-    <AppSidebar />
+    <WorkspaceLayout />
   </main>
 {/if}
 

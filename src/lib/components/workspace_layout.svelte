@@ -397,15 +397,15 @@
             >
               <Sidebar.Root collapsible="none" class="w-full">
                 <Sidebar.Header class="p-0">
-                  <div class="AppSidebar__header">
+                  <div class="SidebarHeader">
                     {#if stores.ui.sidebar_view === "starred"}
-                      <span class="AppSidebar__title">Starred</span>
+                      <span class="SidebarHeader__title">Starred</span>
                     {:else if stores.ui.sidebar_view === "dashboard"}
-                      <span class="AppSidebar__title">Dashboard</span>
+                      <span class="SidebarHeader__title">Dashboard</span>
                     {:else}
                       <button
                         type="button"
-                        class="AppSidebar__title AppSidebar__title--button"
+                        class="SidebarHeader__title SidebarHeader__title--button"
                         onclick={() => {
                           void action_registry.execute(
                             ACTION_IDS.ui_select_folder,
@@ -417,7 +417,7 @@
                         {stores.vault.vault.name}
                       </button>
                     {/if}
-                    <div class="AppSidebar__header-actions">
+                    <div class="SidebarHeader__actions">
                       {#each sidebar_header_actions as action (action.label)}
                         <Tooltip.Root>
                           <Tooltip.Trigger>
@@ -715,7 +715,7 @@
 {/if}
 
 <style>
-  .AppSidebar__header {
+  .SidebarHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -725,7 +725,7 @@
     border-block-end: 1px solid var(--border);
   }
 
-  .AppSidebar__title {
+  .SidebarHeader__title {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -735,16 +735,16 @@
     font-size: var(--text-sm);
   }
 
-  .AppSidebar__title--button {
+  .SidebarHeader__title--button {
     cursor: pointer;
     transition: color var(--duration-fast) var(--ease-default);
   }
 
-  .AppSidebar__title--button:hover {
+  .SidebarHeader__title--button:hover {
     color: var(--foreground);
   }
 
-  .AppSidebar__header-actions {
+  .SidebarHeader__actions {
     display: flex;
     flex-shrink: 0;
     align-items: center;
