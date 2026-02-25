@@ -418,7 +418,6 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
     let _ = safe_vault_abs_for_write(&root, &args.note_path)?;
 
     let note_rel = PathBuf::from(&args.note_path);
-    let note_parent = note_rel.parent().unwrap_or_else(|| Path::new(""));
     let note_stem = note_rel
         .file_stem()
         .and_then(|stem| stem.to_str())
@@ -438,7 +437,16 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         if sanitized.is_empty() {
             return Err("invalid custom filename".to_string());
         }
-        sanitized.to_string()
+        let has_extension = Path::new(sanitized)
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| !e.is_empty());
+        if has_extension {
+            sanitized.to_string()
+        } else {
+            let ext = image_extension(&args.mime_type, args.file_name.as_deref());
+            format!("{}.{}", sanitized, ext)
+        }
     } else {
         let source_stem = args
             .file_name
@@ -455,11 +463,7 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
         )
     };
 
-    let rel_path = if note_parent.as_os_str().is_empty() {
-        PathBuf::from(attachment_folder).join(filename)
-    } else {
-        note_parent.join(attachment_folder).join(filename)
-    };
+    let rel_path = PathBuf::from(attachment_folder).join(filename);
     let rel = storage::normalize_relative_path(&rel_path);
     let abs = safe_vault_abs_for_write(&root, &rel)?;
 

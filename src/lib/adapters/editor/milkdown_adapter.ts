@@ -45,6 +45,7 @@ import {
 import type { BufferConfig, EditorPort } from "$lib/ports/editor_port";
 import type { AssetPath, VaultId } from "$lib/types/ids";
 import { as_asset_path } from "$lib/types/ids";
+import { resolve_relative_asset_path } from "$lib/domain/asset_markdown_path";
 import {
   dirty_state_plugin,
   dirty_state_plugin_config_key,
@@ -373,7 +374,14 @@ export function create_milkdown_editor_port(args?: {
 
                 if (!current_vault_id) return url;
 
-                const result = resolve(current_vault_id, as_asset_path(url));
+                const vault_relative = resolve_relative_asset_path(
+                  current_note_path,
+                  decodeURIComponent(url),
+                );
+                const result = resolve(
+                  current_vault_id,
+                  as_asset_path(vault_relative),
+                );
                 if (typeof result === "string") {
                   resolved_url_cache.set(url, result);
                   return result;

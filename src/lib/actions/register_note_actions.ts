@@ -264,15 +264,8 @@ export function register_note_actions(input: ActionRegistrationInput) {
       if (open_note.meta.id !== payload.note_id) return;
 
       const estimated_size_bytes = payload.image.bytes.byteLength;
-      const attachment_folder =
+      const target_folder =
         stores.ui.editor_settings.attachment_folder || ".assets";
-
-      const note_parts = String(payload.note_path).split("/").filter(Boolean);
-      note_parts.pop();
-      const note_dir = note_parts.length > 0 ? note_parts.join("/") : "";
-      const target_folder = note_dir
-        ? `${note_dir}/${attachment_folder}`
-        : attachment_folder;
 
       stores.ui.image_paste_dialog = {
         open: true,

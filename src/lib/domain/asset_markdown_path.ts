@@ -35,3 +35,22 @@ export function to_markdown_asset_target(
   const relative = [...up, ...down].join("/");
   return encode_path(relative);
 }
+
+export function resolve_relative_asset_path(
+  note_path: string,
+  relative_src: string,
+): string {
+  const note_dir = parts(note_path).slice(0, -1);
+  const src_parts = parts(relative_src);
+
+  const resolved = [...note_dir];
+  for (const segment of src_parts) {
+    if (segment === "..") {
+      resolved.pop();
+    } else if (segment !== ".") {
+      resolved.push(segment);
+    }
+  }
+
+  return resolved.join("/");
+}
