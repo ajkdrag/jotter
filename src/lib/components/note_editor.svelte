@@ -3,10 +3,19 @@
   import { ACTION_IDS } from "$lib/actions/action_ids";
   import type { OpenNoteState } from "$lib/types/editor";
   import FileTextIcon from "@lucide/svelte/icons/file-text";
+  import PlusIcon from "@lucide/svelte/icons/plus";
+  import HotkeyKey from "$lib/components/hotkey_key.svelte";
+  import { Button } from "$lib/components/ui/button";
 
   const { stores, action_registry } = use_app_context();
 
   const open_note = $derived(stores.editor.open_note);
+
+  const create_note_hotkey = $derived(
+    stores.ui.hotkeys_config.bindings.find(
+      (b) => b.action_id === ACTION_IDS.note_create,
+    )?.key ?? null,
+  );
 
   function mount_editor(node: HTMLDivElement, note: OpenNoteState) {
     void action_registry.execute(ACTION_IDS.app_editor_mount, node, note);
@@ -32,6 +41,20 @@
         <p class="NoteEditor__empty-hint">
           Select a note from the sidebar or create a new one
         </p>
+        <div class="NoteEditor__empty-actions">
+          <Button
+            variant="default"
+            size="sm"
+            onclick={() => void action_registry.execute(ACTION_IDS.note_create)}
+          >
+            <PlusIcon />
+            New Note
+          </Button>
+          {#if create_note_hotkey}
+            <span class="NoteEditor__empty-shortcut-label">or press</span>
+            <HotkeyKey hotkey={create_note_hotkey} />
+          {/if}
+        </div>
       </div>
     </div>
   {/if}
@@ -92,5 +115,17 @@
     font-size: var(--text-sm);
     color: var(--muted-foreground);
     max-width: calc(var(--space-6) * 10);
+  }
+
+  .NoteEditor__empty-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .NoteEditor__empty-shortcut-label {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
   }
 </style>
