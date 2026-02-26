@@ -194,9 +194,6 @@ export class NoteService {
   }
 
   async open_wiki_link(note_path: string): Promise<NoteOpenResult> {
-    if (this.escapes_vault(note_path)) {
-      return { status: "failed", error: "Cannot link outside the vault" };
-    }
     return this.open_note(note_path, true);
   }
 
@@ -565,20 +562,6 @@ export class NoteService {
     this.notes_store.remove_note(to_path);
     this.notes_store.remove_recent_note(to_path);
     await this.notes_port.rename_note(vault_id, from_path, to_path);
-  }
-
-  private escapes_vault(path: string): boolean {
-    let depth = 0;
-    for (const segment of path.split("/")) {
-      if (segment === "" || segment === ".") continue;
-      if (segment === "..") {
-        if (depth === 0) return true;
-        depth--;
-      } else {
-        depth++;
-      }
-    }
-    return false;
   }
 
   private is_not_found_error(error: unknown): boolean {

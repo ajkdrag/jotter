@@ -1,271 +1,32 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
-import { clear_folder_filetree_state } from "$lib/actions/filetree_state";
+import {
+  clear_folder_filetree_state,
+  load_folder,
+  remove_expanded_paths,
+  remap_expanded_paths,
+  remap_ui_paths_after_move,
+  set_pagination,
+  transform_filetree_paths,
+} from "$lib/actions/helpers/filetree_helpers";
+import {
+  ancestor_folder_paths,
+  build_folder_path_from_name,
+  close_create_dialog,
+  close_delete_dialog,
+  close_rename_dialog,
+  folder_name_from_path,
+  is_valid_folder_name,
+  parse_reveal_note_path,
+} from "$lib/actions/helpers/folder_helpers";
 import { PAGE_SIZE } from "$lib/constants/pagination";
-import type {
-  FolderLoadState,
-  FolderPaginationState,
-  MoveItem,
-} from "$lib/types/filetree";
+import type { FolderLoadState, FolderPaginationState, MoveItem } from "$lib/types/filetree";
 import { create_logger } from "$lib/utils/logger";
 import { parent_folder_path } from "$lib/utils/path";
 import { get_invalid_drop_reason } from "$lib/domain/filetree";
 
 const log = create_logger("folder_actions");
-
-function should_load_folder(state: FolderLoadState | undefined): boolean {
-  return !state || state === "unloaded" || state === "error";
-}
-
-function set_load_state(
-  input: ActionRegistrationInput,
-  path: string,
-  state: FolderLoadState,
-  error: string | null,
-) {
-  const load_states = new SvelteMap(input.stores.ui.filetree.load_states);
-  load_states.set(path, state);
-
-  const error_messages = new SvelteMap(input.stores.ui.filetree.error_messages);
-  if (error) {
-    error_messages.set(path, error);
-  } else {
-    error_messages.delete(path);
-  }
-
-  input.stores.ui.filetree = {
-    ...input.stores.ui.filetree,
-    load_states,
-    error_messages,
-  };
-}
-
-function set_pagination(
-  input: ActionRegistrationInput,
-  path: string,
-  state: FolderPaginationState,
-) {
-  const pagination = new SvelteMap(input.stores.ui.filetree.pagination);
-  pagination.set(path, state);
-  input.stores.ui.filetree = {
-    ...input.stores.ui.filetree,
-    pagination,
-  };
-}
-
-function clear_folder_pagination(input: ActionRegistrationInput, path: string) {
-  const pagination = new SvelteMap(input.stores.ui.filetree.pagination);
-  pagination.delete(path);
-  input.stores.ui.filetree = {
-    ...input.stores.ui.filetree,
-    pagination,
-  };
-}
-
-function close_create_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.create_folder_dialog = {
-    open: false,
-    parent_path: "",
-    folder_name: "",
-  };
-}
-
-function close_delete_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.delete_folder_dialog = {
-    open: false,
-    folder_path: null,
-    affected_note_count: 0,
-    affected_folder_count: 0,
-    status: "idle",
-  };
-}
-
-function close_rename_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.rename_folder_dialog = {
-    open: false,
-    folder_path: null,
-    new_name: "",
-  };
-}
-
-function folder_name_from_path(path: string): string {
-  const i = path.lastIndexOf("/");
-  return i >= 0 ? path.slice(i + 1) : path;
-}
-
-function build_folder_path_from_name(parent: string, name: string): string {
-  return parent ? `${parent}/${name}` : name;
-}
-
-function parse_reveal_note_path(input: unknown): string {
-  if (input && typeof input === "object" && "note_path" in input) {
-    const record = input as Record<string, unknown>;
-    if (typeof record.note_path === "string") {
-      return record.note_path;
-    }
-  }
-  return String(input);
-}
-
-function ancestor_folder_paths(note_path: string): string[] {
-  const segments = note_path.split("/").filter(Boolean);
-  if (segments.length <= 1) {
-    return [];
-  }
-
-  const folders = segments.slice(0, -1);
-  const result: string[] = [];
-  for (let i = 0; i < folders.length; i += 1) {
-    result.push(folders.slice(0, i + 1).join("/"));
-  }
-  return result;
-}
-
-function is_valid_folder_name(name: string): boolean {
-  const trimmed = name.trim();
-  return (
-    trimmed.length > 0 &&
-    !trimmed.includes("/") &&
-    trimmed !== "." &&
-    trimmed !== ".."
-  );
-}
-
-function transform_filetree_paths(
-  input: ActionRegistrationInput,
-  transform: (path: string) => string | null,
-) {
-  const filetree = input.stores.ui.filetree;
-
-  const expanded_paths = new SvelteSet<string>();
-  for (const path of filetree.expanded_paths) {
-    const result = transform(path);
-    if (result !== null) {
-      expanded_paths.add(result);
-    }
-  }
-
-  const load_states = new SvelteMap<string, FolderLoadState>();
-  for (const [path, state] of filetree.load_states) {
-    const result = transform(path);
-    if (result !== null) {
-      load_states.set(result, state);
-    }
-  }
-
-  const error_messages = new SvelteMap<string, string>();
-  for (const [path, message] of filetree.error_messages) {
-    const result = transform(path);
-    if (result !== null) {
-      error_messages.set(result, message);
-    }
-  }
-
-  const pagination = new SvelteMap<string, FolderPaginationState>();
-  for (const [path, state] of filetree.pagination) {
-    const result = transform(path);
-    if (result !== null) {
-      pagination.set(result, state);
-    }
-  }
-
-  input.stores.ui.filetree = {
-    expanded_paths,
-    load_states,
-    error_messages,
-    pagination,
-  };
-}
-
-function remove_expanded_paths(
-  input: ActionRegistrationInput,
-  folder_path: string,
-) {
-  const prefix = `${folder_path}/`;
-  transform_filetree_paths(input, (path) =>
-    path === folder_path || path.startsWith(prefix) ? null : path,
-  );
-}
-
-function remap_path(path: string, old_path: string, new_path: string): string {
-  if (path === old_path) {
-    return new_path;
-  }
-
-  const old_prefix = `${old_path}/`;
-  if (path.startsWith(old_prefix)) {
-    return `${new_path}/${path.slice(old_prefix.length)}`;
-  }
-
-  return path;
-}
-
-function remap_expanded_paths(
-  input: ActionRegistrationInput,
-  old_path: string,
-  new_path: string,
-) {
-  transform_filetree_paths(input, (path) =>
-    remap_path(path, old_path, new_path),
-  );
-}
-
-function remap_ui_paths_after_move(
-  input: ActionRegistrationInput,
-  old_path: string,
-  new_path: string,
-  is_folder: boolean,
-) {
-  if (is_folder) {
-    input.stores.ui.selected_folder_path = remap_path(
-      input.stores.ui.selected_folder_path,
-      old_path,
-      new_path,
-    );
-    input.stores.ui.filetree_revealed_note_path = remap_path(
-      input.stores.ui.filetree_revealed_note_path,
-      old_path,
-      new_path,
-    );
-    remap_expanded_paths(input, old_path, new_path);
-    return;
-  }
-
-  if (input.stores.ui.filetree_revealed_note_path === old_path) {
-    input.stores.ui.filetree_revealed_note_path = new_path;
-  }
-}
-
-async function load_folder(
-  input: ActionRegistrationInput,
-  path: string,
-): Promise<void> {
-  const current_state = input.stores.ui.filetree.load_states.get(path);
-  if (!should_load_folder(current_state)) {
-    return;
-  }
-
-  set_load_state(input, path, "loading", null);
-  const generation = input.stores.vault.generation;
-  const result = await input.services.folder.load_folder(path, generation);
-
-  if (result.status === "loaded") {
-    set_load_state(input, path, "loaded", null);
-    set_pagination(input, path, {
-      loaded_count: Math.min(PAGE_SIZE, result.total_count),
-      total_count: result.total_count,
-      load_state: "idle",
-      error_message: null,
-    });
-    return;
-  }
-
-  if (result.status === "failed") {
-    set_load_state(input, path, "error", result.error);
-    clear_folder_pagination(input, path);
-  }
-}
 
 export function register_folder_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;

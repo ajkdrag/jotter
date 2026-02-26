@@ -240,7 +240,7 @@ fn rebuild_resolves_batch_outlinks_before_yield() {
     let conn = open_search_db(root).expect("db should open");
 
     write_md(root, "notes/000-target.md", "# target");
-    write_md(root, "notes/001-source.md", "[target](000-target.md)");
+    write_md(root, "notes/001-source.md", "[target](./000-target.md)");
     for i in 0..100 {
         write_md(root, &format!("notes/{:03}-filler.md", i + 2), "# filler");
     }
@@ -263,21 +263,21 @@ fn rebuild_resolves_batch_outlinks_before_yield() {
 
 #[test]
 fn link_target_parsers_cover_spaces_aliases_and_wikilinks() {
-    let gfm = gfm_link_targets("[Doc](Folder Name/child note.md)", "root.md");
+    let gfm = gfm_link_targets("[Doc](<Folder Name/child note.md>)", "root.md");
     assert_eq!(gfm, vec!["Folder Name/child note.md".to_string()]);
 
     let wiki = wiki_link_targets("[[Folder Name/child note#Heading|Alias Label]]", "root.md");
     assert_eq!(wiki, vec!["Folder Name/child note.md".to_string()]);
 
     let combined = internal_link_targets(
-        "[A](./gfm target.md) [[wiki target]] ![[embedded]]",
+        "[A](./gfm%20target.md) [[wiki target]] ![[embedded]]",
         "docs/source.md",
     );
     assert_eq!(
         combined,
         vec![
             "docs/gfm target.md".to_string(),
-            "docs/wiki target.md".to_string()
+            "wiki target.md".to_string()
         ]
     );
 }

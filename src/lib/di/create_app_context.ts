@@ -44,8 +44,11 @@ export function create_app_context(input: {
     stores.editor,
     stores.op,
     {
-      on_internal_link_click: (note_path) =>
-        void action_registry.execute(ACTION_IDS.note_open_wiki_link, note_path),
+      on_internal_link_click: (raw_path, base_note_path) =>
+        void action_registry.execute(ACTION_IDS.note_open_wiki_link, {
+          raw_path,
+          base_note_path,
+        }),
       on_external_link_click: (url) =>
         void action_registry.execute(ACTION_IDS.shell_open_url, url),
       on_image_paste_requested: (note_id, note_path, image) =>

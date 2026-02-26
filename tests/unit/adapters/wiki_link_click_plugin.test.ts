@@ -55,12 +55,12 @@ function create_mouse_event(
 }
 
 describe("create_wiki_link_click_prose_plugin", () => {
-  function setup() {
+  function setup(base_note_path = "folder/current.md") {
     const on_internal_link_click = vi.fn();
     const on_external_link_click = vi.fn();
 
     const plugin = create_wiki_link_click_prose_plugin({
-      base_note_path: "folder/current.md",
+      base_note_path,
       on_internal_link_click,
       on_external_link_click,
     });
@@ -77,91 +77,229 @@ describe("create_wiki_link_click_prose_plugin", () => {
     return handler.call(plugin, null as never, event as never);
   }
 
-  it("calls preventDefault and resolves relative .md href", () => {
-    const { plugin, on_internal_link_click } = setup();
+  describe("internal link passthrough", () => {
+    it("passes raw href and base note path for bare .md href", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event, prevent_default } = create_mouse_event("note.md");
 
-    const { event, prevent_default } = create_mouse_event("note.md");
-    const result = invoke_dom_click(plugin, event);
+      invoke_dom_click(plugin, event);
 
-    expect(result).toBe(true);
-    expect(prevent_default).toHaveBeenCalled();
-    expect(on_internal_link_click).toHaveBeenCalledWith("folder/note.md");
+      expect(prevent_default).toHaveBeenCalled();
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "note.md",
+        "folder/current.md",
+      );
+    });
+
+    it("passes vault-relative path as raw href", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("docs/sub/note.md");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "docs/sub/note.md",
+        "folder/current.md",
+      );
+    });
+
+    it("passes note-relative path as raw href", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("./sibling.md");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "./sibling.md",
+        "folder/current.md",
+      );
+    });
+
+    it("passes parent-relative path as raw href", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("../other.md");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "../other.md",
+        "folder/current.md",
+      );
+    });
+
+    it("passes href without extension as raw path", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("folder/note");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "folder/note",
+        "folder/current.md",
+      );
+    });
+
+    it("strips fragment from href before passing", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("note.md#section");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "note.md",
+        "folder/current.md",
+      );
+    });
+
+    it("strips query string from href before passing", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("note.md?param=1");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "note.md",
+        "folder/current.md",
+      );
+    });
+
+    it("decodes percent-encoded paths", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("my%20notes/todo%20list.md");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "my notes/todo list.md",
+        "folder/current.md",
+      );
+    });
+
+    it("uses base_note_path from constructor when no editor context", () => {
+      const { plugin, on_internal_link_click } =
+        setup("deep/nested/source.md");
+      const { event } = create_mouse_event("target.md");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).toHaveBeenCalledWith(
+        "target.md",
+        "deep/nested/source.md",
+      );
+    });
   });
 
-  it("calls preventDefault and fires external callback for http links", () => {
-    const { plugin, on_external_link_click, on_internal_link_click } = setup();
+  describe("external links", () => {
+    it("fires external callback for https links", () => {
+      const { plugin, on_external_link_click, on_internal_link_click } =
+        setup();
+      const { event } = create_mouse_event("https://example.com");
 
-    const { event, prevent_default } = create_mouse_event(
-      "https://example.com",
-    );
-    const result = invoke_dom_click(plugin, event);
+      invoke_dom_click(plugin, event);
 
-    expect(result).toBe(true);
-    expect(prevent_default).toHaveBeenCalled();
-    expect(on_external_link_click).toHaveBeenCalledWith("https://example.com");
-    expect(on_internal_link_click).not.toHaveBeenCalled();
+      expect(on_external_link_click).toHaveBeenCalledWith(
+        "https://example.com",
+      );
+      expect(on_internal_link_click).not.toHaveBeenCalled();
+    });
+
+    it("fires external callback for http links", () => {
+      const { plugin, on_external_link_click } = setup();
+      const { event } = create_mouse_event("http://example.com/page");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_external_link_click).toHaveBeenCalledWith(
+        "http://example.com/page",
+      );
+    });
   });
 
-  it("calls preventDefault even when internal href cannot be resolved", () => {
-    const { plugin, on_internal_link_click } = setup();
+  describe("filtered clicks", () => {
+    it("ignores non-left clicks", () => {
+      const { plugin } = setup();
+      const { event, prevent_default } = create_mouse_event("note.md", {
+        button: 2,
+      });
 
-    const { event, prevent_default } = create_mouse_event(
-      "nonexistent-note.md",
-    );
-    const result = invoke_dom_click(plugin, event);
+      expect(invoke_dom_click(plugin, event)).toBe(false);
+      expect(prevent_default).not.toHaveBeenCalled();
+    });
 
-    expect(result).toBe(true);
-    expect(prevent_default).toHaveBeenCalled();
-    expect(on_internal_link_click).toHaveBeenCalledWith(
-      "folder/nonexistent-note.md",
-    );
+    it("ignores meta key", () => {
+      const { plugin } = setup();
+      const { event, prevent_default } = create_mouse_event("note.md", {
+        metaKey: true,
+      });
+
+      expect(invoke_dom_click(plugin, event)).toBe(false);
+      expect(prevent_default).not.toHaveBeenCalled();
+    });
+
+    it("ignores ctrl key", () => {
+      const { plugin } = setup();
+      const { event, prevent_default } = create_mouse_event("note.md", {
+        ctrlKey: true,
+      });
+
+      expect(invoke_dom_click(plugin, event)).toBe(false);
+      expect(prevent_default).not.toHaveBeenCalled();
+    });
+
+    it("ignores non-anchor elements", () => {
+      const { plugin } = setup();
+      const { event, prevent_default } = create_mouse_event(null);
+
+      expect(invoke_dom_click(plugin, event)).toBe(false);
+      expect(prevent_default).not.toHaveBeenCalled();
+    });
   });
 
-  it("does not handle non-left clicks", () => {
-    const { plugin } = setup();
+  describe("rejected hrefs", () => {
+    it("rejects non-md file extensions", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event, prevent_default } = create_mouse_event("image.png");
 
-    const { event, prevent_default } = create_mouse_event(
-      "https://example.com",
-      { button: 2 },
-    );
-    const result = invoke_dom_click(plugin, event);
+      invoke_dom_click(plugin, event);
 
-    expect(result).toBe(false);
-    expect(prevent_default).not.toHaveBeenCalled();
-  });
+      expect(prevent_default).toHaveBeenCalled();
+      expect(on_internal_link_click).not.toHaveBeenCalled();
+    });
 
-  it("does not handle clicks with modifier keys", () => {
-    const { plugin } = setup();
+    it("rejects pdf files", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("document.pdf");
 
-    const { event, prevent_default } = create_mouse_event(
-      "https://example.com",
-      { metaKey: true },
-    );
-    const result = invoke_dom_click(plugin, event);
+      invoke_dom_click(plugin, event);
 
-    expect(result).toBe(false);
-    expect(prevent_default).not.toHaveBeenCalled();
-  });
+      expect(on_internal_link_click).not.toHaveBeenCalled();
+    });
 
-  it("ignores non-md file extensions", () => {
-    const { plugin, on_internal_link_click, on_external_link_click } = setup();
+    it("rejects empty href", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("");
 
-    const { event, prevent_default } = create_mouse_event("image.png");
-    const result = invoke_dom_click(plugin, event);
+      invoke_dom_click(plugin, event);
 
-    expect(result).toBe(true);
-    expect(prevent_default).toHaveBeenCalled();
-    expect(on_internal_link_click).not.toHaveBeenCalled();
-    expect(on_external_link_click).not.toHaveBeenCalled();
-  });
+      expect(on_internal_link_click).not.toHaveBeenCalled();
+    });
 
-  it("does not handle clicks on non-anchor elements", () => {
-    const { plugin } = setup();
+    it("rejects href that is only a fragment", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("#section");
 
-    const { event, prevent_default } = create_mouse_event(null);
-    const result = invoke_dom_click(plugin, event);
+      invoke_dom_click(plugin, event);
 
-    expect(result).toBe(false);
-    expect(prevent_default).not.toHaveBeenCalled();
+      expect(on_internal_link_click).not.toHaveBeenCalled();
+    });
+
+    it("rejects directory-only path with trailing slash", () => {
+      const { plugin, on_internal_link_click } = setup();
+      const { event } = create_mouse_event("folder/");
+
+      invoke_dom_click(plugin, event);
+
+      expect(on_internal_link_click).not.toHaveBeenCalled();
+    });
   });
 });

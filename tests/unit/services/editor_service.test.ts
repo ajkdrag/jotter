@@ -320,10 +320,11 @@ describe("EditorService", () => {
     });
 
     const events = session_config_at(session_configs, 0).events;
-    events.on_internal_link_click?.("docs/next.md");
+    events.on_internal_link_click?.("docs/next.md", "current.md");
 
     expect(callbacks.on_internal_link_click).toHaveBeenCalledWith(
       "docs/next.md",
+      "current.md",
     );
   });
 

@@ -6,11 +6,7 @@ import type {
   Mark,
 } from "@milkdown/kit/prose/model";
 import { linkSchema } from "@milkdown/kit/preset/commonmark";
-import {
-  format_wiki_target_for_markdown,
-  format_wiki_target_for_markdown_link,
-  resolve_wiki_target_to_note_path,
-} from "$lib/domain/wiki_link";
+import { format_wiki_display } from "$lib/domain/wiki_link";
 import { dirty_state_plugin_key } from "./dirty_state_plugin";
 import { editor_context_plugin_key } from "./editor_context_plugin";
 
@@ -94,45 +90,26 @@ function contains_protected_mark(
   });
 }
 
+function ensure_md_extension(value: string): string {
+  return value.endsWith(".md") ? value : `${value}.md`;
+}
+
 function build_replacement(input: {
-  link_type: MarkType;
-  base_note_path: string;
   raw_target: string;
   raw_label: string | null;
-}): { resolved_note_path: string; display: string; href: string } | null {
+}): { display: string; href: string } | null {
   const raw = input.raw_target.trim();
   if (raw === "") return null;
 
-  const resolved = resolve_wiki_target_to_note_path({
-    base_note_path: input.base_note_path,
-    raw_target: raw,
-  });
-
-  const href = resolved
-    ? format_wiki_target_for_markdown_link({
-        base_note_path: input.base_note_path,
-        resolved_note_path: resolved,
-      })
-    : raw.endsWith(".md")
-      ? raw
-      : `${raw}.md`;
-
+  const href = ensure_md_extension(raw);
   const label = (input.raw_label ?? "").trim();
+  const display = label || format_wiki_display(raw);
 
-  const display = resolved
-    ? label ||
-      format_wiki_target_for_markdown({
-        base_note_path: input.base_note_path,
-        resolved_note_path: resolved,
-      })
-    : label || raw;
-
-  return { resolved_note_path: resolved ?? raw, display, href };
+  return { display, href };
 }
 
 export function create_wiki_link_converter_prose_plugin(input: {
   link_type: MarkType;
-  base_note_path?: string;
 }) {
   return new Plugin({
     key: wiki_link_plugin_key,
@@ -143,10 +120,6 @@ export function create_wiki_link_converter_prose_plugin(input: {
       const should_scan =
         force_full_scan || transactions.some((tr) => tr.docChanged);
       if (!should_scan) return null;
-
-      const context_state = editor_context_plugin_key.getState(new_state);
-      const base_note_path =
-        context_state?.note_path ?? input.base_note_path ?? "";
 
       const tr = new_state.tr;
 
@@ -193,15 +166,13 @@ export function create_wiki_link_converter_prose_plugin(input: {
             });
           }
 
+
           for (let i = matches.length - 1; i >= 0; i--) {
             const m = matches[i];
             if (!m) continue;
             const start_pos = pos_from_index(segments, m.start);
             if (start_pos === null) continue;
-
             const replacement = build_replacement({
-              link_type: input.link_type,
-              base_note_path,
               raw_target: m.raw_target,
               raw_label: m.raw_label,
             });
@@ -242,8 +213,6 @@ export function create_wiki_link_converter_prose_plugin(input: {
         if (start === null) return;
 
         const replacement = build_replacement({
-          link_type: input.link_type,
-          base_note_path,
           raw_target,
           raw_label: raw_label ?? null,
         });
@@ -326,7 +295,7 @@ function parse_internal_href(href: string): string | null {
 }
 
 export function create_wiki_link_click_prose_plugin(input: {
-  on_internal_link_click: (note_path: string) => void;
+  on_internal_link_click: (raw_path: string, base_note_path: string) => void;
   on_external_link_click: (url: string) => void;
   base_note_path?: string;
 }) {
@@ -365,12 +334,7 @@ export function create_wiki_link_click_prose_plugin(input: {
             ? editor_context_plugin_key.getState(editor_state)
             : null;
           const base = ctx_state?.note_path ?? input.base_note_path ?? "";
-          const resolved =
-            resolve_wiki_target_to_note_path({
-              base_note_path: base,
-              raw_target: raw_path,
-            }) ?? raw_path;
-          input.on_internal_link_click(resolved);
+          input.on_internal_link_click(raw_path, base);
 
           return true;
         },
@@ -388,6 +352,6 @@ export const create_wiki_link_converter_plugin = () =>
   });
 
 export const create_wiki_link_click_plugin = (input: {
-  on_internal_link_click: (note_path: string) => void;
+  on_internal_link_click: (raw_path: string, base_note_path: string) => void;
   on_external_link_click: (url: string) => void;
 }) => $prose(() => create_wiki_link_click_prose_plugin(input));

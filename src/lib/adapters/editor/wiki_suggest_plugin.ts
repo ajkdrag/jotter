@@ -2,7 +2,7 @@ import { $ctx, $prose } from "@milkdown/kit/utils";
 import { TooltipProvider } from "@milkdown/kit/plugin/tooltip";
 import { Plugin, PluginKey } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { format_wiki_target_for_markdown } from "$lib/domain/wiki_link";
+import { format_wiki_display } from "$lib/domain/wiki_link";
 
 export const wiki_suggest_plugin_key = new PluginKey<WikiSuggestState>(
   "wiki-suggest",
@@ -169,12 +169,7 @@ export function create_wiki_suggest_prose_plugin(
     const state = get_state(view);
     const item = state.items[index];
     if (!item) return;
-    const target = config.base_note_path
-      ? format_wiki_target_for_markdown({
-          base_note_path: config.base_note_path,
-          resolved_note_path: item.path,
-        })
-      : item.title;
+    const target = format_wiki_display(item.path);
     const replacement = `[[${target}`;
     const tr = view.state.tr.replaceWith(
       state.from,

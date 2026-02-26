@@ -151,19 +151,24 @@ fn ensure_md_extension(value: &str) -> String {
     format!("{value}.md")
 }
 
-fn resolve_wiki_target(source_path: &str, raw_target: &str) -> Option<String> {
-    let source_dir = source_dir_from_path(source_path);
-    if raw_target.starts_with('/') {
-        let stripped = raw_target.trim_start_matches('/');
-        if stripped.is_empty() {
-            return None;
-        }
-        let candidate = ensure_md_extension(stripped);
-        return resolve_relative_path("", &candidate);
+fn is_note_relative_target(raw_target: &str) -> bool {
+    raw_target.starts_with("./") || raw_target.starts_with("../")
+}
+
+pub(crate) fn resolve_wiki_target(source_path: &str, raw_target: &str) -> Option<String> {
+    let base_dir = if is_note_relative_target(raw_target) {
+        source_dir_from_path(source_path)
+    } else {
+        ""
+    };
+
+    let cleaned = raw_target.trim_start_matches('/');
+    if cleaned.is_empty() {
+        return None;
     }
 
-    let candidate = ensure_md_extension(raw_target);
-    resolve_relative_path(source_dir, &candidate)
+    let candidate = ensure_md_extension(cleaned);
+    resolve_relative_path(base_dir, &candidate)
 }
 
 fn collect_plain_text<'a>(node: &'a AstNode<'a>) -> String {
@@ -207,7 +212,7 @@ fn is_embedded_wikilink(node: &AstNode<'_>) -> bool {
 
 fn parse_link_node(link: &NodeLink, source_path: &str) -> Option<String> {
     let parsed = parse_internal_markdown_target(&link.url)?;
-    resolve_relative_path(source_dir_from_path(source_path), &parsed)
+    resolve_wiki_target(source_path, &parsed)
 }
 
 fn parse_wikilink_node(link: &NodeWikiLink, source_path: &str) -> Option<String> {
@@ -377,13 +382,28 @@ fn strip_md_ext(value: &str) -> &str {
     }
 }
 
-pub(crate) fn format_wiki_target(source_path: &str, resolved_note_path: &str) -> String {
-    let source_dir = source_dir_from_path(source_path);
+fn compute_note_relative_path(from_dir: &str, to_path: &str) -> String {
+    let result = compute_relative_path(from_dir, to_path);
+    if !result.starts_with("./") && !result.starts_with("../") && !result.contains('/') {
+        return format!("./{result}");
+    }
+    result
+}
+
+pub(crate) fn format_wiki_target(
+    source_path: &str,
+    resolved_note_path: &str,
+    note_relative: bool,
+) -> String {
     let stripped = strip_md_ext(resolved_note_path);
+    if !note_relative {
+        return stripped.to_string();
+    }
+    let source_dir = source_dir_from_path(source_path);
     if source_dir.is_empty() {
         return stripped.to_string();
     }
-    compute_relative_path(source_dir, stripped)
+    compute_note_relative_path(source_dir, stripped)
 }
 
 pub(crate) fn format_markdown_link_href(source_path: &str, resolved_note_path: &str) -> String {
@@ -409,7 +429,6 @@ pub(crate) fn rewrite_links(
     let options = markdown_options();
     let root = parse_document(&arena, markdown, &options);
     let line_starts = compute_line_starts(markdown);
-    let old_source_dir = source_dir_from_path(old_source_path);
     let source_moved = old_source_path != new_source_path;
     let mut replacements: Vec<(usize, usize, String)> = Vec::new();
 
@@ -444,20 +463,27 @@ pub(crate) fn rewrite_links(
                     Some(p) => p,
                     None => continue,
                 };
-                let resolved = match resolve_relative_path(old_source_dir, &parsed) {
+                let is_relative = is_note_relative_target(&parsed);
+                let resolved = match resolve_wiki_target(old_source_path, &parsed) {
                     Some(r) => r,
                     None => continue,
                 };
 
                 let new_target = if let Some(mapped) = target_map.get(&resolved) {
                     mapped.clone()
-                } else if source_moved {
+                } else if source_moved && is_relative {
                     resolved
+                } else if source_moved && !is_relative {
+                    continue;
                 } else {
                     continue;
                 };
 
-                let new_href = format_markdown_link_href(new_source_path, &new_target);
+                let new_href = if is_relative {
+                    format_markdown_link_href(new_source_path, &new_target)
+                } else {
+                    new_target.clone()
+                };
                 let (byte_start, byte_end) =
                     match sourcepos_to_byte_range(&line_starts, sourcepos) {
                         Some(range) => range,
@@ -484,6 +510,7 @@ pub(crate) fn rewrite_links(
                     Some(t) => t,
                     None => continue,
                 };
+                let is_relative = is_note_relative_target(&raw_target);
                 let resolved = match resolve_wiki_target(old_source_path, &raw_target) {
                     Some(r) => r,
                     None => continue,
@@ -491,13 +518,13 @@ pub(crate) fn rewrite_links(
 
                 let new_target = if let Some(mapped) = target_map.get(&resolved) {
                     mapped.clone()
-                } else if source_moved {
+                } else if source_moved && is_relative {
                     resolved
                 } else {
                     continue;
                 };
 
-                let new_wiki = format_wiki_target(new_source_path, &new_target);
+                let new_wiki = format_wiki_target(new_source_path, &new_target, is_relative);
                 let (byte_start, byte_end) =
                     match sourcepos_to_byte_range(&line_starts, sourcepos) {
                         Some(range) => range,

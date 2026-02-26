@@ -56,4 +56,8 @@ export interface SearchPort {
     new_source_path: string,
     target_map: Record<string, string>,
   ): Promise<RewriteResult>;
+  resolve_note_link(
+    source_path: string,
+    raw_target: string,
+  ): Promise<string | null>;
 }

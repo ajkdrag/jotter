@@ -4,120 +4,24 @@ import {
   capture_active_tab_snapshot,
   ensure_tab_capacity,
   try_open_tab,
-} from "$lib/actions/register_tab_actions";
-import { clear_folder_filetree_state } from "$lib/actions/filetree_state";
+} from "$lib/actions/helpers/tab_helpers";
+import { clear_folder_filetree_state } from "$lib/actions/helpers/filetree_helpers";
+import {
+  build_full_path,
+  build_note_path_from_name,
+  close_delete_dialog,
+  close_image_paste_dialog,
+  close_rename_dialog,
+  close_save_dialog,
+  filename_from_path,
+  parse_note_open_input,
+  save_and_insert_image,
+} from "$lib/actions/helpers/note_helpers";
 import type { NoteMeta } from "$lib/types/note";
-import { as_note_path, type NoteId, type NotePath } from "$lib/types/ids";
-import type { ImagePasteRequest, PastedImagePayload } from "$lib/types/editor";
-import { sanitize_note_name } from "$lib/domain/sanitize_note_name";
-import { to_markdown_asset_target } from "$lib/domain/asset_markdown_path";
+import { as_note_path, type NotePath } from "$lib/types/ids";
+import type { ImagePasteRequest } from "$lib/types/editor";
 import { note_name_from_path, parent_folder_path } from "$lib/utils/path";
 import { toast } from "svelte-sonner";
-
-function close_delete_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.delete_note_dialog = {
-    open: false,
-    note: null,
-  };
-}
-
-function close_rename_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.rename_note_dialog = {
-    open: false,
-    note: null,
-    new_name: "",
-    show_overwrite_confirm: false,
-    is_checking_conflict: false,
-  };
-}
-
-function close_save_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.save_note_dialog = {
-    open: false,
-    folder_path: "",
-    new_path: null,
-    show_overwrite_confirm: false,
-    is_checking_existence: false,
-  };
-}
-
-function build_full_path(folder_path: string, filename: string): NotePath {
-  const sanitized = sanitize_note_name(filename);
-  return as_note_path(folder_path ? `${folder_path}/${sanitized}` : sanitized);
-}
-
-function filename_from_path(path: string): string {
-  const last_slash = path.lastIndexOf("/");
-  return last_slash >= 0 ? path.slice(last_slash + 1) : path;
-}
-
-function build_note_path_from_name(parent: string, name: string): NotePath {
-  const filename = `${name}.md`;
-  return as_note_path(parent ? `${parent}/${filename}` : filename);
-}
-
-function image_alt_text(file_name: string | null): string {
-  if (!file_name) return "image";
-  const leaf = file_name.split("/").filter(Boolean).at(-1) ?? "";
-  const stem = leaf.replace(/\.[^.]+$/i, "").trim();
-  return stem !== "" ? stem : "image";
-}
-
-function close_image_paste_dialog(input: ActionRegistrationInput) {
-  input.stores.ui.image_paste_dialog = {
-    open: false,
-    note_id: null,
-    note_path: null,
-    image: null,
-    filename: "",
-    estimated_size_bytes: 0,
-    target_folder: "",
-  };
-}
-
-function parse_note_open_input(input: unknown): {
-  note_path: string;
-  cleanup_if_missing: boolean;
-} {
-  if (input && typeof input === "object" && "note_path" in input) {
-    const record = input as Record<string, unknown>;
-    if (typeof record.note_path === "string") {
-      return {
-        note_path: record.note_path,
-        cleanup_if_missing: record.cleanup_if_missing === true,
-      };
-    }
-  }
-
-  return {
-    note_path: String(input),
-    cleanup_if_missing: false,
-  };
-}
-
-async function save_and_insert_image(
-  input: ActionRegistrationInput,
-  note_id: NoteId,
-  note_path: NotePath,
-  image: PastedImagePayload,
-  options?: { custom_filename?: string; attachment_folder?: string },
-): Promise<void> {
-  const { stores, services } = input;
-
-  const write_result = await services.note.save_pasted_image(
-    note_path,
-    image,
-    options,
-  );
-  if (write_result.status !== "saved") return;
-
-  const latest_open_note = stores.editor.open_note;
-  if (!latest_open_note || latest_open_note.meta.id !== note_id) return;
-
-  const target = to_markdown_asset_target(note_path, write_result.asset_path);
-  const alt = image_alt_text(image.file_name);
-  services.editor.insert_text(`![${alt}](${target})`);
-}
 
 export function register_note_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
@@ -200,17 +104,29 @@ export function register_note_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.note_open_wiki_link,
     label: "Open Wiki Link",
     when: () => stores.vault.vault !== null,
-    execute: async (note_path: unknown) => {
-      const path_str = String(note_path);
+    execute: async (payload: unknown) => {
+      const { raw_path, base_note_path } = payload as {
+        raw_path: string;
+        base_note_path: string;
+      };
 
-      const existing_tab = stores.tab.find_tab_by_path(path_str as NotePath);
+      const resolved = await services.search.resolve_note_link(
+        base_note_path,
+        raw_path,
+      );
+      if (!resolved) {
+        toast.error("Cannot link outside the vault");
+        return;
+      }
+
+      const existing_tab = stores.tab.find_tab_by_path(resolved as NotePath);
       if (!existing_tab && !ensure_tab_capacity(input)) return;
 
       await capture_active_tab_snapshot(input);
 
-      const result = await services.note.open_wiki_link(path_str);
+      const result = await services.note.open_wiki_link(resolved);
       if (result.status === "opened") {
-        const opened_path = stores.editor.open_note?.meta.path ?? path_str;
+        const opened_path = stores.editor.open_note?.meta.path ?? resolved;
         const title = note_name_from_path(opened_path);
         const tab = try_open_tab(input, opened_path as NotePath, title);
         if (!tab) return;

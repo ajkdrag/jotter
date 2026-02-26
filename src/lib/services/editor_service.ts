@@ -25,7 +25,7 @@ function note_name_from_path(path: string): string {
 }
 
 export type EditorServiceCallbacks = {
-  on_internal_link_click: (note_path: string) => void;
+  on_internal_link_click: (raw_path: string, base_note_path: string) => void;
   on_external_link_click: (url: string) => void;
   on_image_paste_requested: (
     note_id: NoteId,
@@ -214,9 +214,9 @@ export class EditorService {
             this.editor_store.set_cursor(id, cursor);
           });
         },
-        on_internal_link_click: (note_path: string) => {
+        on_internal_link_click: (raw_path: string, base_note_path: string) => {
           if (!this.is_generation_current(generation)) return;
-          this.callbacks.on_internal_link_click(note_path);
+          this.callbacks.on_internal_link_click(raw_path, base_note_path);
         },
         on_external_link_click: (url: string) => {
           if (!this.is_generation_current(generation)) return;

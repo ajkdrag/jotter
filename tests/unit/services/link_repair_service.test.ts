@@ -47,6 +47,7 @@ function create_mock_search_port(overrides?: Partial<SearchPort>): SearchPort {
       .mockImplementation((markdown: string) =>
         Promise.resolve({ markdown, changed: false }),
       ),
+    resolve_note_link: vi.fn().mockResolvedValue(null),
     ...overrides,
   } as unknown as SearchPort;
 }
@@ -226,6 +227,67 @@ describe("LinkRepairService", () => {
 
     expect(notes_port._calls.write_note).toEqual([]);
     expect(rewrite_note_links).toHaveBeenCalled();
+  });
+
+  it("rewrites outlinks of moved note even when editor has old path", async () => {
+    const editor_store = new EditorStore();
+    const tab_store = new TabStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const old_path = "a/b/noteA.md";
+    const new_path = "noteA.md";
+    const old_note = {
+      id: as_note_path(old_path),
+      path: as_note_path(old_path),
+      name: "noteA",
+      title: "noteA",
+      mtime_ms: 0,
+      size_bytes: 0,
+    };
+
+    editor_store.set_open_note({
+      meta: old_note,
+      markdown: as_markdown_text("[../../Testing](../../Testing.md)"),
+      buffer_id: "buffer-a",
+      is_dirty: false,
+    });
+
+    const rewrite_note_links = vi
+      .fn()
+      .mockResolvedValue({
+        markdown: "[Testing](Testing.md)",
+        changed: true,
+      });
+
+    const search_port = create_mock_search_port({
+      get_note_links_snapshot: vi.fn().mockResolvedValue(EMPTY_SNAPSHOT),
+      rewrite_note_links,
+    });
+
+    const service = new LinkRepairService(
+      notes_port,
+      search_port,
+      index_port,
+      editor_store,
+      tab_store,
+      () => 1,
+    );
+
+    const path_map = new Map([[old_path, new_path]]);
+    await service.repair_links(VAULT_ID, path_map);
+
+    expect(rewrite_note_links).toHaveBeenCalledWith(
+      "[../../Testing](../../Testing.md)",
+      old_path,
+      new_path,
+      { [old_path]: new_path },
+    );
+
+    expect(editor_store.open_note?.markdown).toBe(
+      as_markdown_text("[Testing](Testing.md)"),
+    );
+    expect(editor_store.open_note?.buffer_id).toContain(":repair-links:");
   });
 
   it("skips when path map is empty", async () => {

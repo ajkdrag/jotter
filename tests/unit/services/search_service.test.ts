@@ -70,6 +70,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -112,6 +113,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -160,6 +162,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -204,6 +207,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -266,6 +270,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -324,6 +329,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -403,6 +409,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -470,6 +477,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();
@@ -515,6 +523,7 @@ describe("SearchService", () => {
         .mockImplementation((markdown: string) =>
           Promise.resolve({ markdown, changed: false }),
         ),
+      resolve_note_link: vi.fn().mockResolvedValue(null),
     };
 
     const vault_store = new VaultStore();

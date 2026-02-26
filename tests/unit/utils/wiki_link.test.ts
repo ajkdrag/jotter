@@ -1,246 +1,73 @@
 import { describe, it, expect } from "vitest";
 import {
-  does_target_escape_vault,
-  format_wiki_target_for_markdown,
-  format_wiki_target_for_markdown_link,
-  resolve_wiki_target_to_note_path,
+  format_wiki_display,
+  format_markdown_link,
 } from "$lib/domain/wiki_link";
 
-describe("resolve_wiki_target_to_note_path", () => {
-  it("resolves bare name relative to current folder", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "note",
-      }),
-    ).toBe("abc/pqr/note.md");
+describe("format_wiki_display", () => {
+  it("strips .md from simple path", () => {
+    expect(format_wiki_display("note.md")).toBe("note");
   });
 
-  it("treats slash targets as vault-relative", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "docs/ref.md",
-      }),
-    ).toBe("docs/ref.md");
+  it("strips .md from nested path", () => {
+    expect(format_wiki_display("abc/pqr/note.md")).toBe("abc/pqr/note");
   });
 
-  it("keeps explicit ./ relative to current folder", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "./docs/ref.md",
-      }),
-    ).toBe("abc/pqr/docs/ref.md");
+  it("returns path as-is when no .md extension", () => {
+    expect(format_wiki_display("abc/pqr/note")).toBe("abc/pqr/note");
   });
 
-  it("normalizes parent directory segments", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "../a",
-      }),
-    ).toBe("abc/a.md");
+  it("does not strip .md from middle of path", () => {
+    expect(format_wiki_display("file.md.backup")).toBe("file.md.backup");
   });
 
-  it("resolves absolute targets from vault root", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "x/y/current.md",
-        raw_target: "/abc/pqr/mynote.md",
-      }),
-    ).toBe("abc/pqr/mynote.md");
+  it("handles path that is exactly .md", () => {
+    expect(format_wiki_display(".md")).toBe("");
+  });
+
+  it("handles empty string", () => {
+    expect(format_wiki_display("")).toBe("");
+  });
+
+  it("handles path with spaces", () => {
+    expect(format_wiki_display("my notes/todo list.md")).toBe(
+      "my notes/todo list",
+    );
   });
 });
 
-describe("format_wiki_target_for_markdown", () => {
-  const format = (base: string, resolved: string) =>
-    format_wiki_target_for_markdown({
-      base_note_path: base,
-      resolved_note_path: resolved,
-    });
-
-  it("same directory → bare name without .md", () => {
-    expect(format("abc/pqr/current.md", "abc/pqr/note.md")).toBe("note");
-  });
-
-  it("child directory → ./ prefix without .md", () => {
-    expect(format("abc/pqr/current.md", "abc/pqr/sub/note.md")).toBe(
-      "./sub/note",
+describe("format_markdown_link", () => {
+  it("formats a simple note path and title", () => {
+    expect(format_markdown_link("design.md", "Design")).toBe(
+      "[Design](<design.md>)",
     );
   });
 
-  it("parent directory → ../ prefix without .md", () => {
-    expect(format("abc/pqr/current.md", "abc/note.md")).toBe("../note");
+  it("formats a nested path", () => {
+    expect(
+      format_markdown_link("projects/notes/design.md", "Design Document"),
+    ).toBe("[Design Document](<projects/notes/design.md>)");
   });
 
-  it("sibling directory → ../sibling/ path without .md", () => {
-    expect(format("abc/pqr/current.md", "abc/xyz/note.md")).toBe("../xyz/note");
-  });
-
-  it("deep traversal across branches", () => {
-    expect(format("abc/pqr/current.md", "x/y/note.md")).toBe("../../x/y/note");
-  });
-
-  it("root-level base note → vault-relative without .md", () => {
-    expect(format("current.md", "docs/ref.md")).toBe("docs/ref");
-  });
-
-  it("root-level base note same dir → bare name", () => {
-    expect(format("current.md", "note.md")).toBe("note");
-  });
-
-  it("vault-escape path → preserves raw target without .md", () => {
-    expect(format("current.md", "../xyz")).toBe("../xyz");
-  });
-
-  it("deep vault-escape path → preserves raw target without .md", () => {
-    expect(format("abc/current.md", "../../../xyz")).toBe("../../../xyz");
-  });
-
-  it("vault-escape path with .md → strips extension", () => {
-    expect(format("current.md", "../xyz.md")).toBe("../xyz");
-  });
-});
-
-describe("format_wiki_target_for_markdown_link", () => {
-  const format = (base: string, resolved: string) =>
-    format_wiki_target_for_markdown_link({
-      base_note_path: base,
-      resolved_note_path: resolved,
-    });
-
-  it("same directory → bare filename with .md", () => {
-    expect(format("abc/pqr/current.md", "abc/pqr/note.md")).toBe("note.md");
-  });
-
-  it("child directory → ./ prefix with .md", () => {
-    expect(format("abc/pqr/current.md", "abc/pqr/sub/note.md")).toBe(
-      "./sub/note.md",
+  it("handles paths with spaces", () => {
+    expect(format_markdown_link("my notes/todo list.md", "Todo List")).toBe(
+      "[Todo List](<my notes/todo list.md>)",
     );
   });
 
-  it("parent directory → ../ prefix with .md", () => {
-    expect(format("abc/pqr/current.md", "abc/note.md")).toBe("../note.md");
+  it("handles empty title", () => {
+    expect(format_markdown_link("notes.md", "")).toBe("[](<notes.md>)");
   });
 
-  it("root-level base note → vault-relative with .md", () => {
-    expect(format("current.md", "docs/ref.md")).toBe("docs/ref.md");
-  });
-
-  it("vault-escape path → preserves raw target", () => {
-    expect(format("current.md", "../xyz")).toBe("../xyz");
-  });
-
-  it("vault-escape path with .md → preserves raw target with .md", () => {
-    expect(format("current.md", "../xyz.md")).toBe("../xyz.md");
-  });
-});
-
-describe("vault escape detection", () => {
-  it("returns null for ../foo from root-level note", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "current.md",
-        raw_target: "../foo",
-      }),
-    ).toBeNull();
-  });
-
-  it("returns null for excessive .. from nested note", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "../../../../foo",
-      }),
-    ).toBeNull();
-  });
-
-  it("returns valid path for ../foo from nested note (within bounds)", () => {
-    expect(
-      resolve_wiki_target_to_note_path({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "../foo",
-      }),
-    ).toBe("abc/foo.md");
-  });
-
-  it("does_target_escape_vault returns true for escape attempt", () => {
-    expect(
-      does_target_escape_vault({
-        base_note_path: "current.md",
-        raw_target: "../foo",
-      }),
-    ).toBe(true);
-  });
-
-  it("does_target_escape_vault returns false for valid relative", () => {
-    expect(
-      does_target_escape_vault({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "../foo",
-      }),
-    ).toBe(false);
-  });
-
-  it("does_target_escape_vault returns true for deep escape", () => {
-    expect(
-      does_target_escape_vault({
-        base_note_path: "abc/pqr/current.md",
-        raw_target: "../../../../secret",
-      }),
-    ).toBe(true);
-  });
-
-  it("does_target_escape_vault returns false for empty target", () => {
-    expect(
-      does_target_escape_vault({
-        base_note_path: "current.md",
-        raw_target: "",
-      }),
-    ).toBe(false);
-  });
-});
-
-describe("roundtrip: format → resolve", () => {
-  const roundtrip = (base: string, vault_path: string) => {
-    const formatted = format_wiki_target_for_markdown({
-      base_note_path: base,
-      resolved_note_path: vault_path,
-    });
-    return resolve_wiki_target_to_note_path({
-      base_note_path: base,
-      raw_target: formatted,
-    });
-  };
-
-  it("same directory roundtrips", () => {
-    expect(roundtrip("abc/pqr/current.md", "abc/pqr/note.md")).toBe(
-      "abc/pqr/note.md",
+  it("handles deeply nested path", () => {
+    expect(format_markdown_link("a/b/c/d/note.md", "Deep Note")).toBe(
+      "[Deep Note](<a/b/c/d/note.md>)",
     );
   });
 
-  it("child directory roundtrips", () => {
-    expect(roundtrip("abc/pqr/current.md", "abc/pqr/sub/note.md")).toBe(
-      "abc/pqr/sub/note.md",
+  it("handles title with special characters", () => {
+    expect(format_markdown_link("note.md", "Title [with] brackets")).toBe(
+      "[Title [with] brackets](<note.md>)",
     );
-  });
-
-  it("parent directory roundtrips", () => {
-    expect(roundtrip("abc/pqr/current.md", "abc/note.md")).toBe("abc/note.md");
-  });
-
-  it("sibling directory roundtrips", () => {
-    expect(roundtrip("abc/pqr/current.md", "abc/xyz/note.md")).toBe(
-      "abc/xyz/note.md",
-    );
-  });
-
-  it("deep traversal roundtrips", () => {
-    expect(roundtrip("abc/pqr/current.md", "x/y/note.md")).toBe("x/y/note.md");
-  });
-
-  it("root-level base note roundtrips", () => {
-    expect(roundtrip("current.md", "docs/ref.md")).toBe("docs/ref.md");
   });
 });

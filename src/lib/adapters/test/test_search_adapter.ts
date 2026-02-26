@@ -60,5 +60,12 @@ export function create_test_search_adapter(): SearchPort {
     ) {
       return Promise.resolve({ markdown, changed: false });
     },
+
+    resolve_note_link(_source_path: string, raw_target: string) {
+      const cleaned = raw_target.replace(/^\//, "");
+      if (!cleaned) return Promise.resolve(null);
+      const with_ext = cleaned.endsWith(".md") ? cleaned : `${cleaned}.md`;
+      return Promise.resolve(with_ext);
+    },
   };
 }

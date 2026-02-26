@@ -83,10 +83,15 @@ export class LinkRepairService {
   ): Promise<void> {
     try {
       const open_note = this.editor_store.open_note;
-      const is_open = open_note?.meta.id === note_path;
+      const matched_open_note =
+        open_note?.meta.id === note_path ||
+        (old_source_path !== new_source_path &&
+          String(open_note?.meta.id) === old_source_path)
+          ? open_note
+          : null;
 
-      const markdown = is_open
-        ? open_note.markdown
+      const markdown = matched_open_note
+        ? matched_open_note.markdown
         : (await this.notes_port.read_note(vault_id, note_path)).markdown;
 
       const result = await this.search_port.rewrite_note_links(
@@ -100,15 +105,15 @@ export class LinkRepairService {
 
       const rewritten = as_markdown_text(result.markdown);
 
-      if (is_open) {
-        const repair_buffer_id = `${open_note.buffer_id}:repair-links:${String(this.now_ms())}`;
+      if (matched_open_note) {
+        const repair_buffer_id = `${matched_open_note.buffer_id}:repair-links:${String(this.now_ms())}`;
         this.editor_store.set_open_note({
-          ...open_note,
+          ...matched_open_note,
           markdown: rewritten,
           buffer_id: repair_buffer_id,
-          is_dirty: open_note.is_dirty,
+          is_dirty: matched_open_note.is_dirty,
         });
-        if (!open_note.is_dirty) {
+        if (!matched_open_note.is_dirty) {
           await this.notes_port.write_note(vault_id, note_path, rewritten);
           await this.index_port.upsert_note(vault_id, note_path);
         }
@@ -118,6 +123,12 @@ export class LinkRepairService {
       await this.notes_port.write_note(vault_id, note_path, rewritten);
       await this.index_port.upsert_note(vault_id, note_path);
       this.tab_store.invalidate_cache_by_path(note_path);
+      if (old_source_path !== new_source_path) {
+        this.tab_store.invalidate_cache_by_path(
+          as_note_path(old_source_path),
+        );
+        this.close_editor_buffer(as_note_path(old_source_path));
+      }
       this.close_editor_buffer(note_path);
     } catch (error) {
       log.warn("Rewrite links failed", {

@@ -69,7 +69,6 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     const schema = create_schema();
     const plugin = create_wiki_link_converter_prose_plugin({
       link_type: schema.marks.link,
-      base_note_path: "abc/pqr/current.md",
     });
 
     const doc = schema.node("doc", null, [
@@ -102,7 +101,6 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     const schema = create_schema();
     const plugin = create_wiki_link_converter_prose_plugin({
       link_type: schema.marks.link,
-      base_note_path: "abc/pqr/current.md",
     });
 
     const doc = schema.node("doc", null, [
@@ -134,7 +132,6 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     const schema = create_schema();
     const plugin = create_wiki_link_converter_prose_plugin({
       link_type: schema.marks.link,
-      base_note_path: "vault/current.md",
     });
 
     const doc = schema.node("doc", null, [
@@ -170,7 +167,6 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     const schema = create_schema();
     const plugin = create_wiki_link_converter_prose_plugin({
       link_type: schema.marks.link,
-      base_note_path: "vault/current.md",
     });
 
     const observer_key = new PluginKey<{ saw_mark_clean: boolean }>(
@@ -214,7 +210,6 @@ describe("create_wiki_link_converter_prose_plugin", () => {
     const schema = create_schema();
     const plugin = create_wiki_link_converter_prose_plugin({
       link_type: schema.marks.link,
-      base_note_path: "abc/pqr/current.md",
     });
 
     const doc = schema.node("doc", null, [

@@ -180,5 +180,15 @@ export function create_search_tauri_adapter(): SearchPort {
         targetMap: target_map,
       });
     },
+
+    async resolve_note_link(
+      source_path: string,
+      raw_target: string,
+    ): Promise<string | null> {
+      return tauri_invoke<string | null>("resolve_note_link", {
+        sourcePath: source_path,
+        rawTarget: raw_target,
+      });
+    },
   };
 }

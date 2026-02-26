@@ -414,4 +414,11 @@ export class SearchService {
     this.op_store.reset("search.notes");
     this.op_store.reset("search.notes.all_vaults");
   }
+
+  async resolve_note_link(
+    source_path: string,
+    raw_target: string,
+  ): Promise<string | null> {
+    return this.search_port.resolve_note_link(source_path, raw_target);
+  }
 }

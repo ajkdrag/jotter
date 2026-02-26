@@ -774,3 +774,8 @@ pub fn rewrite_note_links(
 ) -> link_parser::RewriteResult {
     link_parser::rewrite_links(&markdown, &old_source_path, &new_source_path, &target_map)
 }
+
+#[tauri::command]
+pub fn resolve_note_link(source_path: String, raw_target: String) -> Option<String> {
+    link_parser::resolve_wiki_target(&source_path, &raw_target)
+}
