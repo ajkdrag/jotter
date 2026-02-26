@@ -43,6 +43,7 @@ function create_vault_actions_harness() {
       toggle_vault_pin: vi.fn(),
       rebuild_index: vi.fn(),
       reset_change_operation: vi.fn(),
+      apply_opened_vault: vi.fn().mockResolvedValue(undefined),
     },
     note: {
       save_note: vi.fn().mockResolvedValue({

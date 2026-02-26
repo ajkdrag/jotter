@@ -1,5 +1,6 @@
 import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { ActionRegistrationInput } from "$lib/actions/action_registration_input";
+import { is_unavailable_vault_error } from "$lib/domain/vault_errors";
 import type { EditorSettings } from "$lib/types/editor_settings";
 import type { VaultId } from "$lib/types/ids";
 import { toast } from "svelte-sonner";
@@ -347,11 +348,3 @@ export function register_vault_actions(input: ActionRegistrationInput) {
     },
   });
 }
-const is_unavailable_vault_error = (message: string): boolean => {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("vault unavailable") ||
-    normalized.includes("could not be found") ||
-    normalized.includes("no such file or directory")
-  );
-};

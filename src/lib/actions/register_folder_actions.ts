@@ -21,7 +21,11 @@ import {
   parse_reveal_note_path,
 } from "$lib/actions/helpers/folder_helpers";
 import { PAGE_SIZE } from "$lib/constants/pagination";
-import type { FolderLoadState, FolderPaginationState, MoveItem } from "$lib/types/filetree";
+import type {
+  FolderLoadState,
+  FolderPaginationState,
+  MoveItem,
+} from "$lib/types/filetree";
 import { create_logger } from "$lib/utils/logger";
 import { parent_folder_path } from "$lib/utils/path";
 import { get_invalid_drop_reason } from "$lib/domain/filetree";

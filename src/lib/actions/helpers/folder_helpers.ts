@@ -31,7 +31,10 @@ export function folder_name_from_path(path: string): string {
   return i >= 0 ? path.slice(i + 1) : path;
 }
 
-export function build_folder_path_from_name(parent: string, name: string): string {
+export function build_folder_path_from_name(
+  parent: string,
+  name: string,
+): string {
   return parent ? `${parent}/${name}` : name;
 }
 

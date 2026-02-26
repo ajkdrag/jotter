@@ -166,7 +166,6 @@ export function create_wiki_link_converter_prose_plugin(input: {
             });
           }
 
-
           for (let i = matches.length - 1; i >= 0; i--) {
             const m = matches[i];
             if (!m) continue;

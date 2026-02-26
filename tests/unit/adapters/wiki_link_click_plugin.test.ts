@@ -176,8 +176,7 @@ describe("create_wiki_link_click_prose_plugin", () => {
     });
 
     it("uses base_note_path from constructor when no editor context", () => {
-      const { plugin, on_internal_link_click } =
-        setup("deep/nested/source.md");
+      const { plugin, on_internal_link_click } = setup("deep/nested/source.md");
       const { event } = create_mouse_event("target.md");
 
       invoke_dom_click(plugin, event);

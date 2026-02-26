@@ -337,4 +337,3 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     },
   });
 }
-

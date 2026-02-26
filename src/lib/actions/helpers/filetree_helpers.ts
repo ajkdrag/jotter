@@ -33,7 +33,9 @@ export function clear_folder_filetree_state(
   input.stores.ui.filetree = cloned;
 }
 
-export function should_load_folder(state: FolderLoadState | undefined): boolean {
+export function should_load_folder(
+  state: FolderLoadState | undefined,
+): boolean {
   return !state || state === "unloaded" || state === "error";
 }
 
@@ -73,7 +75,10 @@ export function set_pagination(
   };
 }
 
-export function clear_folder_pagination(input: ActionRegistrationInput, path: string) {
+export function clear_folder_pagination(
+  input: ActionRegistrationInput,
+  path: string,
+) {
   const pagination = new SvelteMap(input.stores.ui.filetree.pagination);
   pagination.delete(path);
   input.stores.ui.filetree = {
@@ -138,7 +143,11 @@ export function remove_expanded_paths(
   );
 }
 
-export function remap_path(path: string, old_path: string, new_path: string): string {
+export function remap_path(
+  path: string,
+  old_path: string,
+  new_path: string,
+): string {
   if (path === old_path) {
     return new_path;
   }
@@ -156,7 +165,9 @@ export function remap_expanded_paths(
   old_path: string,
   new_path: string,
 ) {
-  transform_filetree_paths(input, (path) => remap_path(path, old_path, new_path));
+  transform_filetree_paths(input, (path) =>
+    remap_path(path, old_path, new_path),
+  );
 }
 
 export function remap_ui_paths_after_move(

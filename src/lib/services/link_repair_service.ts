@@ -124,9 +124,7 @@ export class LinkRepairService {
       await this.index_port.upsert_note(vault_id, note_path);
       this.tab_store.invalidate_cache_by_path(note_path);
       if (old_source_path !== new_source_path) {
-        this.tab_store.invalidate_cache_by_path(
-          as_note_path(old_source_path),
-        );
+        this.tab_store.invalidate_cache_by_path(as_note_path(old_source_path));
         this.close_editor_buffer(as_note_path(old_source_path));
       }
       this.close_editor_buffer(note_path);

@@ -43,7 +43,10 @@ export function close_image_paste_dialog(input: ActionRegistrationInput) {
   };
 }
 
-export function build_full_path(folder_path: string, filename: string): NotePath {
+export function build_full_path(
+  folder_path: string,
+  filename: string,
+): NotePath {
   const sanitized = sanitize_note_name(filename);
   return as_note_path(folder_path ? `${folder_path}/${sanitized}` : sanitized);
 }
@@ -53,7 +56,10 @@ export function filename_from_path(path: string): string {
   return last_slash >= 0 ? path.slice(last_slash + 1) : path;
 }
 
-export function build_note_path_from_name(parent: string, name: string): NotePath {
+export function build_note_path_from_name(
+  parent: string,
+  name: string,
+): NotePath {
   const filename = `${name}.md`;
   return as_note_path(parent ? `${parent}/${filename}` : filename);
 }

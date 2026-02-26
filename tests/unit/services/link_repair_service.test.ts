@@ -253,12 +253,10 @@ describe("LinkRepairService", () => {
       is_dirty: false,
     });
 
-    const rewrite_note_links = vi
-      .fn()
-      .mockResolvedValue({
-        markdown: "[Testing](Testing.md)",
-        changed: true,
-      });
+    const rewrite_note_links = vi.fn().mockResolvedValue({
+      markdown: "[Testing](Testing.md)",
+      changed: true,
+    });
 
     const search_port = create_mock_search_port({
       get_note_links_snapshot: vi.fn().mockResolvedValue(EMPTY_SNAPSHOT),
