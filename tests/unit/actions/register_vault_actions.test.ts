@@ -50,6 +50,7 @@ function create_vault_actions_harness() {
         status: "saved",
         saved_path: "docs/current.md",
       }),
+      write_note_content: vi.fn().mockResolvedValue(undefined),
       create_new_note: vi.fn(),
     },
     folder: {},
@@ -170,6 +171,36 @@ describe("register_vault_actions", () => {
     expect(services.vault.change_vault_by_id).not.toHaveBeenCalled();
     expect(stores.ui.change_vault.confirm_discard_open).toBe(true);
     expect(stores.ui.change_vault.error).toBe("disk full");
+    expect(stores.ui.change_vault.is_loading).toBe(false);
+  });
+
+  it("keeps confirm dialog open with error when background tab save fails", async () => {
+    const { registry, stores, services } = create_vault_actions_harness();
+    const active_note = create_test_note("docs/active", "Active");
+    const dirty_note = create_test_note("docs/dirty", "Dirty");
+
+    stores.editor.set_open_note(create_open_note_state(active_note));
+    stores.editor.set_dirty(active_note.id, true);
+    stores.tab.open_tab(active_note.path, active_note.title);
+    const dirty_tab = stores.tab.open_tab(dirty_note.path, dirty_note.title);
+    stores.tab.set_cached_note(
+      dirty_tab.id,
+      create_open_note_state(dirty_note),
+    );
+    stores.tab.set_dirty(dirty_tab.id, true);
+    stores.tab.activate_tab(active_note.path);
+    services.note.write_note_content = vi
+      .fn()
+      .mockRejectedValue(new Error("disk full"));
+
+    await registry.execute(ACTION_IDS.vault_select, as_vault_id("vault-next"));
+    await registry.execute(ACTION_IDS.vault_confirm_save_change);
+
+    expect(services.vault.change_vault_by_id).not.toHaveBeenCalled();
+    expect(stores.ui.change_vault.confirm_discard_open).toBe(true);
+    expect(stores.ui.change_vault.error).toBe(
+      "Could not save all open tabs before switching vault.",
+    );
     expect(stores.ui.change_vault.is_loading).toBe(false);
   });
 

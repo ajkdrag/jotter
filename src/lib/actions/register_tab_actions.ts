@@ -19,18 +19,38 @@ export { capture_active_tab_snapshot, ensure_tab_capacity, try_open_tab };
 export function register_tab_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
 
+  function find_tab(tab_id: string) {
+    return stores.tab.tabs.find((tab) => tab.id === tab_id) ?? null;
+  }
+
+  async function activate_tab_and_open_note(tab_id: string) {
+    await capture_active_tab_snapshot(input);
+    stores.tab.activate_tab(tab_id);
+    await open_active_tab_note(input);
+  }
+
+  function open_single_close_confirm(tab_id: string, tab_title: string) {
+    stores.ui.tab_close_confirm = {
+      open: true,
+      tab_id,
+      tab_title,
+      pending_dirty_tab_ids: [],
+      close_mode: "single",
+      keep_tab_id: null,
+      apply_to_all: false,
+    };
+  }
+
   registry.register({
     id: ACTION_IDS.tab_activate,
     label: "Activate Tab",
     when: () => stores.tab.has_tabs,
     execute: async (tab_id: unknown) => {
       const id = String(tab_id);
-      const tab = stores.tab.tabs.find((t) => t.id === id);
-      if (!tab) return;
-
-      await capture_active_tab_snapshot(input);
-      stores.tab.activate_tab(id);
-      await open_active_tab_note(input);
+      if (!find_tab(id)) {
+        return;
+      }
+      await activate_tab_and_open_note(id);
     },
   });
 
@@ -44,9 +64,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       if (!tab) return;
       if (stores.tab.active_tab_id === tab.id) return;
 
-      await capture_active_tab_snapshot(input);
-      stores.tab.activate_tab(tab.id);
-      await open_active_tab_note(input);
+      await activate_tab_and_open_note(tab.id);
     },
   });
 
@@ -60,21 +78,13 @@ export function register_tab_actions(input: ActionRegistrationInput) {
         typeof tab_id_arg === "string" ? tab_id_arg : stores.tab.active_tab_id;
       if (!tab_id) return;
 
-      const tab = stores.tab.tabs.find((t) => t.id === tab_id);
+      const tab = find_tab(tab_id);
       if (!tab) return;
 
       if (tab.is_pinned && !tab_id_arg) return;
 
       if (tab.is_dirty) {
-        stores.ui.tab_close_confirm = {
-          open: true,
-          tab_id: tab.id,
-          tab_title: tab.title,
-          pending_dirty_tab_ids: [],
-          close_mode: "single",
-          keep_tab_id: null,
-          apply_to_all: false,
-        };
+        open_single_close_confirm(tab.id, tab.title);
         return;
       }
 
@@ -154,9 +164,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       const next_index = (current_index + 1) % tabs.length;
       const next_tab = tabs[next_index];
       if (!next_tab) return;
-      await capture_active_tab_snapshot(input);
-      stores.tab.activate_tab(next_tab.id);
-      await open_active_tab_note(input);
+      await activate_tab_and_open_note(next_tab.id);
     },
   });
 
@@ -172,9 +180,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
       const prev_index = (current_index - 1 + tabs.length) % tabs.length;
       const prev_tab = tabs[prev_index];
       if (!prev_tab) return;
-      await capture_active_tab_snapshot(input);
-      stores.tab.activate_tab(prev_tab.id);
-      await open_active_tab_note(input);
+      await activate_tab_and_open_note(prev_tab.id);
     },
   });
 
@@ -247,7 +253,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     label: "Copy File Path",
     execute: async (tab_id: unknown) => {
       const id = String(tab_id);
-      const tab = stores.tab.tabs.find((t) => t.id === id);
+      const tab = find_tab(id);
       if (!tab) return;
 
       try {
@@ -264,7 +270,7 @@ export function register_tab_actions(input: ActionRegistrationInput) {
     label: "Reveal in File Tree",
     execute: async (tab_id: unknown) => {
       const id = String(tab_id);
-      const tab = stores.tab.tabs.find((t) => t.id === id);
+      const tab = find_tab(id);
       if (!tab) return;
 
       await registry.execute(ACTION_IDS.filetree_reveal_note, {

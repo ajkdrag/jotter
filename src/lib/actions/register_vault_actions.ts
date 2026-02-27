@@ -264,14 +264,24 @@ export function register_vault_actions(input: ActionRegistrationInput) {
         .get_dirty_tabs()
         .filter((t) => t.id !== stores.tab.active_tab_id);
 
-      for (const tab of remaining_dirty) {
-        const cached = stores.tab.get_cached_note(tab.id);
-        if (cached) {
-          await services.note.write_note_content(
-            cached.meta.path,
-            cached.markdown,
-          );
+      try {
+        for (const tab of remaining_dirty) {
+          const cached = stores.tab.get_cached_note(tab.id);
+          if (cached) {
+            await services.note.write_note_content(
+              cached.meta.path,
+              cached.markdown,
+            );
+          }
         }
+      } catch {
+        stores.ui.change_vault = {
+          ...stores.ui.change_vault,
+          is_loading: false,
+          error: "Could not save all open tabs before switching vault.",
+          confirm_discard_open: true,
+        };
+        return;
       }
 
       clear_discard_confirm_state();

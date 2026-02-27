@@ -3,8 +3,111 @@ import { ACTION_IDS } from "$lib/actions/action_ids";
 import type { GitDiff } from "$lib/types/git";
 import { toast } from "svelte-sonner";
 
+type CommitSelectionPayload = {
+  hash: string;
+  short_hash: string;
+};
+
+type CommitRestorePayload = {
+  hash: string;
+};
+
+function parse_commit_selection_payload(
+  payload: unknown,
+): CommitSelectionPayload {
+  const record = (payload ?? {}) as Record<string, unknown>;
+  return {
+    hash: typeof record.hash === "string" ? record.hash : "",
+    short_hash: typeof record.short_hash === "string" ? record.short_hash : "",
+  };
+}
+
+function parse_commit_restore_payload(payload: unknown): CommitRestorePayload {
+  const record = (payload ?? {}) as Record<string, unknown>;
+  return {
+    hash: typeof record.hash === "string" ? record.hash : "",
+  };
+}
+
 export function register_git_actions(input: ActionRegistrationInput) {
   const { registry, stores, services } = input;
+
+  function open_version_history_dialog() {
+    const note_path = stores.editor.open_note?.meta.path ?? null;
+    stores.ui.version_history_dialog = {
+      open: true,
+      note_path,
+    };
+    return note_path;
+  }
+
+  function close_version_history_dialog() {
+    stores.ui.version_history_dialog = {
+      open: false,
+      note_path: null,
+    };
+    stores.git.clear_history();
+  }
+
+  function open_checkpoint_dialog() {
+    stores.ui.checkpoint_dialog = {
+      open: true,
+      description: "",
+    };
+  }
+
+  function close_checkpoint_dialog() {
+    stores.ui.checkpoint_dialog = {
+      open: false,
+      description: "",
+    };
+  }
+
+  async function load_file_content_at_commit(
+    note_path: typeof stores.ui.version_history_dialog.note_path,
+    commit_hash: string,
+  ): Promise<string | null> {
+    if (!note_path) {
+      return null;
+    }
+    try {
+      return await services.git.get_file_at_commit(note_path, commit_hash);
+    } catch {
+      return null;
+    }
+  }
+
+  async function resolve_selected_commit_content(
+    commit_hash: string,
+    note_path: typeof stores.ui.version_history_dialog.note_path,
+  ): Promise<{ selected_diff: GitDiff | null; file_content: string | null }> {
+    const parent_hash = `${commit_hash}~1`;
+    const loaded_diff = await services.git.get_diff(
+      parent_hash,
+      commit_hash,
+      note_path,
+    );
+
+    const has_diff =
+      loaded_diff.hunks.length > 0 ||
+      loaded_diff.additions > 0 ||
+      loaded_diff.deletions > 0;
+    if (has_diff) {
+      return {
+        selected_diff: loaded_diff,
+        file_content: null,
+      };
+    }
+
+    const file_content = await load_file_content_at_commit(
+      note_path,
+      commit_hash,
+    );
+    return {
+      selected_diff: null,
+      file_content,
+    };
+  }
 
   registry.register({
     id: ACTION_IDS.git_check_repo,
@@ -53,11 +156,7 @@ export function register_git_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.git_open_history,
     label: "Open Version History",
     execute: async () => {
-      const note_path = stores.editor.open_note?.meta.path ?? null;
-      stores.ui.version_history_dialog = {
-        open: true,
-        note_path,
-      };
+      const note_path = open_version_history_dialog();
       await services.git.load_history(note_path, 50);
     },
   });
@@ -66,11 +165,7 @@ export function register_git_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.git_close_history,
     label: "Close Version History",
     execute: () => {
-      stores.ui.version_history_dialog = {
-        open: false,
-        note_path: null,
-      };
-      stores.git.clear_history();
+      close_version_history_dialog();
     },
   });
 
@@ -78,51 +173,28 @@ export function register_git_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.git_select_commit,
     label: "Select Commit",
     execute: async (payload: unknown) => {
-      const commit = payload as { hash: string; short_hash: string };
-      if (!commit.hash) return;
+      const commit = parse_commit_selection_payload(payload);
+      if (!commit.hash) {
+        return;
+      }
+
       const note_path = stores.ui.version_history_dialog.note_path;
       stores.git.set_loading_diff(true);
       const matching = stores.git.history.find((c) => c.hash === commit.hash);
+
       try {
-        const parent_hash = `${commit.hash}~1`;
-        const loaded_diff = await services.git.get_diff(
-          parent_hash,
-          commit.hash,
-          note_path,
-        );
-        let selected_diff: GitDiff | null = loaded_diff;
-        let file_content: string | null = null;
-
-        const has_diff =
-          loaded_diff.hunks.length > 0 ||
-          loaded_diff.additions > 0 ||
-          loaded_diff.deletions > 0;
-
-        if (!has_diff && note_path) {
-          file_content = await services.git.get_file_at_commit(
-            note_path,
-            commit.hash,
-          );
-          selected_diff = null;
-        }
-
+        const { selected_diff, file_content } =
+          await resolve_selected_commit_content(commit.hash, note_path);
         stores.git.set_selected_commit(
           matching ?? null,
           selected_diff,
           file_content,
         );
       } catch {
-        let file_content: string | null = null;
-        if (note_path) {
-          try {
-            file_content = await services.git.get_file_at_commit(
-              note_path,
-              commit.hash,
-            );
-          } catch {
-            file_content = null;
-          }
-        }
+        const file_content = await load_file_content_at_commit(
+          note_path,
+          commit.hash,
+        );
         stores.git.set_selected_commit(matching ?? null, null, file_content);
       }
     },
@@ -132,7 +204,10 @@ export function register_git_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.git_restore_version,
     label: "Restore Version",
     execute: async (payload: unknown) => {
-      const commit = payload as { hash: string };
+      const commit = parse_commit_restore_payload(payload);
+      if (!commit.hash) {
+        return;
+      }
       const note_path = stores.ui.version_history_dialog.note_path;
       if (!note_path) return;
       await services.git.restore_version(note_path, commit.hash);
@@ -144,8 +219,7 @@ export function register_git_actions(input: ActionRegistrationInput) {
         force_reload: true,
       });
 
-      stores.ui.version_history_dialog = { open: false, note_path: null };
-      stores.git.clear_history();
+      close_version_history_dialog();
     },
   });
 
@@ -153,10 +227,7 @@ export function register_git_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.git_open_checkpoint,
     label: "Create Checkpoint",
     execute: () => {
-      stores.ui.checkpoint_dialog = {
-        open: true,
-        description: "",
-      };
+      open_checkpoint_dialog();
     },
   });
 
@@ -174,7 +245,7 @@ export function register_git_actions(input: ActionRegistrationInput) {
     execute: async () => {
       const description = stores.ui.checkpoint_dialog.description.trim();
       if (!description) return;
-      stores.ui.checkpoint_dialog = { open: false, description: "" };
+      close_checkpoint_dialog();
       const toast_id = toast.loading("Creating checkpoint commit...");
       const result = await services.git.create_checkpoint(description);
       if (result.status === "created") {
@@ -211,7 +282,7 @@ export function register_git_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.git_cancel_checkpoint,
     label: "Cancel Checkpoint",
     execute: () => {
-      stores.ui.checkpoint_dialog = { open: false, description: "" };
+      close_checkpoint_dialog();
     },
   });
 }

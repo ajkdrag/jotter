@@ -9,66 +9,171 @@ import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("app_actions");
 
+type VaultInitializeResult = Awaited<
+  ReturnType<ActionRegistrationInput["services"]["vault"]["initialize"]>
+>;
+
+type AppBootstrapData = {
+  vault_initialize_result: VaultInitializeResult;
+  recent_command_ids: Awaited<
+    ReturnType<
+      ActionRegistrationInput["services"]["settings"]["load_recent_command_ids"]
+    >
+  >;
+  hotkey_overrides: Awaited<
+    ReturnType<
+      ActionRegistrationInput["services"]["hotkey"]["load_hotkey_overrides"]
+    >
+  >;
+  theme_result: Awaited<
+    ReturnType<ActionRegistrationInput["services"]["theme"]["load_themes"]>
+  >;
+};
+
+function set_startup_loading(input: ActionRegistrationInput) {
+  input.stores.ui.startup = {
+    status: "loading",
+    error: null,
+  };
+}
+
+function set_startup_error(input: ActionRegistrationInput, error: string) {
+  input.stores.ui.startup = {
+    status: "error",
+    error,
+  };
+}
+
+function set_startup_idle(input: ActionRegistrationInput) {
+  input.stores.ui.startup = {
+    status: "idle",
+    error: null,
+  };
+}
+
+async function load_bootstrap_data(
+  input: ActionRegistrationInput,
+): Promise<AppBootstrapData> {
+  const { services, default_mount_config } = input;
+  const [
+    vault_initialize_result,
+    recent_command_ids,
+    hotkey_overrides,
+    theme_result,
+  ] = await Promise.all([
+    services.vault.initialize(default_mount_config),
+    services.settings.load_recent_command_ids(),
+    services.hotkey.load_hotkey_overrides(),
+    services.theme.load_themes(),
+  ]);
+
+  return {
+    vault_initialize_result,
+    recent_command_ids,
+    hotkey_overrides,
+    theme_result,
+  };
+}
+
+function apply_loaded_preferences(
+  input: ActionRegistrationInput,
+  data: AppBootstrapData,
+) {
+  const { stores, services } = input;
+  stores.ui.set_user_themes(data.theme_result.user_themes);
+  stores.ui.set_active_theme_id(data.theme_result.active_theme_id);
+  stores.ui.set_recent_command_ids(data.recent_command_ids);
+
+  stores.ui.hotkey_overrides = data.hotkey_overrides;
+  const hotkeys_config = services.hotkey.merge_config(
+    DEFAULT_HOTKEYS,
+    data.hotkey_overrides,
+  );
+  stores.ui.set_hotkeys_config(hotkeys_config);
+}
+
+function reset_ui_state_for_mount(input: ActionRegistrationInput) {
+  input.stores.ui.reset_for_new_vault();
+  input.stores.ui.set_editor_settings({ ...DEFAULT_EDITOR_SETTINGS });
+}
+
+async function mount_ready_vault_state(
+  input: ActionRegistrationInput,
+  result: Extract<VaultInitializeResult, { status: "ready" }>,
+) {
+  if (!result.has_vault) {
+    return;
+  }
+
+  input.stores.ui.reset_for_new_vault();
+  input.stores.ui.set_editor_settings(
+    result.editor_settings ?? { ...DEFAULT_EDITOR_SETTINGS },
+  );
+
+  await input.registry.execute(ACTION_IDS.folder_refresh_tree);
+  await input.registry.execute(ACTION_IDS.git_check_repo);
+
+  if (input.stores.ui.editor_settings.show_vault_dashboard_on_open) {
+    await input.registry.execute(ACTION_IDS.ui_open_vault_dashboard);
+  }
+}
+
+async function execute_app_mounted(input: ActionRegistrationInput) {
+  set_startup_loading(input);
+
+  const bootstrap_data = await load_bootstrap_data(input);
+  apply_loaded_preferences(input, bootstrap_data);
+
+  if (bootstrap_data.vault_initialize_result.status === "error") {
+    set_startup_error(input, bootstrap_data.vault_initialize_result.error);
+    return;
+  }
+
+  if (input.default_mount_config.reset_app_state) {
+    reset_ui_state_for_mount(input);
+  }
+
+  await mount_ready_vault_state(input, bootstrap_data.vault_initialize_result);
+  set_startup_idle(input);
+}
+
+async function execute_app_check_for_updates() {
+  if (!is_tauri) {
+    toast.info("Updates are only available in the desktop app");
+    return;
+  }
+
+  const { check } = await import("@tauri-apps/plugin-updater");
+  const loading_toast_id = toast.loading("Checking for updates...");
+
+  try {
+    const update = await check();
+    toast.dismiss(loading_toast_id);
+    if (!update) {
+      toast.success("Otterly is up to date");
+      return;
+    }
+
+    toast.loading(`Downloading update v${update.version}...`, {
+      id: loading_toast_id,
+    });
+    await update.downloadAndInstall();
+    toast.dismiss(loading_toast_id);
+    toast.success("Update installed — restart Otterly to apply");
+  } catch (error) {
+    toast.dismiss(loading_toast_id);
+    toast.error("Failed to check for updates");
+    log.error("Update check failed", { error: String(error) });
+  }
+}
+
 export function register_app_actions(input: ActionRegistrationInput) {
-  const { registry, stores, services, default_mount_config } = input;
+  const { registry, services } = input;
 
   registry.register({
     id: ACTION_IDS.app_mounted,
     label: "App Mounted",
-    execute: async () => {
-      stores.ui.startup = {
-        status: "loading",
-        error: null,
-      };
-
-      const [result, recent_command_ids, hotkey_overrides, theme_result] =
-        await Promise.all([
-          services.vault.initialize(default_mount_config),
-          services.settings.load_recent_command_ids(),
-          services.hotkey.load_hotkey_overrides(),
-          services.theme.load_themes(),
-        ]);
-      stores.ui.set_user_themes(theme_result.user_themes);
-      stores.ui.set_active_theme_id(theme_result.active_theme_id);
-      stores.ui.set_recent_command_ids(recent_command_ids);
-
-      stores.ui.hotkey_overrides = hotkey_overrides;
-      const hotkeys_config = services.hotkey.merge_config(
-        DEFAULT_HOTKEYS,
-        hotkey_overrides,
-      );
-      stores.ui.set_hotkeys_config(hotkeys_config);
-
-      if (result.status === "error") {
-        stores.ui.startup = {
-          status: "error",
-          error: result.error,
-        };
-        return;
-      }
-
-      if (default_mount_config.reset_app_state) {
-        stores.ui.reset_for_new_vault();
-        stores.ui.set_editor_settings({ ...DEFAULT_EDITOR_SETTINGS });
-      }
-
-      if (result.has_vault) {
-        stores.ui.reset_for_new_vault();
-        stores.ui.set_editor_settings(
-          result.editor_settings ?? { ...DEFAULT_EDITOR_SETTINGS },
-        );
-        await registry.execute(ACTION_IDS.folder_refresh_tree);
-        await registry.execute(ACTION_IDS.git_check_repo);
-        if (stores.ui.editor_settings.show_vault_dashboard_on_open) {
-          await registry.execute(ACTION_IDS.ui_open_vault_dashboard);
-        }
-      }
-
-      stores.ui.startup = {
-        status: "idle",
-        error: null,
-      };
-    },
+    execute: async () => execute_app_mounted(input),
   });
 
   registry.register({
@@ -93,31 +198,6 @@ export function register_app_actions(input: ActionRegistrationInput) {
   registry.register({
     id: ACTION_IDS.app_check_for_updates,
     label: "Check for Updates",
-    execute: async () => {
-      if (!is_tauri) {
-        toast.info("Updates are only available in the desktop app");
-        return;
-      }
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const toastId = toast.loading("Checking for updates...");
-      try {
-        const update = await check();
-        toast.dismiss(toastId);
-        if (!update) {
-          toast.success("Otterly is up to date");
-          return;
-        }
-        toast.loading(`Downloading update v${update.version}...`, {
-          id: toastId,
-        });
-        await update.downloadAndInstall();
-        toast.dismiss(toastId);
-        toast.success("Update installed — restart Otterly to apply");
-      } catch (error) {
-        toast.dismiss(toastId);
-        toast.error("Failed to check for updates");
-        log.error("Update check failed", { error: String(error) });
-      }
-    },
+    execute: async () => execute_app_check_for_updates(),
   });
 }
