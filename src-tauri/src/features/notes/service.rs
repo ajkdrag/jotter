@@ -146,6 +146,22 @@ fn name_from_rel_path(rel_path: &str) -> String {
     leaf.strip_suffix(".md").unwrap_or(leaf).to_string()
 }
 
+fn resolve_folder_abs(root: &Path, folder_path: &str) -> Result<PathBuf, String> {
+    if folder_path.is_empty() {
+        Ok(root.to_path_buf())
+    } else {
+        safe_vault_abs(root, folder_path)
+    }
+}
+
+fn ensure_directory(path: &Path, message: &str) -> Result<(), String> {
+    if path.is_dir() {
+        Ok(())
+    } else {
+        Err(message.to_string())
+    }
+}
+
 pub(crate) fn extract_title(path: &Path) -> String {
     let mut file = match File::open(path) {
         Ok(f) => f,
@@ -198,6 +214,21 @@ pub(crate) fn file_meta(path: &Path) -> Result<(i64, i64), String> {
     Ok((mtime, size))
 }
 
+fn build_note_meta(root: &Path, rel_path: &str) -> Result<NoteMeta, String> {
+    let abs = safe_vault_abs(root, rel_path)?;
+    let title = extract_title(&abs);
+    let (mtime_ms, size_bytes) = file_meta(&abs)?;
+
+    Ok(NoteMeta {
+        id: rel_path.to_string(),
+        path: rel_path.to_string(),
+        name: name_from_rel_path(rel_path),
+        title,
+        mtime_ms,
+        size_bytes,
+    })
+}
+
 #[tauri::command]
 pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, String> {
     log::info!("Listing notes vault_id={}", vault_id);
@@ -226,18 +257,7 @@ pub fn list_notes(app: AppHandle, vault_id: String) -> Result<Vec<NoteMeta>, Str
 
         let rel = p.strip_prefix(&root).map_err(|e| e.to_string())?;
         let rel = storage::normalize_relative_path(rel);
-        let abs = safe_vault_abs(&root, &rel)?;
-        let title = extract_title(&abs);
-        let (mtime_ms, size_bytes) = file_meta(&abs)?;
-        let name = name_from_rel_path(&rel);
-        out.push(NoteMeta {
-            id: rel.clone(),
-            path: rel,
-            name,
-            title,
-            mtime_ms,
-            size_bytes,
-        });
+        out.push(build_note_meta(&root, &rel)?);
     }
 
     out.sort_by(|a, b| a.path.cmp(&b.path));
@@ -253,18 +273,8 @@ pub fn read_note(app: AppHandle, vault_id: String, note_id: String) -> Result<No
         log::error!("Failed to read note {}: {}", note_id, e);
         e.to_string()
     })?;
-    let name = name_from_rel_path(&note_id);
-    let title = extract_title(&abs);
-    let (mtime_ms, size_bytes) = file_meta(&abs)?;
     Ok(NoteDoc {
-        meta: NoteMeta {
-            id: note_id.clone(),
-            path: note_id,
-            name,
-            title,
-            mtime_ms,
-            size_bytes,
-        },
+        meta: build_note_meta(&root, &note_id)?,
         markdown,
     })
 }
@@ -337,17 +347,7 @@ pub fn create_note(args: NoteCreateArgs, app: AppHandle) -> Result<NoteMeta, Str
         })?;
     file.write_all(args.initial_markdown.as_bytes())
         .map_err(|e| e.to_string())?;
-    let name = name_from_rel_path(&args.note_path);
-    let title = extract_title(&abs);
-    let (mtime_ms, size_bytes) = file_meta(&abs)?;
-    let note = NoteMeta {
-        id: args.note_path.clone(),
-        path: args.note_path,
-        name,
-        title,
-        mtime_ms,
-        size_bytes,
-    };
+    let note = build_note_meta(&root, &args.note_path)?;
     invalidate_note_parent_folder_cache(&args.vault_id, &note.path);
     Ok(note)
 }
@@ -762,14 +762,8 @@ pub fn create_folder(args: FolderCreateArgs, app: AppHandle) -> Result<(), Strin
         args.folder_name
     );
     let root = storage::vault_path(&app, &args.vault_id)?;
-    let parent = if args.parent_path.is_empty() {
-        root.clone()
-    } else {
-        safe_vault_abs(&root, &args.parent_path)?
-    };
-    if !parent.is_dir() {
-        return Err("parent path is not a directory".to_string());
-    }
+    let parent = resolve_folder_abs(&root, &args.parent_path)?;
+    ensure_directory(&parent, "parent path is not a directory")?;
     if args.folder_name.contains('/')
         || args.folder_name.contains('\\')
         || args.folder_name.starts_with('.')
@@ -1060,14 +1054,8 @@ pub fn move_items(args: MoveItemsArgs, app: AppHandle) -> Result<Vec<MoveItemRes
         args.items.len()
     );
     let root = storage::vault_path(&app, &args.vault_id)?;
-    let target_abs = if args.target_folder.is_empty() {
-        root.clone()
-    } else {
-        safe_vault_abs(&root, &args.target_folder)?
-    };
-    if !target_abs.is_dir() {
-        return Err("target is not a directory".to_string());
-    }
+    let target_abs = resolve_folder_abs(&root, &args.target_folder)?;
+    ensure_directory(&target_abs, "target is not a directory")?;
 
     let (mut results, pending) = collect_pending_moves(&root, &args)?;
     let mut invalidate_paths: HashSet<String> = HashSet::new();
@@ -1152,15 +1140,8 @@ pub fn list_folder_contents(
         folder_path
     );
     let root = storage::vault_path(&app, &vault_id)?;
-    let target = if folder_path.is_empty() {
-        root.clone()
-    } else {
-        safe_vault_abs(&root, &folder_path)?
-    };
-
-    if !target.is_dir() {
-        return Err("not a directory".to_string());
-    }
+    let target = resolve_folder_abs(&root, &folder_path)?;
+    ensure_directory(&target, "not a directory")?;
 
     let key = folder_cache_key(&vault_id, &folder_path);
     let items = get_or_scan_folder_entries(&key, &target)?;
@@ -1181,18 +1162,7 @@ pub fn list_folder_contents(
         if entry.is_dir {
             subfolders.push(rel);
         } else {
-            let name = name_from_rel_path(&rel);
-            let abs = safe_vault_abs(&root, &rel)?;
-            let title = extract_title(&abs);
-            let (mtime_ms, size_bytes) = file_meta(&abs)?;
-            notes.push(NoteMeta {
-                id: rel.clone(),
-                path: rel,
-                name,
-                title,
-                mtime_ms,
-                size_bytes,
-            });
+            notes.push(build_note_meta(&root, &rel)?);
         }
     }
 
@@ -1216,15 +1186,8 @@ pub fn get_folder_stats(
         folder_path
     );
     let root = storage::vault_path(&app, &vault_id)?;
-    let target = if folder_path.is_empty() {
-        root.clone()
-    } else {
-        safe_vault_abs(&root, &folder_path)?
-    };
-
-    if !target.is_dir() {
-        return Err("not a directory".to_string());
-    }
+    let target = resolve_folder_abs(&root, &folder_path)?;
+    ensure_directory(&target, "not a directory")?;
 
     let mut note_count = 0usize;
     let mut folder_count = 0usize;

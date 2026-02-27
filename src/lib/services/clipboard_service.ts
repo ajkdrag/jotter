@@ -14,6 +14,20 @@ export class ClipboardService {
     private readonly now_ms: () => number,
   ) {}
 
+  private start_write_operation(): void {
+    this.op_store.start("clipboard.write", this.now_ms());
+  }
+
+  private succeed_write_operation(): void {
+    this.op_store.succeed("clipboard.write");
+  }
+
+  private fail_write_operation(error: unknown): void {
+    const message = error_message(error);
+    log.error("Copy markdown failed", { error: message });
+    this.op_store.fail("clipboard.write", message);
+  }
+
   async copy_text(text: string): Promise<void> {
     try {
       await this.clipboard_port.write_text(text);
@@ -28,15 +42,13 @@ export class ClipboardService {
     const markdown = this.editor_store.open_note?.markdown;
     if (!markdown) return;
 
-    this.op_store.start("clipboard.write", this.now_ms());
+    this.start_write_operation();
 
     try {
       await this.clipboard_port.write_text(markdown);
-      this.op_store.succeed("clipboard.write");
+      this.succeed_write_operation();
     } catch (error) {
-      const message = error_message(error);
-      log.error("Copy markdown failed", { error: message });
-      this.op_store.fail("clipboard.write", message);
+      this.fail_write_operation(error);
     }
   }
 }

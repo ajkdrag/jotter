@@ -1,4 +1,5 @@
 import type { ShellPort } from "$lib/ports/shell_port";
+import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("shell_service");
@@ -10,7 +11,7 @@ export class ShellService {
     try {
       await this.shell_port.open_url(url);
     } catch (error) {
-      log.error("Open URL failed", { error });
+      log.error("Open URL failed", { error: error_message(error), url });
     }
   }
 }

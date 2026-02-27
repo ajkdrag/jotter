@@ -55,9 +55,26 @@ fn open_repo(vault_path: &str) -> Result<Repository, String> {
     Repository::open(vault_path).map_err(|e| format!("failed to open repo: {}", e))
 }
 
+fn repo_index(repo: &Repository) -> Result<git2::Index, String> {
+    repo.index().map_err(|e| format!("failed to get index: {}", e))
+}
+
 fn default_signature() -> Result<Signature<'static>, String> {
     Signature::now("Otterly", "otterly@local")
         .map_err(|e| format!("failed to create signature: {}", e))
+}
+
+fn write_default_gitignore_if_missing(vault_path: &str) -> Result<(), String> {
+    let gitignore_path = Path::new(vault_path).join(".gitignore");
+    if gitignore_path.exists() {
+        return Ok(());
+    }
+
+    std::fs::write(
+        &gitignore_path,
+        "node_modules/\n.DS_Store\n*.tmp\n.env\nThumbs.db\n.otterly/\n",
+    )
+    .map_err(|e| format!("failed to write .gitignore: {}", e))
 }
 
 fn status_string(s: git2::Status) -> &'static str {
@@ -88,37 +105,11 @@ pub fn git_has_repo(vault_path: String) -> Result<bool, String> {
 #[tauri::command]
 pub fn git_init_repo(vault_path: String) -> Result<(), String> {
     let repo = Repository::init(&vault_path).map_err(|e| format!("failed to init repo: {}", e))?;
-
-    let gitignore_path = Path::new(&vault_path).join(".gitignore");
-    if !gitignore_path.exists() {
-        std::fs::write(
-            &gitignore_path,
-            "node_modules/\n.DS_Store\n*.tmp\n.env\nThumbs.db\n.otterly/\n",
-        )
-        .map_err(|e| format!("failed to write .gitignore: {}", e))?;
-    }
-
-    let mut index = repo
-        .index()
-        .map_err(|e| format!("failed to get index: {}", e))?;
-    index
-        .add_all(["*"].iter(), IndexAddOption::DEFAULT, None)
-        .map_err(|e| format!("failed to add files: {}", e))?;
-    index
-        .write()
-        .map_err(|e| format!("failed to write index: {}", e))?;
-
-    let tree_oid = index
-        .write_tree()
-        .map_err(|e| format!("failed to write tree: {}", e))?;
-    let tree = repo
-        .find_tree(tree_oid)
-        .map_err(|e| format!("failed to find tree: {}", e))?;
-    let sig = default_signature()?;
-
-    repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
-        .map_err(|e| format!("failed to create commit: {}", e))?;
-
+    write_default_gitignore_if_missing(&vault_path)?;
+    let mut index = repo_index(&repo)?;
+    stage_all_files(&repo, &mut index)?;
+    let (_, tree) = write_index_tree(&repo, &mut index)?;
+    commit_tree(&repo, "Initial commit", &tree, None)?;
     Ok(())
 }
 
@@ -287,9 +278,7 @@ pub fn git_stage_and_commit(
     files: Option<Vec<String>>,
 ) -> Result<String, String> {
     let repo = open_repo(&vault_path)?;
-    let mut index = repo
-        .index()
-        .map_err(|e| format!("failed to get index: {}", e))?;
+    let mut index = repo_index(&repo)?;
     stage_commit_files(&repo, &mut index, &vault_path, files)?;
     let (tree_oid, tree) = write_index_tree(&repo, &mut index)?;
     let parent = head_parent_commit(&repo);
@@ -347,17 +336,7 @@ pub fn git_log(
                 continue;
             }
         }
-
-        let hash = oid.to_string();
-        let short_hash = hash[..7.min(hash.len())].to_string();
-
-        commits.push(GitCommit {
-            hash,
-            short_hash,
-            author: commit.author().name().unwrap_or("Unknown").to_string(),
-            timestamp_ms: commit.time().seconds() * 1000,
-            message: commit.message().unwrap_or("").to_string(),
-        });
+        commits.push(to_git_commit(commit));
     }
 
     Ok(commits)
@@ -400,6 +379,19 @@ fn commit_touches_file(repo: &Repository, commit: &git2::Commit, path: &str) -> 
     false
 }
 
+fn to_git_commit(commit: git2::Commit<'_>) -> GitCommit {
+    let hash = commit.id().to_string();
+    let short_hash = hash[..7.min(hash.len())].to_string();
+
+    GitCommit {
+        hash,
+        short_hash,
+        author: commit.author().name().unwrap_or("Unknown").to_string(),
+        timestamp_ms: commit.time().seconds() * 1000,
+        message: commit.message().unwrap_or("").to_string(),
+    }
+}
+
 fn resolve_tree_from_commit<'repo>(
     repo: &'repo Repository,
     commit_ref: &str,
@@ -433,6 +425,14 @@ fn line_type(origin: char) -> &'static str {
         '+' => "addition",
         '-' => "deletion",
         _ => "context",
+    }
+}
+
+fn abbreviated_hash(hash: &str) -> &str {
+    if hash.len() >= 7 {
+        &hash[..7]
+    } else {
+        hash
     }
 }
 
@@ -541,11 +541,7 @@ pub fn git_restore_file(
 
     std::fs::write(&abs, &content).map_err(|e| format!("failed to write file: {}", e))?;
 
-    let short_hash = if commit_hash.len() >= 7 {
-        &commit_hash[..7]
-    } else {
-        &commit_hash
-    };
+    let short_hash = abbreviated_hash(&commit_hash);
     let title = Path::new(&file_path)
         .file_stem()
         .and_then(|s| s.to_str())
