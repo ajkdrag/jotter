@@ -36,6 +36,27 @@ import { create_logger } from "$lib/utils/logger";
 
 const log = create_logger("note_service");
 
+type OpenNoteOptions = {
+  cleanup_if_missing?: boolean;
+  force_reload?: boolean;
+};
+
+type OpenEditorNote = NonNullable<EditorStore["open_note"]>;
+
+type SavePlan =
+  | { kind: "save_existing"; open_note: OpenEditorNote }
+  | {
+      kind: "save_untitled";
+      open_note: OpenEditorNote;
+      target_path: NotePath;
+      overwrite: boolean;
+    };
+
+type SavePlanDecision =
+  | { status: "skipped" }
+  | { status: "conflict" }
+  | { status: "ready"; plan: SavePlan };
+
 export class NoteService {
   private readonly enqueue_write = create_write_queue();
   private open_abort: AbortController | null = null;
@@ -96,7 +117,7 @@ export class NoteService {
   async open_note(
     note_path: string,
     create_if_missing: boolean = false,
-    options?: { cleanup_if_missing?: boolean; force_reload?: boolean },
+    options?: OpenNoteOptions,
   ): Promise<NoteOpenResult> {
     const vault_id = this.vault_store.vault?.id;
     if (!vault_id) {
@@ -112,56 +133,27 @@ export class NoteService {
     let resolved_path: NotePath | null = null;
 
     try {
-      const resolved_existing = create_if_missing
-        ? resolve_existing_note_path(this.notes_store.notes, note_path)
-        : null;
-      resolved_path = as_note_path(resolved_existing ?? note_path);
+      resolved_path = this.resolve_open_note_path(note_path, create_if_missing);
 
-      const current_open_id = this.editor_store.open_note?.meta.id ?? null;
-      if (
-        !options?.force_reload &&
-        current_open_id &&
-        current_open_id === resolved_path
-      ) {
-        const open_meta = this.editor_store.open_note?.meta;
-        if (open_meta && open_meta.path.endsWith(".md")) {
-          this.notes_store.add_recent_note(open_meta);
-        }
+      if (this.should_keep_current_open_note(resolved_path, options)) {
+        this.add_open_note_to_recent();
         this.op_store.succeed(op_key);
-        return {
-          status: "opened",
-          selected_folder_path: parent_folder_path(resolved_path),
-        };
+        return this.open_note_result(resolved_path);
       }
 
-      const doc = create_if_missing
-        ? await this.read_or_create_note(vault_id, resolved_path)
-        : await this.notes_port.read_note(vault_id, resolved_path);
+      const doc = await this.read_note_for_open(
+        vault_id,
+        resolved_path,
+        create_if_missing,
+      );
 
       if (controller.signal.aborted) {
         return { status: "skipped" };
       }
 
-      this.notes_store.add_note(doc.meta);
-      if (doc.meta.path.endsWith(".md")) {
-        this.notes_store.add_recent_note(doc.meta);
-      }
-
-      const forced_buffer_id = options?.force_reload
-        ? `${doc.meta.id}:reload:${String(this.now_ms())}`
-        : undefined;
-      this.editor_store.set_open_note(
-        to_open_note_state(
-          doc,
-          forced_buffer_id ? { buffer_id: forced_buffer_id } : undefined,
-        ),
-      );
+      this.apply_opened_note(doc, options);
       this.op_store.succeed(op_key);
-
-      return {
-        status: "opened",
-        selected_folder_path: parent_folder_path(resolved_path),
-      };
+      return this.open_note_result(resolved_path);
     } catch (error) {
       if (controller.signal.aborted) {
         return { status: "skipped" };
@@ -172,16 +164,7 @@ export class NoteService {
         resolved_path &&
         this.is_not_found_error(error)
       ) {
-        await this.index_port
-          .remove_note(vault_id, resolved_path)
-          .catch((cleanup_error: unknown) => {
-            log.error("Stale index cleanup failed", {
-              path: String(resolved_path),
-              error: cleanup_error,
-            });
-          });
-        this.notes_store.remove_note(resolved_path);
-        this.notes_store.remove_recent_note(resolved_path);
+        await this.cleanup_missing_open_note(vault_id, resolved_path);
         this.op_store.succeed(op_key);
         return { status: "not_found" };
       }
@@ -353,84 +336,41 @@ export class NoteService {
     target_path: NotePath | null,
     overwrite: boolean,
   ): Promise<NoteSaveResult> {
-    const vault_id = this.vault_store.vault?.id;
-    const open_note = this.editor_store.open_note;
-    if (!vault_id || !open_note) {
+    const save_context = this.resolve_save_context();
+    if (!save_context) {
       return { status: "skipped" };
     }
 
-    const flushed = this.editor_service.flush();
-    if (flushed && flushed.note_id === open_note.meta.id) {
-      this.editor_store.set_markdown(flushed.note_id, flushed.markdown);
-    }
-
-    const latest_open_note = this.editor_store.open_note;
-    if (!latest_open_note) {
+    const plan_decision = this.resolve_save_plan(
+      save_context.open_note,
+      target_path,
+      overwrite,
+    );
+    if (plan_decision.status === "skipped") {
       return { status: "skipped" };
     }
-
-    const is_untitled = !latest_open_note.meta.path.endsWith(".md");
-    if (is_untitled) {
-      if (!target_path) {
-        return { status: "skipped" };
-      }
-
-      const target_exists = note_path_exists(
-        this.notes_store.notes,
-        target_path,
-      );
-      if (target_exists && !overwrite) {
-        return { status: "conflict" };
-      }
+    if (plan_decision.status === "conflict") {
+      return { status: "conflict" };
     }
 
     this.begin_save_operation();
 
     try {
-      if (is_untitled && target_path) {
-        await this.enqueue_write(
-          `note.save:${latest_open_note.meta.id}`,
-          async () => {
-            await this.save_untitled_note(
-              vault_id,
-              latest_open_note,
-              target_path,
-              overwrite,
-            );
-          },
-        );
-      } else {
-        await this.enqueue_write(
-          `note.save:${latest_open_note.meta.id}`,
-          async () => {
-            await this.notes_port.write_note(
-              vault_id,
-              latest_open_note.meta.id,
-              latest_open_note.markdown,
-            );
-            await this.index_port.upsert_note(
-              vault_id,
-              latest_open_note.meta.id,
-            );
-            this.editor_store.mark_clean(
-              latest_open_note.meta.id,
-              this.now_ms(),
-            );
-          },
-        );
-      }
+      await this.run_save_plan(save_context.vault_id, plan_decision.plan);
 
       this.editor_service.mark_clean();
       this.finish_save_operation(null);
 
-      const saved_path =
-        this.editor_store.open_note?.meta.path ?? latest_open_note.meta.path;
+      const saved_path = this.resolve_saved_path(plan_decision.plan.open_note);
       return {
         status: "saved",
-        saved_path: as_note_path(saved_path),
+        saved_path,
       };
     } catch (error) {
-      if (is_untitled && target_path && this.is_note_exists_error(error)) {
+      if (
+        plan_decision.plan.kind === "save_untitled" &&
+        this.is_note_exists_error(error)
+      ) {
         this.finish_save_operation(null);
         return { status: "conflict" };
       }
@@ -442,6 +382,185 @@ export class NoteService {
         error: message,
       };
     }
+  }
+
+  private resolve_open_note_path(
+    note_path: string,
+    create_if_missing: boolean,
+  ): NotePath {
+    const resolved_existing = create_if_missing
+      ? resolve_existing_note_path(this.notes_store.notes, note_path)
+      : null;
+    return as_note_path(resolved_existing ?? note_path);
+  }
+
+  private should_keep_current_open_note(
+    resolved_path: NotePath,
+    options?: OpenNoteOptions,
+  ): boolean {
+    if (options?.force_reload) {
+      return false;
+    }
+    const current_open_id = this.editor_store.open_note?.meta.id;
+    return current_open_id === resolved_path;
+  }
+
+  private add_open_note_to_recent() {
+    const open_meta = this.editor_store.open_note?.meta;
+    if (!open_meta || !open_meta.path.endsWith(".md")) {
+      return;
+    }
+    this.notes_store.add_recent_note(open_meta);
+  }
+
+  private async read_note_for_open(
+    vault_id: VaultId,
+    resolved_path: NotePath,
+    create_if_missing: boolean,
+  ): Promise<NoteDoc> {
+    if (create_if_missing) {
+      return await this.read_or_create_note(vault_id, resolved_path);
+    }
+    return await this.notes_port.read_note(vault_id, resolved_path);
+  }
+
+  private apply_opened_note(doc: NoteDoc, options?: OpenNoteOptions) {
+    this.notes_store.add_note(doc.meta);
+    if (doc.meta.path.endsWith(".md")) {
+      this.notes_store.add_recent_note(doc.meta);
+    }
+
+    const forced_buffer_id = options?.force_reload
+      ? `${doc.meta.id}:reload:${String(this.now_ms())}`
+      : undefined;
+    this.editor_store.set_open_note(
+      to_open_note_state(
+        doc,
+        forced_buffer_id ? { buffer_id: forced_buffer_id } : undefined,
+      ),
+    );
+  }
+
+  private open_note_result(resolved_path: NotePath): NoteOpenResult {
+    return {
+      status: "opened",
+      selected_folder_path: parent_folder_path(resolved_path),
+    };
+  }
+
+  private async cleanup_missing_open_note(
+    vault_id: VaultId,
+    note_path: NotePath,
+  ) {
+    await this.index_port
+      .remove_note(vault_id, note_path)
+      .catch((error: unknown) => {
+        log.error("Stale index cleanup failed", {
+          path: String(note_path),
+          error,
+        });
+      });
+    this.notes_store.remove_note(note_path);
+    this.notes_store.remove_recent_note(note_path);
+  }
+
+  private resolve_save_context(): {
+    vault_id: VaultId;
+    open_note: OpenEditorNote;
+  } | null {
+    const vault_id = this.vault_store.vault?.id;
+    const open_note = this.editor_store.open_note;
+    if (!vault_id || !open_note) {
+      return null;
+    }
+
+    this.sync_flushed_markdown(open_note.meta.id);
+    const latest_open_note = this.editor_store.open_note;
+    if (!latest_open_note) {
+      return null;
+    }
+    return { vault_id, open_note: latest_open_note };
+  }
+
+  private sync_flushed_markdown(note_id: NotePath) {
+    const flushed = this.editor_service.flush();
+    if (!flushed || flushed.note_id !== note_id) {
+      return;
+    }
+    this.editor_store.set_markdown(flushed.note_id, flushed.markdown);
+  }
+
+  private resolve_save_plan(
+    open_note: OpenEditorNote,
+    target_path: NotePath | null,
+    overwrite: boolean,
+  ): SavePlanDecision {
+    const is_untitled = !open_note.meta.path.endsWith(".md");
+    if (!is_untitled) {
+      return {
+        status: "ready",
+        plan: {
+          kind: "save_existing",
+          open_note,
+        },
+      };
+    }
+
+    if (!target_path) {
+      return { status: "skipped" };
+    }
+
+    const target_exists = note_path_exists(this.notes_store.notes, target_path);
+    if (target_exists && !overwrite) {
+      return { status: "conflict" };
+    }
+
+    return {
+      status: "ready",
+      plan: {
+        kind: "save_untitled",
+        open_note,
+        target_path,
+        overwrite,
+      },
+    };
+  }
+
+  private async run_save_plan(vault_id: VaultId, plan: SavePlan) {
+    await this.enqueue_write(
+      `note.save:${plan.open_note.meta.id}`,
+      async () => {
+        if (plan.kind === "save_untitled") {
+          await this.save_untitled_note(
+            vault_id,
+            plan.open_note,
+            plan.target_path,
+            plan.overwrite,
+          );
+          return;
+        }
+        await this.write_existing_note(vault_id, plan.open_note);
+      },
+    );
+  }
+
+  private async write_existing_note(
+    vault_id: VaultId,
+    open_note: OpenEditorNote,
+  ) {
+    await this.notes_port.write_note(
+      vault_id,
+      open_note.meta.id,
+      open_note.markdown,
+    );
+    await this.index_port.upsert_note(vault_id, open_note.meta.id);
+    this.editor_store.mark_clean(open_note.meta.id, this.now_ms());
+  }
+
+  private resolve_saved_path(fallback_note: OpenEditorNote): NotePath {
+    return as_note_path(
+      this.editor_store.open_note?.meta.path ?? fallback_note.meta.path,
+    );
   }
 
   reset_save_operation() {

@@ -1,7 +1,7 @@
 use crate::shared::constants;
 use crate::shared::storage;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write as IoWrite};
 use std::path::Component;
@@ -811,6 +811,12 @@ pub struct MoveItemResult {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct PendingMove {
+    item: MoveItem,
+    destination_path: String,
+}
+
 fn move_target_path(target_folder: &str, source_path: &str) -> Result<String, String> {
     let leaf = Path::new(source_path)
         .file_name()
@@ -861,6 +867,190 @@ fn remove_existing_move_target(
     Ok(())
 }
 
+fn move_failure(path: &str, new_path: impl Into<String>, error: impl Into<String>) -> MoveItemResult {
+    MoveItemResult {
+        path: path.to_string(),
+        new_path: new_path.into(),
+        success: false,
+        error: Some(error.into()),
+    }
+}
+
+fn move_success(path: String, new_path: String) -> MoveItemResult {
+    MoveItemResult {
+        path,
+        new_path,
+        success: true,
+        error: None,
+    }
+}
+
+fn collect_nested_move_sources(items: &[MoveItem], folder_path: &str, invalid_sources: &mut Vec<String>) {
+    for other in items {
+        if other.path == folder_path {
+            continue;
+        }
+        if is_descendant_path(&other.path, folder_path) {
+            invalid_sources.push(other.path.clone());
+        }
+    }
+}
+
+fn collect_pending_moves(
+    root: &Path,
+    args: &MoveItemsArgs,
+) -> Result<(Vec<MoveItemResult>, Vec<PendingMove>), String> {
+    let mut results = Vec::with_capacity(args.items.len());
+    let mut candidates: Vec<PendingMove> = Vec::new();
+    let mut invalid_sources: Vec<String> = Vec::new();
+    let mut seen_paths: HashSet<String> = HashSet::new();
+
+    for item in &args.items {
+        if !seen_paths.insert(item.path.to_lowercase()) {
+            results.push(move_failure(
+                &item.path,
+                item.path.clone(),
+                "duplicate item path",
+            ));
+            continue;
+        }
+
+        if item.path.is_empty() {
+            results.push(move_failure(
+                &item.path,
+                item.path.clone(),
+                "cannot move vault root",
+            ));
+            continue;
+        }
+
+        if item.is_folder && is_descendant_path(&args.target_folder, &item.path) {
+            results.push(move_failure(
+                &item.path,
+                item.path.clone(),
+                "cannot move folder into itself",
+            ));
+            continue;
+        }
+
+        let source_abs = safe_vault_abs(root, &item.path)?;
+        let source_meta = match std::fs::metadata(&source_abs) {
+            Ok(meta) => meta,
+            Err(error) => {
+                results.push(move_failure(
+                    &item.path,
+                    item.path.clone(),
+                    error.to_string(),
+                ));
+                continue;
+            }
+        };
+
+        if item.is_folder && !source_meta.is_dir() {
+            results.push(move_failure(
+                &item.path,
+                item.path.clone(),
+                "source is not a directory",
+            ));
+            continue;
+        }
+
+        if !item.is_folder && !source_meta.is_file() {
+            results.push(move_failure(&item.path, item.path.clone(), "source is not a file"));
+            continue;
+        }
+
+        let destination_path = move_target_path(&args.target_folder, &item.path)?;
+        if destination_path == item.path {
+            results.push(move_failure(
+                &item.path,
+                destination_path,
+                "item already in target folder",
+            ));
+            continue;
+        }
+
+        if item.is_folder {
+            collect_nested_move_sources(&args.items, &item.path, &mut invalid_sources);
+        }
+
+        candidates.push(PendingMove {
+            item: item.clone(),
+            destination_path,
+        });
+    }
+
+    let invalid_source_set: HashSet<String> = invalid_sources
+        .into_iter()
+        .map(|path| path.to_lowercase())
+        .collect();
+    let mut pending: Vec<PendingMove> = Vec::new();
+    for candidate in candidates {
+        if invalid_source_set.contains(&candidate.item.path.to_lowercase()) {
+            results.push(move_failure(
+                &candidate.item.path,
+                candidate.destination_path,
+                "item is contained within another moved folder",
+            ));
+            continue;
+        }
+        pending.push(candidate);
+    }
+
+    Ok((results, pending))
+}
+
+fn execute_pending_moves(
+    root: &Path,
+    args: &MoveItemsArgs,
+    pending: Vec<PendingMove>,
+    invalidate_paths: &mut HashSet<String>,
+) -> Result<Vec<MoveItemResult>, String> {
+    let mut results = Vec::with_capacity(pending.len());
+
+    for pending_move in pending {
+        let item = pending_move.item;
+        let destination_path = pending_move.destination_path;
+        let source_abs = safe_vault_abs(root, &item.path)?;
+        let destination_abs = safe_vault_rename_target_abs(root, &destination_path)?;
+        if let Some(parent_abs) = destination_abs.parent() {
+            std::fs::create_dir_all(parent_abs).map_err(|e| e.to_string())?;
+        }
+
+        if destination_abs.exists() {
+            if !args.overwrite {
+                results.push(move_failure(
+                    &item.path,
+                    destination_path.clone(),
+                    "target already exists",
+                ));
+                continue;
+            }
+            if let Err(error) =
+                remove_existing_move_target(item.is_folder, &source_abs, &destination_abs)
+            {
+                results.push(move_failure(&item.path, destination_path.clone(), error));
+                continue;
+            }
+        }
+
+        match rename_with_temp_path(&source_abs, &destination_abs) {
+            Ok(()) => {
+                let from_parent = parent_folder_path(&item.path);
+                let to_parent = parent_folder_path(&destination_path);
+                invalidate_paths.insert(from_parent);
+                invalidate_paths.insert(to_parent);
+                results.push(move_success(item.path, destination_path));
+            }
+            Err(error) => {
+                results.push(move_failure(&item.path, destination_path, error));
+            }
+        }
+    }
+
+    Ok(results)
+}
+
 #[tauri::command]
 pub fn move_items(args: MoveItemsArgs, app: AppHandle) -> Result<Vec<MoveItemResult>, String> {
     log::info!(
@@ -879,171 +1069,10 @@ pub fn move_items(args: MoveItemsArgs, app: AppHandle) -> Result<Vec<MoveItemRes
         return Err("target is not a directory".to_string());
     }
 
-    let mut results: Vec<MoveItemResult> = Vec::with_capacity(args.items.len());
-    let mut moved: Vec<(MoveItem, String)> = Vec::new();
-    let mut invalid_sources: Vec<String> = Vec::new();
-    let mut seen_paths = std::collections::HashSet::new();
-
-    for item in &args.items {
-        if !seen_paths.insert(item.path.to_lowercase()) {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: item.path.clone(),
-                success: false,
-                error: Some("duplicate item path".to_string()),
-            });
-            continue;
-        }
-
-        if item.path.is_empty() {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: item.path.clone(),
-                success: false,
-                error: Some("cannot move vault root".to_string()),
-            });
-            continue;
-        }
-
-        if item.is_folder && is_descendant_path(&args.target_folder, &item.path) {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: item.path.clone(),
-                success: false,
-                error: Some("cannot move folder into itself".to_string()),
-            });
-            continue;
-        }
-
-        let source_abs = safe_vault_abs(&root, &item.path)?;
-        let source_meta = match std::fs::metadata(&source_abs) {
-            Ok(meta) => meta,
-            Err(err) => {
-                results.push(MoveItemResult {
-                    path: item.path.clone(),
-                    new_path: item.path.clone(),
-                    success: false,
-                    error: Some(err.to_string()),
-                });
-                continue;
-            }
-        };
-
-        if item.is_folder && !source_meta.is_dir() {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: item.path.clone(),
-                success: false,
-                error: Some("source is not a directory".to_string()),
-            });
-            continue;
-        }
-        if !item.is_folder && !source_meta.is_file() {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: item.path.clone(),
-                success: false,
-                error: Some("source is not a file".to_string()),
-            });
-            continue;
-        }
-
-        let destination_path = move_target_path(&args.target_folder, &item.path)?;
-        if destination_path == item.path {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: destination_path,
-                success: false,
-                error: Some("item already in target folder".to_string()),
-            });
-            continue;
-        }
-
-        if item.is_folder {
-            for other in &args.items {
-                if other.path == item.path {
-                    continue;
-                }
-                if is_descendant_path(&other.path, &item.path) {
-                    invalid_sources.push(other.path.clone());
-                }
-            }
-        }
-
-        moved.push((item.clone(), destination_path));
-    }
-
-    let invalid_source_set: std::collections::HashSet<String> =
-        invalid_sources.into_iter().map(|path| path.to_lowercase()).collect();
-    let mut pending: Vec<(MoveItem, String)> = Vec::new();
-    for (item, destination_path) in moved {
-        if invalid_source_set.contains(&item.path.to_lowercase()) {
-            results.push(MoveItemResult {
-                path: item.path.clone(),
-                new_path: destination_path,
-                success: false,
-                error: Some("item is contained within another moved folder".to_string()),
-            });
-            continue;
-        }
-        pending.push((item, destination_path));
-    }
-
-    let mut invalidate_paths = std::collections::HashSet::new();
-
-    for (item, destination_path) in pending {
-        let source_abs = safe_vault_abs(&root, &item.path)?;
-        let destination_abs = safe_vault_rename_target_abs(&root, &destination_path)?;
-        if let Some(parent_abs) = destination_abs.parent() {
-            std::fs::create_dir_all(parent_abs).map_err(|e| e.to_string())?;
-        }
-
-        if destination_abs.exists() {
-            if !args.overwrite {
-                results.push(MoveItemResult {
-                    path: item.path.clone(),
-                    new_path: destination_path.clone(),
-                    success: false,
-                    error: Some("target already exists".to_string()),
-                });
-                continue;
-            }
-            if let Err(err) =
-                remove_existing_move_target(item.is_folder, &source_abs, &destination_abs)
-            {
-                results.push(MoveItemResult {
-                    path: item.path.clone(),
-                    new_path: destination_path.clone(),
-                    success: false,
-                    error: Some(err),
-                });
-                continue;
-            }
-        }
-
-        match rename_with_temp_path(&source_abs, &destination_abs) {
-            Ok(()) => {
-                let from_parent = parent_folder_path(&item.path);
-                let to_parent = parent_folder_path(&destination_path);
-                invalidate_paths.insert(from_parent);
-                invalidate_paths.insert(to_parent);
-                results.push(MoveItemResult {
-                    path: item.path,
-                    new_path: destination_path,
-                    success: true,
-                    error: None,
-                });
-            }
-            Err(err) => {
-                results.push(MoveItemResult {
-                    path: item.path,
-                    new_path: destination_path,
-                    success: false,
-                    error: Some(err),
-                });
-            }
-        }
-    }
+    let (mut results, pending) = collect_pending_moves(&root, &args)?;
+    let mut invalidate_paths: HashSet<String> = HashSet::new();
+    let executed_results = execute_pending_moves(&root, &args, pending, &mut invalidate_paths)?;
+    results.extend(executed_results);
 
     for path in invalidate_paths {
         invalidate_folder_cache(&args.vault_id, &path);
