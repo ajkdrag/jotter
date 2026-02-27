@@ -4,6 +4,7 @@ import type { TabStore } from "$lib/stores/tab_store.svelte";
 import type { NotesStore } from "$lib/stores/notes_store.svelte";
 import type { NoteService } from "$lib/services/note_service";
 import type { Tab, PersistedTabState } from "$lib/types/tab";
+import type { VaultId } from "$lib/types/ids";
 import { note_name_from_path } from "$lib/utils/path";
 import { create_logger } from "$lib/utils/logger";
 
@@ -19,28 +20,74 @@ export class TabService {
     private readonly note_service: NoteService,
   ) {}
 
-  async save_tabs(): Promise<void> {
-    const vault_id = this.vault_store.vault?.id;
-    if (!vault_id) return;
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
 
-    const known_paths = new Set(this.notes_store.notes.map((n) => n.path));
-    const persistable_tabs = this.tab_store.tabs.filter((t) =>
-      known_paths.has(t.note_path),
+  private list_known_note_paths(): Set<string> {
+    return new Set(this.notes_store.notes.map((note) => note.path));
+  }
+
+  private build_persisted_tabs_state(
+    known_paths: Set<string>,
+  ): PersistedTabState {
+    const persistable_tabs = this.tab_store.tabs.filter((tab) =>
+      known_paths.has(tab.note_path),
     );
     const active_path = this.tab_store.active_tab?.note_path ?? null;
 
-    const state: PersistedTabState = {
-      tabs: persistable_tabs.map((t) => {
-        const snapshot = this.tab_store.get_snapshot(t.id);
+    return {
+      tabs: persistable_tabs.map((tab) => {
+        const snapshot = this.tab_store.get_snapshot(tab.id);
         return {
-          note_path: t.note_path,
-          is_pinned: t.is_pinned,
+          note_path: tab.note_path,
+          is_pinned: tab.is_pinned,
           cursor: snapshot?.cursor ?? null,
         };
       }),
       active_tab_path:
         active_path && known_paths.has(active_path) ? active_path : null,
     };
+  }
+
+  private restore_cursor_snapshots(
+    tabs: Tab[],
+    persisted_tabs: PersistedTabState["tabs"],
+  ): void {
+    const tab_by_path = new Map(tabs.map((tab) => [tab.note_path, tab]));
+    for (const persisted_tab of persisted_tabs) {
+      if (!persisted_tab.cursor) {
+        continue;
+      }
+
+      const tab = tab_by_path.get(persisted_tab.note_path);
+      if (!tab) {
+        continue;
+      }
+
+      this.tab_store.set_snapshot(tab.id, {
+        scroll_top: 0,
+        cursor: persisted_tab.cursor,
+      });
+    }
+  }
+
+  private resolve_active_tab_id(
+    tabs: Tab[],
+    active_tab_path: string | null,
+  ): string | null {
+    if (active_tab_path && tabs.some((tab) => tab.id === active_tab_path)) {
+      return active_tab_path;
+    }
+    return tabs[0]?.id ?? null;
+  }
+
+  async save_tabs(): Promise<void> {
+    const vault_id = this.get_active_vault_id();
+    if (!vault_id) return;
+
+    const known_paths = this.list_known_note_paths();
+    const state = this.build_persisted_tabs_state(known_paths);
 
     try {
       await this.vault_settings_port.set_vault_setting(
@@ -58,7 +105,7 @@ export class TabService {
   }
 
   async load_tabs(): Promise<PersistedTabState | null> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) return null;
 
     try {
@@ -78,7 +125,7 @@ export class TabService {
   }
 
   async restore_tabs(persisted: PersistedTabState): Promise<void> {
-    const tabs: Tab[] = persisted.tabs
+    const restored_tabs: Tab[] = persisted.tabs
       .filter(
         (t) => typeof t.note_path === "string" && t.note_path.endsWith(".md"),
       )
@@ -90,42 +137,30 @@ export class TabService {
         is_dirty: false,
       }));
 
-    if (tabs.length === 0) return;
+    if (restored_tabs.length === 0) return;
 
-    const active_path = persisted.active_tab_path;
-    const first_tab = tabs[0];
-    const active_id =
-      active_path && tabs.some((t) => t.id === active_path)
-        ? active_path
-        : first_tab
-          ? first_tab.id
-          : null;
+    const active_id = this.resolve_active_tab_id(
+      restored_tabs,
+      persisted.active_tab_path,
+    );
+    this.tab_store.restore_tabs(restored_tabs, active_id);
+    this.restore_cursor_snapshots(restored_tabs, persisted.tabs);
 
-    this.tab_store.restore_tabs(tabs, active_id);
-
-    for (const pt of persisted.tabs) {
-      if (pt.cursor) {
-        const tab = tabs.find((t) => t.note_path === pt.note_path);
-        if (tab) {
-          this.tab_store.set_snapshot(tab.id, {
-            scroll_top: 0,
-            cursor: pt.cursor,
-          });
-        }
-      }
+    if (!active_id) {
+      return;
     }
 
-    if (active_id) {
-      const active_tab = tabs.find((t) => t.id === active_id);
-      if (active_tab) {
-        const result = await this.note_service.open_note(
-          active_tab.note_path,
-          false,
-        );
-        if (result.status === "not_found") {
-          this.tab_store.remove_tab_by_path(active_tab.note_path);
-        }
-      }
+    const active_tab = restored_tabs.find((tab) => tab.id === active_id);
+    if (!active_tab) {
+      return;
+    }
+
+    const result = await this.note_service.open_note(
+      active_tab.note_path,
+      false,
+    );
+    if (result.status === "not_found") {
+      this.tab_store.remove_tab_by_path(active_tab.note_path);
     }
   }
 }

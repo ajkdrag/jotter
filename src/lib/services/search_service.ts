@@ -23,6 +23,7 @@ import { SETTINGS_REGISTRY } from "$lib/types/settings_registry";
 import { error_message } from "$lib/utils/error_message";
 import { create_logger } from "$lib/utils/logger";
 import type { Vault } from "$lib/types/vault";
+import type { VaultId } from "$lib/types/ids";
 
 const log = create_logger("search_service");
 const WIKI_SUGGEST_LIMIT = 15;
@@ -137,6 +138,37 @@ export class SearchService {
     private readonly now_ms: () => number,
   ) {}
 
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
+
+  private start_operation(operation_key: string): void {
+    this.op_store.start(operation_key, this.now_ms());
+  }
+
+  private succeed_operation(operation_key: string): void {
+    this.op_store.succeed(operation_key);
+  }
+
+  private fail_operation(
+    operation_key: string,
+    log_message: string,
+    error: unknown,
+  ): string {
+    const message = error_message(error);
+    log.error(log_message, { error: message });
+    this.op_store.fail(operation_key, message);
+    return message;
+  }
+
+  private is_search_stale(revision: number): boolean {
+    return revision !== this.active_search_revision;
+  }
+
+  private is_wiki_suggest_stale(revision: number): boolean {
+    return revision !== this.active_wiki_suggest_revision;
+  }
+
   private list_searchable_vaults(): Vault[] {
     const ordered_vaults: Vault[] = [];
     const seen_ids = new Set<string>();
@@ -171,14 +203,14 @@ export class SearchService {
       return { status: "empty", results: [] };
     }
 
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       this.op_store.reset("search.notes");
       return { status: "skipped", results: [] };
     }
 
     const revision = ++this.active_search_revision;
-    this.op_store.start("search.notes", this.now_ms());
+    this.start_operation("search.notes");
 
     try {
       const results = await this.search_port.search_notes(
@@ -186,20 +218,22 @@ export class SearchService {
         parse_search_query(query),
         20,
       );
-      if (revision !== this.active_search_revision) {
+      if (this.is_search_stale(revision)) {
         return { status: "stale", results: [] };
       }
 
-      this.op_store.succeed("search.notes");
+      this.succeed_operation("search.notes");
       return { status: "success", results };
     } catch (error) {
-      if (revision !== this.active_search_revision) {
+      if (this.is_search_stale(revision)) {
         return { status: "stale", results: [] };
       }
 
-      const message = error_message(error);
-      log.error("Search failed", { error: message });
-      this.op_store.fail("search.notes", message);
+      const message = this.fail_operation(
+        "search.notes",
+        "Search failed",
+        error,
+      );
       return { status: "failed", error: message, results: [] };
     }
   }
@@ -209,7 +243,7 @@ export class SearchService {
     const trimmed = query.trim();
     if (!trimmed) return { status: "empty", results: [] };
 
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) return { status: "skipped", results: [] };
 
     try {
@@ -225,7 +259,7 @@ export class SearchService {
           WIKI_SUGGEST_LIMIT,
         ),
       ]);
-      if (revision !== this.active_wiki_suggest_revision) {
+      if (this.is_wiki_suggest_stale(revision)) {
         return { status: "stale", results: [] };
       }
       const results = merge_wiki_suggestions({
@@ -234,12 +268,45 @@ export class SearchService {
       });
       return { status: "success", results };
     } catch (error) {
-      if (revision !== this.active_wiki_suggest_revision) {
+      if (this.is_wiki_suggest_stale(revision)) {
         return { status: "stale", results: [] };
       }
       const message = error_message(error);
       log.error("Wiki suggest failed", { error: message });
       return { status: "failed", error: message, results: [] };
+    }
+  }
+
+  private async search_planned_omnibar_items(
+    query: string,
+  ): Promise<OmnibarSearchResult> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return { domain: "planned", items: [] };
+    }
+
+    const vault_id = this.get_active_vault_id();
+    if (!vault_id) {
+      return { domain: "planned", items: [] };
+    }
+
+    try {
+      const suggestions = await this.search_port.suggest_planned_links(
+        vault_id,
+        trimmed,
+        50,
+      );
+      const items: OmnibarItem[] = suggestions.map((suggestion) => ({
+        kind: "planned_note" as const,
+        target_path: suggestion.target_path,
+        ref_count: suggestion.ref_count,
+        score: suggestion.ref_count,
+      }));
+      return { domain: "planned", items };
+    } catch (error) {
+      const message = error_message(error);
+      log.error("Planned-note search failed", { error: message });
+      return { domain: "planned", items: [], status: "failed" };
     }
   }
 
@@ -259,7 +326,7 @@ export class SearchService {
     }
 
     const revision = ++this.active_cross_vault_search_revision;
-    this.op_store.start("search.notes.all_vaults", this.now_ms());
+    this.start_operation("search.notes.all_vaults");
 
     try {
       const settled = await this.run_cross_vault_search(
@@ -280,16 +347,18 @@ export class SearchService {
         return { status: "failed", error: first_error, groups: [] };
       }
 
-      this.op_store.succeed("search.notes.all_vaults");
+      this.succeed_operation("search.notes.all_vaults");
       return { status: "success", groups };
     } catch (error) {
       if (this.is_cross_vault_search_stale(revision)) {
         return { status: "stale", groups: [] };
       }
 
-      const message = error_message(error);
-      log.error("Cross-vault search failed", { error: message });
-      this.op_store.fail("search.notes.all_vaults", message);
+      const message = this.fail_operation(
+        "search.notes.all_vaults",
+        "Cross-vault search failed",
+        error,
+      );
       return { status: "failed", error: message, groups: [] };
     }
   }
@@ -413,31 +482,7 @@ export class SearchService {
     }
 
     if (parsed.domain === "planned") {
-      if (!parsed.text.trim()) {
-        return { domain: "planned", items: [] };
-      }
-      const vault_id = this.vault_store.vault?.id;
-      if (!vault_id) {
-        return { domain: "planned", items: [] };
-      }
-      try {
-        const suggestions = await this.search_port.suggest_planned_links(
-          vault_id,
-          parsed.text,
-          50,
-        );
-        const items: OmnibarItem[] = suggestions.map((item) => ({
-          kind: "planned_note" as const,
-          target_path: item.target_path,
-          ref_count: item.ref_count,
-          score: item.ref_count,
-        }));
-        return { domain: "planned", items };
-      } catch (error) {
-        const message = error_message(error);
-        log.error("Planned-note search failed", { error: message });
-        return { domain: "planned", items: [], status: "failed" };
-      }
+      return this.search_planned_omnibar_items(parsed.text);
     }
 
     const result = await this.search_notes(raw_query);

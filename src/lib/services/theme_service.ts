@@ -70,14 +70,16 @@ export class ThemeService {
 
 function parse_stored_themes(raw: unknown): Theme[] {
   if (!raw || !Array.isArray(raw)) return [];
-  return raw.filter((entry): entry is Theme => {
-    if (typeof entry !== "object" || entry === null) return false;
-    const t = entry as Record<string, unknown>;
-    return (
-      typeof t.id === "string" &&
-      typeof t.name === "string" &&
-      (t.color_scheme === "dark" || t.color_scheme === "light") &&
-      typeof t.accent_hue === "number"
-    );
-  });
+  return raw.filter(is_theme_record);
+}
+
+function is_theme_record(entry: unknown): entry is Theme {
+  if (typeof entry !== "object" || entry === null) return false;
+  const candidate = entry as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    (candidate.color_scheme === "dark" || candidate.color_scheme === "light") &&
+    typeof candidate.accent_hue === "number"
+  );
 }

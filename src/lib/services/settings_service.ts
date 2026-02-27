@@ -3,6 +3,7 @@ import type { SettingsPort } from "$lib/ports/settings_port";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { OpStore } from "$lib/stores/op_store.svelte";
 import type { EditorSettings } from "$lib/types/editor_settings";
+import type { VaultId } from "$lib/types/ids";
 import type {
   SettingsLoadResult,
   SettingsSaveResult,
@@ -43,10 +44,33 @@ export class SettingsService {
     private readonly now_ms: () => number,
   ) {}
 
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
+
+  private start_operation(operation_key: string): void {
+    this.op_store.start(operation_key, this.now_ms());
+  }
+
+  private succeed_operation(operation_key: string): void {
+    this.op_store.succeed(operation_key);
+  }
+
+  private fail_operation(
+    operation_key: string,
+    log_message: string,
+    error: unknown,
+  ): string {
+    const message = error_message(error);
+    log.error(log_message, { error: message });
+    this.op_store.fail(operation_key, message);
+    return message;
+  }
+
   async load_settings(
     current_settings: EditorSettings,
   ): Promise<SettingsLoadResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return {
         status: "skipped",
@@ -54,7 +78,7 @@ export class SettingsService {
       };
     }
 
-    this.op_store.start("settings.load", this.now_ms());
+    this.start_operation("settings.load");
 
     try {
       const stored_raw =
@@ -77,15 +101,17 @@ export class SettingsService {
           stored,
         );
       }
-      this.op_store.succeed("settings.load");
+      this.succeed_operation("settings.load");
       return {
         status: "success",
         settings,
       };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Load settings failed", { error: message });
-      this.op_store.fail("settings.load", message);
+      const message = this.fail_operation(
+        "settings.load",
+        "Load settings failed",
+        error,
+      );
       return {
         status: "failed",
         settings: current_settings,
@@ -95,12 +121,12 @@ export class SettingsService {
   }
 
   async save_settings(settings: EditorSettings): Promise<SettingsSaveResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("settings.save", this.now_ms());
+    this.start_operation("settings.save");
 
     try {
       const vault_scoped = omit_global_only_keys(
@@ -114,12 +140,14 @@ export class SettingsService {
       for (const key of GLOBAL_ONLY_SETTING_KEYS) {
         await this.settings_port.set_setting(key, settings[key]);
       }
-      this.op_store.succeed("settings.save");
+      this.succeed_operation("settings.save");
       return { status: "success" };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Save settings failed", { error: message });
-      this.op_store.fail("settings.save", message);
+      const message = this.fail_operation(
+        "settings.save",
+        "Save settings failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,

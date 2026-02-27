@@ -17,10 +17,11 @@ import { error_message } from "$lib/utils/error_message";
 import { ensure_open_note } from "$lib/domain/ensure_open_note";
 import { create_logger } from "$lib/utils/logger";
 import { move_destination_path } from "$lib/domain/filetree";
-import { as_note_path } from "$lib/types/ids";
+import { as_note_path, type VaultId } from "$lib/types/ids";
 import type { LinkRepairService } from "$lib/services/link_repair_service";
 
 const log = create_logger("folder_service");
+type MoveItemResult = Awaited<ReturnType<NotesPort["move_items"]>>[number];
 
 export class FolderService {
   constructor(
@@ -35,11 +36,188 @@ export class FolderService {
     private readonly link_repair: LinkRepairService | null = null,
   ) {}
 
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
+
+  private is_stale_generation(expected_generation: number): boolean {
+    return expected_generation !== this.vault_store.generation;
+  }
+
+  private start_operation(operation_key: string): void {
+    this.op_store.start(operation_key, this.now_ms());
+  }
+
+  private succeed_operation(operation_key: string): void {
+    this.op_store.succeed(operation_key);
+  }
+
+  private fail_operation(
+    operation_key: string,
+    log_message: string,
+    error: unknown,
+    details?: Record<string, unknown>,
+  ): string {
+    const message = error_message(error);
+    log.error(
+      log_message,
+      details ? { ...details, error: message } : { error: message },
+    );
+    this.op_store.fail(operation_key, message);
+    return message;
+  }
+
+  private build_note_path_map_for_prefix_move(
+    old_prefix: string,
+    new_prefix: string,
+  ): Map<string, string> {
+    const path_map = new Map<string, string>();
+    for (const note of this.notes_store.notes) {
+      if (!note.path.startsWith(old_prefix)) {
+        continue;
+      }
+      path_map.set(
+        note.path,
+        `${new_prefix}${note.path.slice(old_prefix.length)}`,
+      );
+    }
+    return path_map;
+  }
+
+  private build_move_path_map(
+    results: MoveItemResult[],
+    items_by_path: Map<string, MoveItem>,
+  ): Map<string, string> {
+    const path_map = new Map<string, string>();
+
+    for (const result of results) {
+      if (!result.success) {
+        continue;
+      }
+
+      const moved_item = items_by_path.get(result.path);
+      if (!moved_item) {
+        continue;
+      }
+
+      if (!moved_item.is_folder) {
+        path_map.set(result.path, result.new_path);
+        continue;
+      }
+
+      const folder_path_map = this.build_note_path_map_for_prefix_move(
+        `${result.path}/`,
+        `${result.new_path}/`,
+      );
+      for (const [old_note_path, new_note_path] of folder_path_map) {
+        path_map.set(old_note_path, new_note_path);
+      }
+    }
+
+    return path_map;
+  }
+
+  private async apply_move_result(
+    vault_id: VaultId,
+    item: MoveItem,
+    result: MoveItemResult,
+  ): Promise<void> {
+    if (item.is_folder) {
+      this.apply_folder_rename(result.path, result.new_path);
+      this.tab_store.update_tab_path_prefix(
+        `${result.path}/`,
+        `${result.new_path}/`,
+      );
+      await this.index_port.rename_folder_paths(
+        vault_id,
+        `${result.path}/`,
+        `${result.new_path}/`,
+      );
+      return;
+    }
+
+    const old_note_path = as_note_path(result.path);
+    const new_note_path = as_note_path(result.new_path);
+    this.notes_store.rename_note(old_note_path, new_note_path);
+
+    if (this.editor_store.open_note?.meta.id === old_note_path) {
+      this.editor_store.update_open_note_path(new_note_path);
+    }
+
+    const renamed_note = this.notes_store.notes.find(
+      (note) => note.path === new_note_path,
+    );
+    if (renamed_note) {
+      this.notes_store.rename_recent_note(old_note_path, renamed_note);
+    }
+
+    this.tab_store.update_tab_path(old_note_path, new_note_path);
+    await this.index_port.rename_note_path(
+      vault_id,
+      old_note_path,
+      new_note_path,
+    );
+  }
+
+  private async load_folder_slice(
+    path: string,
+    offset: number,
+    expected_generation: number,
+    apply_contents: (
+      path: string,
+      contents: Awaited<ReturnType<NotesPort["list_folder_contents"]>>,
+    ) => void,
+  ): Promise<FolderLoadResult> {
+    const vault_id = this.get_active_vault_id();
+    if (!vault_id) {
+      return { status: "skipped" };
+    }
+
+    if (this.is_stale_generation(expected_generation)) {
+      return { status: "stale" };
+    }
+
+    try {
+      const contents = await this.notes_port.list_folder_contents(
+        vault_id,
+        path,
+        offset,
+        PAGE_SIZE,
+      );
+
+      if (this.is_stale_generation(expected_generation)) {
+        return { status: "stale" };
+      }
+
+      apply_contents(path, contents);
+      return {
+        status: "loaded",
+        total_count: contents.total_count,
+        has_more: contents.has_more,
+      };
+    } catch (error) {
+      if (this.is_stale_generation(expected_generation)) {
+        return { status: "stale" };
+      }
+
+      const message = error_message(error);
+      log.error("Load folder contents failed", {
+        path,
+        error: message,
+        offset,
+      });
+      return {
+        status: "failed",
+        error: message,
+      };
+    }
+  }
+
   async create_folder(
     parent_path: string,
     folder_name: string,
   ): Promise<FolderMutationResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
@@ -49,7 +227,7 @@ export class FolderService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.create", this.now_ms());
+    this.start_operation("folder.create");
 
     try {
       await this.notes_port.create_folder(vault_id, parent_path, trimmed_name);
@@ -57,12 +235,14 @@ export class FolderService {
         ? `${parent_path}/${trimmed_name}`
         : trimmed_name;
       this.notes_store.add_folder_path(new_folder_path);
-      this.op_store.succeed("folder.create");
+      this.succeed_operation("folder.create");
       return { status: "success" };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Create folder failed", { error: message });
-      this.op_store.fail("folder.create", message);
+      const message = this.fail_operation(
+        "folder.create",
+        "Create folder failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -73,28 +253,30 @@ export class FolderService {
   async load_delete_stats(
     folder_path: string,
   ): Promise<FolderDeleteStatsResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.delete_stats", this.now_ms());
+    this.start_operation("folder.delete_stats");
 
     try {
       const stats = await this.notes_port.get_folder_stats(
         vault_id,
         folder_path,
       );
-      this.op_store.succeed("folder.delete_stats");
+      this.succeed_operation("folder.delete_stats");
       return {
         status: "ready",
         affected_note_count: stats.note_count,
         affected_folder_count: stats.folder_count,
       };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Load folder delete stats failed", { error: message });
-      this.op_store.fail("folder.delete_stats", message);
+      const message = this.fail_operation(
+        "folder.delete_stats",
+        "Load folder delete stats failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -103,12 +285,12 @@ export class FolderService {
   }
 
   async delete_folder(folder_path: string): Promise<FolderMutationResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id || !folder_path) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.delete", this.now_ms());
+    this.start_operation("folder.delete");
 
     try {
       const folder_prefix = `${folder_path}/`;
@@ -135,12 +317,14 @@ export class FolderService {
         this.editor_store.clear_open_note();
       }
 
-      this.op_store.succeed("folder.delete");
+      this.succeed_operation("folder.delete");
       return { status: "success" };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Delete folder failed", { error: message });
-      this.op_store.fail("folder.delete", message);
+      const message = this.fail_operation(
+        "folder.delete",
+        "Delete folder failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -152,25 +336,18 @@ export class FolderService {
     folder_path: string,
     new_path: string,
   ): Promise<FolderMutationResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id || !folder_path || !new_path) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.rename", this.now_ms());
+    this.start_operation("folder.rename");
 
     try {
-      const path_map = new Map<string, string>();
-      const folder_prefix = `${folder_path}/`;
-      const new_prefix = `${new_path}/`;
-      for (const note of this.notes_store.notes) {
-        if (note.path.startsWith(folder_prefix)) {
-          path_map.set(
-            note.path,
-            `${new_prefix}${note.path.slice(folder_prefix.length)}`,
-          );
-        }
-      }
+      const path_map = this.build_note_path_map_for_prefix_move(
+        `${folder_path}/`,
+        `${new_path}/`,
+      );
 
       await this.notes_port.rename_folder(vault_id, folder_path, new_path);
 
@@ -178,12 +355,14 @@ export class FolderService {
         await this.link_repair?.repair_links(vault_id, path_map);
       }
 
-      this.op_store.succeed("folder.rename");
+      this.succeed_operation("folder.rename");
       return { status: "success" };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Rename folder failed", { error: message });
-      this.op_store.fail("folder.rename", message);
+      const message = this.fail_operation(
+        "folder.rename",
+        "Rename folder failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -196,12 +375,12 @@ export class FolderService {
     target_folder: string,
     overwrite: boolean,
   ): Promise<FolderMoveResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id || items.length === 0) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("folder.move", this.now_ms());
+    this.start_operation("folder.move");
 
     try {
       const results = await this.notes_port.move_items(
@@ -211,27 +390,10 @@ export class FolderService {
         overwrite,
       );
 
-      const path_map = new Map<string, string>();
-      for (const result of results) {
-        if (!result.success) continue;
-        const item = items.find((c) => c.path === result.path);
-        if (!item) continue;
-
-        if (item.is_folder) {
-          const old_prefix = `${result.path}/`;
-          const new_prefix = `${result.new_path}/`;
-          for (const note of this.notes_store.notes) {
-            if (note.path.startsWith(old_prefix)) {
-              path_map.set(
-                note.path,
-                `${new_prefix}${note.path.slice(old_prefix.length)}`,
-              );
-            }
-          }
-        } else {
-          path_map.set(result.path, result.new_path);
-        }
-      }
+      const items_by_path = new Map(
+        items.map((item) => [item.path, item] as const),
+      );
+      const path_map = this.build_move_path_map(results, items_by_path);
 
       if (path_map.size > 0) {
         await this.link_repair?.repair_links(vault_id, path_map);
@@ -241,58 +403,22 @@ export class FolderService {
         if (!result.success) {
           continue;
         }
-        const item = items.find((candidate) => candidate.path === result.path);
+        const item = items_by_path.get(result.path);
         if (!item) {
           continue;
         }
-        if (item.is_folder) {
-          this.notes_store.rename_folder(result.path, result.new_path);
-          this.editor_store.update_open_note_path_prefix(
-            `${result.path}/`,
-            `${result.new_path}/`,
-          );
-          this.notes_store.update_recent_note_path_prefix(
-            `${result.path}/`,
-            `${result.new_path}/`,
-          );
-          this.tab_store.update_tab_path_prefix(
-            `${result.path}/`,
-            `${result.new_path}/`,
-          );
-          await this.index_port.rename_folder_paths(
-            vault_id,
-            `${result.path}/`,
-            `${result.new_path}/`,
-          );
-          continue;
-        }
-
-        const old_note_path = as_note_path(result.path);
-        const new_note_path = as_note_path(result.new_path);
-        this.notes_store.rename_note(old_note_path, new_note_path);
-        if (this.editor_store.open_note?.meta.id === old_note_path) {
-          this.editor_store.update_open_note_path(new_note_path);
-        }
-        const renamed_note = this.notes_store.notes.find(
-          (note) => note.path === new_note_path,
-        );
-        if (renamed_note) {
-          this.notes_store.rename_recent_note(old_note_path, renamed_note);
-        }
-        this.tab_store.update_tab_path(old_note_path, new_note_path);
-        await this.index_port.rename_note_path(
-          vault_id,
-          old_note_path,
-          new_note_path,
-        );
+        await this.apply_move_result(vault_id, item, result);
       }
 
-      this.op_store.succeed("folder.move");
+      this.succeed_operation("folder.move");
       return { status: "success", results };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Move items failed", { error: message, target_folder });
-      this.op_store.fail("folder.move", message);
+      const message = this.fail_operation(
+        "folder.move",
+        "Move items failed",
+        error,
+        { target_folder },
+      );
       return {
         status: "failed",
         error: message,
@@ -316,45 +442,14 @@ export class FolderService {
     path: string,
     expected_generation: number,
   ): Promise<FolderLoadResult> {
-    const vault_id = this.vault_store.vault?.id;
-    if (!vault_id) {
-      return { status: "skipped" };
-    }
-
-    if (expected_generation !== this.vault_store.generation) {
-      return { status: "stale" };
-    }
-
-    try {
-      const contents = await this.notes_port.list_folder_contents(
-        vault_id,
-        path,
-        0,
-        PAGE_SIZE,
-      );
-
-      if (expected_generation !== this.vault_store.generation) {
-        return { status: "stale" };
-      }
-
-      this.notes_store.merge_folder_contents(path, contents);
-      return {
-        status: "loaded",
-        total_count: contents.total_count,
-        has_more: contents.has_more,
-      };
-    } catch (error) {
-      if (expected_generation !== this.vault_store.generation) {
-        return { status: "stale" };
-      }
-
-      const message = error_message(error);
-      log.error("Load folder failed", { path, error: message });
-      return {
-        status: "failed",
-        error: message,
-      };
-    }
+    return this.load_folder_slice(
+      path,
+      0,
+      expected_generation,
+      (folder_path, contents) => {
+        this.notes_store.merge_folder_contents(folder_path, contents);
+      },
+    );
   }
 
   async load_folder_page(
@@ -362,45 +457,14 @@ export class FolderService {
     offset: number,
     expected_generation: number,
   ): Promise<FolderLoadResult> {
-    const vault_id = this.vault_store.vault?.id;
-    if (!vault_id) {
-      return { status: "skipped" };
-    }
-
-    if (expected_generation !== this.vault_store.generation) {
-      return { status: "stale" };
-    }
-
-    try {
-      const contents = await this.notes_port.list_folder_contents(
-        vault_id,
-        path,
-        offset,
-        PAGE_SIZE,
-      );
-
-      if (expected_generation !== this.vault_store.generation) {
-        return { status: "stale" };
-      }
-
-      this.notes_store.append_folder_page(path, contents);
-      return {
-        status: "loaded",
-        total_count: contents.total_count,
-        has_more: contents.has_more,
-      };
-    } catch (error) {
-      if (expected_generation !== this.vault_store.generation) {
-        return { status: "stale" };
-      }
-
-      const message = error_message(error);
-      log.error("Load folder page failed", { path, error: message });
-      return {
-        status: "failed",
-        error: message,
-      };
-    }
+    return this.load_folder_slice(
+      path,
+      offset,
+      expected_generation,
+      (folder_path, contents) => {
+        this.notes_store.append_folder_page(folder_path, contents);
+      },
+    );
   }
 
   reset_create_operation() {
@@ -420,7 +484,7 @@ export class FolderService {
   }
 
   async remove_notes_by_prefix(folder_prefix: string): Promise<void> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) return;
     await this.index_port.remove_notes_by_prefix(vault_id, folder_prefix);
   }
@@ -429,7 +493,7 @@ export class FolderService {
     old_prefix: string,
     new_prefix: string,
   ): Promise<void> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) return;
     await this.index_port.rename_folder_paths(vault_id, old_prefix, new_prefix);
   }

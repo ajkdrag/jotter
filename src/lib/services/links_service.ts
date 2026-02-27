@@ -1,6 +1,7 @@
 import type { SearchPort } from "$lib/ports/search_port";
 import type { VaultStore } from "$lib/stores/vault_store.svelte";
 import type { LinksStore } from "$lib/stores/links_store.svelte";
+import type { VaultId } from "$lib/types/ids";
 import { create_logger } from "$lib/utils/logger";
 import { error_message } from "$lib/utils/error_message";
 
@@ -18,9 +19,35 @@ export class LinksService {
     private readonly links_store: LinksStore,
   ) {}
 
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
+
+  private is_global_request_stale(revision: number): boolean {
+    return revision !== this.active_revision;
+  }
+
+  private is_local_request_stale(revision: number): boolean {
+    return revision !== this.active_local_revision;
+  }
+
+  private is_same_local_request(note_path: string, markdown: string): boolean {
+    return (
+      note_path === this.last_local_note_path &&
+      markdown === this.last_local_markdown
+    );
+  }
+
+  private set_empty_local_snapshot(note_path: string): void {
+    this.links_store.set_local_snapshot(note_path, {
+      outlink_paths: [],
+      external_links: [],
+    });
+  }
+
   async load_note_links(note_path: string): Promise<void> {
     const revision = ++this.active_revision;
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       this.links_store.clear();
       return;
@@ -33,10 +60,10 @@ export class LinksService {
         vault_id,
         note_path,
       );
-      if (revision !== this.active_revision) return;
+      if (this.is_global_request_stale(revision)) return;
       this.links_store.set_global_snapshot(note_path, snapshot);
     } catch (error) {
-      if (revision !== this.active_revision) return;
+      if (this.is_global_request_stale(revision)) return;
       const message = error_message(error);
       log.error("Failed to load note links", { error: message });
       this.links_store.set_global_error(note_path, message);
@@ -47,19 +74,13 @@ export class LinksService {
     note_path: string,
     markdown: string,
   ): Promise<void> {
-    if (
-      note_path === this.last_local_note_path &&
-      markdown === this.last_local_markdown
-    ) {
+    if (this.is_same_local_request(note_path, markdown)) {
       return;
     }
 
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
-      this.links_store.set_local_snapshot(note_path, {
-        outlink_paths: [],
-        external_links: [],
-      });
+      this.set_empty_local_snapshot(note_path);
       return;
     }
 
@@ -73,22 +94,16 @@ export class LinksService {
         note_path,
         markdown,
       );
-      if (revision !== this.active_local_revision) return;
-      if (
-        note_path !== this.last_local_note_path ||
-        markdown !== this.last_local_markdown
-      ) {
+      if (this.is_local_request_stale(revision)) return;
+      if (!this.is_same_local_request(note_path, markdown)) {
         return;
       }
       this.links_store.set_local_snapshot(note_path, snapshot);
     } catch (error) {
-      if (revision !== this.active_local_revision) return;
+      if (this.is_local_request_stale(revision)) return;
       const message = error_message(error);
       log.error("Failed to extract local note links", { error: message });
-      this.links_store.set_local_snapshot(note_path, {
-        outlink_paths: [],
-        external_links: [],
-      });
+      this.set_empty_local_snapshot(note_path);
     }
   }
 

@@ -14,6 +14,16 @@ const log = create_logger("hotkey_service");
 
 const HOTKEY_OVERRIDES_KEY = "hotkey_overrides";
 
+function is_hotkey_override(entry: unknown): entry is HotkeyOverride {
+  if (typeof entry !== "object" || entry === null) return false;
+  if (!("action_id" in entry)) return false;
+  if (!("key" in entry)) return false;
+
+  const candidate = entry as Record<string, unknown>;
+  if (typeof candidate.action_id !== "string") return false;
+  return typeof candidate.key === "string" || candidate.key === null;
+}
+
 export class HotkeyService {
   constructor(
     private readonly settings_port: SettingsPort,
@@ -26,14 +36,7 @@ export class HotkeyService {
       const stored =
         await this.settings_port.get_setting<unknown>(HOTKEY_OVERRIDES_KEY);
       if (!stored || !Array.isArray(stored)) return [];
-      return stored.filter((entry): entry is HotkeyOverride => {
-        if (typeof entry !== "object" || entry === null) return false;
-        if (!("action_id" in entry)) return false;
-        const candidate = entry as Record<string, unknown>;
-        if (typeof candidate.action_id !== "string") return false;
-        if (!("key" in entry)) return false;
-        return typeof candidate.key === "string" || candidate.key === null;
-      });
+      return stored.filter(is_hotkey_override);
     } catch (error) {
       log.error("Load hotkey overrides failed", {
         error: error_message(error),
@@ -56,20 +59,13 @@ export class HotkeyService {
     defaults: HotkeyBinding[],
     overrides: HotkeyOverride[],
   ): HotkeyConfig {
-    const override_map = new Map<string, HotkeyOverride>();
-    for (const override of overrides) {
-      override_map.set(override.action_id, override);
-    }
-
-    const bindings: HotkeyBinding[] = [];
-    for (const binding of defaults) {
-      const override = override_map.get(binding.action_id);
-      if (override) {
-        bindings.push({ ...binding, key: override.key });
-      } else {
-        bindings.push(binding);
-      }
-    }
+    const overrides_by_action_id = new Map(
+      overrides.map((override) => [override.action_id, override] as const),
+    );
+    const bindings = defaults.map((binding) => {
+      const override = overrides_by_action_id.get(binding.action_id);
+      return override ? { ...binding, key: override.key } : binding;
+    });
 
     return { bindings };
   }
@@ -80,19 +76,18 @@ export class HotkeyService {
     exclude_action_id: string,
     config: HotkeyConfig,
   ): HotkeyConflict | null {
-    for (const binding of config.bindings) {
-      if (
+    const conflicting_binding = config.bindings.find(
+      (binding) =>
         binding.key === key &&
         binding.phase === phase &&
-        binding.action_id !== exclude_action_id
-      ) {
-        return {
-          key,
-          existing_action_id: binding.action_id,
-          existing_label: binding.label,
-        };
-      }
-    }
-    return null;
+        binding.action_id !== exclude_action_id,
+    );
+    if (!conflicting_binding) return null;
+
+    return {
+      key,
+      existing_action_id: conflicting_binding.action_id,
+      existing_label: conflicting_binding.label,
+    };
   }
 }

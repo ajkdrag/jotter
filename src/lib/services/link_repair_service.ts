@@ -25,15 +25,18 @@ export class LinkRepairService {
     private readonly close_editor_buffer: (path: NotePath) => void = () => {},
   ) {}
 
-  async repair_links(
+  private build_target_map(
+    path_map: Map<string, string>,
+  ): Record<string, string> {
+    return Object.fromEntries(path_map);
+  }
+
+  private async collect_external_source_paths(
     vault_id: VaultId,
     path_map: Map<string, string>,
-  ): Promise<void> {
-    if (path_map.size === 0) return;
-
-    const target_map: Record<string, string> = Object.fromEntries(path_map);
-
+  ): Promise<Set<string>> {
     const external_sources = new Set<string>();
+
     for (const old_path of path_map.keys()) {
       try {
         const snapshot = await this.search_port.get_note_links_snapshot(
@@ -52,6 +55,92 @@ export class LinkRepairService {
         });
       }
     }
+
+    return external_sources;
+  }
+
+  private find_matching_open_note(
+    note_path: NotePath,
+    old_source_path: string,
+    new_source_path: string,
+  ) {
+    const open_note = this.editor_store.open_note;
+    if (!open_note) {
+      return null;
+    }
+    if (open_note.meta.id === note_path) {
+      return open_note;
+    }
+    if (old_source_path !== new_source_path) {
+      return String(open_note.meta.id) === old_source_path ? open_note : null;
+    }
+    return null;
+  }
+
+  private async persist_open_note_rewrite(input: {
+    vault_id: VaultId;
+    note_path: NotePath;
+    rewritten_markdown: ReturnType<typeof as_markdown_text>;
+    matched_open_note: NonNullable<EditorStore["open_note"]>;
+  }): Promise<void> {
+    const { vault_id, note_path, rewritten_markdown, matched_open_note } =
+      input;
+    const repair_buffer_id = `${matched_open_note.buffer_id}:repair-links:${String(this.now_ms())}`;
+
+    this.editor_store.set_open_note({
+      ...matched_open_note,
+      markdown: rewritten_markdown,
+      buffer_id: repair_buffer_id,
+      is_dirty: matched_open_note.is_dirty,
+    });
+
+    if (matched_open_note.is_dirty) {
+      return;
+    }
+
+    await this.notes_port.write_note(vault_id, note_path, rewritten_markdown);
+    await this.index_port.upsert_note(vault_id, note_path);
+  }
+
+  private async persist_closed_note_rewrite(input: {
+    vault_id: VaultId;
+    note_path: NotePath;
+    old_source_path: string;
+    new_source_path: string;
+    rewritten_markdown: ReturnType<typeof as_markdown_text>;
+  }): Promise<void> {
+    const {
+      vault_id,
+      note_path,
+      old_source_path,
+      new_source_path,
+      rewritten_markdown,
+    } = input;
+
+    await this.notes_port.write_note(vault_id, note_path, rewritten_markdown);
+    await this.index_port.upsert_note(vault_id, note_path);
+    this.tab_store.invalidate_cache_by_path(note_path);
+
+    if (old_source_path !== new_source_path) {
+      const old_note_path = as_note_path(old_source_path);
+      this.tab_store.invalidate_cache_by_path(old_note_path);
+      this.close_editor_buffer(old_note_path);
+    }
+
+    this.close_editor_buffer(note_path);
+  }
+
+  async repair_links(
+    vault_id: VaultId,
+    path_map: Map<string, string>,
+  ): Promise<void> {
+    if (path_map.size === 0) return;
+
+    const target_map = this.build_target_map(path_map);
+    const external_sources = await this.collect_external_source_paths(
+      vault_id,
+      path_map,
+    );
 
     for (const source_path of external_sources) {
       await this.rewrite_note_file(
@@ -82,13 +171,11 @@ export class LinkRepairService {
     target_map: Record<string, string>,
   ): Promise<void> {
     try {
-      const open_note = this.editor_store.open_note;
-      const matched_open_note =
-        open_note?.meta.id === note_path ||
-        (old_source_path !== new_source_path &&
-          String(open_note?.meta.id) === old_source_path)
-          ? open_note
-          : null;
+      const matched_open_note = this.find_matching_open_note(
+        note_path,
+        old_source_path,
+        new_source_path,
+      );
 
       const markdown = matched_open_note
         ? matched_open_note.markdown
@@ -106,28 +193,22 @@ export class LinkRepairService {
       const rewritten = as_markdown_text(result.markdown);
 
       if (matched_open_note) {
-        const repair_buffer_id = `${matched_open_note.buffer_id}:repair-links:${String(this.now_ms())}`;
-        this.editor_store.set_open_note({
-          ...matched_open_note,
-          markdown: rewritten,
-          buffer_id: repair_buffer_id,
-          is_dirty: matched_open_note.is_dirty,
+        await this.persist_open_note_rewrite({
+          vault_id,
+          note_path,
+          rewritten_markdown: rewritten,
+          matched_open_note,
         });
-        if (!matched_open_note.is_dirty) {
-          await this.notes_port.write_note(vault_id, note_path, rewritten);
-          await this.index_port.upsert_note(vault_id, note_path);
-        }
         return;
       }
 
-      await this.notes_port.write_note(vault_id, note_path, rewritten);
-      await this.index_port.upsert_note(vault_id, note_path);
-      this.tab_store.invalidate_cache_by_path(note_path);
-      if (old_source_path !== new_source_path) {
-        this.tab_store.invalidate_cache_by_path(as_note_path(old_source_path));
-        this.close_editor_buffer(as_note_path(old_source_path));
-      }
-      this.close_editor_buffer(note_path);
+      await this.persist_closed_note_rewrite({
+        vault_id,
+        note_path,
+        old_source_path,
+        new_source_path,
+        rewritten_markdown: rewritten,
+      });
     } catch (error) {
       log.warn("Rewrite links failed", {
         note_path,

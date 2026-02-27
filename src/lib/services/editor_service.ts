@@ -39,6 +39,8 @@ type EditorFlushResult = {
   markdown: MarkdownText;
 };
 
+type EditorSessionEvents = Parameters<EditorPort["start_session"]>[0]["events"];
+
 export class EditorService {
   private session: EditorSession | null = null;
   private host_root: HTMLDivElement | null = null;
@@ -163,6 +165,119 @@ export class EditorService {
     return generation === this.session_generation;
   }
 
+  private get_active_note_id(): NoteId | null {
+    return this.active_note?.meta.id ?? null;
+  }
+
+  private get_active_note_path(): NotePath | null {
+    return this.active_note?.meta.path ?? null;
+  }
+
+  private with_active_note_id(
+    generation: number,
+    fn: (id: NoteId) => void,
+  ): void {
+    if (!this.is_generation_current(generation)) return;
+    const id = this.get_active_note_id();
+    if (!id) return;
+    fn(id);
+  }
+
+  private with_active_note_identity(
+    generation: number,
+    fn: (id: NoteId, path: NotePath) => void,
+  ): void {
+    if (!this.is_generation_current(generation)) return;
+    const id = this.get_active_note_id();
+    const path = this.get_active_note_path();
+    if (!id || !path) return;
+    fn(id, path);
+  }
+
+  private map_wiki_suggestions(
+    results: Awaited<
+      ReturnType<
+        NonNullable<EditorService["search_service"]>["suggest_wiki_links"]
+      >
+    >["results"],
+  ) {
+    return results.map((result_item) => {
+      if (result_item.kind === "planned") {
+        return {
+          kind: "planned" as const,
+          title: note_name_from_path(result_item.target_path),
+          path: result_item.target_path,
+          ref_count: result_item.ref_count,
+        };
+      }
+      return {
+        kind: "existing" as const,
+        title: result_item.note.name,
+        path: result_item.note.path,
+      };
+    });
+  }
+
+  private handle_wiki_suggest_query(generation: number, query: string): void {
+    if (!this.is_generation_current(generation)) return;
+    const search_service = this.search_service;
+    if (!search_service) return;
+
+    void search_service.suggest_wiki_links(query).then((result) => {
+      if (!this.is_generation_current(generation)) return;
+      if (result.status === "stale") return;
+      if (result.status !== "success") {
+        this.session?.set_wiki_suggestions?.([]);
+        return;
+      }
+
+      this.session?.set_wiki_suggestions?.(
+        this.map_wiki_suggestions(result.results),
+      );
+    });
+  }
+
+  private create_session_events(generation: number): EditorSessionEvents {
+    const events: EditorSessionEvents = {
+      on_markdown_change: (markdown: string) => {
+        this.with_active_note_id(generation, (id) => {
+          this.editor_store.set_markdown(id, as_markdown_text(markdown));
+        });
+      },
+      on_dirty_state_change: (is_dirty: boolean) => {
+        this.with_active_note_id(generation, (id) => {
+          this.editor_store.set_dirty(id, is_dirty);
+        });
+      },
+      on_cursor_change: (cursor: CursorInfo) => {
+        this.with_active_note_id(generation, (id) => {
+          this.editor_store.set_cursor(id, cursor);
+        });
+      },
+      on_internal_link_click: (raw_path: string, base_note_path: string) => {
+        if (!this.is_generation_current(generation)) return;
+        this.callbacks.on_internal_link_click(raw_path, base_note_path);
+      },
+      on_external_link_click: (url: string) => {
+        if (!this.is_generation_current(generation)) return;
+        this.callbacks.on_external_link_click(url);
+      },
+      on_image_paste_requested: (image: PastedImagePayload) => {
+        this.with_active_note_identity(generation, (id, path) => {
+          this.callbacks.on_image_paste_requested(id, path, image);
+        });
+      },
+    };
+
+    if (this.search_service) {
+      events.on_wiki_suggest_query = (query: string) => {
+        this.handle_wiki_suggest_query(generation, query);
+      };
+    }
+
+    return events;
+  }
+
   private async recreate_session(): Promise<void> {
     const host_root = this.host_root;
     const active_note = this.active_note;
@@ -175,94 +290,12 @@ export class EditorService {
       host_root.replaceChildren();
     }
 
-    const get_active_note_id = () => this.active_note?.meta.id ?? null;
-    const get_active_note_path = () => this.active_note?.meta.path ?? null;
-    const with_active_note_id = (fn: (id: NoteId) => void) => {
-      if (!this.is_generation_current(generation)) return;
-      const id = get_active_note_id();
-      if (!id) return;
-      fn(id);
-    };
-    const with_active_note_identity = (
-      fn: (id: NoteId, path: NotePath) => void,
-    ) => {
-      if (!this.is_generation_current(generation)) return;
-      const id = get_active_note_id();
-      const path = get_active_note_path();
-      if (!id || !path) return;
-      fn(id, path);
-    };
-
     const next_session = await this.editor_port.start_session({
       root: host_root,
       initial_markdown: active_note.markdown,
       note_path: active_note.meta.path,
       vault_id: this.vault_store.vault?.id ?? null,
-      events: {
-        on_markdown_change: (markdown: string) => {
-          with_active_note_id((id) => {
-            this.editor_store.set_markdown(id, as_markdown_text(markdown));
-          });
-        },
-        on_dirty_state_change: (is_dirty: boolean) => {
-          with_active_note_id((id) => {
-            this.editor_store.set_dirty(id, is_dirty);
-          });
-        },
-        on_cursor_change: (cursor: CursorInfo) => {
-          with_active_note_id((id) => {
-            this.editor_store.set_cursor(id, cursor);
-          });
-        },
-        on_internal_link_click: (raw_path: string, base_note_path: string) => {
-          if (!this.is_generation_current(generation)) return;
-          this.callbacks.on_internal_link_click(raw_path, base_note_path);
-        },
-        on_external_link_click: (url: string) => {
-          if (!this.is_generation_current(generation)) return;
-          this.callbacks.on_external_link_click(url);
-        },
-        on_image_paste_requested: (image: PastedImagePayload) => {
-          with_active_note_identity((id, path) => {
-            this.callbacks.on_image_paste_requested(id, path, image);
-          });
-        },
-        ...(this.search_service
-          ? {
-              on_wiki_suggest_query: (query: string) => {
-                if (!this.is_generation_current(generation)) return;
-                void this.search_service
-                  ?.suggest_wiki_links(query)
-                  .then((result) => {
-                    if (!this.is_generation_current(generation)) return;
-                    if (result.status === "stale") return;
-
-                    if (result.status !== "success") {
-                      this.session?.set_wiki_suggestions?.([]);
-                      return;
-                    }
-
-                    const items = result.results.map((result_item) => {
-                      if (result_item.kind === "planned") {
-                        return {
-                          kind: "planned" as const,
-                          title: note_name_from_path(result_item.target_path),
-                          path: result_item.target_path,
-                          ref_count: result_item.ref_count,
-                        };
-                      }
-                      return {
-                        kind: "existing" as const,
-                        title: result_item.note.name,
-                        path: result_item.note.path,
-                      };
-                    });
-                    this.session?.set_wiki_suggestions?.(items);
-                  });
-              },
-            }
-          : {}),
-      },
+      events: this.create_session_events(generation),
     });
 
     if (!this.is_generation_current(generation)) {

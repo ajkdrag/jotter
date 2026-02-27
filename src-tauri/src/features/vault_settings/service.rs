@@ -2,7 +2,7 @@ use crate::shared::constants;
 use crate::shared::storage::{load_store, vault_path_by_id};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 
 const SETTINGS_FILE: &str = "settings.json";
@@ -17,10 +17,8 @@ fn vault_settings_path(app: &AppHandle, vault_id: &str) -> Result<PathBuf, Strin
 
 fn load_vault_settings(app: &AppHandle, vault_id: &str) -> Result<HashMap<String, Value>, String> {
     let path = vault_settings_path(app, vault_id)?;
-    let bytes = match std::fs::read(&path) {
-        Ok(b) => b,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(HashMap::new()),
-        Err(e) => return Err(e.to_string()),
+    let Some(bytes) = read_vault_settings_file(&path)? else {
+        return Ok(HashMap::new());
     };
     parse_vault_settings(&bytes)
 }
@@ -46,17 +44,29 @@ pub(crate) fn parse_vault_settings(bytes: &[u8]) -> Result<HashMap<String, Value
     Ok(settings)
 }
 
+fn read_vault_settings_file(path: &Path) -> Result<Option<Vec<u8>>, String> {
+    match std::fs::read(path) {
+        Ok(bytes) => Ok(Some(bytes)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+fn write_vault_settings_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let temporary_path = path.with_extension("json.tmp");
+    std::fs::write(&temporary_path, bytes).map_err(|e| e.to_string())?;
+    std::fs::rename(&temporary_path, path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 fn save_vault_settings(
     app: &AppHandle,
     vault_id: &str,
     settings: &HashMap<String, Value>,
 ) -> Result<(), String> {
     let path = vault_settings_path(app, vault_id)?;
-    let tmp = path.with_extension("json.tmp");
     let bytes = serde_json::to_vec_pretty(settings).map_err(|e| e.to_string())?;
-    std::fs::write(&tmp, bytes).map_err(|e| e.to_string())?;
-    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
-    Ok(())
+    write_vault_settings_file(&path, &bytes)
 }
 
 #[tauri::command]

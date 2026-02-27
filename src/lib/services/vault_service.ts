@@ -92,12 +92,35 @@ export class VaultService {
   private watcher_upsert_paths_buffer = new Set<string>();
   private watcher_remove_paths_buffer = new Set<string>();
 
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
+
+  private start_operation(operation_key: string): void {
+    this.op_store.start(operation_key, this.now_ms());
+  }
+
+  private succeed_operation(operation_key: string): void {
+    this.op_store.succeed(operation_key);
+  }
+
+  private fail_operation(
+    operation_key: string,
+    log_label: string,
+    error: unknown,
+  ): string {
+    const message = error_message(error);
+    log.error(log_label, { error: message });
+    this.op_store.fail(operation_key, message);
+    return message;
+  }
+
   async initialize(config: AppMountConfig): Promise<VaultInitializeResult> {
     if (config.reset_app_state) {
       this.reset_app_state();
     }
 
-    this.op_store.start("app.startup", this.now_ms());
+    this.start_operation("app.startup");
 
     try {
       let editor_settings: EditorSettings | null = null;
@@ -119,13 +142,13 @@ export class VaultService {
         this.vault_store.set_recent_vaults(recent_vaults);
         this.vault_store.set_pinned_vault_ids(pinned_vault_ids);
 
-        const current_vault_id = this.vault_store.vault?.id;
+        const current_vault_id = this.get_active_vault_id();
         if (current_vault_id) {
           editor_settings = await this.load_editor_settings(current_vault_id);
         }
       }
 
-      this.op_store.succeed("app.startup");
+      this.succeed_operation("app.startup");
 
       return {
         status: "ready",
@@ -133,9 +156,11 @@ export class VaultService {
         editor_settings,
       };
     } catch (error) {
-      const message = error_message(error);
-      log.error("App startup failed", { error: message });
-      this.op_store.fail("app.startup", message);
+      const message = this.fail_operation(
+        "app.startup",
+        "App startup failed",
+        error,
+      );
       return {
         status: "error",
         error: message,
@@ -192,18 +217,20 @@ export class VaultService {
     }
 
     const previous_pinned_ids = [...this.vault_store.pinned_vault_ids];
-    this.op_store.start("vault.pin", this.now_ms());
+    this.start_operation("vault.pin");
     this.vault_store.toggle_pinned_vault(vault_id);
 
     try {
       await this.save_pinned_vault_ids(this.vault_store.pinned_vault_ids);
-      this.op_store.succeed("vault.pin");
+      this.succeed_operation("vault.pin");
       return { status: "success" };
     } catch (error) {
       this.vault_store.set_pinned_vault_ids(previous_pinned_ids);
-      const message = error_message(error);
-      log.error("Toggle vault pin failed", { error: message });
-      this.op_store.fail("vault.pin", message);
+      const message = this.fail_operation(
+        "vault.pin",
+        "Toggle vault pin failed",
+        error,
+      );
       return { status: "failed", error: message };
     }
   }
@@ -227,7 +254,7 @@ export class VaultService {
 
     const previous_recent_vaults = [...this.vault_store.recent_vaults];
     const previous_pinned_vault_ids = [...this.vault_store.pinned_vault_ids];
-    this.op_store.start("vault.remove", this.now_ms());
+    this.start_operation("vault.remove");
 
     try {
       await this.vault_port.remove_vault(vault_id);
@@ -238,14 +265,16 @@ export class VaultService {
       this.vault_store.set_recent_vaults(recent_vaults);
       this.vault_store.set_pinned_vault_ids(pinned_vault_ids);
       await this.save_pinned_vault_ids(this.vault_store.pinned_vault_ids);
-      this.op_store.succeed("vault.remove");
+      this.succeed_operation("vault.remove");
       return { status: "success" };
     } catch (error) {
       this.vault_store.set_recent_vaults(previous_recent_vaults);
       this.vault_store.set_pinned_vault_ids(previous_pinned_vault_ids);
-      const message = error_message(error);
-      log.error("Remove vault from registry failed", { error: message });
-      this.op_store.fail("vault.remove", message);
+      const message = this.fail_operation(
+        "vault.remove",
+        "Remove vault from registry failed",
+        error,
+      );
       return { status: "failed", error: message };
     }
   }
@@ -255,7 +284,7 @@ export class VaultService {
     | { status: "skipped" }
     | { status: "failed"; error: string }
   > {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
@@ -263,16 +292,18 @@ export class VaultService {
       return { status: "skipped" };
     }
 
-    this.op_store.start("vault.reindex", this.now_ms());
+    this.start_operation("vault.reindex");
 
     try {
       await this.index_port.rebuild_index(vault_id);
-      this.op_store.succeed("vault.reindex");
+      this.succeed_operation("vault.reindex");
       return { status: "started" };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Reindex vault failed", { error: message });
-      this.op_store.fail("vault.reindex", message);
+      const message = this.fail_operation(
+        "vault.reindex",
+        "Reindex vault failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -285,14 +316,14 @@ export class VaultService {
     error_label: string,
   ): Promise<VaultOpenResult> {
     const open_revision = await this.begin_open_revision();
-    this.op_store.start("vault.change", this.now_ms());
+    this.start_operation("vault.change");
 
     try {
       const editor_settings = await open_fn(open_revision);
       if (!this.is_current_open_revision(open_revision)) {
         return { status: "stale" };
       }
-      this.op_store.succeed("vault.change");
+      this.succeed_operation("vault.change");
       return {
         status: "opened",
         editor_settings,
@@ -302,9 +333,7 @@ export class VaultService {
       if (error instanceof StaleVaultOpenError) {
         return { status: "stale" };
       }
-      const message = error_message(error);
-      log.error(error_label, { error: message });
-      this.op_store.fail("vault.change", message);
+      const message = this.fail_operation("vault.change", error_label, error);
       return { status: "failed", error: message };
     }
   }
@@ -597,7 +626,7 @@ export class VaultService {
   }
 
   private async begin_open_revision(): Promise<number> {
-    const current_vault_id = this.vault_store.vault?.id;
+    const current_vault_id = this.get_active_vault_id();
     this.active_open_revision += 1;
     const revision = this.active_open_revision;
     this.clear_open_runtime_subscriptions();

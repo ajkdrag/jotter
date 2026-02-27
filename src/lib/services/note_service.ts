@@ -76,6 +76,29 @@ export class NoteService {
     private readonly link_repair: LinkRepairService | null = null,
   ) {}
 
+  private get_active_vault_id(): VaultId | null {
+    return this.vault_store.vault?.id ?? null;
+  }
+
+  private start_operation(operation_key: string): void {
+    this.op_store.start(operation_key, this.now_ms());
+  }
+
+  private succeed_operation(operation_key: string): void {
+    this.op_store.succeed(operation_key);
+  }
+
+  private fail_operation(
+    operation_key: string,
+    log_label: string,
+    error: unknown,
+  ): string {
+    const message = error_message(error);
+    log.error(log_label, { error: message });
+    this.op_store.fail(operation_key, message);
+    return message;
+  }
+
   private async read_or_create_note(
     vault_id: VaultId,
     path: NotePath,
@@ -119,7 +142,7 @@ export class NoteService {
     create_if_missing: boolean = false,
     options?: OpenNoteOptions,
   ): Promise<NoteOpenResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
@@ -129,7 +152,7 @@ export class NoteService {
     this.open_abort = controller;
 
     const op_key = `note.open:${note_path}`;
-    this.op_store.start(op_key, this.now_ms());
+    this.start_operation(op_key);
     let resolved_path: NotePath | null = null;
 
     try {
@@ -137,7 +160,7 @@ export class NoteService {
 
       if (this.should_keep_current_open_note(resolved_path, options)) {
         this.add_open_note_to_recent();
-        this.op_store.succeed(op_key);
+        this.succeed_operation(op_key);
         return this.open_note_result(resolved_path);
       }
 
@@ -152,7 +175,7 @@ export class NoteService {
       }
 
       this.apply_opened_note(doc, options);
-      this.op_store.succeed(op_key);
+      this.succeed_operation(op_key);
       return this.open_note_result(resolved_path);
     } catch (error) {
       if (controller.signal.aborted) {
@@ -165,13 +188,11 @@ export class NoteService {
         this.is_not_found_error(error)
       ) {
         await this.cleanup_missing_open_note(vault_id, resolved_path);
-        this.op_store.succeed(op_key);
+        this.succeed_operation(op_key);
         return { status: "not_found" };
       }
 
-      const message = error_message(error);
-      log.error("Open note failed", { error: message });
-      this.op_store.fail(op_key, message);
+      const message = this.fail_operation(op_key, "Open note failed", error);
       return { status: "failed", error: message };
     }
   }
@@ -189,12 +210,12 @@ export class NoteService {
     | { status: "skipped" }
     | { status: "failed"; error: string }
   > {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("asset.write", this.now_ms());
+    this.start_operation("asset.write");
 
     try {
       const input: Parameters<AssetsPort["write_image_asset"]>[1] = {
@@ -211,15 +232,17 @@ export class NoteService {
         vault_id,
         input,
       );
-      this.op_store.succeed("asset.write");
+      this.succeed_operation("asset.write");
       return {
         status: "saved",
         asset_path,
       };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Write image asset failed", { error: message });
-      this.op_store.fail("asset.write", message);
+      const message = this.fail_operation(
+        "asset.write",
+        "Write image asset failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -228,12 +251,12 @@ export class NoteService {
   }
 
   async delete_note(note: NoteMeta): Promise<NoteDeleteResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
 
-    this.op_store.start("note.delete", this.now_ms());
+    this.start_operation("note.delete");
 
     try {
       await this.notes_port.delete_note(vault_id, note.id);
@@ -256,12 +279,14 @@ export class NoteService {
         this.editor_store.clear_open_note();
       }
 
-      this.op_store.succeed("note.delete");
+      this.succeed_operation("note.delete");
       return { status: "deleted" };
     } catch (error) {
-      const message = error_message(error);
-      log.error("Delete note failed", { error: message });
-      this.op_store.fail("note.delete", message);
+      const message = this.fail_operation(
+        "note.delete",
+        "Delete note failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -274,7 +299,7 @@ export class NoteService {
     new_path: NotePath,
     overwrite: boolean,
   ): Promise<NoteRenameResult> {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     if (!vault_id) {
       return { status: "skipped" };
     }
@@ -288,7 +313,7 @@ export class NoteService {
       return { status: "conflict" };
     }
 
-    this.op_store.start("note.rename", this.now_ms());
+    this.start_operation("note.rename");
 
     try {
       await this.rename_note_with_overwrite_if_needed(
@@ -316,15 +341,17 @@ export class NoteService {
         this.editor_store.update_open_note_path(new_path);
       }
 
-      this.op_store.succeed("note.rename");
+      this.succeed_operation("note.rename");
       return { status: "renamed" };
     } catch (error) {
       if (this.is_note_exists_error(error)) {
         return { status: "conflict" };
       }
-      const message = error_message(error);
-      log.error("Rename note failed", { error: message });
-      this.op_store.fail("note.rename", message);
+      const message = this.fail_operation(
+        "note.rename",
+        "Rename note failed",
+        error,
+      );
       return {
         status: "failed",
         error: message,
@@ -468,7 +495,7 @@ export class NoteService {
     vault_id: VaultId;
     open_note: OpenEditorNote;
   } | null {
-    const vault_id = this.vault_store.vault?.id;
+    const vault_id = this.get_active_vault_id();
     const open_note = this.editor_store.open_note;
     if (!vault_id || !open_note) {
       return null;
@@ -584,7 +611,7 @@ export class NoteService {
   private begin_save_operation() {
     if (this.active_save_count === 0) {
       this.pending_save_error = null;
-      this.op_store.start("note.save", this.now_ms());
+      this.start_operation("note.save");
     }
     this.active_save_count += 1;
   }
@@ -605,7 +632,7 @@ export class NoteService {
       this.op_store.fail("note.save", final_error);
       return;
     }
-    this.op_store.succeed("note.save");
+    this.succeed_operation("note.save");
   }
 
   private async save_untitled_note(

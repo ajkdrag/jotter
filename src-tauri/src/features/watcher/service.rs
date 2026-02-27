@@ -55,6 +55,62 @@ fn emit(app: &AppHandle, event: VaultFsEvent) {
     let _ = app.emit("vault_fs_event", event);
 }
 
+fn with_runtime_lock<T>(
+    state: &State<'_, WatcherState>,
+    update: impl FnOnce(&mut Option<WatcherRuntime>) -> T,
+) -> Result<T, String> {
+    let mut guard = state.inner.lock().map_err(|_| "watcher lock poisoned")?;
+    Ok(update(&mut guard))
+}
+
+fn stop_runtime(runtime: WatcherRuntime) {
+    let _ = runtime.stop_tx.send(());
+}
+
+fn stop_active_runtime(state: &State<'_, WatcherState>) -> Result<(), String> {
+    let runtime = with_runtime_lock(state, |slot| slot.take())?;
+    if let Some(runtime) = runtime {
+        stop_runtime(runtime);
+    }
+    Ok(())
+}
+
+fn set_active_runtime(
+    state: &State<'_, WatcherState>,
+    runtime: WatcherRuntime,
+) -> Result<(), String> {
+    with_runtime_lock(state, |slot| {
+        *slot = Some(runtime);
+    })
+}
+
+fn classify_event(
+    kind: &EventKind,
+    vault_id: &str,
+    rel_path: String,
+    is_markdown: bool,
+) -> Option<VaultFsEvent> {
+    match kind {
+        EventKind::Create(_) if is_markdown => Some(VaultFsEvent::NoteAdded {
+            vault_id: vault_id.to_string(),
+            note_path: rel_path,
+        }),
+        EventKind::Remove(_) if is_markdown => Some(VaultFsEvent::NoteRemoved {
+            vault_id: vault_id.to_string(),
+            note_path: rel_path,
+        }),
+        EventKind::Modify(_) if is_markdown => Some(VaultFsEvent::NoteChangedExternally {
+            vault_id: vault_id.to_string(),
+            note_path: rel_path,
+        }),
+        EventKind::Modify(_) => Some(VaultFsEvent::AssetChanged {
+            vault_id: vault_id.to_string(),
+            asset_path: rel_path,
+        }),
+        _ => None,
+    }
+}
+
 #[tauri::command]
 pub fn watch_vault(
     app: AppHandle,
@@ -62,12 +118,7 @@ pub fn watch_vault(
     vault_id: String,
 ) -> Result<(), String> {
     log::info!("Watching vault vault_id={}", vault_id);
-    {
-        let mut guard = state.inner.lock().map_err(|_| "watcher lock poisoned")?;
-        if let Some(rt) = guard.take() {
-            let _ = rt.stop_tx.send(());
-        }
-    }
+    stop_active_runtime(&state)?;
 
     let root = storage::vault_path(&app, &vault_id)?;
     let root_canon = root.canonicalize().map_err(|e| e.to_string())?;
@@ -113,7 +164,7 @@ pub fn watch_vault(
                 Err(_) => continue,
             };
 
-            let kind = event.kind;
+            let kind = &event.kind;
             for p in event.paths.iter() {
                 let abs = match p.canonicalize() {
                     Ok(p) => p,
@@ -131,51 +182,19 @@ pub fn watch_vault(
                 let ext = abs.extension().and_then(|e| e.to_str()).unwrap_or_default();
                 let is_md = ext == "md";
 
-                match kind {
-                    EventKind::Create(_) if is_md => emit(
-                        &app_handle,
-                        VaultFsEvent::NoteAdded {
-                            vault_id: vault_id_clone.clone(),
-                            note_path: rel,
-                        },
-                    ),
-                    EventKind::Remove(_) if is_md => emit(
-                        &app_handle,
-                        VaultFsEvent::NoteRemoved {
-                            vault_id: vault_id_clone.clone(),
-                            note_path: rel,
-                        },
-                    ),
-                    EventKind::Modify(_) if is_md => emit(
-                        &app_handle,
-                        VaultFsEvent::NoteChangedExternally {
-                            vault_id: vault_id_clone.clone(),
-                            note_path: rel,
-                        },
-                    ),
-                    EventKind::Modify(_) => emit(
-                        &app_handle,
-                        VaultFsEvent::AssetChanged {
-                            vault_id: vault_id_clone.clone(),
-                            asset_path: rel,
-                        },
-                    ),
-                    _ => {}
+                if let Some(vault_event) = classify_event(kind, &vault_id_clone, rel, is_md) {
+                    emit(&app_handle, vault_event);
                 }
             }
         }
     });
 
-    *state.inner.lock().map_err(|_| "watcher lock poisoned")? = Some(WatcherRuntime { stop_tx });
+    set_active_runtime(&state, WatcherRuntime { stop_tx })?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn unwatch_vault(state: State<WatcherState>) -> Result<(), String> {
     log::info!("Unwatching vault");
-    let mut guard = state.inner.lock().map_err(|_| "watcher lock poisoned")?;
-    if let Some(rt) = guard.take() {
-        let _ = rt.stop_tx.send(());
-    }
-    Ok(())
+    stop_active_runtime(&state)
 }

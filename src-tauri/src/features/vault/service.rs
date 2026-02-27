@@ -24,6 +24,14 @@ fn is_vault_path_available(path: &str) -> bool {
         .unwrap_or(false)
 }
 
+fn refresh_vault_availability(vault: &mut Vault) {
+    vault.is_available = is_vault_path_available(&vault.path);
+}
+
+fn mark_vault_opened(vault: &mut Vault, opened_at: i64) {
+    vault.last_opened_at = Some(opened_at);
+}
+
 fn load_note_count(app: &AppHandle, vault_id: &str) -> Option<u64> {
     match crate::features::notes::service::list_notes(app.clone(), vault_id.to_string()) {
         Ok(notes) => Some(notes.len() as u64),
@@ -122,7 +130,7 @@ pub fn open_vault_by_id(app: AppHandle, vault_id: String) -> Result<Vault, Strin
             "vault not found".to_string()
         })?;
 
-    entry.vault.is_available = is_vault_path_available(&entry.vault.path);
+    refresh_vault_availability(&mut entry.vault);
     if !entry.vault.is_available {
         let message = format!("vault unavailable at path: {}", entry.vault.path);
         log::warn!("Open vault by id skipped: {}", message);
@@ -131,7 +139,7 @@ pub fn open_vault_by_id(app: AppHandle, vault_id: String) -> Result<Vault, Strin
     }
 
     entry.last_opened_at = now;
-    entry.vault.last_opened_at = Some(now);
+    mark_vault_opened(&mut entry.vault, now);
     if note_count.is_some() {
         entry.vault.note_count = note_count;
     }
@@ -151,7 +159,7 @@ pub fn list_vaults(app: AppHandle) -> Result<Vec<Vault>, String> {
         .vaults
         .iter_mut()
         .map(|entry| {
-            entry.vault.is_available = is_vault_path_available(&entry.vault.path);
+            refresh_vault_availability(&mut entry.vault);
             let mut vault = entry.vault.clone();
             if vault.last_opened_at.is_none() {
                 vault.last_opened_at = Some(entry.last_opened_at);
