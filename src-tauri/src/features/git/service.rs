@@ -187,6 +187,99 @@ fn compute_ahead_behind(repo: &Repository) -> Result<(usize, usize), git2::Error
     repo.graph_ahead_behind(local_oid, upstream_oid)
 }
 
+fn stage_selected_files(
+    index: &mut git2::Index,
+    vault_path: &str,
+    paths: &[String],
+) -> Result<(), String> {
+    for path in paths {
+        let full = Path::new(vault_path).join(path);
+        if full.exists() {
+            index
+                .add_path(Path::new(path))
+                .map_err(|e| format!("failed to stage {}: {}", path, e))?;
+            continue;
+        }
+        index
+            .remove_path(Path::new(path))
+            .map_err(|e| format!("failed to remove {}: {}", path, e))?;
+    }
+    Ok(())
+}
+
+fn stage_all_files(repo: &Repository, index: &mut git2::Index) -> Result<(), String> {
+    index
+        .add_all(["*"].iter(), IndexAddOption::DEFAULT, None)
+        .map_err(|e| format!("failed to stage all: {}", e))?;
+
+    let statuses = repo
+        .statuses(None)
+        .map_err(|e| format!("failed to get status: {}", e))?;
+    for entry in statuses.iter() {
+        if entry.status().is_wt_deleted() || entry.status().is_index_deleted() {
+            if let Some(path) = entry.path() {
+                let _ = index.remove_path(Path::new(path));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn stage_commit_files(
+    repo: &Repository,
+    index: &mut git2::Index,
+    vault_path: &str,
+    files: Option<Vec<String>>,
+) -> Result<(), String> {
+    match files {
+        Some(paths) => stage_selected_files(index, vault_path, &paths),
+        None => stage_all_files(repo, index),
+    }
+}
+
+fn write_index_tree<'repo>(
+    repo: &'repo Repository,
+    index: &mut git2::Index,
+) -> Result<(git2::Oid, git2::Tree<'repo>), String> {
+    index
+        .write()
+        .map_err(|e| format!("failed to write index: {}", e))?;
+    let tree_oid = index
+        .write_tree()
+        .map_err(|e| format!("failed to write tree: {}", e))?;
+    let tree = repo
+        .find_tree(tree_oid)
+        .map_err(|e| format!("failed to find tree: {}", e))?;
+    Ok((tree_oid, tree))
+}
+
+fn head_parent_commit(repo: &Repository) -> Option<git2::Commit<'_>> {
+    repo.head().ok().and_then(|head| head.peel_to_commit().ok())
+}
+
+fn ensure_tree_has_changes(parent: Option<&git2::Commit<'_>>, tree_oid: git2::Oid) -> Result<(), String> {
+    if let Some(parent_commit) = parent {
+        if parent_commit.tree_id() == tree_oid {
+            return Err("nothing to commit".to_string());
+        }
+    }
+    Ok(())
+}
+
+fn commit_tree(
+    repo: &Repository,
+    message: &str,
+    tree: &git2::Tree<'_>,
+    parent: Option<&git2::Commit<'_>>,
+) -> Result<String, String> {
+    let sig = default_signature()?;
+    let parents: Vec<&git2::Commit<'_>> = parent.into_iter().collect();
+    let oid = repo
+        .commit(Some("HEAD"), &sig, &sig, message, tree, &parents)
+        .map_err(|e| format!("failed to commit: {}", e))?;
+    Ok(oid.to_string())
+}
+
 #[tauri::command]
 pub fn git_stage_and_commit(
     vault_path: String,
@@ -197,64 +290,11 @@ pub fn git_stage_and_commit(
     let mut index = repo
         .index()
         .map_err(|e| format!("failed to get index: {}", e))?;
-
-    match files {
-        Some(paths) => {
-            for path in &paths {
-                let full = Path::new(&vault_path).join(path);
-                if full.exists() {
-                    index
-                        .add_path(Path::new(path))
-                        .map_err(|e| format!("failed to stage {}: {}", path, e))?;
-                } else {
-                    index
-                        .remove_path(Path::new(path))
-                        .map_err(|e| format!("failed to remove {}: {}", path, e))?;
-                }
-            }
-        }
-        None => {
-            index
-                .add_all(["*"].iter(), IndexAddOption::DEFAULT, None)
-                .map_err(|e| format!("failed to stage all: {}", e))?;
-
-            let statuses = repo
-                .statuses(None)
-                .map_err(|e| format!("failed to get status: {}", e))?;
-            for entry in statuses.iter() {
-                if entry.status().is_wt_deleted() || entry.status().is_index_deleted() {
-                    if let Some(path) = entry.path() {
-                        let _ = index.remove_path(Path::new(path));
-                    }
-                }
-            }
-        }
-    }
-
-    index
-        .write()
-        .map_err(|e| format!("failed to write index: {}", e))?;
-    let tree_oid = index
-        .write_tree()
-        .map_err(|e| format!("failed to write tree: {}", e))?;
-    let tree = repo
-        .find_tree(tree_oid)
-        .map_err(|e| format!("failed to find tree: {}", e))?;
-    let sig = default_signature()?;
-
-    let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
-    if let Some(parent_commit) = parent.as_ref() {
-        if parent_commit.tree_id() == tree_oid {
-            return Err("nothing to commit".to_string());
-        }
-    }
-    let parents: Vec<&git2::Commit> = parent.iter().collect();
-
-    let oid = repo
-        .commit(Some("HEAD"), &sig, &sig, &message, &tree, &parents)
-        .map_err(|e| format!("failed to commit: {}", e))?;
-
-    Ok(oid.to_string())
+    stage_commit_files(&repo, &mut index, &vault_path, files)?;
+    let (tree_oid, tree) = write_index_tree(&repo, &mut index)?;
+    let parent = head_parent_commit(&repo);
+    ensure_tree_has_changes(parent.as_ref(), tree_oid)?;
+    commit_tree(&repo, &message, &tree, parent.as_ref())
 }
 
 #[tauri::command]
@@ -360,48 +400,43 @@ fn commit_touches_file(repo: &Repository, commit: &git2::Commit, path: &str) -> 
     false
 }
 
-#[tauri::command]
-pub fn git_diff(
-    vault_path: String,
-    commit_a: String,
-    commit_b: String,
-    file_path: Option<String>,
-) -> Result<GitDiff, String> {
-    let repo = open_repo(&vault_path)?;
-
-    let obj_a = repo
-        .revparse_single(&commit_a)
-        .map_err(|e| format!("failed to find commit {}: {}", commit_a, e))?;
-    let obj_b = repo
-        .revparse_single(&commit_b)
-        .map_err(|e| format!("failed to find commit {}: {}", commit_b, e))?;
-
-    let tree_a = obj_a
-        .peel(ObjectType::Tree)
+fn resolve_tree_from_commit<'repo>(
+    repo: &'repo Repository,
+    commit_ref: &str,
+) -> Result<git2::Tree<'repo>, String> {
+    let obj = repo
+        .revparse_single(commit_ref)
+        .map_err(|e| format!("failed to find commit {}: {}", commit_ref, e))?;
+    obj.peel(ObjectType::Tree)
         .map_err(|e| format!("failed to peel to tree: {}", e))?
         .into_tree()
-        .map_err(|_| "not a tree".to_string())?;
-    let tree_b = obj_b
-        .peel(ObjectType::Tree)
-        .map_err(|e| format!("failed to peel to tree: {}", e))?
-        .into_tree()
-        .map_err(|_| "not a tree".to_string())?;
+        .map_err(|_| "not a tree".to_string())
+}
 
+fn build_diff_between_trees<'repo>(
+    repo: &'repo Repository,
+    tree_a: &'repo git2::Tree<'repo>,
+    tree_b: &'repo git2::Tree<'repo>,
+    file_path: Option<&str>,
+) -> Result<git2::Diff<'repo>, String> {
     let mut diff_opts = DiffOptions::new();
-    if let Some(ref fp) = file_path {
-        diff_opts.pathspec(fp);
+    if let Some(path) = file_path {
+        diff_opts.pathspec(path);
     }
 
-    let diff = repo
-        .diff_tree_to_tree(Some(&tree_a), Some(&tree_b), Some(&mut diff_opts))
-        .map_err(|e| format!("failed to diff: {}", e))?;
+    repo.diff_tree_to_tree(Some(tree_a), Some(tree_b), Some(&mut diff_opts))
+        .map_err(|e| format!("failed to diff: {}", e))
+}
 
-    let stats = diff
-        .stats()
-        .map_err(|e| format!("failed to get diff stats: {}", e))?;
-    let additions = stats.insertions();
-    let deletions = stats.deletions();
+fn line_type(origin: char) -> &'static str {
+    match origin {
+        '+' => "addition",
+        '-' => "deletion",
+        _ => "context",
+    }
+}
 
+fn collect_diff_hunks(diff: &git2::Diff<'_>) -> Result<Vec<GitDiffHunk>, String> {
     let mut hunks: Vec<GitDiffHunk> = Vec::new();
 
     diff.print(DiffFormat::Patch, |_delta, hunk, line| {
@@ -415,17 +450,11 @@ pub fn git_diff(
             }
         }
 
-        let line_type = match line.origin() {
-            '+' => "addition",
-            '-' => "deletion",
-            _ => "context",
-        };
-
         let content = String::from_utf8_lossy(line.content()).to_string();
 
         if let Some(current_hunk) = hunks.last_mut() {
             current_hunk.lines.push(GitDiffLine {
-                line_type: line_type.to_string(),
+                line_type: line_type(line.origin()).to_string(),
                 content,
                 old_line: line.old_lineno(),
                 new_line: line.new_lineno(),
@@ -435,6 +464,28 @@ pub fn git_diff(
         true
     })
     .map_err(|e| format!("failed to print diff: {}", e))?;
+
+    Ok(hunks)
+}
+
+#[tauri::command]
+pub fn git_diff(
+    vault_path: String,
+    commit_a: String,
+    commit_b: String,
+    file_path: Option<String>,
+) -> Result<GitDiff, String> {
+    let repo = open_repo(&vault_path)?;
+    let tree_a = resolve_tree_from_commit(&repo, &commit_a)?;
+    let tree_b = resolve_tree_from_commit(&repo, &commit_b)?;
+    let diff = build_diff_between_trees(&repo, &tree_a, &tree_b, file_path.as_deref())?;
+
+    let stats = diff
+        .stats()
+        .map_err(|e| format!("failed to get diff stats: {}", e))?;
+    let additions = stats.insertions();
+    let deletions = stats.deletions();
+    let hunks = collect_diff_hunks(&diff)?;
 
     Ok(GitDiff {
         additions,

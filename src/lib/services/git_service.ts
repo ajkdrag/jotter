@@ -77,6 +77,36 @@ export class GitService {
     return text.includes("nothing to commit");
   }
 
+  private fail_when_no_repository(op_key: string): CommitRunResult {
+    this.op_store.start(op_key, this.now_ms());
+    this.op_store.fail(op_key, "No git repository");
+    return { status: "no_repo" };
+  }
+
+  private begin_git_mutation(op_key: string): void {
+    this.op_store.start(op_key, this.now_ms());
+    this.git_store.set_sync_status("committing");
+    this.git_store.set_error(null);
+  }
+
+  private async finish_git_mutation_success(
+    op_key: string,
+    options?: { track_last_commit?: boolean },
+  ): Promise<void> {
+    this.git_store.set_sync_status("idle");
+    if (options?.track_last_commit) {
+      this.git_store.set_last_commit_time(this.now_ms());
+    }
+    this.op_store.succeed(op_key);
+    await this.refresh_status();
+  }
+
+  private fail_git_mutation(op_key: string, error: string): void {
+    this.git_store.set_sync_status("error");
+    this.git_store.set_error(error);
+    this.op_store.fail(op_key, error);
+  }
+
   private async run_commit(
     op_key: string,
     message: string,
@@ -85,39 +115,30 @@ export class GitService {
     const vault_path = this.get_vault_path();
     const has_repo = await this.git_port.has_repo(vault_path);
     if (!has_repo) {
-      this.op_store.start(op_key, this.now_ms());
-      this.op_store.fail(op_key, "No git repository");
-      return { status: "no_repo" };
+      return this.fail_when_no_repository(op_key);
     }
-    this.op_store.start(op_key, this.now_ms());
-    this.git_store.set_sync_status("committing");
-    this.git_store.set_error(null);
+
+    this.begin_git_mutation(op_key);
+
     try {
       const status = await this.git_port.status(vault_path);
       if (!status.is_dirty) {
-        this.git_store.set_sync_status("idle");
-        this.op_store.succeed(op_key);
-        await this.refresh_status();
+        await this.finish_git_mutation_success(op_key);
         return { status: "skipped" };
       }
 
       await this.git_port.stage_and_commit(vault_path, message, files);
-      this.git_store.set_sync_status("idle");
-      this.git_store.set_last_commit_time(this.now_ms());
-      this.op_store.succeed(op_key);
-      await this.refresh_status();
+      await this.finish_git_mutation_success(op_key, {
+        track_last_commit: true,
+      });
       return { status: "committed" };
     } catch (err) {
       if (this.is_nothing_to_commit_error(err)) {
-        this.git_store.set_sync_status("idle");
-        this.op_store.succeed(op_key);
-        await this.refresh_status();
+        await this.finish_git_mutation_success(op_key);
         return { status: "skipped" };
       }
       const msg = error_message(err);
-      this.git_store.set_sync_status("error");
-      this.git_store.set_error(msg);
-      this.op_store.fail(op_key, msg);
+      this.fail_git_mutation(op_key, msg);
       return { status: "failed", error: msg };
     }
   }
@@ -251,21 +272,16 @@ export class GitService {
     this.git_store.set_sync_status("committing");
     try {
       await this.git_port.restore_file(vault_path, file_path, commit_hash);
-      this.git_store.set_sync_status("idle");
-      this.git_store.set_last_commit_time(this.now_ms());
-      this.op_store.succeed("git.restore");
-      await this.refresh_status();
+      await this.finish_git_mutation_success("git.restore", {
+        track_last_commit: true,
+      });
     } catch (err) {
       if (this.is_nothing_to_commit_error(err)) {
-        this.git_store.set_sync_status("idle");
-        this.op_store.succeed("git.restore");
-        await this.refresh_status();
+        await this.finish_git_mutation_success("git.restore");
         return;
       }
       const msg = error_message(err);
-      this.git_store.set_sync_status("error");
-      this.git_store.set_error(msg);
-      this.op_store.fail("git.restore", msg);
+      this.fail_git_mutation("git.restore", msg);
     }
   }
 }

@@ -529,20 +529,49 @@ fn with_read_conn<F, T>(app: &AppHandle, vault_id: &str, f: F) -> Result<T, Stri
 where
     F: FnOnce(&Connection) -> Result<T, String>,
 {
-    ensure_worker(app, vault_id)?;
-    let state = app.state::<SearchDbState>();
-    let map = state.workers.lock().map_err(|e| e.to_string())?;
-    let worker = map.get(vault_id).ok_or("vault worker not found")?;
-    let conn = worker.read_conn.lock().map_err(|e| e.to_string())?;
-    f(&conn)
+    with_worker(app, vault_id, |worker| {
+        let conn = worker.read_conn.lock().map_err(|e| e.to_string())?;
+        f(&conn)
+    })
 }
 
 fn send_write(app: &AppHandle, vault_id: &str, cmd: DbCommand) -> Result<(), String> {
+    with_worker(app, vault_id, |worker| {
+        worker.write_tx.send(cmd).map_err(|e| e.to_string())
+    })
+}
+
+fn with_worker<F, T>(app: &AppHandle, vault_id: &str, operation: F) -> Result<T, String>
+where
+    F: FnOnce(&VaultWorker) -> Result<T, String>,
+{
     ensure_worker(app, vault_id)?;
     let state = app.state::<SearchDbState>();
     let map = state.workers.lock().map_err(|e| e.to_string())?;
     let worker = map.get(vault_id).ok_or("vault worker not found")?;
-    worker.write_tx.send(cmd).map_err(|e| e.to_string())
+    operation(worker)
+}
+
+fn with_worker_mut<F, T>(app: &AppHandle, vault_id: &str, operation: F) -> Result<T, String>
+where
+    F: FnOnce(&mut VaultWorker) -> Result<T, String>,
+{
+    ensure_worker(app, vault_id)?;
+    let state = app.state::<SearchDbState>();
+    let mut map = state.workers.lock().map_err(|e| e.to_string())?;
+    let worker = map.get_mut(vault_id).ok_or("vault worker not found")?;
+    operation(worker)
+}
+
+fn send_write_reply<T>(
+    app: &AppHandle,
+    vault_id: &str,
+    make_cmd: impl FnOnce(SyncSender<Result<T, String>>) -> DbCommand,
+) -> Result<T, String> {
+    let (reply_tx, reply_rx) = mpsc::sync_channel(1);
+    let cmd = make_cmd(reply_tx);
+    send_write(app, vault_id, cmd)?;
+    reply_rx.recv().map_err(|e| e.to_string())?
 }
 
 fn send_write_blocking(
@@ -550,21 +579,16 @@ fn send_write_blocking(
     vault_id: &str,
     make_cmd: impl FnOnce(SyncSender<Result<(), String>>) -> DbCommand,
 ) -> Result<(), String> {
-    let (reply_tx, reply_rx) = mpsc::sync_channel(1);
-    let cmd = make_cmd(reply_tx);
-    send_write(app, vault_id, cmd)?;
-    reply_rx.recv().map_err(|e| e.to_string())?
+    send_write_reply(app, vault_id, make_cmd)
 }
 
 fn replace_worker_cancel_token(app: &AppHandle, vault_id: &str) -> Result<Arc<AtomicBool>, String> {
-    ensure_worker(app, vault_id)?;
     let next_cancel = Arc::new(AtomicBool::new(false));
-
-    let state = app.state::<SearchDbState>();
-    let mut map = state.workers.lock().map_err(|e| e.to_string())?;
-    let worker = map.get_mut(vault_id).ok_or("vault worker not found")?;
-    worker.cancel.store(true, Ordering::Relaxed);
-    worker.cancel = Arc::clone(&next_cancel);
+    with_worker_mut(app, vault_id, |worker| {
+        worker.cancel.store(true, Ordering::Relaxed);
+        worker.cancel = Arc::clone(&next_cancel);
+        Ok(())
+    })?;
     Ok(next_cancel)
 }
 
@@ -594,12 +618,10 @@ pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn index_cancel(app: AppHandle, vault_id: String) -> Result<(), String> {
-    ensure_worker(&app, &vault_id)?;
-    let state = app.state::<SearchDbState>();
-    let map = state.workers.lock().map_err(|e| e.to_string())?;
-    let worker = map.get(&vault_id).ok_or("vault worker not found")?;
-    worker.cancel.store(true, Ordering::Relaxed);
-    Ok(())
+    with_worker(&app, &vault_id, |worker| {
+        worker.cancel.store(true, Ordering::Relaxed);
+        Ok(())
+    })
 }
 
 #[tauri::command]
@@ -710,17 +732,11 @@ pub fn index_rename_folder(
     old_prefix: String,
     new_prefix: String,
 ) -> Result<usize, String> {
-    let (reply_tx, reply_rx) = mpsc::sync_channel(1);
-    send_write(
-        &app,
-        &vault_id,
-        DbCommand::RenamePaths {
-            old_prefix,
-            new_prefix,
-            reply: reply_tx,
-        },
-    )?;
-    reply_rx.recv().map_err(|e| e.to_string())?
+    send_write_reply(&app, &vault_id, |reply| DbCommand::RenamePaths {
+        old_prefix,
+        new_prefix,
+        reply,
+    })
 }
 
 #[tauri::command]
