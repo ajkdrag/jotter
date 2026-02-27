@@ -4,19 +4,24 @@ import type { VaultPath } from "$lib/types/ids";
 import type { GitCommit, GitDiff, GitStatus } from "$lib/types/git";
 
 export function create_git_tauri_adapter(): GitPort {
+  const invoke_git = <Result>(
+    command: string,
+    payload: Record<string, unknown>,
+  ) => tauri_invoke<Result>(command, payload);
+
   return {
     async has_repo(vault_path: VaultPath) {
-      return await tauri_invoke<boolean>("git_has_repo", {
+      return await invoke_git<boolean>("git_has_repo", {
         vaultPath: vault_path,
       });
     },
     async init_repo(vault_path: VaultPath) {
-      await tauri_invoke<undefined>("git_init_repo", {
+      await invoke_git<undefined>("git_init_repo", {
         vaultPath: vault_path,
       });
     },
     async status(vault_path: VaultPath) {
-      return await tauri_invoke<GitStatus>("git_status", {
+      return await invoke_git<GitStatus>("git_status", {
         vaultPath: vault_path,
       });
     },
@@ -25,14 +30,14 @@ export function create_git_tauri_adapter(): GitPort {
       message: string,
       files: string[] | null,
     ) {
-      return await tauri_invoke<string>("git_stage_and_commit", {
+      return await invoke_git<string>("git_stage_and_commit", {
         vaultPath: vault_path,
         message,
         files,
       });
     },
     async log(vault_path: VaultPath, file_path: string | null, limit: number) {
-      return await tauri_invoke<GitCommit[]>("git_log", {
+      return await invoke_git<GitCommit[]>("git_log", {
         vaultPath: vault_path,
         filePath: file_path,
         limit,
@@ -44,7 +49,7 @@ export function create_git_tauri_adapter(): GitPort {
       commit_b: string,
       file_path: string | null,
     ) {
-      return await tauri_invoke<GitDiff>("git_diff", {
+      return await invoke_git<GitDiff>("git_diff", {
         vaultPath: vault_path,
         commitA: commit_a,
         commitB: commit_b,
@@ -56,7 +61,7 @@ export function create_git_tauri_adapter(): GitPort {
       file_path: string,
       commit_hash: string,
     ) {
-      return await tauri_invoke<string>("git_show_file_at_commit", {
+      return await invoke_git<string>("git_show_file_at_commit", {
         vaultPath: vault_path,
         filePath: file_path,
         commitHash: commit_hash,
@@ -67,14 +72,14 @@ export function create_git_tauri_adapter(): GitPort {
       file_path: string,
       commit_hash: string,
     ) {
-      return await tauri_invoke<string>("git_restore_file", {
+      return await invoke_git<string>("git_restore_file", {
         vaultPath: vault_path,
         filePath: file_path,
         commitHash: commit_hash,
       });
     },
     async create_tag(vault_path: VaultPath, name: string, message: string) {
-      await tauri_invoke<undefined>("git_create_tag", {
+      await invoke_git<undefined>("git_create_tag", {
         vaultPath: vault_path,
         name,
         message,

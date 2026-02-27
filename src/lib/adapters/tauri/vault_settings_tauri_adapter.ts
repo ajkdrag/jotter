@@ -2,17 +2,24 @@ import type { VaultSettingsPort } from "$lib/ports/vault_settings_port";
 import type { VaultId } from "$lib/types/ids";
 import { tauri_invoke } from "$lib/adapters/tauri/tauri_invoke";
 
+async function get_nullable_vault_setting<T>(
+  vault_id: VaultId,
+  key: string,
+): Promise<T | null> {
+  const value = await tauri_invoke<T | null>("get_vault_setting", {
+    vaultId: vault_id,
+    key,
+  });
+  return value ?? null;
+}
+
 export function create_vault_settings_tauri_adapter(): VaultSettingsPort {
   return {
     async get_vault_setting<T>(
       vault_id: VaultId,
       key: string,
     ): Promise<T | null> {
-      const value = await tauri_invoke<T | null>("get_vault_setting", {
-        vaultId: vault_id,
-        key,
-      });
-      return value ?? null;
+      return get_nullable_vault_setting<T>(vault_id, key);
     },
 
     async set_vault_setting(

@@ -70,14 +70,63 @@ function to_note_meta(hit: TauriNoteMeta) {
   };
 }
 
+function map_existing_wiki_suggestions(
+  hits: TauriSuggestionHit[],
+): WikiSuggestion[] {
+  return hits.map((hit) => ({
+    kind: "existing" as const,
+    note: to_note_meta(hit.note),
+    score: hit.score,
+  }));
+}
+
+function map_planned_link_suggestions(
+  hits: TauriPlannedSuggestionHit[],
+): PlannedLinkSuggestion[] {
+  return hits.map((hit) => ({
+    target_path: hit.target_path,
+    ref_count: hit.ref_count,
+  }));
+}
+
+function map_note_links_snapshot(
+  snapshot: TauriLinksSnapshot,
+): NoteLinksSnapshot {
+  return {
+    backlinks: snapshot.backlinks.map(to_note_meta),
+    outlinks: snapshot.outlinks.map(to_note_meta),
+    orphan_links: snapshot.orphan_links.map((orphan) => ({
+      target_path: orphan.target_path,
+      ref_count: orphan.ref_count,
+    })),
+  };
+}
+
+function map_local_note_links_snapshot(
+  snapshot: TauriLocalLinksSnapshot,
+): LocalNoteLinksSnapshot {
+  return {
+    outlink_paths: snapshot.outlink_paths,
+    external_links: snapshot.external_links.map((link) => ({
+      url: link.url,
+      text: link.text,
+    })),
+  };
+}
+
 export function create_search_tauri_adapter(): SearchPort {
+  const invoke_search = <Result>(
+    command: string,
+    payload: Record<string, unknown>,
+  ) => tauri_invoke<Result>(command, payload);
+
   return {
     async search_notes(
       vault_id: VaultId,
       query: SearchQuery,
       limit = 50,
     ): Promise<NoteSearchHit[]> {
-      const hits = await tauri_invoke<TauriSearchHit[]>("index_search", {
+      const hits = await invoke_search<TauriSearchHit[]>("index_search", {
         vaultId: vault_id,
         query,
       });
@@ -93,16 +142,12 @@ export function create_search_tauri_adapter(): SearchPort {
       query: string,
       limit = 15,
     ): Promise<WikiSuggestion[]> {
-      const hits = await tauri_invoke<TauriSuggestionHit[]>("index_suggest", {
+      const hits = await invoke_search<TauriSuggestionHit[]>("index_suggest", {
         vaultId: vault_id,
         query,
         limit,
       });
-      return hits.map((hit) => ({
-        kind: "existing" as const,
-        note: to_note_meta(hit.note),
-        score: hit.score,
-      }));
+      return map_existing_wiki_suggestions(hits);
     },
 
     async suggest_planned_links(
@@ -110,7 +155,7 @@ export function create_search_tauri_adapter(): SearchPort {
       query: string,
       limit = 15,
     ): Promise<PlannedLinkSuggestion[]> {
-      const hits = await tauri_invoke<TauriPlannedSuggestionHit[]>(
+      const hits = await invoke_search<TauriPlannedSuggestionHit[]>(
         "index_suggest_planned",
         {
           vaultId: vault_id,
@@ -118,31 +163,21 @@ export function create_search_tauri_adapter(): SearchPort {
           limit,
         },
       );
-      return hits.map((hit) => ({
-        target_path: hit.target_path,
-        ref_count: hit.ref_count,
-      }));
+      return map_planned_link_suggestions(hits);
     },
 
     async get_note_links_snapshot(
       vault_id: VaultId,
       note_path: string,
     ): Promise<NoteLinksSnapshot> {
-      const snapshot = await tauri_invoke<TauriLinksSnapshot>(
+      const snapshot = await invoke_search<TauriLinksSnapshot>(
         "index_note_links_snapshot",
         {
           vaultId: vault_id,
           noteId: note_path,
         },
       );
-      return {
-        backlinks: snapshot.backlinks.map(to_note_meta),
-        outlinks: snapshot.outlinks.map(to_note_meta),
-        orphan_links: snapshot.orphan_links.map((orphan) => ({
-          target_path: orphan.target_path,
-          ref_count: orphan.ref_count,
-        })),
-      };
+      return map_note_links_snapshot(snapshot);
     },
 
     async extract_local_note_links(
@@ -150,7 +185,7 @@ export function create_search_tauri_adapter(): SearchPort {
       note_path: string,
       markdown: string,
     ): Promise<LocalNoteLinksSnapshot> {
-      const snapshot = await tauri_invoke<TauriLocalLinksSnapshot>(
+      const snapshot = await invoke_search<TauriLocalLinksSnapshot>(
         "index_extract_local_note_links",
         {
           vaultId: vault_id,
@@ -158,13 +193,7 @@ export function create_search_tauri_adapter(): SearchPort {
           markdown,
         },
       );
-      return {
-        outlink_paths: snapshot.outlink_paths,
-        external_links: snapshot.external_links.map((link) => ({
-          url: link.url,
-          text: link.text,
-        })),
-      };
+      return map_local_note_links_snapshot(snapshot);
     },
 
     async rewrite_note_links(
@@ -173,7 +202,7 @@ export function create_search_tauri_adapter(): SearchPort {
       new_source_path: string,
       target_map: Record<string, string>,
     ): Promise<RewriteResult> {
-      return tauri_invoke<RewriteResult>("rewrite_note_links", {
+      return invoke_search<RewriteResult>("rewrite_note_links", {
         markdown,
         oldSourcePath: old_source_path,
         newSourcePath: new_source_path,
@@ -185,7 +214,7 @@ export function create_search_tauri_adapter(): SearchPort {
       source_path: string,
       raw_target: string,
     ): Promise<string | null> {
-      return tauri_invoke<string | null>("resolve_note_link", {
+      return invoke_search<string | null>("resolve_note_link", {
         sourcePath: source_path,
         rawTarget: raw_target,
       });
