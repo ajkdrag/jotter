@@ -556,29 +556,40 @@ fn send_write_blocking(
     reply_rx.recv().map_err(|e| e.to_string())?
 }
 
+fn replace_worker_cancel_token(app: &AppHandle, vault_id: &str) -> Result<Arc<AtomicBool>, String> {
+    ensure_worker(app, vault_id)?;
+    let next_cancel = Arc::new(AtomicBool::new(false));
+
+    let state = app.state::<SearchDbState>();
+    let mut map = state.workers.lock().map_err(|e| e.to_string())?;
+    let worker = map.get_mut(vault_id).ok_or("vault worker not found")?;
+    worker.cancel.store(true, Ordering::Relaxed);
+    worker.cancel = Arc::clone(&next_cancel);
+    Ok(next_cancel)
+}
+
+fn enqueue_index_command(
+    app: &AppHandle,
+    vault_id: &str,
+    make_cmd: impl FnOnce(PathBuf, Arc<AtomicBool>, AppHandle, String) -> DbCommand,
+) -> Result<(), String> {
+    let vault_root = storage::vault_path(app, vault_id)?;
+    let cancel = replace_worker_cancel_token(app, vault_id)?;
+    let cmd = make_cmd(vault_root, cancel, app.clone(), vault_id.to_string());
+    send_write(app, vault_id, cmd)
+}
+
 #[tauri::command]
 pub fn index_build(app: AppHandle, vault_id: String) -> Result<(), String> {
     log::info!("Building index vault_id={}", vault_id);
-    let vault_root = storage::vault_path(&app, &vault_id)?;
-    ensure_worker(&app, &vault_id)?;
-
-    let cancel = Arc::new(AtomicBool::new(false));
-    {
-        let state = app.state::<SearchDbState>();
-        let mut map = state.workers.lock().map_err(|e| e.to_string())?;
-        if let Some(worker) = map.get_mut(&vault_id) {
-            worker.cancel.store(true, Ordering::Relaxed);
-            worker.cancel = Arc::clone(&cancel);
+    enqueue_index_command(&app, &vault_id, |vault_root, cancel, app_handle, vault_id| {
+        DbCommand::Sync {
+            vault_root,
+            cancel,
+            app_handle,
+            vault_id,
         }
-    }
-
-    let cmd = DbCommand::Sync {
-        vault_root,
-        cancel,
-        app_handle: app.clone(),
-        vault_id: vault_id.clone(),
-    };
-    send_write(&app, &vault_id, cmd)
+    })
 }
 
 #[tauri::command]
@@ -594,26 +605,14 @@ pub fn index_cancel(app: AppHandle, vault_id: String) -> Result<(), String> {
 #[tauri::command]
 pub fn index_rebuild(app: AppHandle, vault_id: String) -> Result<(), String> {
     log::info!("Rebuilding index vault_id={}", vault_id);
-    let vault_root = storage::vault_path(&app, &vault_id)?;
-    ensure_worker(&app, &vault_id)?;
-
-    let cancel = Arc::new(AtomicBool::new(false));
-    {
-        let state = app.state::<SearchDbState>();
-        let mut map = state.workers.lock().map_err(|e| e.to_string())?;
-        if let Some(worker) = map.get_mut(&vault_id) {
-            worker.cancel.store(true, Ordering::Relaxed);
-            worker.cancel = Arc::clone(&cancel);
+    enqueue_index_command(&app, &vault_id, |vault_root, cancel, app_handle, vault_id| {
+        DbCommand::Rebuild {
+            vault_root,
+            cancel,
+            app_handle,
+            vault_id,
         }
-    }
-
-    let cmd = DbCommand::Rebuild {
-        vault_root,
-        cancel,
-        app_handle: app.clone(),
-        vault_id: vault_id.clone(),
-    };
-    send_write(&app, &vault_id, cmd)
+    })
 }
 
 #[tauri::command]

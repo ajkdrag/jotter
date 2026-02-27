@@ -48,6 +48,16 @@ const STARRED_PATHS_KEY = "starred_paths";
 const PINNED_VAULT_IDS_KEY = "pinned_vault_ids";
 const WATCHER_INDEX_FLUSH_DELAY_MS = 120;
 const WATCHER_BULK_FORCE_SCAN_THRESHOLD = 256;
+
+type VaultOpenSnapshot = {
+  root_contents: Awaited<ReturnType<NotesPort["list_folder_contents"]>>;
+  recent_vaults: Vault[];
+  pinned_vault_ids: VaultId[];
+  recent_notes: NoteMeta[];
+  starred_paths: string[];
+  editor_settings: EditorSettings;
+};
+
 class StaleVaultOpenError extends Error {
   constructor() {
     super("Stale vault-open request");
@@ -313,12 +323,32 @@ export class VaultService {
     open_revision: number,
   ): Promise<EditorSettings> {
     this.throw_if_stale(open_revision);
+    await this.unwatch_vault_with_logging();
+    this.throw_if_stale(open_revision);
+
+    const snapshot = await this.load_open_vault_snapshot(vault, open_revision);
+    this.throw_if_stale(open_revision);
+
+    this.apply_open_vault_snapshot(vault, snapshot);
+    this.subscribe_open_vault_index_progress(vault.id, open_revision);
+    await this.watch_open_vault_fs_events(vault.id, open_revision);
+    this.trigger_background_index_sync(vault.id, open_revision);
+
+    return snapshot.editor_settings;
+  }
+
+  private async unwatch_vault_with_logging() {
     try {
       await this.watcher_port.unwatch_vault();
     } catch (error) {
       log.error("Unwatch vault failed", { error });
     }
-    this.throw_if_stale(open_revision);
+  }
+
+  private async load_open_vault_snapshot(
+    vault: Vault,
+    open_revision: number,
+  ): Promise<VaultOpenSnapshot> {
     await this.vault_port.remember_last_vault(vault.id);
     this.throw_if_stale(open_revision);
 
@@ -329,77 +359,94 @@ export class VaultService {
     ]);
     this.throw_if_stale(open_revision);
 
-    const loaded_recent_notes = await this.load_recent_notes(vault.id);
-    const loaded_starred_paths = await this.load_starred_paths(vault.id);
+    const recent_notes = await this.load_recent_notes(vault.id);
+    const starred_paths = await this.load_starred_paths(vault.id);
     const editor_settings = await this.load_editor_settings(vault.id);
-    this.throw_if_stale(open_revision);
 
-    this.index_progress_unsubscribe?.();
-    this.index_progress_unsubscribe = null;
-    this.watcher_event_unsubscribe?.();
-    this.watcher_event_unsubscribe = null;
+    return {
+      root_contents,
+      recent_vaults,
+      pinned_vault_ids,
+      recent_notes,
+      starred_paths,
+      editor_settings,
+    };
+  }
+
+  private apply_open_vault_snapshot(vault: Vault, snapshot: VaultOpenSnapshot) {
+    this.clear_open_runtime_subscriptions();
     this.vault_store.clear();
     this.notes_store.reset();
     this.editor_store.reset();
     this.search_store.reset();
 
     this.vault_store.set_vault(vault);
-    this.notes_store.merge_folder_contents("", root_contents);
-    this.vault_store.set_recent_vaults(recent_vaults);
-    this.vault_store.set_pinned_vault_ids(pinned_vault_ids);
-    this.notes_store.set_recent_notes(loaded_recent_notes);
-    this.notes_store.set_starred_paths(loaded_starred_paths);
+    this.notes_store.merge_folder_contents("", snapshot.root_contents);
+    this.vault_store.set_recent_vaults(snapshot.recent_vaults);
+    this.vault_store.set_pinned_vault_ids(snapshot.pinned_vault_ids);
+    this.notes_store.set_recent_notes(snapshot.recent_notes);
+    this.notes_store.set_starred_paths(snapshot.starred_paths);
 
     const ensured_note = ensure_open_note({
       vault,
-      notes: root_contents.notes,
+      notes: snapshot.root_contents.notes,
       open_note: null,
       now_ms: this.now_ms(),
     });
-
     if (ensured_note) {
       this.editor_store.set_open_note(ensured_note);
     }
+  }
 
-    const target_vault_id = vault.id;
-    const event_revision = open_revision;
+  private subscribe_open_vault_index_progress(
+    vault_id: VaultId,
+    open_revision: number,
+  ) {
     this.index_progress_unsubscribe = this.index_port.subscribe_index_progress(
       (event) => {
-        if (!this.is_current_open_revision(event_revision)) {
+        if (!this.is_current_open_revision(open_revision)) {
           return;
         }
-        if (event.vault_id === target_vault_id) {
+        if (event.vault_id === vault_id) {
           this.search_store.set_index_progress(event);
         }
       },
     );
+  }
 
+  private async watch_open_vault_fs_events(
+    vault_id: VaultId,
+    open_revision: number,
+  ) {
     try {
-      await this.watcher_port.watch_vault(vault.id);
+      await this.watcher_port.watch_vault(vault_id);
       this.throw_if_stale(open_revision);
       this.watcher_event_unsubscribe = this.watcher_port.subscribe_fs_events(
         (event) => {
-          if (!this.is_current_open_revision(event_revision)) {
+          if (!this.is_current_open_revision(open_revision)) {
             return;
           }
-          if (event.vault_id !== target_vault_id) {
+          if (event.vault_id !== vault_id) {
             return;
           }
-          this.handle_watcher_event(target_vault_id, event, event_revision);
+          this.handle_watcher_event(vault_id, event, open_revision);
         },
       );
     } catch (error) {
       log.error("Watch vault failed", { error });
     }
+  }
 
-    this.index_port.sync_index(vault.id).catch((e: unknown) => {
-      if (!this.is_current_open_revision(event_revision)) {
+  private trigger_background_index_sync(
+    vault_id: VaultId,
+    open_revision: number,
+  ) {
+    this.index_port.sync_index(vault_id).catch((error: unknown) => {
+      if (!this.is_current_open_revision(open_revision)) {
         return;
       }
-      log.error("Background index sync failed", { error: e });
+      log.error("Background index sync failed", { error });
     });
-
-    return editor_settings;
   }
 
   private async load_editor_settings(
@@ -553,10 +600,7 @@ export class VaultService {
     const current_vault_id = this.vault_store.vault?.id;
     this.active_open_revision += 1;
     const revision = this.active_open_revision;
-    this.index_progress_unsubscribe?.();
-    this.index_progress_unsubscribe = null;
-    this.watcher_event_unsubscribe?.();
-    this.watcher_event_unsubscribe = null;
+    this.clear_open_runtime_subscriptions();
     this.reset_watcher_index_buffer();
     if (current_vault_id) {
       try {
@@ -565,12 +609,15 @@ export class VaultService {
         log.error("Cancel index failed", { error });
       }
     }
-    try {
-      await this.watcher_port.unwatch_vault();
-    } catch (error) {
-      log.error("Unwatch vault failed", { error });
-    }
+    await this.unwatch_vault_with_logging();
     return revision;
+  }
+
+  private clear_open_runtime_subscriptions(): void {
+    this.index_progress_unsubscribe?.();
+    this.index_progress_unsubscribe = null;
+    this.watcher_event_unsubscribe?.();
+    this.watcher_event_unsubscribe = null;
   }
 
   private handle_watcher_event(
