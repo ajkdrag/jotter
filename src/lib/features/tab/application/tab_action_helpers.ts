@@ -56,7 +56,7 @@ export async function capture_active_tab_snapshot(
 
   const cursor = stores.editor.cursor;
   stores.tab.set_snapshot(active_id, {
-    scroll_top: 0,
+    scroll_top: services.editor.get_scroll_top(),
     cursor,
   });
 
@@ -85,11 +85,14 @@ export async function open_active_tab_note(input: ActionRegistrationInput) {
 
   stores.ui.clear_selected_items();
 
+  const snapshot = stores.tab.get_snapshot(active_tab.id);
+
   const cached = stores.tab.get_cached_note(active_tab.id);
   if (cached) {
     stores.editor.set_open_note(cached);
     const folder = parent_folder_path(active_tab.note_path);
     stores.ui.set_selected_folder_path(folder);
+    services.editor.set_scroll_top(snapshot?.scroll_top ?? 0);
     return;
   }
 
@@ -100,6 +103,7 @@ export async function open_active_tab_note(input: ActionRegistrationInput) {
     if (open_note) {
       stores.tab.set_cached_note(active_tab.id, open_note);
     }
+    services.editor.set_scroll_top(snapshot?.scroll_top ?? 0);
   }
 }
 

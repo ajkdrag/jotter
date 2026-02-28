@@ -140,6 +140,18 @@ export class EditorService {
     return payload;
   }
 
+  get_scroll_top(): number {
+    return this.host_root?.parentElement?.scrollTop ?? 0;
+  }
+
+  set_scroll_top(value: number) {
+    const container = this.host_root?.parentElement;
+    if (!container || value <= 0) return;
+    requestAnimationFrame(() => {
+      container.scrollTop = value;
+    });
+  }
+
   focus() {
     this.session?.focus();
   }

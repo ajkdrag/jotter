@@ -65,6 +65,8 @@ function create_tab_actions_harness() {
     search: {},
     editor: {
       flush: vi.fn().mockReturnValue(null),
+      get_scroll_top: vi.fn().mockReturnValue(0),
+      set_scroll_top: vi.fn(),
     },
     clipboard: {
       copy_text: vi.fn().mockResolvedValue(undefined),
