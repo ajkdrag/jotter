@@ -28,7 +28,7 @@
     on_request_rename?: ((note: NoteMeta) => void) | undefined;
     on_request_delete_folder?: ((folder_path: string) => void) | undefined;
     on_request_rename_folder?: ((folder_path: string) => void) | undefined;
-    on_request_create_note?: ((folder_path: string) => void) | undefined;
+    on_request_create_note?: (() => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
     on_toggle_star?:
       | ((payload: { paths: string[]; all_starred: boolean }) => void)

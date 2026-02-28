@@ -29,7 +29,7 @@ import type {
   VaultInitializeResult,
   VaultOpenResult,
 } from "$lib/features/vault/types/vault_service_result";
-import { ensure_open_note } from "$lib/features/note";
+import { create_untitled_open_note } from "$lib/features/note";
 import { error_message } from "$lib/shared/utils/error_message";
 import { create_logger } from "$lib/shared/utils/logger";
 import { PAGE_SIZE } from "$lib/shared/constants/pagination";
@@ -415,15 +415,9 @@ export class VaultService {
     this.notes_store.set_recent_notes(snapshot.recent_notes);
     this.notes_store.set_starred_paths(snapshot.starred_paths);
 
-    const ensured_note = ensure_open_note({
-      vault,
-      notes: snapshot.root_contents.notes,
-      open_note: null,
-      now_ms: this.now_ms(),
-    });
-    if (ensured_note) {
-      this.editor_store.set_open_note(ensured_note);
-    }
+    this.editor_store.set_open_note(
+      create_untitled_open_note({ open_names: [], now_ms: this.now_ms() }),
+    );
   }
 
   private subscribe_open_vault_index_progress(

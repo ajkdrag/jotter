@@ -51,7 +51,7 @@
     on_request_rename?: ((note: NoteMeta) => void) | undefined;
     on_request_delete_folder?: ((folder_path: string) => void) | undefined;
     on_request_rename_folder?: ((folder_path: string) => void) | undefined;
-    on_request_create_note?: ((folder_path: string) => void) | undefined;
+    on_request_create_note?: (() => void) | undefined;
     on_request_create_folder?: ((folder_path: string) => void) | undefined;
     on_toggle_star?: ((path: string) => void) | undefined;
     selection_count?: number;
@@ -282,9 +282,7 @@
         {:else}
           <ContextMenu.Item
             onSelect={() => {
-              if (on_request_create_note) {
-                on_request_create_note(node.path);
-              }
+              on_request_create_note?.();
             }}
           >
             <FilePlus class="mr-2 h-4 w-4" />

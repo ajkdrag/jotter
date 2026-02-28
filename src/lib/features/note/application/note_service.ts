@@ -21,10 +21,7 @@ import type {
   NoteSaveResult,
 } from "$lib/features/note/types/note_service_result";
 import { error_message } from "$lib/shared/utils/error_message";
-import {
-  ensure_open_note,
-  create_untitled_open_note_in_folder,
-} from "$lib/features/note/domain/ensure_open_note";
+import { create_untitled_open_note } from "$lib/features/note/domain/ensure_open_note";
 import { parent_folder_path } from "$lib/shared/utils/path";
 import { resolve_existing_note_path } from "$lib/features/note/domain/note_lookup";
 import { note_path_exists } from "$lib/features/note/domain/note_path_exists";
@@ -130,10 +127,9 @@ export class NoteService {
     }
   }
 
-  create_new_note(folder_path: string) {
-    const open_note = create_untitled_open_note_in_folder({
-      notes: this.notes_store.notes,
-      folder_prefix: folder_path,
+  create_new_note(open_names: string[]) {
+    const open_note = create_untitled_open_note({
+      open_names,
       now_ms: this.now_ms(),
     });
 
@@ -269,16 +265,7 @@ export class NoteService {
       this.notes_store.remove_note(note.id);
       this.notes_store.remove_recent_note(note.id);
 
-      const ensured = ensure_open_note({
-        vault: this.vault_store.vault,
-        notes: this.notes_store.notes,
-        open_note: is_open_note ? null : this.editor_store.open_note,
-        now_ms: this.now_ms(),
-      });
-
-      if (ensured) {
-        this.editor_store.set_open_note(ensured);
-      } else {
+      if (is_open_note) {
         this.editor_store.clear_open_note();
       }
 

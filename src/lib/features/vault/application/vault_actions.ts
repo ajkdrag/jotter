@@ -28,7 +28,7 @@ async function apply_opened_vault(
   }
 
   if (input.stores.tab.tabs.length === 0) {
-    input.services.note.create_new_note("");
+    input.services.note.create_new_note([]);
     const open_note = input.stores.editor.open_note;
     if (open_note) {
       input.stores.tab.open_tab(

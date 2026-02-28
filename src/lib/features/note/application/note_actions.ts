@@ -206,20 +206,17 @@ export function register_note_actions(input: ActionRegistrationInput) {
       label: "Create Note",
       shortcut: "CmdOrCtrl+N",
       when: when_vault_open,
-      execute: async (folder_prefix?: unknown) => {
-        const folder_path =
-          typeof folder_prefix === "string" && folder_prefix.length > 0
-            ? folder_prefix
-            : stores.ui.selected_folder_path;
-
+      execute: async () => {
         if (!can_open_more_tabs()) {
           return;
         }
 
         await capture_active_tab_snapshot(input);
 
-        services.note.create_new_note(folder_path);
-        stores.ui.set_selected_folder_path(folder_path);
+        const open_names = stores.tab.tabs.map((t) =>
+          note_name_from_path(t.note_path),
+        );
+        services.note.create_new_note(open_names);
 
         const open_note = stores.editor.open_note;
         if (!open_note) {

@@ -473,10 +473,9 @@
                               ACTION_IDS.ui_select_folder,
                               path,
                             )}
-                          on_request_create_note={(folder_path: string) =>
+                          on_request_create_note={() =>
                             void action_registry.execute(
                               ACTION_IDS.note_create,
-                              folder_path,
                             )}
                           on_request_create_folder={(folder_path: string) =>
                             void action_registry.execute(
@@ -598,10 +597,9 @@
                             ACTION_IDS.folder_request_rename,
                             folder_path,
                           )}
-                        on_request_create_note={(folder_path: string) =>
+                        on_request_create_note={() =>
                           void action_registry.execute(
                             ACTION_IDS.note_create,
-                            folder_path,
                           )}
                         on_request_create_folder={(folder_path: string) =>
                           void action_registry.execute(
