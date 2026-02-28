@@ -2,7 +2,7 @@ import type { SearchPort } from "$lib/features/search/ports";
 import type { VaultStore } from "$lib/features/vault";
 import type { OpStore } from "$lib/app";
 import type { CommandDefinition } from "$lib/shared/types/command_palette";
-import type { SettingDefinition } from "$lib/shared/types/settings_registry";
+import type { SettingDefinition } from "$lib/features/settings";
 import type {
   InFileMatch,
   OmnibarItem,
@@ -19,7 +19,7 @@ import type {
 import { parse_search_query } from "$lib/features/search/domain/search_query_parser";
 import { search_within_text } from "$lib/features/search/domain/search_within_text";
 import { COMMANDS_REGISTRY } from "$lib/features/search/domain/search_commands";
-import { SETTINGS_REGISTRY } from "$lib/shared/types/settings_registry";
+import { SETTINGS_REGISTRY } from "$lib/features/settings";
 import { error_message } from "$lib/shared/utils/error_message";
 import { create_logger } from "$lib/shared/utils/logger";
 import type { Vault } from "$lib/shared/types/vault";

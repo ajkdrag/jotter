@@ -1,6 +1,13 @@
 import type { NoteMeta } from "$lib/shared/types/note";
 import type { CommandDefinition } from "$lib/shared/types/command_palette";
-import type { SettingDefinition } from "$lib/shared/types/settings_registry";
+
+export type SearchSettingDefinition = {
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+  keywords: string[];
+};
 
 export type SearchScope = "all" | "path" | "title" | "content";
 export type SearchDomain = "notes" | "commands" | "planned";
@@ -95,5 +102,5 @@ export type OmnibarItem =
       score: number;
     }
   | { kind: "command"; command: CommandDefinition; score: number }
-  | { kind: "setting"; setting: SettingDefinition; score: number }
+  | { kind: "setting"; setting: SearchSettingDefinition; score: number }
   | { kind: "recent_note"; note: NoteMeta };
