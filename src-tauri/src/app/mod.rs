@@ -1,5 +1,6 @@
 use crate::features;
 use crate::shared;
+use tauri_plugin_window_state::StateFlags;
 
 include!(concat!(env!("OUT_DIR"), "/icon_stamp.rs"));
 
@@ -37,6 +38,16 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(log_builder.build())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(
+                    StateFlags::SIZE
+                        | StateFlags::POSITION
+                        | StateFlags::MAXIMIZED
+                        | StateFlags::FULLSCREEN,
+                )
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             features::vault::service::open_vault,
             features::vault::service::open_vault_by_id,
