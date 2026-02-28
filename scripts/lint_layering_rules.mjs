@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const project_root = process.cwd();
+const tests_root = path.join(project_root, "tests");
 
 const source_extensions = new Set([".ts", ".js", ".mjs", ".cjs", ".svelte"]);
 const feature_root = path.join(project_root, "src/lib/features");
@@ -306,6 +307,21 @@ for (const file_path of import_policy_files) {
   const imports = extract_imports(content);
 
   for (const current_import of imports) {
+    const resolved_import_path = resolve_internal_import(
+      file_path,
+      current_import.module,
+    );
+    if (resolved_import_path && path_in_dir(resolved_import_path, tests_root)) {
+      violations.push({
+        file: relative_path(file_path),
+        line: line_number(content, current_import.index),
+        message:
+          `app code must not import test infrastructure (${current_import.module}); ` +
+          "move shared runtime code into `src/lib` and keep test-only helpers in `tests/`",
+      });
+      continue;
+    }
+
     const deep_feature_match = /^\$lib\/features\/([^/]+)\/.+/.exec(
       current_import.module,
     );

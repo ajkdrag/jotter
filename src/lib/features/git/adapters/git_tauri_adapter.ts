@@ -1,7 +1,11 @@
 import type { GitPort } from "$lib/features/git/ports";
 import { tauri_invoke } from "$lib/shared/adapters/tauri_invoke";
 import type { VaultPath } from "$lib/shared/types/ids";
-import type { GitCommit, GitDiff, GitStatus } from "$lib/shared/types/git";
+import type {
+  GitCommit,
+  GitDiff,
+  GitStatus,
+} from "$lib/features/git/types/git";
 
 export function create_git_tauri_adapter(): GitPort {
   const invoke_git = <Result>(

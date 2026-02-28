@@ -1,5 +1,32 @@
 import type { NoteMeta } from "$lib/shared/types/note";
-import type { CommandDefinition } from "$lib/shared/types/command_palette";
+
+export type SearchCommandDefinition = {
+  id:
+    | "create_new_note"
+    | "change_vault"
+    | "open_settings"
+    | "open_hotkeys"
+    | "reindex_vault"
+    | "show_vault_dashboard"
+    | "git_version_history"
+    | "git_create_checkpoint"
+    | "git_init_repo"
+    | "toggle_links_panel"
+    | "check_for_updates";
+  label: string;
+  description: string;
+  keywords: string[];
+  icon:
+    | "file-plus"
+    | "folder-open"
+    | "settings"
+    | "keyboard"
+    | "git-branch"
+    | "history"
+    | "bookmark"
+    | "link"
+    | "refresh-cw";
+};
 
 export type SearchSettingDefinition = {
   key: string;
@@ -101,6 +128,6 @@ export type OmnibarItem =
       ref_count: number;
       score: number;
     }
-  | { kind: "command"; command: CommandDefinition; score: number }
+  | { kind: "command"; command: SearchCommandDefinition; score: number }
   | { kind: "setting"; setting: SearchSettingDefinition; score: number }
   | { kind: "recent_note"; note: NoteMeta };

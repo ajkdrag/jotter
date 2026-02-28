@@ -1,6 +1,6 @@
 import type { NoteMeta } from "$lib/shared/types/note";
 import type { OrphanLink } from "$lib/shared/types/search";
-import type { ExternalLink } from "$lib/shared/types/link";
+import type { ExternalLink } from "$lib/features/links/types/link";
 
 type LinksSnapshot = {
   backlinks: NoteMeta[];

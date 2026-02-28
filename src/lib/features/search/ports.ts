@@ -8,7 +8,7 @@ import type {
   IndexProgressEvent,
 } from "$lib/shared/types/search";
 import type { NoteMeta } from "$lib/shared/types/note";
-import type { ExternalLink } from "$lib/shared/types/link";
+import type { ExternalLink } from "$lib/features/links";
 
 export type { IndexProgressEvent };
 

@@ -1,7 +1,7 @@
 import type { SearchPort } from "$lib/features/search/ports";
 import type { VaultStore } from "$lib/features/vault";
 import type { OpStore } from "$lib/app";
-import type { CommandDefinition } from "$lib/shared/types/command_palette";
+import type { CommandDefinition } from "$lib/features/search/types/command_palette";
 import type { SettingDefinition } from "$lib/features/settings";
 import type {
   InFileMatch,

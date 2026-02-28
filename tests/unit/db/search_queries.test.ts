@@ -11,7 +11,7 @@ import {
   planned_match_expression,
   search_match_expression,
   suggest_match_expression,
-} from "$lib/shared/db/search_queries";
+} from "$lib/features/search/db/search_queries";
 
 describe("search_queries", () => {
   it("escapes search terms as quoted tokens", () => {

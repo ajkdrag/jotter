@@ -7,10 +7,10 @@ import { create_test_vault_settings_adapter } from "./test_vault_settings_adapte
 import { create_test_search_adapter } from "./test_search_adapter";
 import type { Ports } from "$lib/app/di/app_ports";
 import { create_milkdown_editor_port } from "$lib/features/editor";
-import { create_test_clipboard_adapter } from "$lib/shared/adapters/test/test_clipboard_adapter";
-import { create_test_shell_adapter } from "$lib/shared/adapters/test/test_shell_adapter";
-import { create_test_watcher_adapter } from "$lib/shared/adapters/test/test_watcher_adapter";
-import { create_test_git_adapter } from "$lib/shared/adapters/test/test_git_adapter";
+import { create_test_clipboard_adapter } from "./test_clipboard_adapter";
+import { create_test_shell_adapter } from "./test_shell_adapter";
+import { create_test_watcher_adapter } from "./test_watcher_adapter";
+import { create_test_git_adapter } from "./test_git_adapter";
 
 export function create_test_ports(): Ports {
   const assets = create_test_assets_adapter();

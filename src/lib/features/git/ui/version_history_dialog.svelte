@@ -4,7 +4,7 @@
   import { History, RotateCcw } from "@lucide/svelte";
   import GitDiffView from "$lib/features/git/ui/git_diff_view.svelte";
   import { format_relative_time } from "$lib/shared/utils/relative_time";
-  import type { GitCommit, GitDiff } from "$lib/shared/types/git";
+  import type { GitCommit, GitDiff } from "$lib/features/git/types/git";
 
   interface Props {
     open: boolean;

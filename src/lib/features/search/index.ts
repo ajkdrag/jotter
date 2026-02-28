@@ -18,3 +18,8 @@ export type {
   OmnibarSearchResult,
   CrossVaultSearchResult,
 } from "$lib/features/search/types/search_service_result";
+export type {
+  CommandId,
+  CommandIcon,
+  CommandDefinition,
+} from "$lib/features/search/types/command_palette";

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { GitBranch } from "@lucide/svelte";
-  import type { GitSyncStatus } from "$lib/shared/types/git";
+  import type { GitSyncStatus } from "$lib/features/git/types/git";
 
   interface Props {
     enabled: boolean;

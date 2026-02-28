@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { create_test_workspace_index_adapter } from "$lib/shared/adapters/test/test_workspace_index_adapter";
+import { create_test_workspace_index_adapter } from "../../helpers/adapters/test_workspace_index_adapter";
 import { as_note_path, as_vault_id } from "$lib/shared/types/ids";
 
 describe("test_workspace_index_adapter", () => {

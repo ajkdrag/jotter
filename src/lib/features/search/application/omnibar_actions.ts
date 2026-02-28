@@ -1,7 +1,7 @@
 import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
 import type { ActionRegistrationInput } from "$lib/app/action_registry/action_registration_input";
 import type { OmnibarItem, OmnibarScope } from "$lib/shared/types/search";
-import type { CommandId } from "$lib/shared/types/command_palette";
+import type { CommandId } from "$lib/features/search/types/command_palette";
 import { COMMANDS_REGISTRY } from "$lib/features/search/domain/search_commands";
 import { parse_search_query } from "$lib/features/search/domain/search_query_parser";
 import { as_note_path, type VaultId } from "$lib/shared/types/ids";

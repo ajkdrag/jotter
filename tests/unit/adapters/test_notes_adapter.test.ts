@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { create_test_notes_adapter } from "$lib/shared/adapters/test/test_notes_adapter";
+import { create_test_notes_adapter } from "../../helpers/adapters/test_notes_adapter";
 import {
   as_markdown_text,
   as_note_path,

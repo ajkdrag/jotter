@@ -6,4 +6,9 @@ export { create_git_tauri_adapter } from "$lib/features/git/adapters/git_tauri_a
 export { default as GitStatusWidget } from "$lib/features/git/ui/git_status_widget.svelte";
 export { default as VersionHistoryDialog } from "$lib/features/git/ui/version_history_dialog.svelte";
 export { default as CheckpointDialog } from "$lib/features/git/ui/checkpoint_dialog.svelte";
-export type { GitStatus, GitCommit, GitDiff } from "$lib/shared/types/git";
+export type {
+  GitSyncStatus,
+  GitStatus,
+  GitCommit,
+  GitDiff,
+} from "$lib/features/git/types/git";

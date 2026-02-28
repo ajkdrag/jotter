@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "$lib/shared/types/command_palette";
+import type { CommandDefinition } from "$lib/features/search/types/command_palette";
 
 export const COMMANDS_REGISTRY: CommandDefinition[] = [
   {

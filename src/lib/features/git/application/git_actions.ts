@@ -1,6 +1,6 @@
 import type { ActionRegistrationInput } from "$lib/app/action_registry/action_registration_input";
 import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
-import type { GitDiff } from "$lib/shared/types/git";
+import type { GitDiff } from "$lib/features/git/types/git";
 import { toast } from "svelte-sonner";
 
 type CommitSelectionPayload = {

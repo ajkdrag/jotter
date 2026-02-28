@@ -19,7 +19,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import type { OmnibarItem, OmnibarScope } from "$lib/shared/types/search";
   import type { NoteMeta } from "$lib/shared/types/note";
-  import type { CommandIcon as CommandIconType } from "$lib/shared/types/command_palette";
+  import type { CommandIcon as CommandIconType } from "$lib/features/search/types/command_palette";
   import { COMMANDS_REGISTRY } from "$lib/features/search/domain/search_commands";
   import type { Component } from "svelte";
 

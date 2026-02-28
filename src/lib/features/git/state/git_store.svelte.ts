@@ -1,4 +1,8 @@
-import type { GitSyncStatus, GitCommit, GitDiff } from "$lib/shared/types/git";
+import type {
+  GitSyncStatus,
+  GitCommit,
+  GitDiff,
+} from "$lib/features/git/types/git";
 
 export class GitStore {
   enabled = $state(false);

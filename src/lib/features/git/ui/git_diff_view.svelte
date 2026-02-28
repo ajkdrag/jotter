@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GitDiff } from "$lib/shared/types/git";
+  import type { GitDiff } from "$lib/features/git/types/git";
 
   interface Props {
     diff: GitDiff | null;

@@ -1,5 +1,9 @@
 import type { VaultPath } from "$lib/shared/types/ids";
-import type { GitCommit, GitDiff, GitStatus } from "$lib/shared/types/git";
+import type {
+  GitCommit,
+  GitDiff,
+  GitStatus,
+} from "$lib/features/git/types/git";
 
 export interface GitPort {
   has_repo(vault_path: VaultPath): Promise<boolean>;

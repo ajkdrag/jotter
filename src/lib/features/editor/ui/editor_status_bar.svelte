@@ -4,7 +4,7 @@
   import { format_relative_time } from "$lib/shared/utils/relative_time";
   import type { CursorInfo } from "$lib/shared/types/editor";
   import type { IndexProgress } from "$lib/features/search";
-  import type { GitSyncStatus } from "$lib/shared/types/git";
+  import type { GitSyncStatus } from "$lib/features/git";
 
   interface Props {
     cursor_info: CursorInfo | null;
