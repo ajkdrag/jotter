@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { SearchService } from "$lib/services/search_service";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
-import type { PlannedLinkSuggestion, WikiSuggestion } from "$lib/types/search";
+import { SearchService } from "$lib/features/search/application/search_service";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import {
+  as_note_path,
+  as_vault_id,
+  as_vault_path,
+} from "$lib/shared/types/ids";
+import type {
+  PlannedLinkSuggestion,
+  WikiSuggestion,
+} from "$lib/shared/types/search";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 function create_deferred<T>() {

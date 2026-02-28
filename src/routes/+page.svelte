@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { create_prod_ports } from "$lib/adapters/create_prod_ports";
-  import { create_app_context } from "$lib/di/create_app_context";
-  import { provide_app_context } from "$lib/context/app_context.svelte";
-  import AppShell from "$lib/components/app_shell.svelte";
+  import { create_prod_ports } from "$lib/app/create_prod_ports";
+  import { create_app_context } from "$lib/app/di/create_app_context";
+  import { provide_app_context } from "$lib/app/context/app_context.svelte";
+  import { AppShell } from "$lib/app";
 
   const ports = create_prod_ports();
 

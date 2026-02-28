@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { SettingsService } from "$lib/services/settings_service";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { as_vault_id } from "$lib/types/ids";
-import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
+import { SettingsService } from "$lib/features/settings/application/settings_service";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import { as_vault_id } from "$lib/shared/types/ids";
+import { DEFAULT_EDITOR_SETTINGS } from "$lib/shared/types/editor_settings";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 const VAULT_ID = as_vault_id("vault-a");

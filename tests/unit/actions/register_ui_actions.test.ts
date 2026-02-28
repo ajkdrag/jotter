@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { ActionRegistry } from "$lib/actions/registry";
-import { ACTION_IDS } from "$lib/actions/action_ids";
-import { register_ui_actions } from "$lib/actions/register_ui_actions";
-import { UIStore } from "$lib/stores/ui_store.svelte";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { SearchStore } from "$lib/stores/search_store.svelte";
-import { TabStore } from "$lib/stores/tab_store.svelte";
-import { GitStore } from "$lib/stores/git_store.svelte";
+import { ActionRegistry } from "$lib/app/action_registry/action_registry";
+import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
+import { register_ui_actions } from "$lib/app/orchestration/ui_actions";
+import { UIStore } from "$lib/app/orchestration/ui_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import { SearchStore } from "$lib/features/search/state/search_store.svelte";
+import { TabStore } from "$lib/features/tab/state/tab_store.svelte";
+import { GitStore } from "$lib/features/git/state/git_store.svelte";
 
 describe("register_ui_actions", () => {
   it("opens and closes vault dashboard", async () => {

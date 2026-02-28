@@ -3,8 +3,8 @@ import {
   clamp_vault_selection,
   duplicate_vault_names,
   move_vault_selection,
-} from "$lib/domain/vault_switcher";
-import { as_vault_id, as_vault_path } from "$lib/types/ids";
+} from "$lib/features/vault/domain/vault_switcher";
+import { as_vault_id, as_vault_path } from "$lib/shared/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 describe("vault_switcher", () => {

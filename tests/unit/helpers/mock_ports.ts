@@ -1,21 +1,21 @@
-import type { VaultPort } from "$lib/ports/vault_port";
-import type { NotesPort, FolderStats } from "$lib/ports/notes_port";
-import type { WorkspaceIndexPort } from "$lib/ports/workspace_index_port";
-import type { IndexChange } from "$lib/ports/workspace_index_port";
+import type { VaultPort } from "$lib/features/vault/ports";
+import type { NotesPort, FolderStats } from "$lib/features/note/ports";
+import type { WorkspaceIndexPort } from "$lib/features/search/ports";
+import type { IndexChange } from "$lib/features/search/ports";
 import type {
   VaultId,
   VaultPath,
   NotePath,
   NoteId,
   MarkdownText,
-} from "$lib/types/ids";
-import type { Vault } from "$lib/types/vault";
-import type { NoteMeta } from "$lib/types/note";
+} from "$lib/shared/types/ids";
+import type { Vault } from "$lib/shared/types/vault";
+import type { NoteMeta } from "$lib/shared/types/note";
 import type {
   FolderContents,
   MoveItem,
   MoveItemResult,
-} from "$lib/types/filetree";
+} from "$lib/shared/types/filetree";
 
 export function create_mock_vault_port(): VaultPort & {
   _calls: {

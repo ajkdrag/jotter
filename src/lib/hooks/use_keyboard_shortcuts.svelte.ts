@@ -1,6 +1,6 @@
-import type { HotkeyConfig } from "$lib/types/hotkey_config";
-import type { ActionRegistry } from "$lib/actions/registry";
-import { normalize_event_to_key } from "$lib/domain/hotkey_validation";
+import type { HotkeyConfig } from "$lib/features/hotkey";
+import type { ActionRegistry } from "$lib/app";
+import { normalize_event_to_key } from "$lib/features/hotkey";
 
 export type KeyboardShortcuts = {
   handle_keydown_capture: (event: KeyboardEvent) => void;

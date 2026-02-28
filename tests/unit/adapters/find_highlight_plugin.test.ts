@@ -5,7 +5,7 @@ import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import {
   create_find_highlight_prose_plugin,
   find_highlight_plugin_key,
-} from "$lib/adapters/editor/find_highlight_plugin";
+} from "$lib/features/editor/adapters/find_highlight_plugin";
 
 function create_simple_schema() {
   const doc = { content: "block+" } as const;

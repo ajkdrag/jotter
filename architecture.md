@@ -60,7 +60,7 @@ Most user-triggered operations follow this loop:
 
 ## State ownership
 
-### Domain state (`src/lib/stores`)
+### Domain state (`src/lib/features/*/state/*_store.svelte.ts`)
 
 - `vault_store.svelte.ts`
 - `notes_store.svelte.ts`
@@ -75,7 +75,7 @@ Rules:
 - no async/await in stores
 - no imports from services, adapters, reactors, or UI components
 
-### App UI state (`src/lib/stores/ui_store.svelte.ts`)
+### App UI state (`src/lib/app/orchestration/ui_store.svelte.ts`)
 
 Owns ephemeral cross-screen UI state:
 
@@ -90,7 +90,7 @@ Rules:
 - UI-only state lives here
 - service/or action updates are explicit
 
-### Operation state (`src/lib/stores/op_store.svelte.ts`)
+### Operation state (`src/lib/app/orchestration/op_store.svelte.ts`)
 
 Owns async operation status by key (`pending`, `success`, `error`) and error messages.
 
@@ -113,11 +113,11 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 | **Reactors**         | Cross-cutting reactive side effects                                      | Observes store state → calls service. Never writes to stores directly. All registered in `reactors/index.ts`. |
 | **Action Registry**  | Discoverable, triggerable actions                                        | Maps action IDs to service calls. Used by UI, shortcuts, command palette, Tauri menu.                         |
 
-### `src/lib/types`
+### `src/lib/shared/types`
 
 - shared domain and UI-safe types only
 
-### `src/lib/utils`
+### `src/lib/shared/utils`
 
 - pure, domain-agnostic utility functions
 - no business logic or domain knowledge
@@ -125,39 +125,26 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 - stores can import from utils
 - examples: `format_bytes`, `count_words`, `error_message`, `parent_folder_path`
 
-### `src/lib/domain`
+### `src/lib/features/*/domain`
 
-- domain-aware utility functions with business logic
-- works with domain types (NoteMeta, NotePath, etc.)
-- contains domain rules and transformations
-- stores cannot import from domain
-- examples: `extract_note_title`, `wiki_link`, `sanitize_note_name`, `search_query_parser`, `note_path_exists`, `default_hotkeys`
+- feature-specific business rules and transformations
+- pure logic only (no IO, no framework runtime coupling)
+- cross-feature consumers should import via feature entrypoints, not deep paths
 
-### `src/lib/ports`
+### `src/lib/features/*/ports.ts`
 
-- interface contracts for IO boundaries only
+- each feature owns its own IO contracts
+- ports are imported through feature entrypoints across feature boundaries
+- app DI uses `src/lib/app/di/app_ports.ts` to compose the full runtime port set
 
-### `src/lib/adapters`
+### `src/lib/shared/adapters`
 
 - concrete tauri/test implementations of ports (e.g. `editor/`, `tauri/`, `shared/`, `test/`)
 
-### `src/lib/db`
+### `src/lib/shared/db`
 
 - search schema and query constants (SQL, BM25 weights)
 - used by search adapters for FTS index
-
-### `src/lib/stores`
-
-- synchronous app state classes
-- can import from `utils` (pure utilities)
-- cannot import from `domain` (business logic)
-
-### `src/lib/services`
-
-- async use-case orchestration
-- IO via ports only
-- writes state via domain store + `op_store` methods only
-- never imports `ui_store`; UI orchestration stays in actions/components
 
 ### `src/lib/reactors`
 
@@ -165,22 +152,26 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 - must not directly mutate stores
 - call services or pure utilities instead
 
-### `src/lib/actions`
+### `src/lib/features`
 
-- typed action IDs + registry + domain registration modules
-- central place for user-triggerable intents (clicks, shortcuts, palette, menu equivalents)
-- owns cross-cutting UI workflow state (dialogs, pending flags, selection state) driven by service outcomes
+- feature-first vertical slices (`note`, `search`, `vault`, etc.)
+- each feature owns its local `application/`, `state/`, optional `domain/`, `ports.ts`, `adapters/`, and `ui/`
+- each feature exposes a stable public surface through `src/lib/features/<feature>/index.ts`
+- cross-feature imports must go through feature entrypoints, not deep file paths
 
-### `src/lib/components`
+### `src/lib/features/*/ui`
 
+- feature-scoped UI components live with their feature
 - render from stores
 - trigger behavior via `action_registry.execute(...)`
 - no direct port or adapter usage
 
-### `src/lib/di` + `src/lib/context`
+### `src/lib/app`
 
-- composition root and context provision
-- wire ports, stores, services, actions, reactors
+- `bootstrap/`: app shell composition + store creation
+- `action_registry/`: global action IDs, registry, and registration
+- `orchestration/`: app-level actions + UI/op stores
+- `di/` + `context/`: app wiring and context provision
 
 ## Folder structure
 
@@ -189,20 +180,12 @@ Purely local visual concerns remain inside components (`$state`, `$derived`, loc
 ```
 src/
 ├── lib/
-│   ├── types/           # Shared domain and UI-safe types
-│   ├── ports/           # Interface contracts for IO boundaries
-│   ├── adapters/        # Concrete tauri/test implementations (editor/, tauri/, shared/, test/)
-│   ├── db/              # Search schema and query constants
-│   ├── stores/          # Synchronous app state classes
-│   ├── services/        # Async use-case orchestration
+│   ├── app/             # App bootstrap + action registry + context + orchestration
+│   ├── shared/          # Cross-feature foundations (types, utils, adapters, constants, db)
 │   ├── reactors/        # Persistent observers; index.ts registers all
-│   ├── actions/         # Action registry + per-domain action registrations
-│   ├── components/      # App Svelte components (pages, panels, modals)
-│   ├── di/              # Composition root
-│   ├── context/         # Context provision (app_context.svelte)
+│   ├── features/        # Feature-first modules (application, state, adapters, ui, entrypoint)
+│   ├── components/      # Shared UI system components (shadcn primitives)
 │   ├── hooks/           # Shared hooks (keyboard shortcuts, external links)
-│   ├── domain/          # Domain-aware utilities
-│   ├── utils/           # Pure, domain-agnostic utilities
 │   └── ...
 ├── routes/              # Entrypoint (+page.svelte)
 └── ...
@@ -234,6 +217,35 @@ src-tauri/src/
 └── tests/
     └── mod.rs           # Integration test modules linked via #[path] to top-level tests/
 ```
+
+### Cross-runtime feature organization
+
+Use one feature model across runtimes, but keep two physical roots:
+
+- frontend: `src/lib/features/<feature>`
+- native: `src-tauri/src/features/<feature>`
+
+This is the default because it is the least surprising setup for SvelteKit + Tauri contributors and tooling.
+
+Treat each feature as one vertical capability split across two runtime implementations:
+
+```
+feature "<name>"
+├── src/lib/features/<name>/...           # TS stores/services/actions/ui/adapters
+└── src-tauri/src/features/<name>/...     # Rust tauri command handlers + native state
+```
+
+#### Why not a single physical `src/` for TS + Rust?
+
+Although Tauri can be configured with custom app/frontend paths, collapsing Rust and TS into one physical source tree is non-standard and raises contributor/tooling surprise (IDE indexing, lint scopes, build scripts, and onboarding expectations). Keep physical separation, enforce conceptual unification.
+
+#### Cross-runtime invariants
+
+1. Feature names should match across TS and Rust when they represent the same capability (`vault`, `search`, `git`, etc.).
+2. TS feature code calls native code only through feature adapters (`src/lib/features/*/adapters/*_tauri_adapter.ts`).
+3. Rust feature modules expose only `#[tauri::command]` functions; no direct frontend coupling.
+4. Cross-feature calls in TS must use feature entrypoints (`src/lib/features/<feature>/index.ts`) and must not deep-import internals.
+5. Cross-feature calls in Rust must go through explicit module APIs; shared cross-feature code belongs in `src-tauri/src/shared`.
 
 ## Backend architecture (Rust / Tauri)
 
@@ -411,11 +423,13 @@ Current rules include:
 - `components` cannot import ports/adapters/services/reactors
 - `stores` cannot import ports/adapters/services/reactors/actions/components/domain and cannot use `async`/`await`
 - `stores` can import from `utils` (pure utilities only)
+- feature `ports.ts` files are treated as `ports` layer for lint rules
 - `services` cannot import adapters/components/reactors and cannot use `$effect`
 - `services` cannot import `ui_store.svelte`
 - `reactors` cannot import adapters/components and should not use inline `await`
 - `actions` cannot import ports/adapters/components
 - `routes` cannot import ports/services/stores/reactors/actions and should use context helpers
+- cross-feature deep imports are disallowed; import other features through feature entrypoints
 
 ## Validation
 

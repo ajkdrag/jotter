@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { LinksStore } from "$lib/stores/links_store.svelte";
-import type { NoteId, NotePath } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
-import type { OrphanLink } from "$lib/types/search";
+import { LinksStore } from "$lib/features/links/state/links_store.svelte";
+import type { NoteId, NotePath } from "$lib/shared/types/ids";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { OrphanLink } from "$lib/shared/types/search";
 
 function note(path: string): NoteMeta {
   return {

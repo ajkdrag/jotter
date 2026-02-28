@@ -1,8 +1,8 @@
-import type { NotesStore } from "$lib/stores/notes_store.svelte";
-import type { VaultStore } from "$lib/stores/vault_store.svelte";
-import type { VaultService } from "$lib/services/vault_service";
-import type { NoteMeta } from "$lib/types/note";
-import type { VaultId } from "$lib/types/ids";
+import type { NotesStore } from "$lib/features/note";
+import type { VaultStore } from "$lib/features/vault";
+import type { VaultService } from "$lib/features/vault";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { VaultId } from "$lib/shared/types/ids";
 
 const RECENT_NOTES_PERSIST_DELAY_MS = 1000;
 

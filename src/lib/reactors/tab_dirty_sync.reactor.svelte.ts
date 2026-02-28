@@ -1,8 +1,8 @@
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { TabStore } from "$lib/stores/tab_store.svelte";
-import type { TabService } from "$lib/services/tab_service";
-import type { OpenNoteState } from "$lib/types/editor";
-import type { Tab } from "$lib/types/tab";
+import type { EditorStore } from "$lib/features/editor";
+import type { TabStore } from "$lib/features/tab";
+import type { TabService } from "$lib/features/tab";
+import type { OpenNoteState } from "$lib/shared/types/editor";
+import type { Tab } from "$lib/features/tab";
 
 export function resolve_tab_dirty_sync(
   open_note: OpenNoteState | null,

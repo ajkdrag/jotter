@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { TabService } from "$lib/services/tab_service";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { TabStore } from "$lib/stores/tab_store.svelte";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import { as_note_path, as_vault_id } from "$lib/types/ids";
-import type { CursorInfo } from "$lib/types/editor";
-import type { PersistedTabState } from "$lib/types/tab";
+import { TabService } from "$lib/features/tab/application/tab_service";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { TabStore } from "$lib/features/tab/state/tab_store.svelte";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import { as_note_path, as_vault_id } from "$lib/shared/types/ids";
+import type { CursorInfo } from "$lib/shared/types/editor";
+import type { PersistedTabState } from "$lib/features/tab";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 function create_setup() {

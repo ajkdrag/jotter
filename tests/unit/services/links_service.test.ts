@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { LinksService } from "$lib/services/links_service";
-import { LinksStore } from "$lib/stores/links_store.svelte";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { as_note_path } from "$lib/types/ids";
+import { LinksService } from "$lib/features/links/application/links_service";
+import { LinksStore } from "$lib/features/links/state/links_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { as_note_path } from "$lib/shared/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
-import type { NoteMeta } from "$lib/types/note";
-import type { OrphanLink } from "$lib/types/search";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { OrphanLink } from "$lib/shared/types/search";
 
 function note(path: string): NoteMeta {
   return {

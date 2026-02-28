@@ -2,12 +2,12 @@ import { describe, expect, test } from "vitest";
 import {
   ensure_open_note,
   create_untitled_open_note_in_folder,
-} from "$lib/domain/ensure_open_note";
-import type { Vault } from "$lib/types/vault";
-import type { VaultId, VaultPath, NotePath } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
-import type { OpenNoteState } from "$lib/types/editor";
-import { as_note_path, as_markdown_text } from "$lib/types/ids";
+} from "$lib/features/note";
+import type { Vault } from "$lib/shared/types/vault";
+import type { VaultId, VaultPath, NotePath } from "$lib/shared/types/ids";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { OpenNoteState } from "$lib/shared/types/editor";
+import { as_note_path, as_markdown_text } from "$lib/shared/types/ids";
 
 describe("ensure_open_note", () => {
   test("does nothing without vault", () => {

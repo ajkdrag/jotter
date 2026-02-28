@@ -1,6 +1,6 @@
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { LinksService } from "$lib/services/links_service";
+import type { EditorStore } from "$lib/features/editor";
+import type { UIStore } from "$lib/app";
+import type { LinksService } from "$lib/features/links";
 
 const LOCAL_LINKS_DEBOUNCE_MS = 220;
 

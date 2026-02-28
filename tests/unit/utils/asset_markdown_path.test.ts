@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { as_asset_path, as_note_path } from "$lib/types/ids";
+import { as_asset_path, as_note_path } from "$lib/shared/types/ids";
 import {
   resolve_relative_asset_path,
   to_markdown_asset_target,
-} from "$lib/domain/asset_markdown_path";
+} from "$lib/features/note";
 
 describe("to_markdown_asset_target", () => {
   it("builds relative path for same folder assets", () => {

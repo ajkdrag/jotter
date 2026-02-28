@@ -3,7 +3,7 @@ import {
   resolve_editor_sync_open,
   resolve_editor_sync_restore_policy,
 } from "$lib/reactors/editor_sync.reactor.svelte";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
 
 function open_note(buffer_id: string) {
   return {

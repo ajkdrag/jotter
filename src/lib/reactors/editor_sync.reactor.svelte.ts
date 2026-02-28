@@ -1,6 +1,6 @@
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { EditorService } from "$lib/services/editor_service";
-import type { BufferRestorePolicy } from "$lib/ports/editor_port";
+import type { EditorStore } from "$lib/features/editor";
+import type { EditorService } from "$lib/features/editor";
+import type { BufferRestorePolicy } from "$lib/features/editor";
 
 export function resolve_editor_sync_open(input: {
   open_note_id: string;

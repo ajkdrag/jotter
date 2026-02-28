@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { create_test_settings_adapter } from "$lib/adapters/test/test_settings_adapter";
+import { create_test_settings_adapter } from "$lib/shared/adapters/test/test_settings_adapter";
 
 describe("test_settings_adapter", () => {
   it("stores and retrieves settings", async () => {

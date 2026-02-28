@@ -1,8 +1,8 @@
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { SearchStore } from "$lib/stores/search_store.svelte";
-import type { LinksService } from "$lib/services/links_service";
-import type { LinksStore } from "$lib/stores/links_store.svelte";
+import type { EditorStore } from "$lib/features/editor";
+import type { UIStore } from "$lib/app";
+import type { SearchStore } from "$lib/features/search";
+import type { LinksService } from "$lib/features/links";
+import type { LinksStore } from "$lib/features/links";
 
 type BacklinksSyncState = {
   last_note_path: string | null;

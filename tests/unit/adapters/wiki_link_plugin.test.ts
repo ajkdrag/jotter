@@ -9,8 +9,8 @@ import {
 import {
   create_wiki_link_converter_prose_plugin,
   wiki_link_plugin_key,
-} from "$lib/adapters/editor/wiki_link_plugin";
-import { dirty_state_plugin_key } from "$lib/adapters/editor/dirty_state_plugin";
+} from "$lib/features/editor/adapters/wiki_link_plugin";
+import { dirty_state_plugin_key } from "$lib/features/editor/adapters/dirty_state_plugin";
 import type {
   MarkType,
   Node as ProseNode,

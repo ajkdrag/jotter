@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EditorPort, EditorSession } from "$lib/ports/editor_port";
-import { EditorService } from "$lib/services/editor_service";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import type { OpenNoteState } from "$lib/types/editor";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
+import type { EditorPort, EditorSession } from "$lib/features/editor/ports";
+import { EditorService } from "$lib/features/editor/application/editor_service";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import type { OpenNoteState } from "$lib/shared/types/editor";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 function create_open_note(note_path: string, markdown: string): OpenNoteState {

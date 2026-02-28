@@ -1,7 +1,7 @@
-import type { TabStore } from "$lib/stores/tab_store.svelte";
-import type { VaultStore } from "$lib/stores/vault_store.svelte";
-import type { TabService } from "$lib/services/tab_service";
-import type { VaultId } from "$lib/types/ids";
+import type { TabStore } from "$lib/features/tab";
+import type { VaultStore } from "$lib/features/vault";
+import type { TabService } from "$lib/features/tab";
+import type { VaultId } from "$lib/shared/types/ids";
 
 const TAB_PERSIST_DELAY_MS = 1000;
 

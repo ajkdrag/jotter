@@ -4,27 +4,22 @@ import path from "node:path";
 const project_root = process.cwd();
 
 const source_extensions = new Set([".ts", ".js", ".mjs", ".cjs", ".svelte"]);
+const feature_root = path.join(project_root, "src/lib/features");
 
 const layering_roots = {
   components: path.join(project_root, "src/lib/components"),
-  stores: path.join(project_root, "src/lib/stores"),
-  services: path.join(project_root, "src/lib/services"),
   reactors: path.join(project_root, "src/lib/reactors"),
-  actions: path.join(project_root, "src/lib/actions"),
+  features: feature_root,
+  app: path.join(project_root, "src/lib/app"),
   routes: path.join(project_root, "src/routes"),
 };
 
 const internal_roots = {
-  ports: path.join(project_root, "src/lib/ports"),
-  adapters: path.join(project_root, "src/lib/adapters"),
-  stores: path.join(project_root, "src/lib/stores"),
-  services: path.join(project_root, "src/lib/services"),
+  adapters: path.join(project_root, "src/lib/shared/adapters"),
   reactors: path.join(project_root, "src/lib/reactors"),
-  actions: path.join(project_root, "src/lib/actions"),
   components: path.join(project_root, "src/lib/components"),
-  utils: path.join(project_root, "src/lib/utils"),
-  domain: path.join(project_root, "src/lib/domain"),
-  types: path.join(project_root, "src/lib/types"),
+  utils: path.join(project_root, "src/lib/shared/utils"),
+  types: path.join(project_root, "src/lib/shared/types"),
 };
 
 const layer_rules = [
@@ -160,6 +155,31 @@ function categorize_import(file_path, import_path) {
   const resolved = resolve_internal_import(file_path, import_path);
   if (!resolved) return null;
 
+  if (path_in_dir(resolved, feature_root)) {
+    if (resolved.includes(`${path.sep}domain${path.sep}`)) {
+      return "domain";
+    }
+    const base_name = path.basename(resolved);
+    if (base_name === "ports.ts") {
+      return "ports";
+    }
+    if (/_store\.svelte\.ts$/.test(base_name)) {
+      return "stores";
+    }
+    if (/_service\.ts$/.test(base_name)) {
+      return "services";
+    }
+    if (
+      /_actions\.ts$/.test(base_name) ||
+      base_name === "action_ids.ts" ||
+      base_name === "action_registry.ts" ||
+      base_name === "register_actions.ts" ||
+      base_name === "action_registration_input.ts"
+    ) {
+      return "actions";
+    }
+  }
+
   for (const [category, root_path] of Object.entries(internal_roots)) {
     if (path_in_dir(resolved, root_path)) return category;
   }
@@ -198,10 +218,49 @@ function relative_path(file_path) {
   return path.relative(project_root, file_path).split(path.sep).join("/");
 }
 
+function feature_name_from_file(file_path) {
+  if (!path_in_dir(file_path, feature_root)) {
+    return null;
+  }
+
+  const relative = path.relative(feature_root, file_path);
+  const [feature_name] = relative.split(path.sep);
+  return feature_name || null;
+}
+
+function files_for_layer(layer) {
+  if (layer === "stores") {
+    return list_source_files(layering_roots.features).filter((file_path) =>
+      /_store\.svelte\.ts$/.test(file_path),
+    );
+  }
+
+  if (layer === "services") {
+    return list_source_files(layering_roots.features).filter((file_path) =>
+      /_service\.ts$/.test(file_path),
+    );
+  }
+
+  if (layer === "actions") {
+    return list_source_files(layering_roots.features).filter((file_path) => {
+      const base_name = path.basename(file_path);
+      return (
+        /_actions\.ts$/.test(base_name) ||
+        base_name === "action_ids.ts" ||
+        base_name === "action_registry.ts" ||
+        base_name === "register_actions.ts" ||
+        base_name === "action_registration_input.ts"
+      );
+    });
+  }
+
+  return list_source_files(layering_roots[layer]);
+}
+
 const violations = [];
 
 for (const rule of layer_rules) {
-  const files = list_source_files(layering_roots[rule.layer]);
+  const files = files_for_layer(rule.layer);
 
   for (const file_path of files) {
     const content = fs.readFileSync(file_path, "utf8");
@@ -230,6 +289,42 @@ for (const rule of layer_rules) {
       }
       pattern.regex.lastIndex = 0;
     }
+  }
+}
+
+const import_policy_roots = [
+  path.join(project_root, "src/lib"),
+  path.join(project_root, "src/routes"),
+];
+const import_policy_files = import_policy_roots.flatMap((dir_path) =>
+  list_source_files(dir_path),
+);
+
+for (const file_path of import_policy_files) {
+  const source_feature_name = feature_name_from_file(file_path);
+  const content = fs.readFileSync(file_path, "utf8");
+  const imports = extract_imports(content);
+
+  for (const current_import of imports) {
+    const deep_feature_match = /^\$lib\/features\/([^/]+)\/.+/.exec(
+      current_import.module,
+    );
+    if (!deep_feature_match) {
+      continue;
+    }
+
+    const target_feature_name = deep_feature_match[1];
+    if (source_feature_name && source_feature_name === target_feature_name) {
+      continue;
+    }
+
+    violations.push({
+      file: relative_path(file_path),
+      line: line_number(content, current_import.index),
+      message:
+        `cross-feature deep import is not allowed (${current_import.module}); ` +
+        "import through feature entrypoints (`$lib/features/<feature>`) outside the owning feature",
+    });
   }
 }
 

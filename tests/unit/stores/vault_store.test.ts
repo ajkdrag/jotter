@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
 import { create_test_vault } from "../helpers/test_fixtures";
-import { as_vault_id } from "$lib/types/ids";
+import { as_vault_id } from "$lib/shared/types/ids";
 
 describe("VaultStore", () => {
   it("sets and clears vault while updating generation", () => {

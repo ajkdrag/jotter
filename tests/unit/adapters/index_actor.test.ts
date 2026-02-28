@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { create_index_actor } from "$lib/adapters/shared/index_actor";
-import { as_note_path, as_vault_id } from "$lib/types/ids";
+import { create_index_actor } from "$lib/features/search/adapters/index_actor";
+import { as_note_path, as_vault_id } from "$lib/shared/types/ids";
 
 function create_deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;

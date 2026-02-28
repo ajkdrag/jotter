@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { count_words } from "$lib/utils/count_words";
+import { count_words } from "$lib/shared/utils/count_words";
 
 describe("count_words", () => {
   it("counts words across whitespace", () => {

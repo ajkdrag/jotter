@@ -1,5 +1,5 @@
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { SettingsService } from "$lib/services/settings_service";
+import type { UIStore } from "$lib/app";
+import type { SettingsService } from "$lib/features/settings";
 
 const PERSIST_DELAY_MS = 1000;
 

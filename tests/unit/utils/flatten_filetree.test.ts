@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { flatten_filetree } from "$lib/domain/flatten_filetree";
-import { as_note_path } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
-import type { FolderLoadState } from "$lib/types/filetree";
+import { flatten_filetree } from "$lib/features/folder";
+import { as_note_path } from "$lib/shared/types/ids";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { FolderLoadState } from "$lib/shared/types/filetree";
 
 function make_note(path: string, title?: string): NoteMeta {
   return {

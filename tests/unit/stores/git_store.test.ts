@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GitStore } from "$lib/stores/git_store.svelte";
+import { GitStore } from "$lib/features/git/state/git_store.svelte";
 
 describe("GitStore", () => {
   it("starts disabled with default values", () => {

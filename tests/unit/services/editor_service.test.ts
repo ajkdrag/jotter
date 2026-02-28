@@ -4,16 +4,16 @@ import type {
   EditorPort,
   EditorSession,
   EditorSessionConfig,
-} from "$lib/ports/editor_port";
+} from "$lib/features/editor/ports";
 import {
   EditorService,
   type EditorServiceCallbacks,
-} from "$lib/services/editor_service";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import type { OpenNoteState, CursorInfo } from "$lib/types/editor";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
+} from "$lib/features/editor/application/editor_service";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import type { OpenNoteState, CursorInfo } from "$lib/shared/types/editor";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 function create_open_note(note_path: string, markdown: string): OpenNoteState {

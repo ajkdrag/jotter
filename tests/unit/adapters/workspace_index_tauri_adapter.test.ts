@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { create_workspace_index_tauri_adapter } from "$lib/adapters/tauri/workspace_index_tauri_adapter";
-import { as_note_path, as_vault_id } from "$lib/types/ids";
+import { create_workspace_index_tauri_adapter } from "$lib/features/search/adapters/workspace_index_tauri_adapter";
+import { as_note_path, as_vault_id } from "$lib/shared/types/ids";
 
 const { tauri_invoke_mock } = vi.hoisted(() => ({
   tauri_invoke_mock: vi.fn().mockResolvedValue(undefined),
@@ -9,7 +9,7 @@ const { listen_mock } = vi.hoisted(() => ({
   listen_mock: vi.fn(),
 }));
 
-vi.mock("$lib/adapters/tauri/tauri_invoke", () => ({
+vi.mock("$lib/shared/adapters/tauri_invoke", () => ({
   tauri_invoke: tauri_invoke_mock,
 }));
 vi.mock("@tauri-apps/api/event", () => ({

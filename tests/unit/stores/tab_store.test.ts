@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { TabStore } from "$lib/stores/tab_store.svelte";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
-import type { OpenNoteState } from "$lib/types/editor";
-import type { NotePath } from "$lib/types/ids";
+import { TabStore } from "$lib/features/tab/state/tab_store.svelte";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
+import type { OpenNoteState } from "$lib/shared/types/editor";
+import type { NotePath } from "$lib/shared/types/ids";
 
 function np(path: string): NotePath {
   return as_note_path(path);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitize_note_name } from "$lib/domain/sanitize_note_name";
+import { sanitize_note_name } from "$lib/features/note/domain/sanitize_note_name";
 
 describe("sanitize_note_name", () => {
   it("returns Untitled.md for empty input", () => {

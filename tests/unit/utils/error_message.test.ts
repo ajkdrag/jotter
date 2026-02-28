@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { error_message } from "$lib/utils/error_message";
+import { error_message } from "$lib/shared/utils/error_message";
 
 describe("error_message", () => {
   it("extracts message from Error instances", () => {

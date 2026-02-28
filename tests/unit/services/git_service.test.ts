@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { GitService } from "$lib/services/git_service";
-import { GitStore } from "$lib/stores/git_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import type { GitPort } from "$lib/ports/git_port";
+import { GitService } from "$lib/features/git/application/git_service";
+import { GitStore } from "$lib/features/git/state/git_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import type { GitPort } from "$lib/features/git/ports";
 import { create_test_vault } from "../helpers/test_fixtures";
 
 function create_mock_port() {

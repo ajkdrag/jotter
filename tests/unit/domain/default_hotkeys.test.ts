@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
-import { is_valid_hotkey } from "$lib/domain/hotkey_validation";
-import type { HotkeyCategory } from "$lib/types/hotkey_config";
+import { DEFAULT_HOTKEYS } from "$lib/features/hotkey";
+import { is_valid_hotkey } from "$lib/features/hotkey";
+import type { HotkeyCategory } from "$lib/features/hotkey";
 
 describe("DEFAULT_HOTKEYS", () => {
   it("has at least 15 default bindings", () => {

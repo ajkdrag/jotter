@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   count_index_workset_items,
   reduce_index_changes,
-} from "$lib/domain/index_workset";
-import { as_note_path } from "$lib/types/ids";
+} from "$lib/features/search/domain/index_workset";
+import { as_note_path } from "$lib/shared/types/ids";
 
 describe("index_workset", () => {
   it("keeps only remove for conflicting path updates", () => {

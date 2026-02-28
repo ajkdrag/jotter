@@ -1,8 +1,13 @@
-import type { Vault } from "$lib/types/vault";
-import type { NoteMeta } from "$lib/types/note";
-import type { OpenNoteState } from "$lib/types/editor";
-import type { VaultId, VaultPath, NoteId, NotePath } from "$lib/types/ids";
-import { as_markdown_text } from "$lib/types/ids";
+import type { Vault } from "$lib/shared/types/vault";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { OpenNoteState } from "$lib/shared/types/editor";
+import type {
+  VaultId,
+  VaultPath,
+  NoteId,
+  NotePath,
+} from "$lib/shared/types/ids";
+import { as_markdown_text } from "$lib/shared/types/ids";
 
 export function create_test_vault(overrides?: Partial<Vault>): Vault {
   return {

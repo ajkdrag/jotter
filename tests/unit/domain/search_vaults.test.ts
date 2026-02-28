@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { search_vaults } from "$lib/domain/search_vaults";
-import { as_vault_id, as_vault_path } from "$lib/types/ids";
+import { search_vaults } from "$lib/features/vault/domain/search_vaults";
+import { as_vault_id, as_vault_path } from "$lib/shared/types/ids";
 
 describe("search_vaults", () => {
   const vaults = [

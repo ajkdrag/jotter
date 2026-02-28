@@ -1,7 +1,7 @@
-import type { NotesStore } from "$lib/stores/notes_store.svelte";
-import type { VaultStore } from "$lib/stores/vault_store.svelte";
-import type { VaultService } from "$lib/services/vault_service";
-import type { VaultId } from "$lib/types/ids";
+import type { NotesStore } from "$lib/features/note";
+import type { VaultStore } from "$lib/features/vault";
+import type { VaultService } from "$lib/features/vault";
+import type { VaultId } from "$lib/shared/types/ids";
 
 const STARRED_PATHS_PERSIST_DELAY_MS = 400;
 

@@ -5,10 +5,10 @@ import {
   is_valid_drop_target,
   move_destination_path,
   sort_tree,
-} from "$lib/domain/filetree";
-import { parent_folder_path } from "$lib/utils/path";
-import type { NoteMeta } from "$lib/types/note";
-import { as_note_path } from "$lib/types/ids";
+} from "$lib/features/folder";
+import { parent_folder_path } from "$lib/shared/utils/path";
+import type { NoteMeta } from "$lib/shared/types/note";
+import { as_note_path } from "$lib/shared/types/ids";
 
 function create_note(path: string, title: string = ""): NoteMeta {
   return {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { otterly_asset_url } from "$lib/domain/asset_url";
-import { as_asset_path, as_vault_id } from "$lib/types/ids";
+import { otterly_asset_url } from "$lib/features/note/domain/asset_url";
+import { as_asset_path, as_vault_id } from "$lib/shared/types/ids";
 
 describe("otterly_asset_url", () => {
   it("encodes asset paths for custom scheme", () => {

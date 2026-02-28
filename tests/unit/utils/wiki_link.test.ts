@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   format_wiki_display,
   format_markdown_link,
-} from "$lib/domain/wiki_link";
+} from "$lib/features/editor/domain/wiki_link";
 
 describe("format_wiki_display", () => {
   it("strips .md from simple path", () => {

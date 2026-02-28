@@ -1,18 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
-import { NoteService } from "$lib/services/note_service";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { as_asset_path, as_markdown_text, as_note_path } from "$lib/types/ids";
+import { NoteService } from "$lib/features/note/application/note_service";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import {
+  as_asset_path,
+  as_markdown_text,
+  as_note_path,
+} from "$lib/shared/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
 import {
   create_mock_index_port,
   create_mock_notes_port,
 } from "../helpers/mock_ports";
-import type { EditorService } from "$lib/services/editor_service";
-import type { AssetsPort } from "$lib/ports/assets_port";
-import type { LinkRepairService } from "$lib/services/link_repair_service";
+import type { EditorService } from "$lib/features/editor/application/editor_service";
+import type { AssetsPort } from "$lib/features/note/ports";
+import type { LinkRepairService } from "$lib/features/links/application/link_repair_service";
 
 function create_deferred<T>() {
   let resolve: (value: T) => void = () => {};

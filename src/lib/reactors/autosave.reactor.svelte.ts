@@ -1,6 +1,6 @@
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { NoteService } from "$lib/services/note_service";
+import type { EditorStore } from "$lib/features/editor";
+import type { UIStore } from "$lib/app";
+import type { NoteService } from "$lib/features/note";
 
 const AUTOSAVE_DELAY_MS = 2000;
 

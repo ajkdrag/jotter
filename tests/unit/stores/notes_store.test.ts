@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import type { NoteMeta } from "$lib/types/note";
-import type { NoteId, NotePath } from "$lib/types/ids";
-import type { FolderContents } from "$lib/types/filetree";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { NoteId, NotePath } from "$lib/shared/types/ids";
+import type { FolderContents } from "$lib/shared/types/filetree";
 
 function note(path: string): NoteMeta {
   return {

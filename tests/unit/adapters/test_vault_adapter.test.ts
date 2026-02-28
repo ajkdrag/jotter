@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { create_test_vault_adapter } from "$lib/adapters/test/test_vault_adapter";
-import { as_vault_path } from "$lib/types/ids";
+import { create_test_vault_adapter } from "$lib/shared/adapters/test/test_vault_adapter";
+import { as_vault_path } from "$lib/shared/types/ids";
 
 describe("test_vault_adapter", () => {
   it("opens vault by path", async () => {

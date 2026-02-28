@@ -6,7 +6,7 @@ import type {
   Node as ProseNode,
   Mark,
 } from "@milkdown/kit/prose/model";
-import { create_markdown_link_input_rule_prose_plugin } from "$lib/adapters/editor/markdown_link_input_rule";
+import { create_markdown_link_input_rule_prose_plugin } from "$lib/features/editor/adapters/markdown_link_input_rule";
 
 function create_schema() {
   const link = {

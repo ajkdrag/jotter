@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cn } from "$lib/utils/component_utils";
+import { cn } from "$lib/shared/utils/component_utils";
 
 describe("cn", () => {
   it("merges class names and removes duplicates", () => {

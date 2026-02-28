@@ -1,14 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { LinkRepairService } from "$lib/services/link_repair_service";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { TabStore } from "$lib/stores/tab_store.svelte";
-import { as_markdown_text, as_note_path, type NoteId } from "$lib/types/ids";
+import { LinkRepairService } from "$lib/features/links/application/link_repair_service";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { TabStore } from "$lib/features/tab/state/tab_store.svelte";
+import {
+  as_markdown_text,
+  as_note_path,
+  type NoteId,
+} from "$lib/shared/types/ids";
 import { create_test_vault } from "../helpers/test_fixtures";
 import {
   create_mock_index_port,
   create_mock_notes_port,
 } from "../helpers/mock_ports";
-import type { SearchPort } from "$lib/ports/search_port";
+import type { SearchPort } from "$lib/features/search/ports";
 
 const VAULT_ID = create_test_vault().id;
 const SOURCE_PATH = "docs/source.md";

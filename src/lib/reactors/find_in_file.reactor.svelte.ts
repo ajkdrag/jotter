@@ -1,5 +1,5 @@
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { EditorService } from "$lib/services/editor_service";
+import type { UIStore } from "$lib/app";
+import type { EditorService } from "$lib/features/editor";
 
 export function create_find_in_file_reactor(
   ui_store: UIStore,

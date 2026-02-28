@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { create_test_notes_adapter } from "$lib/adapters/test/test_notes_adapter";
-import { as_markdown_text, as_note_path, as_vault_id } from "$lib/types/ids";
+import { create_test_notes_adapter } from "$lib/shared/adapters/test/test_notes_adapter";
+import {
+  as_markdown_text,
+  as_note_path,
+  as_vault_id,
+} from "$lib/shared/types/ids";
 
 describe("test_notes_adapter", () => {
   it("lists default notes", async () => {

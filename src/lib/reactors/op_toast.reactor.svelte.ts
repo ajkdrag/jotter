@@ -1,6 +1,6 @@
 import { toast } from "svelte-sonner";
-import type { OpStore } from "$lib/stores/op_store.svelte";
-import { create_logger } from "$lib/utils/logger";
+import type { OpStore } from "$lib/app";
+import { create_logger } from "$lib/shared/utils/logger";
 
 const log = create_logger("op_toast_reactor");
 

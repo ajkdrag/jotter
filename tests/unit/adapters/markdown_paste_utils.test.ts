@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   looks_like_markdown,
   pick_paste_mode,
-} from "$lib/adapters/editor/markdown_paste_utils";
+} from "$lib/features/editor/adapters/markdown_paste_utils";
 
 describe("looks_like_markdown", () => {
   it("detects headings", () => {

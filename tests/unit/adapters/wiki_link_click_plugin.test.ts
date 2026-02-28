@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { create_wiki_link_click_prose_plugin } from "$lib/adapters/editor/wiki_link_plugin";
+import { create_wiki_link_click_prose_plugin } from "$lib/features/editor/adapters/wiki_link_plugin";
 
 class MockElement {
   closest(_selector: string): unknown {

@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { apply_theme } from "$lib/utils/apply_theme";
-import { BUILTIN_NORDIC_DARK, BUILTIN_NORDIC_LIGHT } from "$lib/types/theme";
+import { apply_theme } from "$lib/shared/utils/apply_theme";
+import {
+  BUILTIN_NORDIC_DARK,
+  BUILTIN_NORDIC_LIGHT,
+} from "$lib/shared/types/theme";
 
 describe("apply_theme", () => {
   const original_document = globalThis.document;

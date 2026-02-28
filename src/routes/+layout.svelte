@@ -6,8 +6,8 @@
   import "../styles/editor.css";
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
-  import { create_logger } from "$lib/utils/logger";
-  import { error_message } from "$lib/utils/error_message";
+  import { create_logger } from "$lib/shared/utils/logger";
+  import { error_message } from "$lib/shared/utils/error_message";
   import { onMount } from "svelte";
 
   const log = create_logger("app");

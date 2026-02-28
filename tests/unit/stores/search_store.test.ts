@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { SearchStore } from "$lib/stores/search_store.svelte";
-import type { NoteId, NotePath } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
-import type { OmnibarItem, InFileMatch } from "$lib/types/search";
+import { SearchStore } from "$lib/features/search/state/search_store.svelte";
+import type { NoteId, NotePath } from "$lib/shared/types/ids";
+import type { NoteMeta } from "$lib/shared/types/note";
+import type { OmnibarItem, InFileMatch } from "$lib/shared/types/search";
 
 function note(path: string): NoteMeta {
   return {

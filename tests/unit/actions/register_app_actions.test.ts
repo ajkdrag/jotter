@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ActionRegistry } from "$lib/actions/registry";
-import { ACTION_IDS } from "$lib/actions/action_ids";
-import { register_app_actions } from "$lib/actions/register_app_actions";
-import { UIStore } from "$lib/stores/ui_store.svelte";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { SearchStore } from "$lib/stores/search_store.svelte";
-import { TabStore } from "$lib/stores/tab_store.svelte";
-import { GitStore } from "$lib/stores/git_store.svelte";
-import { DEFAULT_EDITOR_SETTINGS } from "$lib/types/editor_settings";
-import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
-import type { OpenNoteState } from "$lib/types/editor";
+import { ActionRegistry } from "$lib/app/action_registry/action_registry";
+import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
+import { register_app_actions } from "$lib/app/orchestration/app_actions";
+import { UIStore } from "$lib/app/orchestration/ui_store.svelte";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import { SearchStore } from "$lib/features/search/state/search_store.svelte";
+import { TabStore } from "$lib/features/tab/state/tab_store.svelte";
+import { GitStore } from "$lib/features/git/state/git_store.svelte";
+import { DEFAULT_EDITOR_SETTINGS } from "$lib/shared/types/editor_settings";
+import { DEFAULT_HOTKEYS } from "$lib/features/hotkey";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
+import type { OpenNoteState } from "$lib/shared/types/editor";
 import { toast } from "svelte-sonner";
 
 vi.mock("svelte-sonner", () => ({

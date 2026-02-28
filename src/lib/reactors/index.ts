@@ -11,22 +11,22 @@ import { create_recent_commands_persist_reactor } from "$lib/reactors/recent_com
 import { create_find_in_file_reactor } from "$lib/reactors/find_in_file.reactor.svelte";
 import { create_backlinks_sync_reactor } from "$lib/reactors/backlinks_sync.reactor.svelte";
 import { create_local_links_sync_reactor } from "$lib/reactors/local_links_sync.reactor.svelte";
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { OpStore } from "$lib/stores/op_store.svelte";
-import type { NotesStore } from "$lib/stores/notes_store.svelte";
-import type { VaultStore } from "$lib/stores/vault_store.svelte";
-import type { TabStore } from "$lib/stores/tab_store.svelte";
-import type { EditorService } from "$lib/services/editor_service";
-import type { NoteService } from "$lib/services/note_service";
-import type { VaultService } from "$lib/services/vault_service";
-import type { SettingsService } from "$lib/services/settings_service";
-import type { TabService } from "$lib/services/tab_service";
-import type { GitStore } from "$lib/stores/git_store.svelte";
-import type { GitService } from "$lib/services/git_service";
-import type { LinksService } from "$lib/services/links_service";
-import type { SearchStore } from "$lib/stores/search_store.svelte";
-import type { LinksStore } from "$lib/stores/links_store.svelte";
+import type { EditorStore } from "$lib/features/editor";
+import type { UIStore } from "$lib/app";
+import type { OpStore } from "$lib/app";
+import type { NotesStore } from "$lib/features/note";
+import type { VaultStore } from "$lib/features/vault";
+import type { TabStore } from "$lib/features/tab";
+import type { EditorService } from "$lib/features/editor";
+import type { NoteService } from "$lib/features/note";
+import type { VaultService } from "$lib/features/vault";
+import type { SettingsService } from "$lib/features/settings";
+import type { TabService } from "$lib/features/tab";
+import type { GitStore } from "$lib/features/git";
+import type { GitService } from "$lib/features/git";
+import type { LinksService } from "$lib/features/links";
+import type { SearchStore } from "$lib/features/search";
+import type { LinksStore } from "$lib/features/links";
 
 export type ReactorContext = {
   editor_store: EditorStore;

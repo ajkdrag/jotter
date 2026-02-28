@@ -6,7 +6,7 @@ import {
   format_hotkey_for_display,
   parse_hotkey_parts,
   RESERVED_KEYS,
-} from "$lib/domain/hotkey_validation";
+} from "$lib/features/hotkey";
 
 describe("is_valid_hotkey", () => {
   it("accepts modifier + letter combos", () => {

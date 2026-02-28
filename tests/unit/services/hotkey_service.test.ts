@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { HotkeyService } from "$lib/services/hotkey_service";
-import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
-import type { SettingsPort } from "$lib/ports/settings_port";
-import type { OpStore } from "$lib/stores/op_store.svelte";
-import type { HotkeyOverride, HotkeyBinding } from "$lib/types/hotkey_config";
+import { HotkeyService } from "$lib/features/hotkey/application/hotkey_service";
+import { DEFAULT_HOTKEYS } from "$lib/features/hotkey";
+import type { SettingsPort } from "$lib/features/settings/ports";
+import type { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import type { HotkeyOverride, HotkeyBinding } from "$lib/features/hotkey";
 
 function create_mock_settings_port(): SettingsPort {
   const store = new Map<string, unknown>();

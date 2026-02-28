@@ -1,18 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { FolderService } from "$lib/services/folder_service";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { TabStore } from "$lib/stores/tab_store.svelte";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
-import { to_open_note_state } from "$lib/types/editor";
+import { FolderService } from "$lib/features/folder/application/folder_service";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import { TabStore } from "$lib/features/tab/state/tab_store.svelte";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
+import { to_open_note_state } from "$lib/shared/types/editor";
 import { create_test_vault } from "../helpers/test_fixtures";
 import {
   create_mock_index_port,
   create_mock_notes_port,
 } from "../helpers/mock_ports";
-import type { LinkRepairService } from "$lib/services/link_repair_service";
+import type { LinkRepairService } from "$lib/features/links/application/link_repair_service";
 
 function create_note(index: number) {
   const file = `note-${String(index).padStart(3, "0")}.md`;

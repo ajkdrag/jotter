@@ -1,7 +1,7 @@
-import type { EditorStore } from "$lib/stores/editor_store.svelte";
-import type { GitStore } from "$lib/stores/git_store.svelte";
-import type { UIStore } from "$lib/stores/ui_store.svelte";
-import type { GitService } from "$lib/services/git_service";
+import type { EditorStore } from "$lib/features/editor";
+import type { GitStore } from "$lib/features/git";
+import type { UIStore } from "$lib/app";
+import type { GitService } from "$lib/features/git";
 
 const AUTOCOMMIT_DELAY_MS = 30_000;
 const RETRY_DELAY_WHILE_COMMITTING_MS = 1_000;

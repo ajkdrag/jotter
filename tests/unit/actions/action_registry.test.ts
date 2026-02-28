@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ActionRegistry } from "$lib/actions/registry";
+import { ActionRegistry } from "$lib/app/action_registry/action_registry";
 
 describe("ActionRegistry", () => {
   it("executes registered actions", async () => {

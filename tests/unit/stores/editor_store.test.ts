@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
 import {
   create_open_note_state,
   create_test_note,

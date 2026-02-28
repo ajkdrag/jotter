@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { VaultService } from "$lib/services/vault_service";
-import { VaultStore } from "$lib/stores/vault_store.svelte";
-import { NotesStore } from "$lib/stores/notes_store.svelte";
-import { EditorStore } from "$lib/stores/editor_store.svelte";
-import { OpStore } from "$lib/stores/op_store.svelte";
-import { SearchStore } from "$lib/stores/search_store.svelte";
-import { as_note_path, as_vault_id, as_vault_path } from "$lib/types/ids";
-import type { Vault } from "$lib/types/vault";
+import { VaultService } from "$lib/features/vault/application/vault_service";
+import { VaultStore } from "$lib/features/vault/state/vault_store.svelte";
+import { NotesStore } from "$lib/features/note/state/note_store.svelte";
+import { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
+import { OpStore } from "$lib/app/orchestration/op_store.svelte";
+import { SearchStore } from "$lib/features/search/state/search_store.svelte";
+import {
+  as_note_path,
+  as_vault_id,
+  as_vault_path,
+} from "$lib/shared/types/ids";
+import type { Vault } from "$lib/shared/types/vault";
 
 function create_deferred<T>() {
   let resolve: (value: T) => void = () => {};

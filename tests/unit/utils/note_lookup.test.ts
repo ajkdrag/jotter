@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { resolve_existing_note_path } from "$lib/domain/note_lookup";
-import { as_note_path } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
+import { resolve_existing_note_path } from "$lib/features/note/domain/note_lookup";
+import { as_note_path } from "$lib/shared/types/ids";
+import type { NoteMeta } from "$lib/shared/types/note";
 
 function note(path: string): NoteMeta {
   const p = as_note_path(path);

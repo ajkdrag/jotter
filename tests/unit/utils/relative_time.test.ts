@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { format_relative_time } from "$lib/utils/relative_time";
+import { format_relative_time } from "$lib/shared/utils/relative_time";
 
 describe("format_relative_time", () => {
   it("formats short deltas as just now", () => {

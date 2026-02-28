@@ -3,9 +3,9 @@ import {
   resolve_tab_dirty_sync,
   create_tab_dirty_sync_reactor,
 } from "$lib/reactors/tab_dirty_sync.reactor.svelte";
-import { as_markdown_text, as_note_path } from "$lib/types/ids";
-import type { OpenNoteState } from "$lib/types/editor";
-import type { Tab } from "$lib/types/tab";
+import { as_markdown_text, as_note_path } from "$lib/shared/types/ids";
+import type { OpenNoteState } from "$lib/shared/types/editor";
+import type { Tab } from "$lib/features/tab";
 
 function mock_open_note(path: string): OpenNoteState {
   return {

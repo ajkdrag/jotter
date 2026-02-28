@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { create_test_workspace_index_adapter } from "$lib/adapters/test/test_workspace_index_adapter";
-import { as_note_path, as_vault_id } from "$lib/types/ids";
+import { create_test_workspace_index_adapter } from "$lib/shared/adapters/test/test_workspace_index_adapter";
+import { as_note_path, as_vault_id } from "$lib/shared/types/ids";
 
 describe("test_workspace_index_adapter", () => {
   it("touch_index resolves", async () => {

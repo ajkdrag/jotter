@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { note_path_exists } from "$lib/domain/note_path_exists";
-import { as_note_path } from "$lib/types/ids";
-import type { NoteMeta } from "$lib/types/note";
+import { note_path_exists } from "$lib/features/note/domain/note_path_exists";
+import { as_note_path } from "$lib/shared/types/ids";
+import type { NoteMeta } from "$lib/shared/types/note";
 
 describe("note_path_exists", () => {
   const notes: NoteMeta[] = [

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { use_keyboard_shortcuts } from "$lib/hooks/use_keyboard_shortcuts.svelte";
-import { DEFAULT_HOTKEYS } from "$lib/domain/default_hotkeys";
-import type { ActionRegistry } from "$lib/actions/registry";
-import type { HotkeyConfig } from "$lib/types/hotkey_config";
+import { DEFAULT_HOTKEYS } from "$lib/features/hotkey";
+import type { ActionRegistry } from "$lib/app/action_registry/action_registry";
+import type { HotkeyConfig } from "$lib/features/hotkey";
 
 function create_mock_registry() {
   const execute_fn = vi.fn();
