@@ -410,10 +410,6 @@ Only if a cross-cutting side effect is required (e.g. window title). Otherwise n
 
 Pattern: **Port → Store mutation → Service method → Action → Component.** Add a reactor only when a store change must auto-trigger a side effect.
 
-## XState policy
-
-XState is not part of the default architecture. If ever needed, it should be a local implementation detail inside a service method, not a top-level architectural layer.
-
 ## Layering lint guard
 
 `pnpm lint:layering` enforces architecture constraints.

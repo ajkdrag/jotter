@@ -31,6 +31,7 @@
   let can_scroll_right = $state(false);
 
   let drag_source_id: TabId | null = $state(null);
+  let drag_source_pinned = $state(false);
   let drag_over_id: TabId | null = $state(null);
 
   function check_scroll() {
@@ -96,11 +97,17 @@
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", tab.id);
     drag_source_id = tab.id;
+    drag_source_pinned = tab.is_pinned;
   }
 
   function handle_dragover(event: DragEvent, tab: Tab) {
-    event.preventDefault();
     if (!event.dataTransfer) return;
+    if (drag_source_id && drag_source_pinned !== tab.is_pinned) {
+      event.dataTransfer.dropEffect = "none";
+      drag_over_id = null;
+      return;
+    }
+    event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     drag_over_id = tab.id;
   }
@@ -128,6 +135,7 @@
 
   function handle_dragend() {
     drag_source_id = null;
+    drag_source_pinned = false;
     drag_over_id = null;
   }
 
@@ -157,7 +165,10 @@
       bind:this={scroll_container}
       onscroll={check_scroll}
     >
-      {#each tabs as tab (tab.id)}
+      {#each tabs as tab, i (tab.id)}
+        {#if i > 0 && !tab.is_pinned && tabs[i - 1]?.is_pinned}
+          <div class="TabBar__pin-divider" aria-hidden="true"></div>
+        {/if}
         {@const is_active = tab.id === active_tab_id}
         {@const is_dragging = tab.id === drag_source_id}
         {@const is_drag_over =
@@ -479,6 +490,20 @@
 
   .TabBar__tab--active:hover {
     background-color: var(--muted);
+  }
+
+  .TabBar__tab--pinned {
+    background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+  }
+
+  .TabBar__tab--pinned:hover {
+    background-color: var(--muted);
+  }
+
+  .TabBar__pin-divider {
+    width: 2px;
+    flex-shrink: 0;
+    background-color: var(--border);
   }
 
   .TabBar__tab--dragging {
