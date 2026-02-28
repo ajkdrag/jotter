@@ -15,7 +15,9 @@
     FolderPlus,
     Star,
     StarOff,
+    Copy,
   } from "@lucide/svelte";
+  import { toast } from "svelte-sonner";
 
   type Props = {
     node: FlatTreeNode;
@@ -361,6 +363,19 @@
               <Star class="mr-2 h-4 w-4" />
               <span>Star</span>
             {/if}
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            onSelect={async () => {
+              try {
+                await navigator.clipboard.writeText(node.path);
+                toast.success("Path copied");
+              } catch {
+                toast.error("Failed to copy path");
+              }
+            }}
+          >
+            <Copy class="mr-2 h-4 w-4" />
+            <span>Copy File Path</span>
           </ContextMenu.Item>
           {#if on_request_rename || on_request_delete}
             <ContextMenu.Separator />
