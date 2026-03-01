@@ -116,7 +116,7 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
   },
   {
     action_id: ACTION_IDS.tab_next,
-    key: "CmdOrCtrl+Tab",
+    key: "CmdOrCtrl+J",
     phase: "capture",
     label: "Next Tab",
     description: "Switch to the next tab",
@@ -124,10 +124,18 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
   },
   {
     action_id: ACTION_IDS.tab_prev,
-    key: "CmdOrCtrl+Shift+Tab",
+    key: "CmdOrCtrl+K",
     phase: "capture",
     label: "Previous Tab",
     description: "Switch to the previous tab",
+    category: "tabs",
+  },
+  {
+    action_id: ACTION_IDS.tab_go_to_last_used,
+    key: "CmdOrCtrl+`",
+    phase: "capture",
+    label: "Switch to Last Used Tab",
+    description: "Switch to the previously active tab",
     category: "tabs",
   },
   {

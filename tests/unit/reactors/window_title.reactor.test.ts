@@ -55,7 +55,7 @@ describe("window_title.reactor", () => {
     it("prefixes with dirty indicator when note has unsaved changes", () => {
       expect(
         resolve_window_title(mock_vault("My Notes"), mock_tab("hello", true)),
-      ).toBe("● hello — My Notes");
+      ).toBe("∘ hello — My Notes");
     });
 
     it("has no dirty indicator when note is clean", () => {
