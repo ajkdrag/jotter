@@ -113,6 +113,7 @@ export const ACTION_IDS = {
   tab_activate_by_index: "tab.activate_by_index",
   tab_next: "tab.next",
   tab_prev: "tab.prev",
+  tab_go_to_last_used: "tab.go_to_last_used",
   tab_reopen_closed: "tab.reopen_closed",
   tab_pin: "tab.pin",
   tab_unpin: "tab.unpin",

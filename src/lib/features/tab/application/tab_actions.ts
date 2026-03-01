@@ -185,6 +185,17 @@ export function register_tab_actions(input: ActionRegistrationInput) {
   });
 
   registry.register({
+    id: ACTION_IDS.tab_go_to_last_used,
+    label: "Go to Last Used Tab",
+    when: () => stores.tab.mru_previous_tab_id !== null,
+    execute: async () => {
+      const last_used_id = stores.tab.mru_previous_tab_id;
+      if (!last_used_id) return;
+      await activate_tab_and_open_note(last_used_id);
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.tab_reopen_closed,
     label: "Reopen Closed Tab",
     shortcut: "CmdOrCtrl+Shift+T",

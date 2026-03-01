@@ -19,6 +19,7 @@ export class TabStore {
   closed_tab_history = $state<ClosedTabEntry[]>([]);
   editor_snapshots = $state<Map<TabId, TabEditorSnapshot>>(new Map());
   note_cache = $state<Map<TabId, OpenNoteState>>(new Map());
+  mru_order = $state<TabId[]>([]);
 
   get active_tab(): Tab | null {
     if (!this.active_tab_id) return null;
@@ -34,6 +35,15 @@ export class TabStore {
     return this.tabs.findIndex((t) => t.id === this.active_tab_id);
   }
 
+  get mru_previous_tab_id(): TabId | null {
+    return this.mru_order[1] ?? null;
+  }
+
+  private move_to_front_mru(tab_id: TabId) {
+    const next = this.mru_order.filter((id) => id !== tab_id);
+    this.mru_order = [tab_id, ...next];
+  }
+
   find_tab_by_path(note_path: NotePath): Tab | null {
     return (
       this.tabs.find((t) => paths_equal_ignore_case(t.note_path, note_path)) ??
@@ -45,6 +55,7 @@ export class TabStore {
     const existing = this.find_tab_by_path(note_path);
     if (existing) {
       this.active_tab_id = existing.id;
+      this.move_to_front_mru(existing.id);
       return existing;
     }
 
@@ -58,6 +69,7 @@ export class TabStore {
 
     this.tabs = [...this.tabs, tab];
     this.active_tab_id = tab.id;
+    this.mru_order = [tab.id, ...this.mru_order];
     return tab;
   }
 
@@ -65,6 +77,7 @@ export class TabStore {
     const tab = this.tabs.find((t) => t.id === tab_id);
     if (!tab) return;
     this.active_tab_id = tab_id;
+    this.move_to_front_mru(tab_id);
   }
 
   close_tab(tab_id: TabId): TabId | null {
@@ -78,6 +91,8 @@ export class TabStore {
       [...this.note_cache].filter(([id]) => id !== tab_id),
     );
 
+    this.mru_order = this.mru_order.filter((id) => id !== tab_id);
+
     const was_active = this.active_tab_id === tab_id;
     this.tabs = this.tabs.filter((t) => t.id !== tab_id);
 
@@ -88,10 +103,15 @@ export class TabStore {
       return null;
     }
 
-    const next_index = Math.min(index, this.tabs.length - 1);
-    const next_tab = this.tabs[next_index];
+    const mru_next = this.mru_order[0];
+    const next_tab = mru_next ? this.tabs.find((t) => t.id === mru_next) : null;
+
     if (next_tab) {
       this.active_tab_id = next_tab.id;
+    } else {
+      const next_index = Math.min(index, this.tabs.length - 1);
+      const fallback = this.tabs[next_index];
+      this.active_tab_id = fallback?.id ?? null;
     }
     return this.active_tab_id;
   }
@@ -110,6 +130,7 @@ export class TabStore {
     this.note_cache = new Map(
       [...this.note_cache].filter(([id]) => !removed_ids.has(id)),
     );
+    this.mru_order = this.mru_order.filter((id) => !removed_ids.has(id));
     this.tabs = kept;
     this.active_tab_id = keep_tab_id;
   }
@@ -129,6 +150,7 @@ export class TabStore {
     this.note_cache = new Map(
       [...this.note_cache].filter(([id]) => !removed_ids.has(id)),
     );
+    this.mru_order = this.mru_order.filter((id) => !removed_ids.has(id));
     this.tabs = kept;
 
     if (this.active_tab_id && removed_ids.has(this.active_tab_id)) {
@@ -141,6 +163,7 @@ export class TabStore {
     this.active_tab_id = null;
     this.editor_snapshots = new Map();
     this.note_cache = new Map();
+    this.mru_order = [];
   }
 
   set_dirty(tab_id: TabId, is_dirty: boolean) {
@@ -243,6 +266,10 @@ export class TabStore {
       next.set(new_path, cached_note);
       this.note_cache = next;
     }
+
+    this.mru_order = this.mru_order.map((id) =>
+      id === old_path ? new_path : id,
+    );
   }
 
   update_tab_path_prefix(old_prefix: string, new_prefix: string) {
@@ -295,6 +322,11 @@ export class TabStore {
         }
       }
       this.note_cache = next_cache;
+
+      this.mru_order = this.mru_order.map((id) => {
+        const rename = snapshot_renames.find(([old_id]) => old_id === id);
+        return rename ? rename[1] : id;
+      });
     }
   }
 
@@ -362,12 +394,21 @@ export class TabStore {
   restore_tabs(tabs: Tab[], active_tab_id: TabId | null) {
     this.tabs = tabs;
     const first_tab = tabs[0];
-    this.active_tab_id =
+    const resolved_active_id =
       active_tab_id && tabs.some((t) => t.id === active_tab_id)
         ? active_tab_id
         : first_tab
           ? first_tab.id
           : null;
+    this.active_tab_id = resolved_active_id;
+
+    const tab_ids = tabs.map((t) => t.id);
+    this.mru_order = resolved_active_id
+      ? [
+          resolved_active_id,
+          ...tab_ids.filter((id) => id !== resolved_active_id),
+        ]
+      : tab_ids;
   }
 
   reset() {
@@ -376,5 +417,6 @@ export class TabStore {
     this.closed_tab_history = [];
     this.editor_snapshots = new Map();
     this.note_cache = new Map();
+    this.mru_order = [];
   }
 }
