@@ -590,7 +590,11 @@ describe("FolderService", () => {
     };
     notes_store.set_notes([note_in_folder]);
 
-    const repair_links = vi.fn().mockResolvedValue(undefined);
+    const repair_links = vi.fn().mockResolvedValue({
+      scanned: 1,
+      rewritten: 1,
+      failed: [],
+    });
     const link_repair = { repair_links } as unknown as LinkRepairService;
 
     const service = new FolderService(
@@ -647,7 +651,11 @@ describe("FolderService", () => {
       },
     ]);
 
-    const repair_links = vi.fn().mockResolvedValue(undefined);
+    const repair_links = vi.fn().mockResolvedValue({
+      scanned: 1,
+      rewritten: 1,
+      failed: [],
+    });
     const link_repair = { repair_links } as unknown as LinkRepairService;
 
     const service = new FolderService(

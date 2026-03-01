@@ -98,7 +98,7 @@ describe("LinkRepairService", () => {
       () => 1,
     );
 
-    await service.repair_links(VAULT_ID, RENAME_MAP);
+    const result = await service.repair_links(VAULT_ID, RENAME_MAP);
 
     expect(notes_port._calls.write_note).toContainEqual({
       vault_id: VAULT_ID,
@@ -108,6 +108,11 @@ describe("LinkRepairService", () => {
     expect(index_port._calls.upsert_note).toContainEqual({
       vault_id: VAULT_ID,
       note_id: as_note_path(SOURCE_PATH),
+    });
+    expect(result).toEqual({
+      scanned: 2,
+      rewritten: 2,
+      failed: [],
     });
   });
 
@@ -212,7 +217,9 @@ describe("LinkRepairService", () => {
     const notes_port = create_mock_notes_port();
     const index_port = create_mock_index_port();
 
-    const rewrite_note_links = vi.fn();
+    const rewrite_note_links = vi
+      .fn()
+      .mockResolvedValue({ markdown: "# Content", changed: false });
     const search_port = create_mock_search_port({
       get_note_links_snapshot: vi.fn().mockResolvedValue(EMPTY_SNAPSHOT),
       rewrite_note_links,
@@ -310,8 +317,39 @@ describe("LinkRepairService", () => {
       () => 1,
     );
 
-    await service.repair_links(VAULT_ID, new Map());
+    const result = await service.repair_links(VAULT_ID, new Map());
 
     expect(get_note_links_snapshot).not.toHaveBeenCalled();
+    expect(result).toEqual({ scanned: 0, rewritten: 0, failed: [] });
+  });
+
+  it("reports failures without throwing", async () => {
+    const editor_store = new EditorStore();
+    const tab_store = new TabStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    notes_port.read_note = vi.fn().mockRejectedValue(new Error("disk failed"));
+
+    const search_port = create_mock_search_port({
+      get_note_links_snapshot: vi.fn().mockResolvedValue(BACKLINKS_SNAPSHOT),
+    });
+
+    const service = new LinkRepairService(
+      notes_port,
+      search_port,
+      index_port,
+      editor_store,
+      tab_store,
+      () => 1,
+    );
+
+    const result = await service.repair_links(VAULT_ID, RENAME_MAP);
+
+    expect(result).toEqual({
+      scanned: 2,
+      rewritten: 0,
+      failed: [SOURCE_PATH, "docs/new.md"],
+    });
   });
 });

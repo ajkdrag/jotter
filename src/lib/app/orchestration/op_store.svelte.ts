@@ -1,16 +1,18 @@
 import { SvelteMap } from "svelte/reactivity";
 
-type OpStatus = "idle" | "pending" | "success" | "error";
+export type OpStatus = "idle" | "pending" | "success" | "error";
 
-type OpState = {
+export type OpState = {
   status: OpStatus;
   error: string | null;
+  message: string | null;
   started_at: number | null;
 };
 
 const IDLE: OpState = {
   status: "idle",
   error: null,
+  message: null,
   started_at: null,
 };
 
@@ -29,16 +31,27 @@ export class OpStore {
     this.ops.set(key, {
       status: "pending",
       error: null,
+      message: null,
       started_at,
     });
   }
 
-  succeed(key: string) {
-    this.ops.set(key, { status: "success", error: null, started_at: null });
+  succeed(key: string, message: string | null = null) {
+    this.ops.set(key, {
+      status: "success",
+      error: null,
+      message,
+      started_at: null,
+    });
   }
 
   fail(key: string, error: string) {
-    this.ops.set(key, { status: "error", error, started_at: null });
+    this.ops.set(key, {
+      status: "error",
+      error,
+      message: null,
+      started_at: null,
+    });
   }
 
   reset(key: string) {

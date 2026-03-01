@@ -19,6 +19,7 @@
     git_is_dirty: boolean;
     git_pending_files: number;
     git_sync_status: GitSyncStatus;
+    is_repairing_links: boolean;
     on_vault_click: () => void;
     on_info_click: () => void;
     on_git_click: () => void;
@@ -37,6 +38,7 @@
     git_is_dirty,
     git_pending_files,
     git_sync_status,
+    is_repairing_links,
     on_vault_click,
     on_info_click,
     on_git_click,
@@ -100,6 +102,14 @@
     {/if}
   </div>
   <div class="StatusBar__section">
+    {#if is_repairing_links}
+      <span class="StatusBar__item StatusBar__item--repairing">
+        <RefreshCw class="StatusBar__spinner" />
+        <span>Repairing links...</span>
+      </span>
+      <span class="StatusBar__separator" aria-hidden="true"></span>
+    {/if}
+
     {#if index_progress.status === "indexing"}
       <span class="StatusBar__item StatusBar__item--indexing">
         <RefreshCw class="StatusBar__spinner" />
@@ -182,6 +192,10 @@
   }
 
   .StatusBar__item--indexing {
+    color: var(--primary);
+  }
+
+  .StatusBar__item--repairing {
     color: var(--primary);
   }
 

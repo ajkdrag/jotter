@@ -13,6 +13,12 @@ import { create_logger } from "$lib/shared/utils/logger";
 
 const log = create_logger("link_repair_service");
 
+export type LinkRepairResult = {
+  scanned: number;
+  rewritten: number;
+  failed: string[];
+};
+
 export class LinkRepairService {
   constructor(
     private readonly notes_port: NotesPort,
@@ -132,8 +138,16 @@ export class LinkRepairService {
   async repair_links(
     vault_id: VaultId,
     path_map: Map<string, string>,
-  ): Promise<void> {
-    if (path_map.size === 0) return;
+  ): Promise<LinkRepairResult> {
+    if (path_map.size === 0) {
+      return { scanned: 0, rewritten: 0, failed: [] };
+    }
+
+    const result: LinkRepairResult = {
+      scanned: 0,
+      rewritten: 0,
+      failed: [],
+    };
 
     const target_map = this.build_target_map(path_map);
     const external_sources = await this.collect_external_source_paths(
@@ -142,24 +156,40 @@ export class LinkRepairService {
     );
 
     for (const source_path of external_sources) {
-      await this.rewrite_note_file(
+      result.scanned += 1;
+      const rewrite_result = await this.rewrite_note_file(
         vault_id,
         as_note_path(source_path),
         source_path,
         source_path,
         target_map,
       );
+      if (rewrite_result.status === "rewritten") {
+        result.rewritten += 1;
+      }
+      if (rewrite_result.status === "failed") {
+        result.failed.push(source_path);
+      }
     }
 
     for (const [old_path, new_path] of path_map) {
-      await this.rewrite_note_file(
+      result.scanned += 1;
+      const rewrite_result = await this.rewrite_note_file(
         vault_id,
         as_note_path(new_path),
         old_path,
         new_path,
         target_map,
       );
+      if (rewrite_result.status === "rewritten") {
+        result.rewritten += 1;
+      }
+      if (rewrite_result.status === "failed") {
+        result.failed.push(new_path);
+      }
     }
+
+    return result;
   }
 
   private async rewrite_note_file(
@@ -168,7 +198,7 @@ export class LinkRepairService {
     old_source_path: string,
     new_source_path: string,
     target_map: Record<string, string>,
-  ): Promise<void> {
+  ): Promise<{ status: "unchanged" | "rewritten" | "failed" }> {
     try {
       const matched_open_note = this.find_matching_open_note(
         note_path,
@@ -187,7 +217,9 @@ export class LinkRepairService {
         target_map,
       );
 
-      if (!result.changed) return;
+      if (!result.changed) {
+        return { status: "unchanged" };
+      }
 
       const rewritten = as_markdown_text(result.markdown);
 
@@ -198,7 +230,7 @@ export class LinkRepairService {
           rewritten_markdown: rewritten,
           matched_open_note,
         });
-        return;
+        return { status: "rewritten" };
       }
 
       await this.persist_closed_note_rewrite({
@@ -208,6 +240,7 @@ export class LinkRepairService {
         new_source_path,
         rewritten_markdown: rewritten,
       });
+      return { status: "rewritten" };
     } catch (error) {
       log.warn("Rewrite links failed", {
         note_path,
@@ -215,6 +248,7 @@ export class LinkRepairService {
         new_source_path,
         error: error_message(error),
       });
+      return { status: "failed" };
     }
   }
 }

@@ -524,7 +524,11 @@ describe("NoteService", () => {
       rename_buffer: vi.fn(),
     } as unknown as EditorService;
 
-    const repair_links = vi.fn().mockResolvedValue(undefined);
+    const repair_links = vi.fn().mockResolvedValue({
+      scanned: 1,
+      rewritten: 1,
+      failed: [],
+    });
     const link_repair = { repair_links } as unknown as LinkRepairService;
 
     const service = new NoteService(

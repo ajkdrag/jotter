@@ -692,6 +692,7 @@
       git_is_dirty={stores.git.is_dirty}
       git_pending_files={stores.git.pending_files}
       git_sync_status={stores.git.sync_status}
+      is_repairing_links={stores.op.is_pending("links.repair")}
       on_vault_click={() =>
         void action_registry.execute(ACTION_IDS.vault_request_change)}
       on_info_click={() => (details_dialog_open = true)}

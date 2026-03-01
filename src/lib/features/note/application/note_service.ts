@@ -25,7 +25,7 @@ import { create_untitled_open_note } from "$lib/features/note/domain/ensure_open
 import { parent_folder_path } from "$lib/shared/utils/path";
 import { resolve_existing_note_path } from "$lib/features/note/domain/note_lookup";
 import { note_path_exists } from "$lib/features/note/domain/note_path_exists";
-import type { LinkRepairService } from "$lib/features/links";
+import type { LinkRepairResult, LinkRepairService } from "$lib/features/links";
 import type { EditorService } from "$lib/features/editor";
 import {
   to_open_note_state,
@@ -97,6 +97,40 @@ export class NoteService {
     log.error(log_label, { error: message });
     this.op_store.fail(operation_key, message);
     return message;
+  }
+
+  private build_link_repair_success_message(result: LinkRepairResult): string {
+    if (result.scanned === 0) {
+      return "Link repair complete: no notes scanned";
+    }
+    return `Link repair complete: ${String(result.rewritten)}/${String(result.scanned)} notes updated`;
+  }
+
+  private async run_link_repair(
+    vault_id: VaultId,
+    path_map: Map<string, string>,
+  ): Promise<void> {
+    if (!this.link_repair || path_map.size === 0) {
+      return;
+    }
+
+    this.start_operation("links.repair");
+
+    try {
+      const result = await this.link_repair.repair_links(vault_id, path_map);
+      if (result.failed.length > 0) {
+        const message = `Link repair failed for ${String(result.failed.length)} notes`;
+        this.op_store.fail("links.repair", message);
+        return;
+      }
+
+      this.op_store.succeed(
+        "links.repair",
+        this.build_link_repair_success_message(result),
+      );
+    } catch (error) {
+      this.fail_operation("links.repair", "Link repair failed", error);
+    }
   }
 
   private async read_or_create_note(
@@ -315,7 +349,7 @@ export class NoteService {
       await this.index_port.rename_note_path(vault_id, note.id, new_path);
 
       const path_map = new Map([[note.id as string, new_path as string]]);
-      await this.link_repair?.repair_links(vault_id, path_map);
+      await this.run_link_repair(vault_id, path_map);
 
       this.notes_store.rename_note(note.path, new_path);
       const updated_note = this.notes_store.notes.find(
