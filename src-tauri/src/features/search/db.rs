@@ -225,6 +225,23 @@ pub fn remove_notes_by_prefix(conn: &Connection, prefix: &str) -> Result<(), Str
     }
 }
 
+pub fn list_note_paths_by_prefix(conn: &Connection, prefix: &str) -> Result<Vec<String>, String> {
+    let like_pattern = like_prefix_pattern(prefix);
+    let mut stmt = conn
+        .prepare(
+            "SELECT path
+             FROM notes
+             WHERE path LIKE ?1 ESCAPE '\\'
+             ORDER BY path",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![like_pattern], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
 #[derive(Debug, Serialize)]
 pub struct IndexResult {
     pub total: usize,
@@ -439,8 +456,6 @@ pub fn sync_index(
                 .map_err(|e| e.to_string())?;
             for path in batch {
                 remove_note(conn, path)?;
-                conn.execute("DELETE FROM outlinks WHERE source_path = ?1", params![path])
-                    .map_err(|e| e.to_string())?;
                 indexed += 1;
             }
             conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;

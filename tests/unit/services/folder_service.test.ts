@@ -583,12 +583,9 @@ describe("FolderService", () => {
     const vault = create_test_vault();
     vault_store.set_vault(vault);
 
-    const note_in_folder = {
-      ...create_note(1),
-      path: as_note_path("docs/note-001.md"),
-      id: as_note_path("docs/note-001.md"),
-    };
-    notes_store.set_notes([note_in_folder]);
+    index_port._mock_note_paths_by_prefix.set(`${String(vault.id)}::docs/`, [
+      "docs/note-001.md",
+    ]);
 
     const repair_links = vi.fn().mockResolvedValue({
       scanned: 1,
@@ -615,6 +612,64 @@ describe("FolderService", () => {
       vault.id,
       new Map([["docs/note-001.md", "archive/note-001.md"]]),
     );
+  });
+
+  it("rename_folder repairs all indexed folder notes beyond loaded PAGE_SIZE", async () => {
+    const vault_store = new VaultStore();
+    const notes_store = new NotesStore();
+    const editor_store = new EditorStore();
+    const op_store = new OpStore();
+    const tab_store = new TabStore();
+    const notes_port = create_mock_notes_port();
+    const index_port = create_mock_index_port();
+
+    const vault = create_test_vault();
+    vault_store.set_vault(vault);
+
+    const loaded_notes = Array.from({ length: 200 }, (_, index) => ({
+      ...create_note(index + 1),
+      path: as_note_path(`docs/note-${String(index + 1).padStart(4, "0")}.md`),
+      id: as_note_path(`docs/note-${String(index + 1).padStart(4, "0")}.md`),
+    }));
+    notes_store.set_notes(loaded_notes);
+
+    const all_indexed_paths = Array.from(
+      { length: 205 },
+      (_, index) => `docs/note-${String(index + 1).padStart(4, "0")}.md`,
+    );
+    index_port._mock_note_paths_by_prefix.set(
+      `${String(vault.id)}::docs/`,
+      all_indexed_paths,
+    );
+
+    const repair_links = vi.fn().mockResolvedValue({
+      scanned: 205,
+      rewritten: 205,
+      failed: [],
+    });
+    const link_repair = { repair_links } as unknown as LinkRepairService;
+
+    const service = new FolderService(
+      notes_port,
+      index_port,
+      vault_store,
+      notes_store,
+      editor_store,
+      tab_store,
+      op_store,
+      () => 1,
+      link_repair,
+    );
+
+    await service.rename_folder("docs", "archive");
+
+    expect(index_port._calls.list_note_paths_by_prefix).toEqual([
+      { vault_id: vault.id, prefix: "docs/" },
+    ]);
+    expect(repair_links).toHaveBeenCalledTimes(1);
+    const path_map = repair_links.mock.calls[0]?.[1] as Map<string, string>;
+    expect(path_map.size).toBe(205);
+    expect(path_map.get("docs/note-0205.md")).toBe("archive/note-0205.md");
   });
 
   it("move_items calls link repair with filtered path map for successful moves", async () => {

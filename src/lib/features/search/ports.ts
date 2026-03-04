@@ -69,6 +69,10 @@ export interface WorkspaceIndexPort {
   cancel_index(vault_id: VaultId): Promise<void>;
   sync_index(vault_id: VaultId): Promise<void>;
   rebuild_index(vault_id: VaultId): Promise<void>;
+  list_note_paths_by_prefix(
+    vault_id: VaultId,
+    prefix: string,
+  ): Promise<string[]>;
   upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_note(vault_id: VaultId, note_id: NoteId): Promise<void>;
   remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void>;

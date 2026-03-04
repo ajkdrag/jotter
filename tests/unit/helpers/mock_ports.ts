@@ -396,10 +396,12 @@ export function create_mock_notes_port(): NotesPort & {
 }
 
 export function create_mock_index_port(): WorkspaceIndexPort & {
+  _mock_note_paths_by_prefix: Map<string, string[]>;
   _calls: {
     cancel_index: VaultId[];
     sync_index: VaultId[];
     rebuild_index: VaultId[];
+    list_note_paths_by_prefix: { vault_id: VaultId; prefix: string }[];
     upsert_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_note: { vault_id: VaultId; note_id: NoteId }[];
     remove_notes: { vault_id: VaultId; note_ids: NoteId[] }[];
@@ -417,10 +419,12 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
   };
 } {
   const mock = {
+    _mock_note_paths_by_prefix: new Map<string, string[]>(),
     _calls: {
       cancel_index: [] as VaultId[],
       sync_index: [] as VaultId[],
       rebuild_index: [] as VaultId[],
+      list_note_paths_by_prefix: [] as { vault_id: VaultId; prefix: string }[],
       upsert_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_note: [] as { vault_id: VaultId; note_id: NoteId }[],
       remove_notes: [] as { vault_id: VaultId; note_ids: NoteId[] }[],
@@ -447,6 +451,11 @@ export function create_mock_index_port(): WorkspaceIndexPort & {
     rebuild_index(vault_id: VaultId) {
       mock._calls.rebuild_index.push(vault_id);
       return Promise.resolve();
+    },
+    list_note_paths_by_prefix(vault_id: VaultId, prefix: string) {
+      mock._calls.list_note_paths_by_prefix.push({ vault_id, prefix });
+      const key = `${String(vault_id)}::${prefix}`;
+      return Promise.resolve(mock._mock_note_paths_by_prefix.get(key) ?? []);
     },
     upsert_note(vault_id: VaultId, note_id: NoteId) {
       mock._calls.upsert_note.push({ vault_id, note_id });

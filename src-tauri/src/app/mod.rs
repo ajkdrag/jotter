@@ -63,6 +63,7 @@ pub fn run() {
             features::search::service::index_search,
             features::search::service::index_suggest,
             features::search::service::index_suggest_planned,
+            features::search::service::index_list_note_paths_by_prefix,
             features::search::service::index_upsert_note,
             features::search::service::index_remove_note,
             features::search::service::index_remove_notes,

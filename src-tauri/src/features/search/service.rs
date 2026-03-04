@@ -684,6 +684,17 @@ pub fn index_suggest_planned(
 }
 
 #[tauri::command]
+pub fn index_list_note_paths_by_prefix(
+    app: AppHandle,
+    vault_id: String,
+    prefix: String,
+) -> Result<Vec<String>, String> {
+    with_read_conn(&app, &vault_id, |conn| {
+        search_db::list_note_paths_by_prefix(conn, &prefix)
+    })
+}
+
+#[tauri::command]
 pub fn index_upsert_note(app: AppHandle, vault_id: String, note_id: String) -> Result<(), String> {
     let vault_root = storage::vault_path(&app, &vault_id)?;
     send_write_blocking(&app, &vault_id, |reply| DbCommand::UpsertNote {

@@ -221,6 +221,15 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
     async rebuild_index(vault_id: VaultId): Promise<void> {
       await run_index_command("index_rebuild", vault_id);
     },
+    async list_note_paths_by_prefix(
+      vault_id: VaultId,
+      prefix: string,
+    ): Promise<string[]> {
+      return tauri_invoke<string[]>("index_list_note_paths_by_prefix", {
+        vaultId: vault_id,
+        prefix,
+      });
+    },
     async upsert_note(vault_id: VaultId, note_id: NoteId): Promise<void> {
       await tauri_invoke<undefined>("index_upsert_note", {
         vaultId: vault_id,
@@ -234,17 +243,7 @@ export function create_workspace_index_tauri_adapter(): WorkspaceIndexPort {
       });
     },
     async remove_notes(vault_id: VaultId, note_ids: NoteId[]): Promise<void> {
-      if (note_ids.length === 1) {
-        const first = note_ids[0];
-        if (!first) {
-          return;
-        }
-        await tauri_invoke<undefined>("index_remove_note", {
-          vaultId: vault_id,
-          noteId: first,
-        });
-        return;
-      }
+      if (note_ids.length === 0) return;
       await tauri_invoke<undefined>("index_remove_notes", {
         vaultId: vault_id,
         noteIds: note_ids,

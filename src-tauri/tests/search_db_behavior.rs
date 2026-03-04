@@ -1,9 +1,9 @@
 use crate::features::notes::service as notes_service;
 use crate::features::search::db::{
     compute_sync_plan, get_backlinks, get_manifest, get_orphan_outlinks, get_outlinks,
-    gfm_link_targets, internal_link_targets, open_search_db, rebuild_index, remove_notes_by_prefix,
-    rename_folder_paths, rename_note_path, search, set_outlinks, suggest_planned, sync_index,
-    upsert_note, wiki_link_targets,
+    gfm_link_targets, internal_link_targets, list_note_paths_by_prefix, open_search_db,
+    rebuild_index, remove_notes_by_prefix, rename_folder_paths, rename_note_path, search,
+    set_outlinks, suggest_planned, sync_index, upsert_note, wiki_link_targets,
 };
 use crate::features::search::model::{IndexNoteMeta, SearchScope};
 use std::cell::RefCell;
@@ -313,4 +313,34 @@ fn rename_folder_paths_escapes_like_wildcards() {
     assert!(manifest.contains_key("new/a.md"));
     assert!(manifest.contains_key("old_500/b.md"));
     assert!(!manifest.contains_key("old_50%/a.md"));
+}
+
+#[test]
+fn list_note_paths_by_prefix_respects_folder_boundary() {
+    let tmp = TempDir::new().expect("temp dir should be created");
+    let conn = open_search_db(tmp.path()).expect("db should open");
+
+    let notes = vec![
+        ("docs/a.md", "A", "a", "body a"),
+        ("docs/sub/b.md", "B", "b", "body b"),
+        ("docs2/c.md", "C", "c", "body c"),
+    ];
+    for (path, title, name, body) in &notes {
+        let meta = IndexNoteMeta {
+            id: path.to_string(),
+            path: path.to_string(),
+            title: title.to_string(),
+            name: name.to_string(),
+            mtime_ms: 100,
+            size_bytes: 10,
+        };
+        upsert_note(&conn, &meta, body).expect("upsert should succeed");
+    }
+
+    let paths =
+        list_note_paths_by_prefix(&conn, "docs/").expect("list by prefix should succeed");
+    assert_eq!(
+        paths,
+        vec!["docs/a.md".to_string(), "docs/sub/b.md".to_string()]
+    );
 }

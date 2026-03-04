@@ -1,7 +1,6 @@
-import type { NotesPort } from "$lib/features/note";
+import type { NotesPort, NotesStore } from "$lib/features/note";
 import type { WorkspaceIndexPort } from "$lib/features/search";
 import type { VaultStore } from "$lib/features/vault";
-import type { NotesStore } from "$lib/features/note";
 import type { EditorStore } from "$lib/features/editor";
 import type { OpStore } from "$lib/app";
 import type { TabStore } from "$lib/features/tab";
@@ -96,15 +95,16 @@ export class FolderService {
   private build_note_path_map_for_prefix_move(
     old_prefix: string,
     new_prefix: string,
+    note_paths: string[],
   ): Map<string, string> {
     const path_map = new Map<string, string>();
-    for (const note of this.notes_store.notes) {
-      if (!note.path.startsWith(old_prefix)) {
+    for (const note_path of note_paths) {
+      if (!note_path.startsWith(old_prefix)) {
         continue;
       }
       path_map.set(
-        note.path,
-        `${new_prefix}${note.path.slice(old_prefix.length)}`,
+        note_path,
+        `${new_prefix}${note_path.slice(old_prefix.length)}`,
       );
     }
     return path_map;
@@ -134,6 +134,7 @@ export class FolderService {
       const folder_path_map = this.build_note_path_map_for_prefix_move(
         `${result.path}/`,
         `${result.new_path}/`,
+        this.notes_store.notes.map((note) => note.path),
       );
       for (const [old_note_path, new_note_path] of folder_path_map) {
         path_map.set(old_note_path, new_note_path);
@@ -376,6 +377,10 @@ export class FolderService {
       const path_map = this.build_note_path_map_for_prefix_move(
         `${folder_path}/`,
         `${new_path}/`,
+        await this.index_port.list_note_paths_by_prefix(
+          vault_id,
+          `${folder_path}/`,
+        ),
       );
 
       await this.notes_port.rename_folder(vault_id, folder_path, new_path);
