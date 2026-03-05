@@ -320,6 +320,8 @@ export class UIStore {
     description: string;
   }>({ ...INITIAL_CHECKPOINT_DIALOG });
 
+  vault_switcher_open = $state(false);
+
   context_rail_open = $state(false);
   context_rail_tab = $state<ContextRailTab>("links");
 
@@ -408,6 +410,14 @@ export class UIStore {
     this.filetree_revealed_note_path = path;
   }
 
+  toggle_vault_switcher() {
+    this.vault_switcher_open = !this.vault_switcher_open;
+  }
+
+  set_vault_switcher_open(open: boolean) {
+    this.vault_switcher_open = open;
+  }
+
   toggle_context_rail() {
     this.context_rail_open = !this.context_rail_open;
   }
@@ -464,6 +474,7 @@ export class UIStore {
     this.tab_close_confirm = { ...INITIAL_TAB_CLOSE_CONFIRM };
     this.version_history_dialog = { ...INITIAL_VERSION_HISTORY_DIALOG };
     this.checkpoint_dialog = { ...INITIAL_CHECKPOINT_DIALOG };
+    this.vault_switcher_open = false;
     this.context_rail_open = false;
     this.context_rail_tab = "links";
   }

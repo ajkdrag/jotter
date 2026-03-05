@@ -156,6 +156,19 @@ export class GitService {
     }
   }
 
+  async get_git_info_for_path(
+    vault_path: VaultPath,
+  ): Promise<{ branch: string; is_dirty: boolean } | null> {
+    try {
+      const has_repo = await this.git_port.has_repo(vault_path);
+      if (!has_repo) return null;
+      const status = await this.git_port.status(vault_path);
+      return { branch: status.branch, is_dirty: status.is_dirty };
+    } catch {
+      return null;
+    }
+  }
+
   async init_repo(): Promise<GitInitResult> {
     const vault_path = this.get_vault_path();
     this.op_store.start("git.init", this.now_ms());

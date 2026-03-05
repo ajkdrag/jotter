@@ -40,6 +40,8 @@ export const ACTION_IDS = {
   vault_select_pinned_slot: "vault.select_pinned_slot",
   vault_remove_from_registry: "vault.remove_from_registry",
   vault_toggle_pin: "vault.toggle_pin",
+  vault_open_switcher: "vault.open_switcher",
+  vault_fetch_git_info_for_list: "vault.fetch_git_info_for_list",
   vault_sync_index: "vault.sync_index",
   vault_reindex: "vault.reindex",
 

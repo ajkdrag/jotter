@@ -5,7 +5,10 @@
   import { Button } from "$lib/components/ui/button";
   import ActivityBar from "$lib/app/bootstrap/ui/activity_bar.svelte";
   import { VirtualFileTree } from "$lib/features/folder";
-  import { VaultDashboardPanel } from "$lib/features/vault";
+  import {
+    VaultDashboardPanel,
+    VaultSwitcherDropdown,
+  } from "$lib/features/vault";
   import { NoteEditor, NoteDetailsDialog } from "$lib/features/note";
   import { TabBar } from "$lib/features/tab";
   import { FindInFileBar } from "$lib/features/search";
@@ -402,19 +405,57 @@
                     {:else if stores.ui.sidebar_view === "dashboard"}
                       <span class="SidebarHeader__title">Dashboard</span>
                     {:else}
-                      <button
-                        type="button"
-                        class="SidebarHeader__title SidebarHeader__title--button"
-                        onclick={() => {
+                      <VaultSwitcherDropdown
+                        recent_vaults={stores.vault.recent_vaults}
+                        pinned_vault_ids={stores.vault.pinned_vault_ids}
+                        current_vault_id={stores.vault.vault?.id ?? null}
+                        current_vault_name={stores.vault.vault?.name ?? ""}
+                        bind:open={stores.ui.vault_switcher_open}
+                        git_cache={stores.vault.vault_git_cache}
+                        on_select_vault={(id) => {
+                          void action_registry.execute(
+                            ACTION_IDS.vault_select,
+                            id,
+                          );
+                        }}
+                        on_choose_vault={() => {
+                          void action_registry.execute(ACTION_IDS.vault_choose);
+                        }}
+                        on_manage_vaults={() => {
+                          void action_registry.execute(
+                            ACTION_IDS.vault_request_change,
+                          );
+                        }}
+                        on_toggle_pin={(id) => {
+                          void action_registry.execute(
+                            ACTION_IDS.vault_toggle_pin,
+                            id,
+                          );
+                        }}
+                        on_remove_vault={(id) => {
+                          void action_registry.execute(
+                            ACTION_IDS.vault_remove_from_registry,
+                            id,
+                          );
+                        }}
+                        on_reveal_vault={(path) => {
+                          void action_registry.execute(
+                            ACTION_IDS.shell_open_url,
+                            path,
+                          );
+                        }}
+                        on_dropdown_opened={() => {
+                          void action_registry.execute(
+                            ACTION_IDS.vault_fetch_git_info_for_list,
+                          );
+                        }}
+                        on_select_folder={() => {
                           void action_registry.execute(
                             ACTION_IDS.ui_select_folder,
                             "",
                           );
                         }}
-                        aria-label="Select vault root"
-                      >
-                        {stores.vault.vault.name}
-                      </button>
+                      />
                     {/if}
                     <div class="SidebarHeader__actions">
                       {#each sidebar_header_actions as action (action.label)}
@@ -735,15 +776,6 @@
     text-align: left;
     font-weight: 600;
     font-size: var(--text-sm);
-  }
-
-  .SidebarHeader__title--button {
-    cursor: pointer;
-    transition: color var(--duration-fast) var(--ease-default);
-  }
-
-  .SidebarHeader__title--button:hover {
-    color: var(--foreground);
   }
 
   .SidebarHeader__actions {

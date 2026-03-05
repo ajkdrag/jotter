@@ -60,6 +60,9 @@ function create_vault_actions_harness() {
     editor: {},
     clipboard: {},
     shell: {},
+    git: {
+      get_git_info_for_path: vi.fn().mockResolvedValue(null),
+    },
     tab: {
       load_tabs: vi.fn().mockResolvedValue(null),
       restore_tabs: vi.fn().mockResolvedValue(undefined),
@@ -329,6 +332,78 @@ describe("register_vault_actions", () => {
       await registry.execute(ACTION_IDS.vault_sync_index);
 
       expect(services.vault.sync_index).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("vault.open_switcher", () => {
+    it("toggles vault_switcher_open state", () => {
+      const { registry, stores } = create_vault_actions_harness();
+      expect(stores.ui.vault_switcher_open).toBe(false);
+
+      void registry.execute(ACTION_IDS.vault_open_switcher);
+
+      expect(stores.ui.vault_switcher_open).toBe(true);
+
+      void registry.execute(ACTION_IDS.vault_open_switcher);
+
+      expect(stores.ui.vault_switcher_open).toBe(false);
+    });
+  });
+
+  describe("vault.fetch_git_info_for_list", () => {
+    it("fetches git info for each recent vault and caches it", async () => {
+      const { registry, stores, services } = create_vault_actions_harness();
+      const vault_a = {
+        id: as_vault_id("a"),
+        name: "A",
+        path: as_vault_path("/a"),
+        created_at: 1,
+      };
+      const vault_b = {
+        id: as_vault_id("b"),
+        name: "B",
+        path: as_vault_path("/b"),
+        created_at: 2,
+      };
+      stores.vault.set_recent_vaults([vault_a, vault_b]);
+
+      services.git.get_git_info_for_path = vi
+        .fn()
+        .mockImplementation((path: string) => {
+          if (path === "/a")
+            return Promise.resolve({ branch: "main", is_dirty: false });
+          return Promise.resolve(null);
+        });
+
+      await registry.execute(ACTION_IDS.vault_fetch_git_info_for_list);
+
+      expect(stores.vault.get_vault_git_info(as_vault_id("a"))).toEqual({
+        branch: "main",
+        is_dirty: false,
+      });
+      expect(stores.vault.get_vault_git_info(as_vault_id("b"))).toBeUndefined();
+    });
+
+    it("skips vaults already in the cache", async () => {
+      const { registry, stores, services } = create_vault_actions_harness();
+      const vault_a = {
+        id: as_vault_id("a"),
+        name: "A",
+        path: as_vault_path("/a"),
+        created_at: 1,
+      };
+      stores.vault.set_recent_vaults([vault_a]);
+      stores.vault.set_vault_git_info(as_vault_id("a"), {
+        branch: "cached",
+        is_dirty: false,
+      });
+
+      await registry.execute(ACTION_IDS.vault_fetch_git_info_for_list);
+
+      expect(services.git.get_git_info_for_path).not.toHaveBeenCalled();
+      expect(stores.vault.get_vault_git_info(as_vault_id("a"))?.branch).toBe(
+        "cached",
+      );
     });
   });
 });

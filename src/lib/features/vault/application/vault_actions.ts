@@ -347,6 +347,31 @@ export function register_vault_actions(input: ActionRegistrationInput) {
   });
 
   registry.register({
+    id: ACTION_IDS.vault_open_switcher,
+    label: "Quick Switch Vault",
+    execute: () => {
+      stores.ui.toggle_vault_switcher();
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.vault_fetch_git_info_for_list,
+    label: "Fetch Git Info for Vault List",
+    execute: async () => {
+      const vaults = stores.vault.recent_vaults;
+      await Promise.all(
+        vaults.map(async (vault) => {
+          if (stores.vault.vault_git_cache.has(vault.id)) return;
+          const info = await services.git.get_git_info_for_path(vault.path);
+          if (info) {
+            stores.vault.set_vault_git_info(vault.id, info);
+          }
+        }),
+      );
+    },
+  });
+
+  registry.register({
     id: ACTION_IDS.vault_sync_index,
     label: "Sync Vault Index",
     when: () => stores.vault.vault !== null,

@@ -59,6 +59,14 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
     category: "navigation",
   },
   {
+    action_id: ACTION_IDS.vault_open_switcher,
+    key: "CmdOrCtrl+Shift+V",
+    phase: "capture",
+    label: "Quick Switch Vault",
+    description: "Open the vault switcher dropdown",
+    category: "navigation",
+  },
+  {
     action_id: ACTION_IDS.vault_request_change,
     key: "CmdOrCtrl+Shift+O",
     phase: "capture",

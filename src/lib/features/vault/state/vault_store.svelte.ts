@@ -1,5 +1,8 @@
 import type { Vault } from "$lib/shared/types/vault";
 import type { VaultId } from "$lib/shared/types/ids";
+import { SvelteMap } from "svelte/reactivity";
+
+export type VaultGitInfo = { branch: string; is_dirty: boolean };
 
 function normalize_pinned_vault_ids(vault_ids: VaultId[]): VaultId[] {
   const seen = new Set<VaultId>();
@@ -16,6 +19,7 @@ export class VaultStore {
   vault = $state<Vault | null>(null);
   recent_vaults = $state<Vault[]>([]);
   pinned_vault_ids = $state<VaultId[]>([]);
+  vault_git_cache = new SvelteMap<VaultId, VaultGitInfo>();
   generation = $state(0);
 
   clear() {
@@ -78,6 +82,14 @@ export class VaultStore {
     return this.pinned_vault_ids[slot] ?? null;
   }
 
+  set_vault_git_info(vault_id: VaultId, info: VaultGitInfo) {
+    this.vault_git_cache.set(vault_id, info);
+  }
+
+  get_vault_git_info(vault_id: VaultId): VaultGitInfo | undefined {
+    return this.vault_git_cache.get(vault_id);
+  }
+
   bump_generation() {
     this.generation += 1;
   }
@@ -86,6 +98,7 @@ export class VaultStore {
     this.vault = null;
     this.recent_vaults = [];
     this.pinned_vault_ids = [];
+    this.vault_git_cache.clear();
     this.generation += 1;
   }
 
