@@ -104,10 +104,10 @@
 
 ### Frontend
 
-- [ ] Extend center editor pane to support multiple editor instances
-- [ ] `Cmd+\` to split editor area into two panes
-- [ ] Each pane opens a different file independently
-- [ ] Leverage existing `Resizable.PaneGroup` infrastructure
+- [x] Extend center editor pane to support multiple editor instances
+- [x] `Cmd+\` to split editor area into two panes
+- [x] Each pane opens a different file independently
+- [x] Leverage existing `Resizable.PaneGroup` infrastructure
 - [ ] Drag tab to split, drag back to merge
 - [ ] `Cmd+W` to close split pane
 - [ ] Max 2–3 panes
@@ -115,12 +115,22 @@
 
 ### Editor
 
-- [ ] Support multiple concurrent Milkdown instances (separate ProseMirror sessions)
-- [ ] Each pane has independent dirty state, cursor, scroll position
-- [ ] Active pane tracking for keyboard shortcuts and status bar
+- [x] Support multiple concurrent Milkdown instances (separate ProseMirror sessions)
+- [x] Each pane has independent dirty state, cursor, scroll position
+- [x] Active pane tracking for keyboard shortcuts and status bar
+
+### Context Menus
+
+- [x] "Open to Side" in file tree context menu
+- [x] "Open to Side" in tab bar context menu
+
+### Vault Integration
+
+- [x] Close split view on vault switch
 
 ### Testing
 
+- [x] Test SplitViewStore state management (9 scenarios)
 - [ ] Test split/merge lifecycle
 - [ ] Test independent editing in split panes
 - [ ] Test dirty state isolation between panes
