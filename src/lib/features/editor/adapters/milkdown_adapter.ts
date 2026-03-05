@@ -66,6 +66,7 @@ import {
 import { code_block_copy_plugin } from "./code_block_copy_plugin";
 import { mark_escape_plugin } from "./mark_escape_plugin";
 import { slash_command_plugin } from "./slash_command_plugin";
+import { outline_plugin, outline_plugin_key } from "./outline_plugin";
 import { error_message } from "$lib/shared/utils/error_message";
 import { count_words } from "$lib/shared/utils/count_words";
 import { create_logger } from "$lib/shared/utils/logger";
@@ -226,11 +227,13 @@ export function create_milkdown_editor_port(args?: {
         on_external_link_click,
         on_image_paste_requested,
         on_wiki_suggest_query,
+        on_outline_change,
       } = events;
 
       let current_markdown = initial_markdown;
       let current_is_dirty = false;
       let editor: Editor | null = null;
+      let outline_timer: ReturnType<typeof setTimeout> | undefined;
       let is_large_note = is_large_markdown(initial_markdown);
       let current_note_path = note_path;
       let current_vault_id = vault_id;
@@ -393,6 +396,7 @@ export function create_milkdown_editor_port(args?: {
         .use(create_wiki_link_converter_plugin())
         .use(slash_command_plugin)
         .use(find_highlight_plugin)
+        .use(outline_plugin)
         .use(listener)
         .use(history)
         .use(dirty_state_plugin_config_key)
@@ -414,6 +418,13 @@ export function create_milkdown_editor_port(args?: {
 
             current_markdown = normalized;
             on_markdown_change(normalized);
+
+            if (on_outline_change) {
+              clearTimeout(outline_timer);
+              outline_timer = setTimeout(() => {
+                emit_outline_headings();
+              }, 300);
+            }
           });
         });
 
@@ -465,6 +476,17 @@ export function create_milkdown_editor_port(args?: {
           log.error("Editor action failed", { error });
         });
       };
+
+      function emit_outline_headings() {
+        if (!on_outline_change || !editor) return;
+        run_editor_action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          const plugin_state = outline_plugin_key.getState(view.state);
+          if (plugin_state) {
+            on_outline_change(plugin_state.headings);
+          }
+        });
+      }
 
       function get_buffer_entry_from_view_state(
         state: EditorState,
@@ -541,6 +563,7 @@ export function create_milkdown_editor_port(args?: {
       }
 
       save_current_buffer();
+      emit_outline_headings();
 
       function mark_clean() {
         if (!editor) return;
@@ -555,6 +578,7 @@ export function create_milkdown_editor_port(args?: {
       const handle = {
         destroy() {
           if (!editor) return;
+          clearTimeout(outline_timer);
           buffer_map.clear();
           void editor.destroy();
           editor = null;
@@ -677,6 +701,7 @@ export function create_milkdown_editor_port(args?: {
 
           on_markdown_change(current_markdown);
           on_dirty_state_change(current_is_dirty);
+          emit_outline_headings();
         },
         rename_buffer(old_note_path: string, new_note_path: string) {
           if (old_note_path === new_note_path) return;
@@ -757,6 +782,18 @@ export function create_milkdown_editor_port(args?: {
                 node?.scrollIntoView({ behavior: "smooth", block: "center" });
               }
             }
+          });
+        },
+        scroll_to_position(pos: number) {
+          if (!editor) return;
+          run_editor_action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const dom = view.domAtPos(pos);
+            const node =
+              dom.node instanceof HTMLElement
+                ? dom.node
+                : dom.node.parentElement;
+            node?.scrollIntoView({ behavior: "smooth", block: "start" });
           });
         },
       };
