@@ -46,6 +46,7 @@ pub fn run() {
         .manage(features::search::service::SearchDbState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_pty::init())
         .plugin(log_builder.build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(

@@ -9,6 +9,7 @@ import { GitStore } from "$lib/features/git";
 import { LinksStore } from "$lib/features/links";
 import { OutlineStore } from "$lib/features/outline";
 import { SplitViewStore } from "$lib/features/split_view";
+import { TerminalStore } from "$lib/features/terminal";
 
 export type AppStores = {
   vault: VaultStore;
@@ -22,6 +23,7 @@ export type AppStores = {
   links: LinksStore;
   outline: OutlineStore;
   split_view: SplitViewStore;
+  terminal: TerminalStore;
 };
 
 export function create_app_stores(): AppStores {
@@ -37,5 +39,6 @@ export function create_app_stores(): AppStores {
     links: new LinksStore(),
     outline: new OutlineStore(),
     split_view: new SplitViewStore(),
+    terminal: new TerminalStore(),
   };
 }

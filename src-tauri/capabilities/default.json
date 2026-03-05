@@ -12,6 +12,7 @@
     "log:default",
     "opener:default",
     "updater:default",
-    "window-state:default"
+    "window-state:default",
+    "pty:default"
   ]
 }

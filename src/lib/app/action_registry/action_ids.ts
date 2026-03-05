@@ -162,6 +162,9 @@ export const ACTION_IDS = {
   hotkey_reset_all: "hotkey.reset_all",
   hotkey_reset_single: "hotkey.reset_single",
 
+  terminal_toggle: "terminal.toggle",
+  terminal_close: "terminal.close",
+
   split_view_toggle: "split_view.toggle",
   split_view_close: "split_view.close",
   split_view_mount: "split_view.mount",

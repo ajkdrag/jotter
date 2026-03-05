@@ -11,6 +11,7 @@
   } from "$lib/features/vault";
   import { NoteEditor, NoteDetailsDialog } from "$lib/features/note";
   import { SplitNoteEditor } from "$lib/features/split_view";
+  import { TerminalPanel } from "$lib/features/terminal";
   import { TabBar } from "$lib/features/tab";
   import { FindInFileBar } from "$lib/features/search";
   import { EditorStatusBar } from "$lib/features/editor";
@@ -34,6 +35,7 @@
 
   let starred_expanded_node_ids = $state(new SvelteSet<string>());
   const split_view_active = $derived(stores.split_view.active);
+  const terminal_open = $derived(stores.terminal.panel_open);
 
   function starred_node_id(root_path: string, relative_path: string): string {
     return `starred:${root_path}:${relative_path}`;
@@ -697,53 +699,80 @@
           {/if}
           <Resizable.Pane order={2}>
             <Sidebar.Inset class="flex h-full min-h-0 flex-col">
-              <TabBar />
-              <div class="flex min-h-0 flex-1 flex-col">
-                <FindInFileBar
-                  open={stores.ui.find_in_file.open}
-                  query={stores.ui.find_in_file.query}
-                  matches={stores.search.in_file_matches}
-                  selected_match_index={stores.ui.find_in_file
-                    .selected_match_index}
-                  on_query_change={(query: string) =>
-                    void action_registry.execute(
-                      ACTION_IDS.find_in_file_set_query,
-                      query,
-                    )}
-                  on_next={() =>
-                    void action_registry.execute(ACTION_IDS.find_in_file_next)}
-                  on_prev={() =>
-                    void action_registry.execute(ACTION_IDS.find_in_file_prev)}
-                  on_close={() =>
-                    void action_registry.execute(ACTION_IDS.find_in_file_close)}
-                />
-                <div
-                  class="SplitViewContainer"
-                  class:SplitViewContainer--split={split_view_active}
+              <Resizable.PaneGroup direction="vertical" class="flex-1 min-h-0">
+                <Resizable.Pane
+                  defaultSize={terminal_open ? 70 : 100}
+                  minSize={20}
+                  order={1}
                 >
-                  <!-- svelte-ignore a11y_click_events_have_key_events -->
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div
-                    class="SplitViewContainer__primary"
-                    onclick={() => {
-                      if (split_view_active) {
-                        void action_registry.execute(
-                          ACTION_IDS.split_view_set_active_pane,
-                          "primary",
-                        );
-                      }
-                    }}
-                  >
-                    <NoteEditor />
-                  </div>
-                  {#if split_view_active}
-                    <div class="SplitViewContainer__handle"></div>
-                    <div class="SplitViewContainer__secondary">
-                      <SplitNoteEditor />
+                  <div class="flex h-full min-h-0 flex-col">
+                    <TabBar />
+                    <div class="flex min-h-0 flex-1 flex-col">
+                      <FindInFileBar
+                        open={stores.ui.find_in_file.open}
+                        query={stores.ui.find_in_file.query}
+                        matches={stores.search.in_file_matches}
+                        selected_match_index={stores.ui.find_in_file
+                          .selected_match_index}
+                        on_query_change={(query: string) =>
+                          void action_registry.execute(
+                            ACTION_IDS.find_in_file_set_query,
+                            query,
+                          )}
+                        on_next={() =>
+                          void action_registry.execute(
+                            ACTION_IDS.find_in_file_next,
+                          )}
+                        on_prev={() =>
+                          void action_registry.execute(
+                            ACTION_IDS.find_in_file_prev,
+                          )}
+                        on_close={() =>
+                          void action_registry.execute(
+                            ACTION_IDS.find_in_file_close,
+                          )}
+                      />
+                      <div
+                        class="SplitViewContainer"
+                        class:SplitViewContainer--split={split_view_active}
+                      >
+                        <!-- svelte-ignore a11y_click_events_have_key_events -->
+                        <!-- svelte-ignore a11y_no_static_element_interactions -->
+                        <div
+                          class="SplitViewContainer__primary"
+                          onclick={() => {
+                            if (split_view_active) {
+                              void action_registry.execute(
+                                ACTION_IDS.split_view_set_active_pane,
+                                "primary",
+                              );
+                            }
+                          }}
+                        >
+                          <NoteEditor />
+                        </div>
+                        {#if split_view_active}
+                          <div class="SplitViewContainer__handle"></div>
+                          <div class="SplitViewContainer__secondary">
+                            <SplitNoteEditor />
+                          </div>
+                        {/if}
+                      </div>
                     </div>
-                  {/if}
-                </div>
-              </div>
+                  </div>
+                </Resizable.Pane>
+                {#if terminal_open}
+                  <Resizable.Handle withHandle />
+                  <Resizable.Pane
+                    defaultSize={30}
+                    minSize={10}
+                    maxSize={80}
+                    order={2}
+                  >
+                    <TerminalPanel />
+                  </Resizable.Pane>
+                {/if}
+              </Resizable.PaneGroup>
             </Sidebar.Inset>
           </Resizable.Pane>
           {#if stores.ui.context_rail_open}

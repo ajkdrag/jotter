@@ -187,6 +187,14 @@ export const DEFAULT_HOTKEYS: HotkeyBinding[] = [
     category: "editing",
   },
   {
+    action_id: ACTION_IDS.terminal_toggle,
+    key: "CmdOrCtrl+Shift+`",
+    phase: "capture",
+    label: "Toggle Terminal",
+    description: "Show or hide the terminal panel",
+    category: "navigation",
+  },
+  {
     action_id: ACTION_IDS.split_view_toggle,
     key: "CmdOrCtrl+\\",
     phase: "capture",

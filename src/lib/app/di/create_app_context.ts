@@ -24,6 +24,7 @@ import {
   SplitViewService,
   register_split_view_actions,
 } from "$lib/features/split_view";
+import { register_terminal_actions } from "$lib/features/terminal";
 import { mount_reactors } from "$lib/reactors";
 
 export type AppContext = ReturnType<typeof create_app_context>;
@@ -217,6 +218,11 @@ export function create_app_context(input: {
     split_view_store: stores.split_view,
     split_view_service,
     notes_port: input.ports.notes,
+  });
+
+  register_terminal_actions({
+    ...base_action_input,
+    terminal_store: stores.terminal,
   });
 
   const cleanup_reactors = mount_reactors({
