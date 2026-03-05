@@ -65,6 +65,7 @@ import {
 } from "./find_highlight_plugin";
 import { code_block_copy_plugin } from "./code_block_copy_plugin";
 import { mark_escape_plugin } from "./mark_escape_plugin";
+import { slash_command_plugin } from "./slash_command_plugin";
 import { error_message } from "$lib/shared/utils/error_message";
 import { count_words } from "$lib/shared/utils/count_words";
 import { create_logger } from "$lib/shared/utils/logger";
@@ -390,6 +391,7 @@ export function create_milkdown_editor_port(args?: {
           }),
         )
         .use(create_wiki_link_converter_plugin())
+        .use(slash_command_plugin)
         .use(find_highlight_plugin)
         .use(listener)
         .use(history)
