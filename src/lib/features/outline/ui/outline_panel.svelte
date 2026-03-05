@@ -4,12 +4,113 @@
   import type { OutlineHeading } from "$lib/features/outline/types/outline";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import ListTreeIcon from "@lucide/svelte/icons/list-tree";
+  import { onDestroy } from "svelte";
 
   const { stores, action_registry } = use_app_context();
 
   const headings = $derived(stores.outline.headings);
   const active_heading_id = $derived(stores.outline.active_heading_id);
   const collapsed_ids = $derived(stores.outline.collapsed_ids);
+
+  let scroll_raf: number | undefined;
+  let cached_heading_tops: number[] = [];
+  let heading_tops_raf: number | undefined;
+
+  function find_editor_scroll_container(): HTMLElement | null {
+    return document.querySelector(".NoteEditor");
+  }
+
+  function compute_heading_tops() {
+    heading_tops_raf = undefined;
+    const container = find_editor_scroll_container();
+    if (!container || headings.length === 0) {
+      cached_heading_tops = [];
+      return;
+    }
+
+    const heading_elements = container.querySelectorAll(
+      "h1, h2, h3, h4, h5, h6",
+    );
+    const container_rect = container.getBoundingClientRect();
+    const scroll_top = container.scrollTop;
+
+    cached_heading_tops = Array.from(heading_elements).map((el) => {
+      const rect = el.getBoundingClientRect();
+      return rect.top - container_rect.top + scroll_top;
+    });
+  }
+
+  function update_active_heading() {
+    const container = find_editor_scroll_container();
+    if (
+      !container ||
+      headings.length === 0 ||
+      cached_heading_tops.length === 0
+    ) {
+      stores.outline.set_active_heading(null);
+      return;
+    }
+
+    const threshold = container.scrollTop + 80;
+    let last_id: string | null = null;
+
+    for (let i = 0; i < headings.length && i < cached_heading_tops.length; i++) {
+      if (cached_heading_tops[i]! <= threshold) {
+        last_id = headings[i]!.id;
+      } else {
+        break;
+      }
+    }
+
+    const max_scroll = container.scrollHeight - container.clientHeight;
+    if (max_scroll > 0 && container.scrollTop >= max_scroll - 2) {
+      const last_heading = headings[headings.length - 1];
+      if (last_heading) {
+        last_id = last_heading.id;
+      }
+    }
+
+    stores.outline.set_active_heading(
+      last_id ?? headings[0]?.id ?? null,
+    );
+  }
+
+  function handle_scroll() {
+    if (scroll_raf) return;
+    scroll_raf = requestAnimationFrame(() => {
+      scroll_raf = undefined;
+      update_active_heading();
+    });
+  }
+
+  let current_scroll_container: HTMLElement | null = null;
+
+  $effect(() => {
+    void headings.length;
+    if (heading_tops_raf) cancelAnimationFrame(heading_tops_raf);
+    heading_tops_raf = requestAnimationFrame(compute_heading_tops);
+  });
+
+  $effect(() => {
+    void headings.length;
+    const container = find_editor_scroll_container();
+    if (container !== current_scroll_container) {
+      current_scroll_container?.removeEventListener("scroll", handle_scroll);
+      current_scroll_container = container;
+      container?.addEventListener("scroll", handle_scroll, { passive: true });
+    }
+
+    return () => {
+      current_scroll_container?.removeEventListener("scroll", handle_scroll);
+      current_scroll_container = null;
+    };
+  });
+
+  onDestroy(() => {
+    if (scroll_raf) cancelAnimationFrame(scroll_raf);
+    if (heading_tops_raf) cancelAnimationFrame(heading_tops_raf);
+    current_scroll_container?.removeEventListener("scroll", handle_scroll);
+  });
 
   const visible_headings = $derived.by(() => {
     const result: OutlineHeading[] = [];
