@@ -122,5 +122,9 @@ export function create_test_vault_adapter(): VaultPort {
       }
       return Promise.resolve(last_vault_id);
     },
+
+    resolve_file_to_vault(): Promise<null> {
+      return Promise.resolve(null);
+    },
   };
 }

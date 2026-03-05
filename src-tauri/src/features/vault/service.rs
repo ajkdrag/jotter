@@ -1,6 +1,6 @@
 use crate::shared::storage;
 use crate::shared::storage::{Vault, VaultEntry, VaultStore};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::AppHandle;
 
@@ -205,4 +205,39 @@ pub fn remove_vault_from_registry(app: AppHandle, args: RemoveVaultArgs) -> Resu
 pub fn get_last_vault_id(app: AppHandle) -> Result<Option<String>, String> {
     let store = storage::load_store(&app)?;
     Ok(store.last_vault_id)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileVaultResolution {
+    pub vault_id: String,
+    pub vault_path: String,
+    pub relative_path: String,
+}
+
+#[tauri::command]
+pub fn resolve_file_to_vault(
+    app: AppHandle,
+    file_path: String,
+) -> Result<Option<FileVaultResolution>, String> {
+    log::info!("Resolving file to vault: {}", file_path);
+    let canonical = canonicalize_path(&file_path)?;
+    let store = storage::load_store(&app)?;
+
+    for entry in &store.vaults {
+        let vault_path = &entry.vault.path;
+        if canonical.starts_with(vault_path) {
+            let relative = canonical
+                .strip_prefix(vault_path)
+                .unwrap_or(&canonical)
+                .trim_start_matches('/')
+                .to_string();
+            return Ok(Some(FileVaultResolution {
+                vault_id: entry.vault.id.clone(),
+                vault_path: vault_path.clone(),
+                relative_path: relative,
+            }));
+        }
+    }
+
+    Ok(None)
 }

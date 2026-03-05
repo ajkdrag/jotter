@@ -210,6 +210,7 @@ export function create_app_context(input: {
     tab_service,
     git_service,
     links_service,
+    action_registry,
   });
 
   return {

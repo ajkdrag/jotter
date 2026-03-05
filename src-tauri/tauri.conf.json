@@ -22,7 +22,21 @@
     ],
     "macOS": {
       "signingIdentity": "-"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown", "mdown", "mkd", "mkdn", "mdwn", "mdx"],
+        "name": "Markdown Document",
+        "mimeType": "text/markdown",
+        "role": "Editor"
+      },
+      {
+        "ext": ["txt"],
+        "name": "Text Document",
+        "mimeType": "text/plain",
+        "role": "Editor"
+      }
+    ]
   },
   "plugins": {
     "updater": {

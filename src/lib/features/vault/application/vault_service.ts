@@ -192,6 +192,10 @@ export class VaultService {
     );
   }
 
+  async resolve_file_to_vault(file_path: string) {
+    return this.vault_port.resolve_file_to_vault(file_path);
+  }
+
   async toggle_vault_pin(
     vault_id: VaultId,
   ): Promise<{ status: "success" } | { status: "failed"; error: string }> {

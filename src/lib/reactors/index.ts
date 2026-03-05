@@ -12,6 +12,7 @@ import { create_find_in_file_reactor } from "$lib/reactors/find_in_file.reactor.
 import { create_backlinks_sync_reactor } from "$lib/reactors/backlinks_sync.reactor.svelte";
 import { create_local_links_sync_reactor } from "$lib/reactors/local_links_sync.reactor.svelte";
 import { create_window_title_reactor } from "$lib/reactors/window_title.reactor.svelte";
+import { create_file_open_reactor } from "$lib/reactors/file_open.reactor.svelte";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { EditorStore } from "$lib/features/editor";
 import type { UIStore } from "$lib/app";
@@ -29,6 +30,8 @@ import type { GitService } from "$lib/features/git";
 import type { LinksService } from "$lib/features/links";
 import type { SearchStore } from "$lib/features/search";
 import type { LinksStore } from "$lib/features/links";
+import type { ActionRegistry } from "$lib/app/action_registry/action_registry";
+import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
 
 export type ReactorContext = {
   editor_store: EditorStore;
@@ -47,6 +50,7 @@ export type ReactorContext = {
   tab_service: TabService;
   git_service: GitService;
   links_service: LinksService;
+  action_registry: ActionRegistry;
 };
 
 export function mount_reactors(context: ReactorContext): () => void {
@@ -106,6 +110,13 @@ export function mount_reactors(context: ReactorContext): () => void {
       context.vault_store,
       context.tab_store,
       (title) => void getCurrentWindow().setTitle(title),
+    ),
+    create_file_open_reactor(
+      (file_path) =>
+        void context.action_registry.execute(
+          ACTION_IDS.app_handle_file_open,
+          file_path,
+        ),
     ),
   ];
 

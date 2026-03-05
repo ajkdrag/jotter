@@ -40,5 +40,12 @@ export function create_vault_tauri_adapter(): VaultPort {
     async get_last_vault_id() {
       return await invoke_vault<VaultId | null>("get_last_vault_id");
     },
+    async resolve_file_to_vault(file_path: string) {
+      return await invoke_vault<{
+        vault_id: string;
+        vault_path: string;
+        relative_path: string;
+      } | null>("resolve_file_to_vault", { filePath: file_path });
+    },
   };
 }

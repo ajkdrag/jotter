@@ -3,6 +3,7 @@ export const ACTION_IDS = {
   app_check_for_updates: "app.check_for_updates",
   app_editor_mount: "app.editor.mount",
   app_editor_unmount: "app.editor.unmount",
+  app_handle_file_open: "app.handle_file_open",
 
   note_create: "note.create",
   note_open: "note.open",

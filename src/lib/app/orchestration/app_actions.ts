@@ -2,6 +2,8 @@ import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
 import type { ActionRegistrationInput } from "$lib/app/action_registry/action_registration_input";
 import type { OpenNoteState } from "$lib/shared/types/editor";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/shared/types/editor_settings";
+import { as_note_path } from "$lib/shared/types/ids";
+import type { VaultId } from "$lib/shared/types/ids";
 import { DEFAULT_HOTKEYS } from "$lib/features/hotkey";
 import { is_tauri } from "$lib/shared/utils/detect_platform";
 import { toast } from "svelte-sonner";
@@ -199,5 +201,44 @@ export function register_app_actions(input: ActionRegistrationInput) {
     id: ACTION_IDS.app_check_for_updates,
     label: "Check for Updates",
     execute: async () => execute_app_check_for_updates(),
+  });
+
+  registry.register({
+    id: ACTION_IDS.app_handle_file_open,
+    label: "Handle File Open",
+    execute: async (file_path_raw: unknown) => {
+      const file_path = file_path_raw as string;
+      try {
+        const resolution =
+          await services.vault.resolve_file_to_vault(file_path);
+        if (!resolution) {
+          toast.info(
+            "File is not in a known vault. Open its folder as a vault first.",
+          );
+          return;
+        }
+
+        const current_vault_id = input.stores.vault.vault?.id;
+        if (current_vault_id !== resolution.vault_id) {
+          const result = await services.vault.change_vault_by_id(
+            resolution.vault_id as VaultId,
+          );
+          if (result.status === "failed") {
+            toast.error(`Failed to switch vault: ${result.error}`);
+            return;
+          }
+          await registry.execute(ACTION_IDS.folder_refresh_tree);
+          await registry.execute(ACTION_IDS.git_check_repo);
+        }
+
+        await registry.execute(ACTION_IDS.note_open, {
+          note_path: as_note_path(resolution.relative_path),
+          cleanup_if_missing: false,
+        });
+      } catch (error) {
+        log.error("Failed to handle file open", { error: String(error) });
+        toast.error("Failed to open file");
+      }
+    },
   });
 }

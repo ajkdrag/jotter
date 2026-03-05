@@ -100,11 +100,30 @@ pub fn run() {
             features::git::service::git_diff,
             features::git::service::git_show_file_at_commit,
             features::git::service::git_restore_file,
-            features::git::service::git_create_tag
+            features::git::service::git_create_tag,
+            features::vault::service::resolve_file_to_vault
         ])
         .register_uri_scheme_protocol("otterly-asset", |ctx, req| {
             shared::storage::handle_asset_request(ctx.app_handle(), req)
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            {
+                if let tauri::RunEvent::Opened { urls } = &event {
+                    use tauri::Emitter;
+                    for url in urls {
+                        if url.scheme() == "file" {
+                            if let Ok(path) = url.to_file_path() {
+                                let path_str = path.to_string_lossy().into_owned();
+                                log::info!("File open event: {}", path_str);
+                                let _ = app.emit("file-open", &path_str);
+                            }
+                        }
+                    }
+                }
+            }
+            let _ = (&app, &event);
+        });
 }

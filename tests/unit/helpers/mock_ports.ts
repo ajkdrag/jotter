@@ -62,6 +62,9 @@ export function create_mock_vault_port(): VaultPort & {
     get_last_vault_id() {
       return Promise.resolve(null);
     },
+    resolve_file_to_vault() {
+      return Promise.resolve(null);
+    },
   };
   return mock;
 }

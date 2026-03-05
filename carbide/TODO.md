@@ -80,19 +80,21 @@
 
 ### Backend (Rust)
 
-- [ ] Add `fileAssociations` to `tauri.conf.json` for `.md`, `.markdown`, `.mdx`
-- [ ] Handle file-open events in Rust (adapt Moraya's `lib.rs` pattern)
-- [ ] Emit event to frontend with file path on open
+- [x] Add `fileAssociations` to `tauri.conf.json` for `.md`, `.markdown`, `.mdx`
+- [x] Handle file-open events in Rust (adapt Moraya's `lib.rs` pattern)
+- [x] Emit event to frontend with file path on open
+- [x] Add `resolve_file_to_vault` Tauri command
 
 ### Frontend
 
-- [ ] Handle file-open event: if file is in known vault → open vault + navigate to file
-- [ ] Handle file-open event: if file outside any vault → standalone single-file mode
+- [x] Handle file-open event: if file is in known vault → open vault + navigate to file
+- [x] Handle file-open event: if file outside any vault → toast prompting to add folder as vault
 - [ ] Support drag-and-drop `.md` files onto dock icon
 
 ### Testing
 
 - [ ] Test file association registration
+- [ ] Test `resolve_file_to_vault` logic
 - [ ] Test opening file inside known vault
 - [ ] Test opening file outside any vault
 
