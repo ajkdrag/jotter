@@ -1,5 +1,5 @@
 import { EditorService, EditorStore } from "$lib/features/editor";
-import type { EditorPort } from "$lib/features/editor";
+import type { EditorPort, EditorServiceCallbacks } from "$lib/features/editor";
 import type { VaultStore } from "$lib/features/vault";
 import type { OpStore } from "$lib/app";
 import type { SplitViewStore } from "$lib/features/split_view/state/split_view_store.svelte";
@@ -17,15 +17,8 @@ export class SplitViewService {
     private readonly vault_store: VaultStore,
     private readonly op_store: OpStore,
     private readonly split_view_store: SplitViewStore,
+    private readonly callbacks: EditorServiceCallbacks,
   ) {}
-
-  get_secondary_editor(): EditorService | null {
-    return this.secondary_editor;
-  }
-
-  get_secondary_store(): EditorStore | null {
-    return this.secondary_store;
-  }
 
   activate(note: OpenNoteState): void {
     this.split_view_store.open_secondary(note);
@@ -44,11 +37,7 @@ export class SplitViewService {
         this.vault_store,
         this.secondary_store,
         this.op_store,
-        {
-          on_internal_link_click: () => {},
-          on_external_link_click: () => {},
-          on_image_paste_requested: () => {},
-        },
+        this.callbacks,
       );
     }
 

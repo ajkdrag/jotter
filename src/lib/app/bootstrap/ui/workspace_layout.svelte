@@ -717,30 +717,32 @@
                   on_close={() =>
                     void action_registry.execute(ACTION_IDS.find_in_file_close)}
                 />
-                {#if split_view_active}
-                  <Resizable.PaneGroup direction="horizontal">
-                    <Resizable.Pane defaultSize={50} minSize={30}>
-                      <!-- svelte-ignore a11y_click_events_have_key_events -->
-                      <!-- svelte-ignore a11y_no_static_element_interactions -->
-                      <div
-                        class="h-full"
-                        onclick={() =>
-                          void action_registry.execute(
-                            ACTION_IDS.split_view_set_active_pane,
-                            "primary",
-                          )}
-                      >
-                        <NoteEditor />
-                      </div>
-                    </Resizable.Pane>
-                    <Resizable.Handle withHandle />
-                    <Resizable.Pane defaultSize={50} minSize={30}>
+                <div
+                  class="SplitViewContainer"
+                  class:SplitViewContainer--split={split_view_active}
+                >
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="SplitViewContainer__primary"
+                    onclick={() => {
+                      if (split_view_active) {
+                        void action_registry.execute(
+                          ACTION_IDS.split_view_set_active_pane,
+                          "primary",
+                        );
+                      }
+                    }}
+                  >
+                    <NoteEditor />
+                  </div>
+                  {#if split_view_active}
+                    <div class="SplitViewContainer__handle"></div>
+                    <div class="SplitViewContainer__secondary">
                       <SplitNoteEditor />
-                    </Resizable.Pane>
-                  </Resizable.PaneGroup>
-                {:else}
-                  <NoteEditor />
-                {/if}
+                    </div>
+                  {/if}
+                </div>
               </div>
             </Sidebar.Inset>
           </Resizable.Pane>
@@ -793,6 +795,38 @@
 {/if}
 
 <style>
+  .SplitViewContainer {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .SplitViewContainer__primary {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .SplitViewContainer--split .SplitViewContainer__primary {
+    flex: 1 1 50%;
+  }
+
+  .SplitViewContainer__handle {
+    width: 1px;
+    flex-shrink: 0;
+    background-color: var(--border);
+    cursor: col-resize;
+  }
+
+  .SplitViewContainer__secondary {
+    flex: 1 1 50%;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
   .SidebarHeader {
     display: flex;
     align-items: center;

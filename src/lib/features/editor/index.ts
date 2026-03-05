@@ -1,4 +1,7 @@
-export { EditorService } from "$lib/features/editor/application/editor_service";
+export {
+  EditorService,
+  type EditorServiceCallbacks,
+} from "$lib/features/editor/application/editor_service";
 export { EditorStore } from "$lib/features/editor/state/editor_store.svelte";
 export type {
   BufferRestorePolicy,

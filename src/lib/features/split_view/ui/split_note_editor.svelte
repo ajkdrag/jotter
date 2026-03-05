@@ -13,6 +13,13 @@
     void action_registry.execute(ACTION_IDS.split_view_mount, node, note);
 
     return {
+      update(new_note: OpenNoteState) {
+        void action_registry.execute(
+          ACTION_IDS.split_view_mount,
+          node,
+          new_note,
+        );
+      },
       destroy() {
         void action_registry.execute(ACTION_IDS.split_view_unmount);
       },

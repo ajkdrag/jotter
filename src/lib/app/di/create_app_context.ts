@@ -9,7 +9,10 @@ import { NoteService } from "$lib/features/note";
 import { FolderService } from "$lib/features/folder";
 import { SettingsService } from "$lib/features/settings";
 import { SearchService } from "$lib/features/search";
-import { EditorService } from "$lib/features/editor";
+import {
+  EditorService,
+  type EditorServiceCallbacks,
+} from "$lib/features/editor";
 import { ClipboardService } from "$lib/features/clipboard";
 import { ShellService } from "$lib/features/shell";
 import { TabService } from "$lib/features/tab";
@@ -41,26 +44,28 @@ export function create_app_context(input: {
     now_ms,
   );
 
+  const editor_callbacks: EditorServiceCallbacks = {
+    on_internal_link_click: (raw_path, base_note_path) =>
+      void action_registry.execute(ACTION_IDS.note_open_wiki_link, {
+        raw_path,
+        base_note_path,
+      }),
+    on_external_link_click: (url) =>
+      void action_registry.execute(ACTION_IDS.shell_open_url, url),
+    on_image_paste_requested: (note_id, note_path, image) =>
+      void action_registry.execute(ACTION_IDS.note_request_image_paste, {
+        note_id,
+        note_path,
+        image,
+      }),
+  };
+
   const editor_service = new EditorService(
     input.ports.editor,
     stores.vault,
     stores.editor,
     stores.op,
-    {
-      on_internal_link_click: (raw_path, base_note_path) =>
-        void action_registry.execute(ACTION_IDS.note_open_wiki_link, {
-          raw_path,
-          base_note_path,
-        }),
-      on_external_link_click: (url) =>
-        void action_registry.execute(ACTION_IDS.shell_open_url, url),
-      on_image_paste_requested: (note_id, note_path, image) =>
-        void action_registry.execute(ACTION_IDS.note_request_image_paste, {
-          note_id,
-          note_path,
-          image,
-        }),
-    },
+    editor_callbacks,
     search_service,
     stores.outline,
   );
@@ -172,9 +177,10 @@ export function create_app_context(input: {
     stores.vault,
     stores.op,
     stores.split_view,
+    editor_callbacks,
   );
 
-  register_actions({
+  const base_action_input = {
     registry: action_registry,
     stores: {
       ui: stores.ui,
@@ -202,36 +208,12 @@ export function create_app_context(input: {
       theme: theme_service,
     },
     default_mount_config: input.default_mount_config,
-  });
+  };
+
+  register_actions(base_action_input);
 
   register_split_view_actions({
-    registry: action_registry,
-    stores: {
-      ui: stores.ui,
-      vault: stores.vault,
-      notes: stores.notes,
-      editor: stores.editor,
-      op: stores.op,
-      search: stores.search,
-      tab: stores.tab,
-      git: stores.git,
-      outline: stores.outline,
-    },
-    services: {
-      vault: vault_service,
-      note: note_service,
-      folder: folder_service,
-      settings: settings_service,
-      search: search_service,
-      editor: editor_service,
-      clipboard: clipboard_service,
-      shell: shell_service,
-      tab: tab_service,
-      git: git_service,
-      hotkey: hotkey_service,
-      theme: theme_service,
-    },
-    default_mount_config: input.default_mount_config,
+    ...base_action_input,
     split_view_store: stores.split_view,
     split_view_service,
     notes_port: input.ports.notes,

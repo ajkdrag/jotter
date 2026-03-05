@@ -3,7 +3,6 @@ import type { ActionRegistrationInput } from "$lib/app/action_registry/action_re
 import type { OpenNoteState } from "$lib/shared/types/editor";
 import { DEFAULT_EDITOR_SETTINGS } from "$lib/shared/types/editor_settings";
 import { as_note_path } from "$lib/shared/types/ids";
-import type { VaultId } from "$lib/shared/types/ids";
 import { DEFAULT_HOTKEYS } from "$lib/features/hotkey";
 import { is_tauri } from "$lib/shared/utils/detect_platform";
 import { toast } from "svelte-sonner";
@@ -220,15 +219,7 @@ export function register_app_actions(input: ActionRegistrationInput) {
 
         const current_vault_id = input.stores.vault.vault?.id;
         if (current_vault_id !== resolution.vault_id) {
-          const result = await services.vault.change_vault_by_id(
-            resolution.vault_id as VaultId,
-          );
-          if (result.status === "failed") {
-            toast.error(`Failed to switch vault: ${result.error}`);
-            return;
-          }
-          await registry.execute(ACTION_IDS.folder_refresh_tree);
-          await registry.execute(ACTION_IDS.git_check_repo);
+          await registry.execute(ACTION_IDS.vault_select, resolution.vault_id);
         }
 
         await registry.execute(ACTION_IDS.note_open, {

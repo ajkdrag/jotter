@@ -23,11 +23,9 @@ export function register_split_view_actions(
 
   registry.register({
     id: ACTION_IDS.split_view_toggle,
-    label: "Toggle Split View",
+    label: "Close Split View",
     execute: () => {
-      if (split_view_store.active) {
-        split_view_service.close();
-      }
+      split_view_service.close();
     },
   });
 
