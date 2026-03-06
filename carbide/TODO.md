@@ -89,6 +89,7 @@
 
 - [x] Handle file-open event: if file is in known vault → open vault + navigate to file
 - [x] Handle file-open event: if file outside any vault → toast prompting to add folder as vault
+- [ ] Support drag-and-drop `.md` files onto dock icon
 
 ### Testing
 
