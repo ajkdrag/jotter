@@ -20,11 +20,16 @@
     git_is_dirty: boolean;
     git_pending_files: number;
     git_sync_status: GitSyncStatus;
+    git_has_remote: boolean;
+    git_ahead: number;
+    git_behind: number;
     is_repairing_links: boolean;
     link_repair_message: string | null;
     on_vault_click: () => void;
     on_info_click: () => void;
     on_git_click: () => void;
+    on_git_push: () => void;
+    on_git_pull: () => void;
     on_sync_click: () => void;
   }
 
@@ -41,11 +46,16 @@
     git_is_dirty,
     git_pending_files,
     git_sync_status,
+    git_has_remote,
+    git_ahead,
+    git_behind,
     is_repairing_links,
     link_repair_message,
     on_vault_click,
     on_info_click,
     on_git_click,
+    on_git_push,
+    on_git_pull,
     on_sync_click,
   }: Props = $props();
 
@@ -169,7 +179,12 @@
         is_dirty={git_is_dirty}
         pending_files={git_pending_files}
         sync_status={git_sync_status}
+        has_remote={git_has_remote}
+        ahead={git_ahead}
+        behind={git_behind}
         on_click={on_git_click}
+        on_push={on_git_push}
+        on_pull={on_git_pull}
       />
     {/if}
     <Tooltip.Provider delayDuration={0}>

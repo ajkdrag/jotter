@@ -12,6 +12,8 @@ export class GitStore {
   has_remote = $state(false);
   has_upstream = $state(false);
   remote_url = $state<string | null>(null);
+  ahead = $state(0);
+  behind = $state(0);
   sync_status = $state<GitSyncStatus>("idle");
   last_commit_time = $state<number | null>(null);
   error = $state<string | null>(null);
@@ -31,6 +33,8 @@ export class GitStore {
     has_remote: boolean,
     has_upstream: boolean,
     remote_url: string | null,
+    ahead: number,
+    behind: number,
   ) {
     this.branch = branch;
     this.is_dirty = is_dirty;
@@ -38,6 +42,8 @@ export class GitStore {
     this.has_remote = has_remote;
     this.has_upstream = has_upstream;
     this.remote_url = remote_url;
+    this.ahead = ahead;
+    this.behind = behind;
   }
 
   set_enabled(enabled: boolean) {
@@ -101,6 +107,8 @@ export class GitStore {
     this.has_remote = false;
     this.has_upstream = false;
     this.remote_url = null;
+    this.ahead = 0;
+    this.behind = 0;
     this.sync_status = "idle";
     this.last_commit_time = null;
     this.error = null;

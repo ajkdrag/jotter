@@ -94,7 +94,7 @@ describe("register_git_actions", () => {
 
   it("git_commit_all delegates to service commit_all", async () => {
     const { registry, stores, services } = create_harness();
-    stores.git.set_status("main", true, 1, false, false, null);
+    stores.git.set_status("main", true, 1, false, false, null, 0, 0);
 
     await registry.execute(ACTION_IDS.git_commit_all);
 

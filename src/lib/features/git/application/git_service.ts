@@ -206,6 +206,8 @@ export class GitService {
         status.has_remote,
         status.has_upstream,
         status.remote_url,
+        status.ahead,
+        status.behind,
       );
       this.op_store.succeed("git.status");
     } catch (err) {

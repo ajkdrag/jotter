@@ -285,4 +285,71 @@ export function register_git_actions(input: ActionRegistrationInput) {
       close_checkpoint_dialog();
     },
   });
+
+  registry.register({
+    id: ACTION_IDS.git_push,
+    label: "Git Push",
+    execute: async () => {
+      const toast_id = toast.loading("Pushing...");
+      const result = await services.git.push();
+      if (result.success) {
+        toast.success(result.message ?? "Pushed successfully", {
+          id: toast_id,
+        });
+      } else {
+        toast.error(result.error ?? "Push failed", { id: toast_id });
+      }
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.git_pull,
+    label: "Git Pull",
+    execute: async () => {
+      const toast_id = toast.loading("Pulling...");
+      const result = await services.git.pull();
+      if (result.success) {
+        toast.success(result.message ?? "Pulled successfully", {
+          id: toast_id,
+        });
+      } else {
+        toast.error(result.error ?? "Pull failed", { id: toast_id });
+      }
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.git_sync,
+    label: "Git Sync",
+    execute: async () => {
+      const toast_id = toast.loading("Syncing...");
+      const result = await services.git.sync();
+      if (result.success) {
+        toast.success("Synced successfully", { id: toast_id });
+      } else {
+        toast.error(result.error ?? "Sync failed", { id: toast_id });
+      }
+    },
+  });
+
+  registry.register({
+    id: ACTION_IDS.git_add_remote,
+    label: "Add Git Remote",
+    execute: async (payload: unknown) => {
+      const url =
+        typeof payload === "string"
+          ? payload
+          : typeof (payload as Record<string, unknown>)?.url === "string"
+            ? ((payload as Record<string, unknown>).url as string)
+            : "";
+      if (!url) return;
+      const toast_id = toast.loading("Adding remote...");
+      const result = await services.git.add_remote(url);
+      if (result.success) {
+        toast.success("Remote added", { id: toast_id });
+      } else {
+        toast.error(result.error ?? "Failed to add remote", { id: toast_id });
+      }
+    },
+  });
 }

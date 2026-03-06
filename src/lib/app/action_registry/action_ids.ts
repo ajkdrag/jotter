@@ -145,6 +145,10 @@ export const ACTION_IDS = {
   git_confirm_checkpoint: "git.confirm_checkpoint",
   git_cancel_checkpoint: "git.cancel_checkpoint",
   git_select_commit: "git.select_commit",
+  git_push: "git.push",
+  git_pull: "git.pull",
+  git_sync: "git.sync",
+  git_add_remote: "git.add_remote",
 
   theme_load: "theme.load",
   theme_switch: "theme.switch",

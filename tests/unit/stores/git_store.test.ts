@@ -35,10 +35,17 @@ describe("GitStore", () => {
       true,
       true,
       "git@github.com:user/repo.git",
+      2,
+      1,
     );
     expect(store.branch).toBe("feature/test");
     expect(store.is_dirty).toBe(true);
     expect(store.pending_files).toBe(3);
+    expect(store.has_remote).toBe(true);
+    expect(store.has_upstream).toBe(true);
+    expect(store.remote_url).toBe("git@github.com:user/repo.git");
+    expect(store.ahead).toBe(2);
+    expect(store.behind).toBe(1);
   });
 
   it("sets sync status", () => {
@@ -106,7 +113,7 @@ describe("GitStore", () => {
   it("resets all state", () => {
     const store = new GitStore();
     store.set_enabled(true);
-    store.set_status("dev", true, 5, true, false, null);
+    store.set_status("dev", true, 5, true, false, null, 3, 0);
     store.set_sync_status("pushing");
     store.set_last_commit_time(9999);
     store.set_error("err");
