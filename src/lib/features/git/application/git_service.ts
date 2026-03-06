@@ -203,6 +203,9 @@ export class GitService {
         status.branch,
         status.is_dirty,
         status.files.length,
+        status.has_remote,
+        status.has_upstream,
+        status.remote_url,
       );
       this.op_store.succeed("git.status");
     } catch (err) {
@@ -296,5 +299,113 @@ export class GitService {
       const msg = error_message(err);
       this.fail_git_mutation("git.restore", msg);
     }
+  }
+
+  async push() {
+    const vault_path = this.get_vault_path();
+    this.op_store.start("git.push", this.now_ms());
+    this.git_store.set_sync_status("pushing");
+    this.git_store.set_error(null);
+    try {
+      const status = await this.git_port.status(vault_path);
+      const result = status.has_upstream
+        ? await this.git_port.push(vault_path)
+        : await this.git_port.push_with_upstream(vault_path, status.branch);
+      if (!result.success) {
+        this.fail_git_mutation("git.push", result.error ?? "Push failed");
+        return result;
+      }
+      this.git_store.set_sync_status("idle");
+      this.op_store.succeed("git.push");
+      await this.refresh_status();
+      return result;
+    } catch (err) {
+      const msg = error_message(err);
+      this.fail_git_mutation("git.push", msg);
+      return { success: false, message: null, error: msg };
+    }
+  }
+
+  async pull() {
+    const vault_path = this.get_vault_path();
+    this.op_store.start("git.pull", this.now_ms());
+    this.git_store.set_sync_status("pulling");
+    this.git_store.set_error(null);
+    try {
+      const result = await this.git_port.pull(vault_path);
+      if (!result.success) {
+        this.fail_git_mutation("git.pull", result.error ?? "Pull failed");
+        return result;
+      }
+      this.git_store.set_sync_status("idle");
+      this.op_store.succeed("git.pull");
+      await this.refresh_status();
+      return result;
+    } catch (err) {
+      const msg = error_message(err);
+      this.fail_git_mutation("git.pull", msg);
+      return { success: false, message: null, error: msg };
+    }
+  }
+
+  async fetch_remote() {
+    const vault_path = this.get_vault_path();
+    this.op_store.start("git.fetch", this.now_ms());
+    try {
+      const result = await this.git_port.fetch(vault_path);
+      if (!result.success) {
+        this.op_store.fail("git.fetch", result.error ?? "Fetch failed");
+        return result;
+      }
+      this.op_store.succeed("git.fetch");
+      await this.refresh_status();
+      return result;
+    } catch (err) {
+      const msg = error_message(err);
+      this.op_store.fail("git.fetch", msg);
+      return { success: false, message: null, error: msg };
+    }
+  }
+
+  async add_remote(url: string) {
+    const vault_path = this.get_vault_path();
+    this.op_store.start("git.add_remote", this.now_ms());
+    this.git_store.set_error(null);
+    try {
+      const result = await this.git_port.add_remote(vault_path, url);
+      if (!result.success) {
+        this.git_store.set_error(result.error);
+        this.op_store.fail(
+          "git.add_remote",
+          result.error ?? "Failed to add remote",
+        );
+        return result;
+      }
+      this.op_store.succeed("git.add_remote");
+      await this.refresh_status();
+      return result;
+    } catch (err) {
+      const msg = error_message(err);
+      this.git_store.set_error(msg);
+      this.op_store.fail("git.add_remote", msg);
+      return { success: false, message: null, error: msg };
+    }
+  }
+
+  async sync() {
+    const vault_path = this.get_vault_path();
+    const status = await this.git_port.status(vault_path);
+    if (!status.has_remote) {
+      return { success: false, message: null, error: "No remote configured" };
+    }
+
+    if (status.is_dirty) {
+      await this.commit_all();
+    }
+
+    const pull_result = await this.pull();
+    if (!pull_result.success) return pull_result;
+
+    return await this.push();
   }
 }

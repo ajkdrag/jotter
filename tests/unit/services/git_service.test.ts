@@ -14,6 +14,9 @@ function create_mock_port() {
     is_dirty: false,
     ahead: 0,
     behind: 0,
+    has_remote: false,
+    has_upstream: false,
+    remote_url: null,
     files: [],
   });
   const stage_and_commit = vi.fn().mockResolvedValue("abc123");
@@ -24,6 +27,21 @@ function create_mock_port() {
   const show_file_at_commit = vi.fn().mockResolvedValue("file content");
   const restore_file = vi.fn().mockResolvedValue("def456");
   const create_tag = vi.fn().mockResolvedValue(undefined);
+  const push = vi
+    .fn()
+    .mockResolvedValue({ success: true, message: null, error: null });
+  const fetch = vi
+    .fn()
+    .mockResolvedValue({ success: true, message: null, error: null });
+  const pull = vi
+    .fn()
+    .mockResolvedValue({ success: true, message: null, error: null });
+  const add_remote = vi
+    .fn()
+    .mockResolvedValue({ success: true, message: null, error: null });
+  const push_with_upstream = vi
+    .fn()
+    .mockResolvedValue({ success: true, message: null, error: null });
 
   const port: GitPort = {
     has_repo,
@@ -35,6 +53,11 @@ function create_mock_port() {
     show_file_at_commit,
     restore_file,
     create_tag,
+    push,
+    fetch,
+    pull,
+    add_remote,
+    push_with_upstream,
   };
 
   return {

@@ -15,7 +15,16 @@ export type GitStatus = {
   is_dirty: boolean;
   ahead: number;
   behind: number;
+  has_remote: boolean;
+  has_upstream: boolean;
+  remote_url: string | null;
   files: GitFileStatus[];
+};
+
+export type GitRemoteResult = {
+  success: boolean;
+  message: string | null;
+  error: string | null;
 };
 
 export type GitCommit = {

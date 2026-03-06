@@ -17,6 +17,9 @@ pub struct GitStatus {
     pub is_dirty: bool,
     pub ahead: usize,
     pub behind: usize,
+    pub has_remote: bool,
+    pub has_upstream: bool,
+    pub remote_url: Option<String>,
     pub files: Vec<GitFileStatus>,
 }
 
@@ -148,13 +151,25 @@ pub fn git_status(vault_path: String) -> Result<GitStatus, String> {
 
     let is_dirty = !files.is_empty();
 
-    let (ahead, behind) = compute_ahead_behind(&repo).unwrap_or((0, 0));
+    let has_remote = repo.find_remote("origin").is_ok();
+    let remote_url = repo
+        .find_remote("origin")
+        .ok()
+        .and_then(|r| r.url().map(|u| u.to_string()));
+
+    let (ahead, behind, has_upstream) = match compute_ahead_behind(&repo) {
+        Ok((a, b)) => (a, b, true),
+        Err(_) => (0, 0, false),
+    };
 
     Ok(GitStatus {
         branch,
         is_dirty,
         ahead,
         behind,
+        has_remote,
+        has_upstream,
+        remote_url,
         files,
     })
 }
@@ -549,4 +564,275 @@ pub fn git_restore_file(
     let message = format!("Restore: {} to {}", title, short_hash);
 
     git_stage_and_commit(vault_path, message, Some(vec![file_path]))
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GitRemoteResult {
+    pub success: bool,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+fn git_cmd(vault_path: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new("git");
+    cmd.current_dir(vault_path);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    cmd
+}
+
+fn parse_remote_error(stderr: &str) -> Option<String> {
+    if stderr.contains("Permission denied") || stderr.contains("publickey") {
+        Some("Authentication failed. Check your SSH keys or credentials.".to_string())
+    } else if stderr.contains("Could not resolve host") {
+        Some("Could not connect to remote. Check your internet connection.".to_string())
+    } else {
+        None
+    }
+}
+
+fn parse_push_error(stderr: &str) -> String {
+    if let Some(msg) = parse_remote_error(stderr) {
+        msg
+    } else if stderr.contains("Repository not found") || stderr.contains("does not exist") {
+        "Remote repository not found. Check the URL.".to_string()
+    } else {
+        stderr.trim().to_string()
+    }
+}
+
+fn parse_pull_error(stderr: &str) -> String {
+    if let Some(msg) = parse_remote_error(stderr) {
+        msg
+    } else if stderr.contains("local changes") || stderr.contains("unstaged changes") {
+        "Commit your changes before syncing with remote.".to_string()
+    } else if stderr.contains("CONFLICT") || stderr.contains("Merge conflict") {
+        "Pull failed due to merge conflicts. Resolve conflicts manually.".to_string()
+    } else if stderr.contains("not possible to fast-forward") {
+        "Pull failed: local and remote have diverged. Try pulling with rebase or merging manually."
+            .to_string()
+    } else if stderr.contains("unrelated histories") {
+        "Pull failed: repositories have unrelated histories.".to_string()
+    } else {
+        stderr.trim().to_string()
+    }
+}
+
+fn is_valid_remote_url(url: &str) -> bool {
+    let url = url.trim();
+    url.starts_with("git@") || url.starts_with("https://") || url.starts_with("http://")
+}
+
+#[tauri::command]
+pub fn git_push(vault_path: String) -> GitRemoteResult {
+    let output = git_cmd(&vault_path)
+        .args([
+            "-c",
+            "http.lowSpeedLimit=1000",
+            "-c",
+            "http.lowSpeedTime=10",
+            "push",
+        ])
+        .env("GIT_SSH_COMMAND", "ssh -o ConnectTimeout=10")
+        .output();
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                GitRemoteResult {
+                    success: true,
+                    message: Some("Pushed successfully".to_string()),
+                    error: None,
+                }
+            } else {
+                GitRemoteResult {
+                    success: false,
+                    message: None,
+                    error: Some(parse_push_error(&String::from_utf8_lossy(&output.stderr))),
+                }
+            }
+        }
+        Err(e) => GitRemoteResult {
+            success: false,
+            message: None,
+            error: Some(format!("Failed to push: {}", e)),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn git_fetch(vault_path: String) -> GitRemoteResult {
+    let output = git_cmd(&vault_path)
+        .args([
+            "-c",
+            "http.lowSpeedLimit=1000",
+            "-c",
+            "http.lowSpeedTime=10",
+            "fetch",
+            "--quiet",
+        ])
+        .env("GIT_SSH_COMMAND", "ssh -o ConnectTimeout=10")
+        .output();
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                GitRemoteResult {
+                    success: true,
+                    message: Some("Fetched successfully".to_string()),
+                    error: None,
+                }
+            } else {
+                GitRemoteResult {
+                    success: false,
+                    message: None,
+                    error: Some(parse_pull_error(&String::from_utf8_lossy(&output.stderr))),
+                }
+            }
+        }
+        Err(e) => GitRemoteResult {
+            success: false,
+            message: None,
+            error: Some(format!("Failed to fetch: {}", e)),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn git_pull(vault_path: String) -> GitRemoteResult {
+    let output = git_cmd(&vault_path)
+        .args([
+            "-c",
+            "http.lowSpeedLimit=1000",
+            "-c",
+            "http.lowSpeedTime=10",
+            "-c",
+            "pull.rebase=false",
+            "pull",
+        ])
+        .env("GIT_SSH_COMMAND", "ssh -o ConnectTimeout=10")
+        .output();
+
+    match output {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if output.status.success() {
+                let message = if stdout.contains("Already up to date") {
+                    "Already up to date"
+                } else {
+                    "Pulled latest changes"
+                };
+                GitRemoteResult {
+                    success: true,
+                    message: Some(message.to_string()),
+                    error: None,
+                }
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let combined = format!("{}{}", stdout, stderr);
+                GitRemoteResult {
+                    success: false,
+                    message: None,
+                    error: Some(parse_pull_error(&combined)),
+                }
+            }
+        }
+        Err(e) => GitRemoteResult {
+            success: false,
+            message: None,
+            error: Some(format!("Failed to pull: {}", e)),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn git_add_remote(vault_path: String, url: String) -> GitRemoteResult {
+    if !is_valid_remote_url(&url) {
+        return GitRemoteResult {
+            success: false,
+            message: None,
+            error: Some(
+                "Invalid remote URL. Must start with https://, http://, or git@".to_string(),
+            ),
+        };
+    }
+
+    let output = git_cmd(&vault_path)
+        .args(["remote", "add", "origin", &url])
+        .output();
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                GitRemoteResult {
+                    success: true,
+                    message: Some("Remote added successfully".to_string()),
+                    error: None,
+                }
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                if stderr.contains("already exists") {
+                    GitRemoteResult {
+                        success: false,
+                        message: None,
+                        error: Some("Remote 'origin' already exists".to_string()),
+                    }
+                } else {
+                    GitRemoteResult {
+                        success: false,
+                        message: None,
+                        error: Some(stderr),
+                    }
+                }
+            }
+        }
+        Err(e) => GitRemoteResult {
+            success: false,
+            message: None,
+            error: Some(format!("Failed to add remote: {}", e)),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn git_push_with_upstream(vault_path: String, branch: String) -> GitRemoteResult {
+    let output = git_cmd(&vault_path)
+        .args([
+            "-c",
+            "http.lowSpeedLimit=1000",
+            "-c",
+            "http.lowSpeedTime=10",
+            "push",
+            "-u",
+            "origin",
+            &branch,
+        ])
+        .env("GIT_SSH_COMMAND", "ssh -o ConnectTimeout=10")
+        .output();
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                GitRemoteResult {
+                    success: true,
+                    message: Some(format!("Pushed and tracking origin/{}", branch)),
+                    error: None,
+                }
+            } else {
+                GitRemoteResult {
+                    success: false,
+                    message: None,
+                    error: Some(parse_push_error(&String::from_utf8_lossy(&output.stderr))),
+                }
+            }
+        }
+        Err(e) => GitRemoteResult {
+            success: false,
+            message: None,
+            error: Some(format!("Failed to push: {}", e)),
+        },
+    }
 }

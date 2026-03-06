@@ -114,6 +114,11 @@ pub fn run() {
             features::git::service::git_show_file_at_commit,
             features::git::service::git_restore_file,
             features::git::service::git_create_tag,
+            features::git::service::git_push,
+            features::git::service::git_fetch,
+            features::git::service::git_pull,
+            features::git::service::git_add_remote,
+            features::git::service::git_push_with_upstream,
             features::vault::service::resolve_file_to_vault,
             get_pending_file_open
         ])

@@ -4,6 +4,7 @@ import type { VaultPath } from "$lib/shared/types/ids";
 import type {
   GitCommit,
   GitDiff,
+  GitRemoteResult,
   GitStatus,
 } from "$lib/features/git/types/git";
 
@@ -87,6 +88,33 @@ export function create_git_tauri_adapter(): GitPort {
         vaultPath: vault_path,
         name,
         message,
+      });
+    },
+    async push(vault_path: VaultPath) {
+      return await invoke_git<GitRemoteResult>("git_push", {
+        vaultPath: vault_path,
+      });
+    },
+    async fetch(vault_path: VaultPath) {
+      return await invoke_git<GitRemoteResult>("git_fetch", {
+        vaultPath: vault_path,
+      });
+    },
+    async pull(vault_path: VaultPath) {
+      return await invoke_git<GitRemoteResult>("git_pull", {
+        vaultPath: vault_path,
+      });
+    },
+    async add_remote(vault_path: VaultPath, url: string) {
+      return await invoke_git<GitRemoteResult>("git_add_remote", {
+        vaultPath: vault_path,
+        url,
+      });
+    },
+    async push_with_upstream(vault_path: VaultPath, branch: string) {
+      return await invoke_git<GitRemoteResult>("git_push_with_upstream", {
+        vaultPath: vault_path,
+        branch,
       });
     },
   };

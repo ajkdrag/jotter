@@ -14,6 +14,9 @@ export function create_test_git_adapter(): GitPort {
         is_dirty: false,
         ahead: 0,
         behind: 0,
+        has_remote: false,
+        has_upstream: false,
+        remote_url: null,
         files: [],
       });
     },
@@ -40,6 +43,21 @@ export function create_test_git_adapter(): GitPort {
     },
     create_tag() {
       return Promise.resolve();
+    },
+    push() {
+      return Promise.resolve({ success: true, message: null, error: null });
+    },
+    fetch() {
+      return Promise.resolve({ success: true, message: null, error: null });
+    },
+    pull() {
+      return Promise.resolve({ success: true, message: null, error: null });
+    },
+    add_remote() {
+      return Promise.resolve({ success: true, message: null, error: null });
+    },
+    push_with_upstream() {
+      return Promise.resolve({ success: true, message: null, error: null });
     },
   };
 }

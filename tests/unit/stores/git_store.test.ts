@@ -28,7 +28,14 @@ describe("GitStore", () => {
 
   it("sets status fields", () => {
     const store = new GitStore();
-    store.set_status("feature/test", true, 3);
+    store.set_status(
+      "feature/test",
+      true,
+      3,
+      true,
+      true,
+      "git@github.com:user/repo.git",
+    );
     expect(store.branch).toBe("feature/test");
     expect(store.is_dirty).toBe(true);
     expect(store.pending_files).toBe(3);
@@ -99,7 +106,7 @@ describe("GitStore", () => {
   it("resets all state", () => {
     const store = new GitStore();
     store.set_enabled(true);
-    store.set_status("dev", true, 5);
+    store.set_status("dev", true, 5, true, false, null);
     store.set_sync_status("pushing");
     store.set_last_commit_time(9999);
     store.set_error("err");

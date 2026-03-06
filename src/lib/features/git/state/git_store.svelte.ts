@@ -9,6 +9,9 @@ export class GitStore {
   branch = $state("main");
   is_dirty = $state(false);
   pending_files = $state(0);
+  has_remote = $state(false);
+  has_upstream = $state(false);
+  remote_url = $state<string | null>(null);
   sync_status = $state<GitSyncStatus>("idle");
   last_commit_time = $state<number | null>(null);
   error = $state<string | null>(null);
@@ -21,10 +24,20 @@ export class GitStore {
   selected_file_content = $state<string | null>(null);
   is_loading_diff = $state(false);
 
-  set_status(branch: string, is_dirty: boolean, pending_files: number) {
+  set_status(
+    branch: string,
+    is_dirty: boolean,
+    pending_files: number,
+    has_remote: boolean,
+    has_upstream: boolean,
+    remote_url: string | null,
+  ) {
     this.branch = branch;
     this.is_dirty = is_dirty;
     this.pending_files = pending_files;
+    this.has_remote = has_remote;
+    this.has_upstream = has_upstream;
+    this.remote_url = remote_url;
   }
 
   set_enabled(enabled: boolean) {
@@ -85,6 +98,9 @@ export class GitStore {
     this.branch = "main";
     this.is_dirty = false;
     this.pending_files = 0;
+    this.has_remote = false;
+    this.has_upstream = false;
+    this.remote_url = null;
     this.sync_status = "idle";
     this.last_commit_time = null;
     this.error = null;

@@ -2,6 +2,7 @@ import type { VaultPath } from "$lib/shared/types/ids";
 import type {
   GitCommit,
   GitDiff,
+  GitRemoteResult,
   GitStatus,
 } from "$lib/features/git/types/git";
 
@@ -40,4 +41,12 @@ export interface GitPort {
     name: string,
     message: string,
   ): Promise<void>;
+  push(vault_path: VaultPath): Promise<GitRemoteResult>;
+  fetch(vault_path: VaultPath): Promise<GitRemoteResult>;
+  pull(vault_path: VaultPath): Promise<GitRemoteResult>;
+  add_remote(vault_path: VaultPath, url: string): Promise<GitRemoteResult>;
+  push_with_upstream(
+    vault_path: VaultPath,
+    branch: string,
+  ): Promise<GitRemoteResult>;
 }

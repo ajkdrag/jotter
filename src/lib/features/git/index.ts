@@ -11,4 +11,5 @@ export type {
   GitStatus,
   GitCommit,
   GitDiff,
+  GitRemoteResult,
 } from "$lib/features/git/types/git";
