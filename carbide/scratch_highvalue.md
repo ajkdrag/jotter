@@ -326,6 +326,343 @@ Rationale: Start with the trivial UI features (Focus Mode, Editor Width), then M
 
 ---
 
+# Editor Feature Ports (from Moraya + Scratch)
+
+> Source catalog: `carbide/scratch.md` (full feature comparison)
+> Status: `[ ]` pending | `[~]` in progress | `[x]` done | `[-]` dropped
+
+---
+
+## Batch 0: Shared Floating UI Infrastructure
+
+Features 1, 3, 6, 7 all need floating positioning. Extract a reusable pattern first.
+
+### Files to create
+
+- [x] `src/lib/features/editor/adapters/floating_toolbar_utils.ts`
+
+### Implementation
+
+- [x] Export `compute_floating_position(anchor, floating, placement)` wrapping `@floating-ui/dom`'s `computePosition` with `flip` + `shift` middleware
+- [x] Export z-index constants: `Z_TABLE_TOOLBAR = 50`, `Z_IMAGE_TOOLBAR = 55`, `Z_CONTEXT_MENU = 60`
+- [x] Export `create_backdrop(on_dismiss)` for the fixed inset-0 click-to-dismiss layer
+
+~50 lines. Prevents each feature from reinventing positioning.
+
+---
+
+## Batch 1: Table Toolbar + Image Resize Toolbar
+
+**Depends on**: Batch 0
+
+### Feature: Table Toolbar
+
+**Source**: moraya `src/lib/editor/TableToolbar.svelte` (168 lines)
+
+#### Files to create
+
+- [x] `src/lib/features/editor/adapters/table_toolbar_plugin.ts` — ProseMirror plugin detecting cursor in table cell
+- [-] `src/lib/features/editor/ui/table_toolbar.svelte` — skipped; pure DOM in plugin (consistent with existing patterns)
+
+#### Files to modify
+
+- [x] `src/lib/features/editor/adapters/milkdown_adapter.ts` — add `.use(table_toolbar_plugin)`
+- [x] `src/styles/editor.css` — `.table-toolbar`, `.toolbar-divider`, `.toolbar-btn`, `.toolbar-btn.danger`
+
+#### Steps
+
+- [x] Plugin `view().update()`: check if `$from` resolves inside `table_cell` or `table_header` node
+- [x] If yes: find table DOM element, compute toolbar position above it via `floating_toolbar_utils`
+- [x] Pure DOM toolbar (consistent with code_block_copy_plugin pattern, no Svelte mount needed)
+- [x] Toolbar callbacks use `prosemirror-tables` commands: `addRowBefore`, `addRowAfter`, `addColumnBefore`, `addColumnAfter`, `deleteRow`, `deleteColumn`
+- [ ] For alignment: dispatch `tr.setNodeMarkup()` setting `alignment` attr on current cell
+- [ ] Verify Milkdown GFM table cells already support `alignment` attr (maps to `:---:` / `---:` syntax)
+- [x] If cursor leaves table: unmount toolbar
+
+#### Tests
+
+- [ ] Unit test for cursor-in-table detection (pure function from EditorState)
+- [ ] Unit test for toolbar lifecycle (mount/unmount on cursor enter/leave table)
+
+---
+
+### Feature: Image Resize Toolbar
+
+**Source**: moraya `src/lib/editor/ImageToolbar.svelte` (117 lines)
+
+#### Files to create
+
+- [x] `src/lib/features/editor/adapters/image_toolbar_plugin.ts` — ProseMirror plugin for image click detection
+- [-] `src/lib/features/editor/ui/image_resize_toolbar.svelte` — skipped; pure DOM in plugin (consistent with existing patterns)
+
+#### Files to modify
+
+- [x] `src/lib/features/editor/adapters/milkdown_adapter.ts` — add `.use(image_toolbar_plugin)`
+- [x] `src/styles/editor.css` — `.image-toolbar`, `.size-btn`, `.size-btn.active`
+
+#### Steps
+
+- [x] Plugin `handleClick`: detect click on image-block node
+- [x] Get image bounding rect, compute toolbar position centered above it
+- [x] Pure DOM toolbar with size presets (consistent with codebase patterns)
+- [x] `onResize`: dispatch `tr.setNodeMarkup(pos, undefined, { ...attrs, width: newWidth })` where width is `'25%' | '50%' | '75%' | '100%' | ''`
+- [ ] Apply width as inline style on image wrapper (extend `imageBlockConfig` or use `data-width` attr + CSS)
+- [x] Backdrop click dismisses toolbar
+
+#### Tests
+
+- [ ] Unit test for width attribute application
+- [ ] Unit test for toolbar show/dismiss lifecycle
+
+---
+
+## Batch 2: Code Block Language Picker + Mermaid Preview
+
+**Depends on**: Nothing (replaces existing `code_block_copy_plugin`)
+
+### Feature: Code Block Language Picker
+
+**Source**: moraya `src/lib/editor/plugins/code-block-view.ts` (728 lines)
+
+#### Files to create
+
+- [x] `src/lib/features/editor/adapters/code_block_view_plugin.ts` — NodeView with language label, picker dropdown, copy button (replaces `code_block_copy_plugin.ts`)
+- [x] `src/lib/features/editor/adapters/language_registry.ts` — `POPULAR_LANGUAGES`, `ALL_LANGUAGES`, `find_language_label()` (data file, ~100 lines)
+
+#### Files to modify
+
+- [x] `src/lib/features/editor/adapters/milkdown_adapter.ts` — replace `.use(code_block_copy_plugin)` with `.use(code_block_view_plugin)`
+- [x] `src/styles/editor.css` — `.code-block-wrapper`, `.code-block-toolbar`, `.code-lang-label`, `.code-lang-picker`, `.code-lang-search`, `.code-lang-list`, `.code-lang-option`, `.code-lang-group-label`
+
+#### Steps
+
+- [x] NodeView factory creates: wrapper → toolbar (contentEditable=false) + pre > code (contentDOM)
+- [x] Toolbar contains: language label (clickable) + copy button (lifted from existing `code_block_copy_plugin`)
+- [x] Clicking language label opens `createLanguagePicker()` — pure DOM, searchable, grouped (Popular/All)
+- [x] Language select: dispatch `tr.setNodeMarkup(pos, undefined, { ...attrs, language: newLang })`
+- [ ] Auto-detect language: lazy-load `hljs`, use `highlightAuto()`, show as suggestion with relevance > 5 threshold (defer to v2)
+- [x] Drop moraya's renderer plugin references (Otterly doesn't have that system)
+
+#### Tests
+
+- [x] Unit test for `find_language_label()` and search filtering (`language_registry.test.ts`)
+- [ ] Unit test for language picker open/close lifecycle
+
+---
+
+### Feature: Mermaid Diagram Preview
+
+**Source**: moraya `src/lib/editor/plugins/mermaid-renderer.ts` (92 lines)
+
+#### Files to create
+
+- [-] `src/lib/features/editor/adapters/mermaid_renderer.ts` — inlined into code_block_view_plugin (simpler for now)
+
+#### Files to modify
+
+- [x] `src/lib/features/editor/adapters/code_block_view_plugin.ts` — mermaid state integrated into CodeBlockView class
+- [x] `src/styles/editor.css` — `.mermaid-preview`, `.mermaid-loading`, `.mermaid-spinner`, `.mermaid-error`, `.mermaid-empty`, `.mermaid-toggle-btn`
+
+#### Steps
+
+- [x] Mermaid rendering via lazy `import("mermaid")` with theme detection from `data-color-scheme`
+- [ ] Serial render queue (deferred — current impl uses debounce instead)
+- [ ] Theme re-render on `data-color-scheme` change via MutationObserver (deferred)
+- [x] In NodeView, when `language === 'mermaid'`: show toggle button (Edit/Preview), default to preview
+- [x] Preview mode: hide `<pre>`, show mermaid container, debounce renders at 150ms
+- [x] Click toggle → switch between edit/preview mode
+- [ ] Guard: if code changes during async render, discard stale result (deferred)
+
+**New dep**: `mermaid` (lazy-loaded via dynamic import)
+
+#### Tests
+
+- [ ] Unit test for `renderMermaid()` with mock module
+- [ ] Unit test for serial queue (second waits for first)
+
+---
+
+## Batch 3: Emoji Shortcodes
+
+**Depends on**: Nothing
+
+**Source**: moraya `src/lib/editor/plugins/emoji.ts` (65 lines)
+
+#### Files to create
+
+- [x] `src/lib/features/editor/adapters/emoji_plugin.ts`
+
+#### Files to modify
+
+- [x] `src/lib/features/editor/adapters/milkdown_adapter.ts` — add `.use(emoji_plugin)`
+
+#### Steps
+
+- [x] Wrap in `$prose()`: `handleTextInput(view, from, to, text)` — trigger on `:`
+- [x] Scan backwards for opening `:`, extract shortcode, validate `[a-zA-Z0-9_+-]`
+- [x] Lookup via `node-emoji`'s `get()`, replace range with emoji text node
+- [x] Guard: skip if parent node is `code_block` (no emoji in code)
+
+**New dep**: `node-emoji`
+
+#### Tests
+
+- [x] Unit test for shortcode detection (`emoji_plugin.test.ts` — 8 tests)
+- [x] Test edge cases: `:` in code blocks, empty shortcode, invalid chars
+
+---
+
+## Batch 4: Image Context Menu + Alt Text Editor
+
+**Depends on**: Batch 0 (floating utils), Batch 1 (shared resize logic)
+
+### Feature: Image Context Menu
+
+**Source**: moraya `src/lib/editor/ImageContextMenu.svelte` (190 lines)
+
+#### Files to create
+
+- [ ] `src/lib/features/editor/adapters/image_context_menu_plugin.ts` — plugin intercepting `contextmenu` on images
+- [ ] `src/lib/features/editor/ui/image_context_menu.svelte`
+
+#### Files to modify
+
+- [ ] `src/lib/features/editor/adapters/milkdown_adapter.ts` — add `.use(image_context_menu_plugin)`
+- [ ] `src/styles/editor.css` — `.context-menu`, `.menu-item`, `.menu-divider`, `.submenu`
+
+#### Steps
+
+- [ ] Plugin `handleDOMEvents.contextmenu`: detect right-click on `img` inside image-block
+- [ ] Mount context menu at click coordinates
+- [ ] Actions: Resize submenu (reuse size options), Copy Image, Copy URL, Edit Alt (opens Feature 7), Open in Browser (remote URLs only), Save As (Tauri save dialog), Delete (delete node transaction)
+- [ ] `isRemoteUrl` = starts with `http://` or `https://`
+- [ ] Backdrop click dismisses
+
+### Feature: Image Alt Text Editor
+
+**Source**: moraya `src/lib/editor/ImageAltEditor.svelte` (139 lines)
+
+#### Files to create
+
+- [ ] `src/lib/features/editor/ui/image_alt_editor.svelte`
+
+#### Steps
+
+- [ ] Floating popup near image with text input
+- [ ] Auto-focus + select-all on open
+- [ ] Enter to save, Escape to cancel
+- [ ] Save: dispatch `tr.setNodeMarkup(pos, undefined, { ...attrs, caption: newAltText })` (Milkdown image-block uses `caption`)
+- [ ] Triggered from context menu "Edit Alt" action
+
+#### Tests (Batch 4)
+
+- [ ] Unit test for context menu action dispatch (delete, copy URL, resize)
+- [ ] Unit test for alt text save transaction
+
+---
+
+## Batch 5: Touch/Formatting Toolbar
+
+**Depends on**: Nothing (but best done last, benefits from all commands being wired)
+
+**Source**: moraya `src/lib/editor/TouchToolbar.svelte` (133 lines)
+
+#### Files to create
+
+- [ ] `src/lib/features/editor/ui/formatting_toolbar.svelte`
+- [ ] `src/lib/features/editor/adapters/formatting_toolbar_commands.ts` — maps button IDs to editor commands
+
+#### Files to modify
+
+- [ ] `src/lib/features/note/ui/note_editor.svelte` — conditionally render toolbar below editor
+- [ ] `src/lib/features/editor/state/editor_store.svelte.ts` — add `show_formatting_toolbar` boolean
+- [ ] `src/styles/editor.css` — `.touch-toolbar`, `.toolbar-scroll`, `.tb-btn`, `.tb-sep`
+
+#### Steps
+
+- [ ] Toolbar buttons: Undo, Redo | Bold, Italic, Strikethrough, Code, Link | H1, H2, H3, Quote, Bullet, Ordered | Code Block, Table, Image, HR
+- [ ] `dispatch_toolbar_command(view, commandId)` maps IDs to ProseMirror commands or Milkdown `callCommand()`
+- [ ] Render in `note_editor.svelte` below editor mount, outside ProseMirror DOM
+- [ ] Show/hide via settings toggle or responsive breakpoint
+
+#### Tests
+
+- [ ] Unit test for `dispatch_toolbar_command` mapping (each ID resolves to valid command)
+
+---
+
+## Dependency Graph
+
+```
+Batch 0: Floating Utils ─────────────────────────────────┐
+  │                                                       │
+  ├─> Batch 1: Table Toolbar + Image Resize ──────────────┤
+  │                                                       │
+  │                              Batch 4: Image Context   │
+  │                              Menu + Alt Editor ───────┘
+  │
+Batch 2: Code Block Language Picker + Mermaid (independent)
+  │
+Batch 3: Emoji Shortcodes (independent)
+  │
+Batch 5: Touch Toolbar (independent, do last)
+```
+
+Batches 0+1, 2, and 3 can be developed in parallel.
+
+## New Dependencies
+
+| Package          | Feature            | Load Strategy             | Status    |
+| ---------------- | ------------------ | ------------------------- | --------- |
+| `@floating-ui/dom` | Floating toolbars | Static import             | Installed |
+| `node-emoji`     | Emoji shortcodes   | Static import (small)     | Installed |
+| `mermaid`        | Mermaid preview    | Lazy `import()` (~2.4 MB) | Installed |
+
+## Timeline
+
+| Batch     | Features                             | Est.          |
+| --------- | ------------------------------------ | ------------- |
+| 0         | Floating utils                       | 0.5 day       |
+| 1         | Table toolbar + Image resize         | 2-3 days      |
+| 2         | Code block language picker + Mermaid | 3-4 days      |
+| 3         | Emoji shortcodes                     | 0.5 day       |
+| 4         | Image context menu + Alt editor      | 1-2 days      |
+| 5         | Touch toolbar                        | 1 day         |
+| **Total** |                                      | **8-11 days** |
+
+---
+
 ## Development Log
 
-_(Updates added here as features are implemented)_
+### 2026-03-06: Batches 0-3 implemented
+
+**Commit:** `e8cb652` on `fix/browse-mode-switch-freeze`
+
+**Files created (7):**
+- `floating_toolbar_utils.ts` — shared `@floating-ui/dom` wrapper, z-index constants, backdrop helper
+- `table_toolbar_plugin.ts` — cursor-in-table detection, floating toolbar with add/delete row/column
+- `image_toolbar_plugin.ts` — click-on-image detection, floating size presets (25/50/75/100%)
+- `code_block_view_plugin.ts` — full NodeView: language label + searchable picker, copy button, mermaid preview
+- `language_registry.ts` — 25 popular + 42 total languages, search/filter functions
+- `emoji_plugin.ts` — `:shortcode:` expansion via `node-emoji`, skips code blocks
+
+**Files modified (2):**
+- `milkdown_adapter.ts` — swapped `code_block_copy_plugin` for new plugins
+- `editor.css` — added styles for table toolbar, image toolbar, code block toolbar/picker, mermaid preview
+
+**Tests added (2 files, 16 tests):**
+- `language_registry.test.ts` — label lookup, search filtering, sort order
+- `emoji_plugin.test.ts` — shortcode extraction, edge cases
+
+**Design decisions:**
+- Used pure DOM for all toolbar UI (consistent with existing ProseMirror plugin patterns, no Svelte `mount()` needed)
+- Mermaid rendering inlined into `code_block_view_plugin` rather than separate renderer (simpler for now)
+- Table cell alignment deferred (needs Milkdown GFM schema investigation)
+- Auto-detect language deferred to v2
+
+**Remaining work for these batches:**
+- Table cell alignment support
+- Mermaid serial render queue + stale result guard
+- Mermaid theme re-render on color scheme change (MutationObserver)
+- Image width application to actual image DOM (currently sets attr but needs CSS/style hookup)
+- DOM-level integration tests for toolbar lifecycle
