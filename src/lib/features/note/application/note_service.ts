@@ -81,12 +81,10 @@ export class NoteService {
     private readonly on_file_written?: (path: string) => void,
   ) {}
 
-  /** Clears the currently-open note from the editor. Used by the watcher reactor on external delete. */
   clear_open_note() {
     this.editor_store.clear_open_note();
   }
 
-  /** Zeroes the mtime so the next save skips the mtime conflict check. Used after "Keep my changes". */
   skip_mtime_guard(note_id: NoteId) {
     this.editor_store.update_mtime(note_id, 0);
   }
@@ -618,7 +616,7 @@ export class NoteService {
       vault_id,
       open_note.meta.id,
       open_note.markdown,
-      open_note.meta.mtime_ms || undefined,
+      open_note.meta.mtime_ms ?? undefined,
     );
     await this.index_port.upsert_note(vault_id, open_note.meta.id);
     this.editor_store.mark_clean(open_note.meta.id, new_mtime);
@@ -768,7 +766,7 @@ export class NoteService {
   }
 
   private is_mtime_conflict_error(error: unknown): boolean {
-    return error_message(error).startsWith("conflict:");
+    return error_message(error).startsWith("conflict:mtime_mismatch");
   }
 
   private is_note_exists_error(error: unknown): boolean {

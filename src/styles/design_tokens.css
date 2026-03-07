@@ -72,6 +72,9 @@
 
   /* Warning semantic color */
   --warning: oklch(0.8 0.14 85);
+  --warning-bg: oklch(0.97 0.025 85);
+  --warning-text-on-bg: oklch(0.4 0.1 85);
+  --warning-border: oklch(0.88 0.06 85);
 
   /* Status indicators */
   --indicator-dirty: oklch(0.62 0.12 44);
@@ -283,6 +286,9 @@
   --selection-bg: oklch(0.28 0.05 var(--accent-hue));
 
   --warning: oklch(0.86 0.12 90);
+  --warning-bg: oklch(0.24 0.035 85);
+  --warning-text-on-bg: oklch(0.88 0.08 90);
+  --warning-border: oklch(0.38 0.06 85);
 
   /* ----------------------------------------
      SHADCN BASE TOKEN OVERRIDES — Dark

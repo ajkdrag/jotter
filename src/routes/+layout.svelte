@@ -53,6 +53,9 @@
       --error-bg: var(--color-popover);
       --error-text: var(--color-popover-foreground);
       --error-border: var(--color-destructive);
+      --warning-bg: var(--warning-bg);
+      --warning-text: var(--warning-text-on-bg);
+      --warning-border: var(--warning-border);
     "
   />
   {@render children()}

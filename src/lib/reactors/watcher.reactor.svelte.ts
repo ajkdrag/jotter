@@ -9,7 +9,7 @@ import type { VaultFsEvent } from "$lib/features/watcher";
 import { ACTION_IDS } from "$lib/app/action_registry/action_ids";
 import { create_logger } from "$lib/shared/utils/logger";
 import { paths_equal_ignore_case } from "$lib/shared/utils/path";
-import type { NotePath } from "$lib/shared/types/ids";
+import { as_note_path, type NotePath } from "$lib/shared/types/ids";
 import {
   active_note_conflict_callbacks,
   type ConflictToastManager,
@@ -18,13 +18,8 @@ import {
 const log = create_logger("watcher_reactor");
 const TREE_REFRESH_DEBOUNCE_MS = 300;
 
-/** Dirty state of a non-active tab, or null if no background tab exists for the path. */
 export type BackgroundTabInfo = { is_dirty: boolean } | null;
 
-/**
- * Discriminated union returned by `resolve_watcher_event_decision`.
- * Each variant maps to a specific handler action in the watcher reactor.
- */
 export type WatcherEventDecision =
   | { action: "reload"; note_path: NotePath }
   | { action: "conflict_toast"; note_path: NotePath }
@@ -36,10 +31,6 @@ export type WatcherEventDecision =
   | { action: "log_only"; path: string }
   | { action: "ignore" };
 
-/**
- * Pure decision function: maps a filesystem event + current editor/tab state
- * to an action the reactor should take.
- */
 export function resolve_watcher_event_decision(
   event: VaultFsEvent,
   current_vault_id: string | null,
@@ -53,7 +44,7 @@ export function resolve_watcher_event_decision(
 
   switch (event.type) {
     case "note_changed_externally": {
-      const np = event.note_path as NotePath;
+      const np = as_note_path(event.note_path);
       if (
         open_note_path &&
         paths_equal_ignore_case(event.note_path, open_note_path)
@@ -75,7 +66,7 @@ export function resolve_watcher_event_decision(
     case "note_added":
       return { action: "refresh_tree" };
     case "note_removed": {
-      const rp = event.note_path as NotePath;
+      const rp = as_note_path(event.note_path);
       if (
         open_note_path &&
         paths_equal_ignore_case(event.note_path, open_note_path)
@@ -92,13 +83,6 @@ export function resolve_watcher_event_decision(
   }
 }
 
-/**
- * Reactor that starts/stops the filesystem watcher when the vault changes,
- * and dispatches incoming events through `resolve_watcher_event_decision`.
- *
- * Self-writes are suppressed before reaching the decision function.
- * File tree refreshes are debounced (300ms) to batch rapid add/remove events.
- */
 export function create_watcher_reactor(
   vault_store: VaultStore,
   editor_store: EditorStore,
@@ -123,7 +107,7 @@ export function create_watcher_reactor(
     }
 
     function find_background_tab(path: string): BackgroundTabInfo {
-      const tab = tab_store.find_tab_by_path(path as NotePath);
+      const tab = tab_store.find_tab_by_path(as_note_path(path));
       if (!tab || tab.id === tab_store.active_tab_id) return null;
       return { is_dirty: tab.is_dirty };
     }
