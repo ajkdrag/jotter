@@ -7,6 +7,7 @@ import type { ShellPort } from "$lib/features/shell";
 import type { GitPort } from "$lib/features/git";
 import type { VaultPort, VaultSettingsPort } from "$lib/features/vault";
 import type { DocumentPort } from "$lib/features/document";
+import type { WindowPort } from "$lib/features/window";
 
 export type Ports = {
   vault: VaultPort;
@@ -21,4 +22,5 @@ export type Ports = {
   shell: ShellPort;
   git: GitPort;
   document: DocumentPort;
+  window: WindowPort;
 };

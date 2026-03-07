@@ -11,6 +11,7 @@ import { create_test_clipboard_adapter } from "./test_clipboard_adapter";
 import { create_test_shell_adapter } from "./test_shell_adapter";
 import { create_test_git_adapter } from "./test_git_adapter";
 import { create_test_document_adapter } from "./test_document_adapter";
+import { create_test_window_adapter } from "./test_window_adapter";
 
 export function create_test_ports(): Ports {
   const assets = create_test_assets_adapter();
@@ -31,5 +32,6 @@ export function create_test_ports(): Ports {
     shell: create_test_shell_adapter(),
     git: create_test_git_adapter(),
     document: create_test_document_adapter(),
+    window: create_test_window_adapter(),
   };
 }

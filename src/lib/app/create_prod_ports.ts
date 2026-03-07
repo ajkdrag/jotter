@@ -16,6 +16,7 @@ import { create_clipboard_tauri_adapter } from "$lib/features/clipboard";
 import { create_shell_tauri_adapter } from "$lib/features/shell";
 import { create_git_tauri_adapter } from "$lib/features/git";
 import { create_document_tauri_adapter } from "$lib/features/document";
+import { create_window_tauri_adapter } from "$lib/features/window";
 import type { Ports } from "$lib/app/di/app_ports";
 
 export function create_prod_ports(): Ports {
@@ -46,5 +47,6 @@ export function create_prod_ports(): Ports {
     shell,
     git,
     document: create_document_tauri_adapter(),
+    window: create_window_tauri_adapter(),
   };
 }

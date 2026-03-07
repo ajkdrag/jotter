@@ -26,6 +26,7 @@ import {
 } from "$lib/features/split_view";
 import { register_terminal_actions } from "$lib/features/terminal";
 import { register_document_actions } from "$lib/features/document";
+import { register_window_actions } from "$lib/features/window";
 import { mount_reactors } from "$lib/reactors";
 
 export type AppContext = ReturnType<typeof create_app_context>;
@@ -230,6 +231,11 @@ export function create_app_context(input: {
     ...base_action_input,
     document_store: stores.document,
     document_port: input.ports.document,
+  });
+
+  register_window_actions({
+    ...base_action_input,
+    window_port: input.ports.window,
   });
 
   const cleanup_reactors = mount_reactors({

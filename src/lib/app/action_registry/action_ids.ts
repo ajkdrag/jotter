@@ -179,6 +179,9 @@ export const ACTION_IDS = {
 
   document_open: "document.open",
   document_close: "document.close",
+
+  window_open_viewer: "window.open_viewer",
+  window_open_browse: "window.open_browse",
 } as const;
 
 export type ActionId = (typeof ACTION_IDS)[keyof typeof ACTION_IDS];
