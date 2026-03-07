@@ -23,6 +23,7 @@
     on_toggle_folder: (path: string) => void;
     on_toggle_folder_node?: ((node: FlatTreeNode) => void) | undefined;
     on_select_note: (path: string) => void;
+    on_select_file?: ((path: string) => void) | undefined;
     on_select_folder: (path: string) => void;
     on_request_delete?: ((note: NoteMeta) => void) | undefined;
     on_request_rename?: ((note: NoteMeta) => void) | undefined;
@@ -55,6 +56,7 @@
     on_toggle_folder,
     on_toggle_folder_node,
     on_select_note,
+    on_select_file,
     on_select_folder,
     on_request_delete,
     on_request_rename,
@@ -406,6 +408,7 @@
             {on_toggle_folder}
             {on_toggle_folder_node}
             {on_select_note}
+            {on_select_file}
             {on_select_folder}
             {on_request_delete}
             {on_request_rename}

@@ -25,7 +25,9 @@
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.1",
+    "@codemirror/language": "^6.12.2",
     "@codemirror/language-data": "^6.5.2",
+    "@codemirror/state": "^6.5.4",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.39.11",
     "@floating-ui/dom": "^1.7.6",

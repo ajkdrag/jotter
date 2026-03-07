@@ -6,10 +6,17 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import { HotkeyKey } from "$lib/features/hotkey";
   import { Button } from "$lib/components/ui/button";
+  import { DocumentViewer } from "$lib/features/document";
 
   const { stores, action_registry } = use_app_context();
 
   const open_note = $derived(stores.editor.open_note);
+  const active_tab = $derived(stores.tab.active_tab);
+  const document_viewer_state = $derived(
+    active_tab?.kind === "document"
+      ? stores.document.get_viewer_state(active_tab.id)
+      : undefined,
+  );
 
   const create_note_hotkey = $derived(
     stores.ui.hotkeys_config.bindings.find(
@@ -29,7 +36,9 @@
 </script>
 
 <div class="NoteEditor">
-  {#if open_note}
+  {#if active_tab?.kind === "document" && document_viewer_state}
+    <DocumentViewer viewer_state={document_viewer_state} />
+  {:else if open_note}
     <div use:mount_editor={open_note} class="NoteEditor__content"></div>
   {:else}
     <div class="NoteEditor__empty">

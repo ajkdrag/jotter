@@ -537,6 +537,11 @@
                               ACTION_IDS.note_open,
                               note_path,
                             )}
+                          on_select_file={(file_path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.document_open,
+                              file_path,
+                            )}
                           on_select_folder={(path: string) =>
                             void action_registry.execute(
                               ACTION_IDS.ui_select_folder,
@@ -648,6 +653,11 @@
                           void action_registry.execute(
                             ACTION_IDS.note_open,
                             note_path,
+                          )}
+                        on_select_file={(file_path: string) =>
+                          void action_registry.execute(
+                            ACTION_IDS.document_open,
+                            file_path,
                           )}
                         on_select_folder={(path: string) =>
                           void action_registry.execute(
