@@ -4,11 +4,14 @@
   import { create_app_context } from "$lib/app/di/create_app_context";
   import { provide_app_context } from "$lib/app/context/app_context.svelte";
   import { as_vault_path } from "$lib/shared/types/ids";
-  import { AppShell } from "$lib/app";
+  import { AppShell, ViewerShell, BrowseShell } from "$lib/app";
+  import { parse_window_init } from "$lib/features/window";
 
   const url_params = new URLSearchParams(window.location.search);
   const vault_path_param = url_params.get("vault_path");
   const file_path_param = url_params.get("file_path");
+
+  const window_init = parse_window_init(url_params);
 
   const ports = create_prod_ports();
 
@@ -31,4 +34,10 @@
   });
 </script>
 
-<AppShell />
+{#if window_init.kind === "viewer"}
+  <ViewerShell />
+{:else if window_init.kind === "browse"}
+  <BrowseShell />
+{:else}
+  <AppShell />
+{/if}

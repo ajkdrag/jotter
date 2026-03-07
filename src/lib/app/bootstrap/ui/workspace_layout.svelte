@@ -562,6 +562,14 @@
                               ACTION_IDS.split_view_open_to_side,
                               path,
                             )}
+                          on_open_in_new_window={(file_path: string) =>
+                            void action_registry.execute(
+                              ACTION_IDS.window_open_viewer,
+                              {
+                                vault_path: stores.vault.vault?.path ?? "",
+                                file_path,
+                              },
+                            )}
                           on_retry_load={(path: string) =>
                             void action_registry.execute(
                               ACTION_IDS.folder_retry_load,
@@ -696,6 +704,14 @@
                           void action_registry.execute(
                             ACTION_IDS.split_view_open_to_side,
                             path,
+                          )}
+                        on_open_in_new_window={(file_path: string) =>
+                          void action_registry.execute(
+                            ACTION_IDS.window_open_viewer,
+                            {
+                              vault_path: stores.vault.vault?.path ?? "",
+                              file_path,
+                            },
                           )}
                         on_retry_load={(path: string) =>
                           void action_registry.execute(

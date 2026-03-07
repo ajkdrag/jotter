@@ -69,6 +69,7 @@
     StarOff,
     Copy,
     Columns2,
+    AppWindow,
   } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
 
@@ -113,6 +114,7 @@
     selection_count?: number;
     all_selected_starred?: boolean;
     on_open_to_side?: ((path: string) => void) | undefined;
+    on_open_in_new_window?: ((file_path: string) => void) | undefined;
     on_retry_load: (path: string) => void;
     on_retry_load_more: (folder_path: string) => void;
   };
@@ -146,6 +148,7 @@
     selection_count = 1,
     all_selected_starred = false,
     on_open_to_side,
+    on_open_in_new_window,
     on_retry_load,
     on_retry_load_more,
   }: Props = $props();
@@ -401,7 +404,21 @@
     </ContextMenu.Portal>
   </ContextMenu.Root>
 {:else if node.file_meta}
-  {@render row_content()}
+  <ContextMenu.Root>
+    <ContextMenu.Trigger class="w-full">
+      {@render row_content()}
+    </ContextMenu.Trigger>
+    <ContextMenu.Portal>
+      <ContextMenu.Content>
+        {#if on_open_in_new_window}
+          <ContextMenu.Item onSelect={() => on_open_in_new_window(node.path)}>
+            <AppWindow class="mr-2 h-4 w-4" />
+            <span>Open in New Window</span>
+          </ContextMenu.Item>
+        {/if}
+      </ContextMenu.Content>
+    </ContextMenu.Portal>
+  </ContextMenu.Root>
 {:else if node.note}
   <ContextMenu.Root>
     <ContextMenu.Trigger class="w-full">

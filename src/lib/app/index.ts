@@ -12,3 +12,5 @@ export { OpStore } from "$lib/app/orchestration/op_store.svelte";
 export { create_app_stores } from "$lib/app/bootstrap/create_app_stores";
 export type { AppStores } from "$lib/app/bootstrap/create_app_stores";
 export { default as AppShell } from "$lib/app/bootstrap/ui/app_shell.svelte";
+export { default as ViewerShell } from "$lib/app/bootstrap/ui/viewer_shell.svelte";
+export { default as BrowseShell } from "$lib/app/bootstrap/ui/browse_shell.svelte";

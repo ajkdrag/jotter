@@ -8,6 +8,7 @@
     ChevronRight,
     PanelRight,
     Columns2,
+    AppWindow,
   } from "@lucide/svelte";
   import { use_app_context } from "$lib/app/context/app_context.svelte";
   import { ACTION_IDS } from "$lib/app";
@@ -323,6 +324,22 @@
                 <Columns2 class="mr-2 h-4 w-4" />
                 Open to Side
               </ContextMenu.Item>
+              {#if tab.kind === "document"}
+                <ContextMenu.Item
+                  onSelect={() => {
+                    void action_registry.execute(
+                      ACTION_IDS.window_open_viewer,
+                      {
+                        vault_path: stores.vault.vault?.path ?? "",
+                        file_path: tab.file_path,
+                      },
+                    );
+                  }}
+                >
+                  <AppWindow class="mr-2 h-4 w-4" />
+                  Detach to Window
+                </ContextMenu.Item>
+              {/if}
               <ContextMenu.Separator />
               {@const note_meta = find_note_meta(tab)}
               <ContextMenu.Item
