@@ -69,6 +69,7 @@ function create_tab_actions_harness() {
       flush: vi.fn().mockReturnValue(null),
       get_scroll_top: vi.fn().mockReturnValue(0),
       set_scroll_top: vi.fn(),
+      close_buffer: vi.fn(),
     },
     clipboard: {
       copy_text: vi.fn().mockResolvedValue(undefined),
@@ -353,6 +354,20 @@ describe("register_tab_actions", () => {
       expect(stores.tab.tabs.map((t) => t.id)).toContain("closed.md");
       expect(services.note.open_note).toHaveBeenCalledWith("closed.md", false);
     });
+
+    it("reopens a tab closed by close_other_tabs", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.activate_tab("b.md");
+      stores.editor.set_open_note(mock_open_note("b.md"));
+
+      await registry.execute(ACTION_IDS.tab_close_other, "b.md");
+      await registry.execute(ACTION_IDS.tab_reopen_closed);
+
+      expect(stores.tab.tabs.map((tab) => tab.id)).toContain("a.md");
+      expect(services.note.open_note).toHaveBeenCalledWith("a.md", false);
+    });
   });
 
   describe("tab_pin / tab_unpin", () => {
@@ -510,6 +525,62 @@ describe("register_tab_actions", () => {
       expect(stores.ui.tab_close_confirm.open).toBe(false);
       expect(stores.tab.tabs).toHaveLength(1);
       expect(stores.tab.has_conflict(np("a.md"))).toBe(true);
+    });
+
+    it("discarding close-other closes the removed tab buffer", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.set_dirty("a.md", true);
+      stores.tab.set_cached_note("a.md", {
+        ...mock_open_note("a.md"),
+        markdown: as_markdown_text("draft"),
+        is_dirty: true,
+      });
+      stores.tab.activate_tab("b.md");
+      stores.editor.set_open_note(mock_open_note("b.md"));
+
+      await registry.execute(ACTION_IDS.tab_close_other, "b.md");
+      await registry.execute(ACTION_IDS.tab_confirm_close_discard);
+
+      expect(services.editor.close_buffer).toHaveBeenCalledWith("a.md");
+      expect(stores.tab.find_tab_by_path(np("a.md"))).toBeNull();
+      expect(stores.tab.get_cached_note("a.md")).toBeNull();
+    });
+
+    it("discarding close-other records the removed tab for reopen", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.set_dirty("a.md", true);
+      stores.tab.set_cached_note("a.md", {
+        ...mock_open_note("a.md"),
+        markdown: as_markdown_text("draft"),
+        is_dirty: true,
+      });
+      stores.tab.activate_tab("b.md");
+      stores.editor.set_open_note(mock_open_note("b.md"));
+
+      await registry.execute(ACTION_IDS.tab_close_other, "b.md");
+      await registry.execute(ACTION_IDS.tab_confirm_close_discard);
+      await registry.execute(ACTION_IDS.tab_reopen_closed);
+
+      expect(stores.tab.tabs.map((tab) => tab.id)).toContain("a.md");
+      expect(services.note.open_note).toHaveBeenCalledWith("a.md", false);
+    });
+  });
+
+  describe("multi-close buffer cleanup", () => {
+    it("close_other_tabs closes removed tab buffers on the clean path", async () => {
+      const { registry, stores, services } = create_tab_actions_harness();
+      stores.tab.open_tab(np("a.md"), "a");
+      stores.tab.open_tab(np("b.md"), "b");
+      stores.tab.activate_tab("b.md");
+      stores.editor.set_open_note(mock_open_note("b.md"));
+
+      await registry.execute(ACTION_IDS.tab_close_other, "b.md");
+
+      expect(services.editor.close_buffer).toHaveBeenCalledWith("a.md");
     });
   });
 

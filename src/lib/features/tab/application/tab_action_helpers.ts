@@ -171,11 +171,15 @@ export async function execute_batch_close(
 ): Promise<void> {
   const { stores } = input;
   const { close_mode, keep_tab_id } = stores.ui.tab_close_confirm;
-  const note_paths_to_close = list_note_paths_for_batch_close(
+  if (close_mode === "single") {
+    return;
+  }
+  const tabs_to_close = list_tabs_for_batch_close(
     stores.tab.tabs,
     close_mode,
     keep_tab_id,
   );
+  record_closed_tabs(stores, tabs_to_close);
 
   reset_close_confirm(stores);
 
@@ -201,7 +205,10 @@ export async function execute_batch_close(
     }
   }
 
-  close_editor_buffers(input, note_paths_to_close);
+  close_editor_buffers(
+    input,
+    tabs_to_close.map((tab) => tab.note_path),
+  );
 }
 
 export async function advance_or_finish_batch(
@@ -251,27 +258,40 @@ export async function close_tab_immediate(
   }
 }
 
-export function list_note_paths_for_batch_close(
+export function list_tabs_for_batch_close(
   tabs: Tab[],
   close_mode: BatchCloseMode,
   keep_tab_id: string | null,
-): NotePath[] {
+): Tab[] {
   switch (close_mode) {
     case "all":
-      return tabs.map((tab) => tab.note_path);
+      return tabs;
     case "other":
       if (!keep_tab_id) return [];
-      return tabs
-        .filter((tab) => tab.id !== keep_tab_id && !tab.is_pinned)
-        .map((tab) => tab.note_path);
+      return tabs.filter((tab) => tab.id !== keep_tab_id && !tab.is_pinned);
     case "right": {
       if (!keep_tab_id) return [];
       const index = tabs.findIndex((tab) => tab.id === keep_tab_id);
       if (index === -1) return [];
-      return tabs
-        .filter((tab, tab_index) => tab_index > index && !tab.is_pinned)
-        .map((tab) => tab.note_path);
+      return tabs.filter(
+        (tab, tab_index) => tab_index > index && !tab.is_pinned,
+      );
     }
+  }
+}
+
+export function record_closed_tabs(
+  stores: ActionRegistrationInput["stores"],
+  tabs: Tab[],
+): void {
+  for (const tab of tabs) {
+    const snapshot = stores.tab.get_snapshot(tab.id);
+    stores.tab.push_closed_history({
+      note_path: tab.note_path,
+      title: tab.title,
+      scroll_top: snapshot?.scroll_top ?? 0,
+      cursor: snapshot?.cursor ?? null,
+    });
   }
 }
 

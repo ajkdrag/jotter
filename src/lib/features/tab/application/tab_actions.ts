@@ -7,8 +7,9 @@ import {
   close_tab_immediate,
   ensure_tab_capacity,
   execute_batch_close,
-  list_note_paths_for_batch_close,
+  list_tabs_for_batch_close,
   open_active_tab_note,
+  record_closed_tabs,
   reset_close_confirm,
   save_dirty_tab,
   start_batch_close_confirm,
@@ -110,9 +111,15 @@ export function register_tab_actions(input: ActionRegistrationInput) {
         return;
       }
 
+      const tabs_to_close = list_tabs_for_batch_close(
+        stores.tab.tabs,
+        "other",
+        id,
+      );
+      record_closed_tabs(stores, tabs_to_close);
       close_editor_buffers(
         input,
-        list_note_paths_for_batch_close(stores.tab.tabs, "other", id),
+        tabs_to_close.map((tab) => tab.note_path),
       );
       stores.tab.close_other_tabs(id);
       await open_active_tab_note(input);
@@ -137,9 +144,15 @@ export function register_tab_actions(input: ActionRegistrationInput) {
         return;
       }
 
+      const tabs_to_close = list_tabs_for_batch_close(
+        stores.tab.tabs,
+        "right",
+        id,
+      );
+      record_closed_tabs(stores, tabs_to_close);
       close_editor_buffers(
         input,
-        list_note_paths_for_batch_close(stores.tab.tabs, "right", id),
+        tabs_to_close.map((tab) => tab.note_path),
       );
       stores.tab.close_tabs_to_right(id);
       await open_active_tab_note(input);
@@ -157,9 +170,15 @@ export function register_tab_actions(input: ActionRegistrationInput) {
         return;
       }
 
+      const tabs_to_close = list_tabs_for_batch_close(
+        stores.tab.tabs,
+        "all",
+        null,
+      );
+      record_closed_tabs(stores, tabs_to_close);
       close_editor_buffers(
         input,
-        list_note_paths_for_batch_close(stores.tab.tabs, "all", null),
+        tabs_to_close.map((tab) => tab.note_path),
       );
       stores.tab.close_all_tabs();
       stores.editor.clear_open_note();
