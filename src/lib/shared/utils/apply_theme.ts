@@ -57,7 +57,6 @@ function build_token_entries(theme: Theme): [string, string][] {
     ["--editor-heading-6", `${String(theme.heading_6_size)}em`],
 
     // Layout
-    ["--editor-max-width", `min(${String(theme.editor_max_width_ch)}ch, 90%)`],
     ["--editor-padding-x", `${String(theme.editor_padding_x)}rem`],
     ["--editor-padding-y", `${String(theme.editor_padding_y)}rem`],
 

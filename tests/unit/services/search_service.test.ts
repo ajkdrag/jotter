@@ -178,7 +178,8 @@ describe("SearchService", () => {
       results.some(
         (result) =>
           result.kind === "setting" &&
-          result.setting.key === "editor_max_width_ch",
+          result.setting.key === "editor_max_width_ch" &&
+          result.setting.category === "Layout",
       ),
     ).toBe(true);
   });

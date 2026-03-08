@@ -189,19 +189,6 @@ export const STYLE_DESCRIPTORS: ThemeStyleDescriptor[] = [
 
   // ── Layout ──
   {
-    id: "editor_max_width_ch",
-    theme_key: "editor_max_width_ch",
-    label: "Line Width",
-    description: "Maximum width of the editor content area",
-    category: "layout",
-    control: "slider",
-    tags: ["width", "line", "length", "readable", "max", "editor", "column"],
-    min: 60,
-    max: 140,
-    step: 5,
-    unit: "ch",
-  },
-  {
     id: "editor_padding_x",
     theme_key: "editor_padding_x",
     label: "Horizontal Padding",

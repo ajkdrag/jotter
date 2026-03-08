@@ -34,7 +34,6 @@ export type Theme = {
   heading_5_size: number;
   heading_6_size: number;
 
-  editor_max_width_ch: number;
   editor_padding_x: number;
   editor_padding_y: number;
 
@@ -85,7 +84,6 @@ const SHARED_DEFAULTS: Omit<
   heading_4_size: 1.0625,
   heading_5_size: 1.0,
   heading_6_size: 0.875,
-  editor_max_width_ch: 85,
   editor_padding_x: 2,
   editor_padding_y: 3,
   bold_style: "default",

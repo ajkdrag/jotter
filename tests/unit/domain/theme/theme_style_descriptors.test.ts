@@ -78,7 +78,6 @@ describe("theme_style_descriptors", () => {
       "spacing",
       "editor_text_color",
       "link_color",
-      "editor_max_width_ch",
       "editor_padding_x",
       "editor_padding_y",
       "heading_color",

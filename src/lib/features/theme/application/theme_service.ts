@@ -125,10 +125,6 @@ function normalize_theme(raw: Record<string, unknown>): Theme {
     heading_5_size: num(raw.heading_5_size, defaults.heading_5_size),
     heading_6_size: num(raw.heading_6_size, defaults.heading_6_size),
 
-    editor_max_width_ch: num(
-      raw.editor_max_width_ch,
-      defaults.editor_max_width_ch,
-    ),
     editor_padding_x: num(raw.editor_padding_x, defaults.editor_padding_x),
     editor_padding_y: num(raw.editor_padding_y, defaults.editor_padding_y),
 

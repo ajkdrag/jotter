@@ -83,8 +83,14 @@
   function update<K extends keyof EditorSettings>(
     key: K,
     value: EditorSettings[K],
-  ) {
+  ): void {
     on_update_settings({ ...editor_settings, [key]: value });
+  }
+
+  function get_save_button_label(): string {
+    if (is_saving) return "Saving...";
+    if (has_unsaved_changes) return "Save Changes";
+    return "Saved";
   }
 
   const categories: {
@@ -102,7 +108,7 @@
 
   let dialog_element = $state<HTMLElement | null>(null);
 
-  function reset_drag_styles() {
+  function reset_drag_styles(): void {
     if (!dialog_element) return;
     dialog_element.style.left = "";
     dialog_element.style.top = "";
@@ -112,7 +118,7 @@
     dialog_element.style.cursor = "";
   }
 
-  function request_close() {
+  function request_close(): void {
     if (is_saving) return;
     reset_drag_styles();
     on_close();
@@ -186,6 +192,46 @@
           <h2 class="SettingsDialog__content-header">Layout</h2>
 
           <div class="SettingsDialog__section-content">
+            <div class="SettingsDialog__row">
+              <div class="SettingsDialog__label-group">
+                <span class="SettingsDialog__label">Editor Max Width</span>
+                <span class="SettingsDialog__description"
+                  >Maximum line width for the editor content (in characters)</span
+                >
+              </div>
+              <div class="flex items-center gap-3">
+                <Slider
+                  type="single"
+                  value={editor_settings.editor_max_width_ch}
+                  onValueChange={(value: number | undefined) => {
+                    if (value !== undefined) {
+                      update("editor_max_width_ch", value);
+                    }
+                  }}
+                  min={60}
+                  max={140}
+                  step={5}
+                  class="w-32"
+                />
+                <span class="text-sm tabular-nums w-10"
+                  >{editor_settings.editor_max_width_ch}ch</span
+                >
+                <button
+                  type="button"
+                  class="SettingsDialog__reset"
+                  onclick={() =>
+                    update(
+                      "editor_max_width_ch",
+                      DEFAULT_EDITOR_SETTINGS.editor_max_width_ch,
+                    )}
+                  disabled={editor_settings.editor_max_width_ch ===
+                    DEFAULT_EDITOR_SETTINGS.editor_max_width_ch}
+                  title={`Reset to default (${String(DEFAULT_EDITOR_SETTINGS.editor_max_width_ch)}ch)`}
+                >
+                  <RotateCcw />
+                </button>
+              </div>
+            </div>
             <div class="SettingsDialog__row">
               <div class="SettingsDialog__label-group">
                 <span class="SettingsDialog__label">Max Open Tabs</span>
@@ -390,11 +436,7 @@
         onclick={on_save}
         disabled={!has_unsaved_changes || is_saving}
       >
-        {is_saving
-          ? "Saving..."
-          : has_unsaved_changes
-            ? "Save Changes"
-            : "Saved"}
+        {get_save_button_label()}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>
