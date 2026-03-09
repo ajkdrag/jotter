@@ -83,7 +83,7 @@ jobs:
       matrix:
         include:
           - job_name: macos-x64
-            os: macos-13
+            os: macos-latest
             target_key: darwin-x86_64
             rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
             bundle_root: src-tauri/target/x86_64-apple-darwin/release/bundle
@@ -166,7 +166,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@v0.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
