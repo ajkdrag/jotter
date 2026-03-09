@@ -56,7 +56,8 @@ fn open_repo(vault_path: &str) -> Result<Repository, String> {
 }
 
 fn repo_index(repo: &Repository) -> Result<git2::Index, String> {
-    repo.index().map_err(|e| format!("failed to get index: {}", e))
+    repo.index()
+        .map_err(|e| format!("failed to get index: {}", e))
 }
 
 fn default_signature() -> Result<Signature<'static>, String> {
@@ -248,7 +249,10 @@ fn head_parent_commit(repo: &Repository) -> Option<git2::Commit<'_>> {
     repo.head().ok().and_then(|head| head.peel_to_commit().ok())
 }
 
-fn ensure_tree_has_changes(parent: Option<&git2::Commit<'_>>, tree_oid: git2::Oid) -> Result<(), String> {
+fn ensure_tree_has_changes(
+    parent: Option<&git2::Commit<'_>>,
+    tree_oid: git2::Oid,
+) -> Result<(), String> {
     if let Some(parent_commit) = parent {
         if parent_commit.tree_id() == tree_oid {
             return Err("nothing to commit".to_string());

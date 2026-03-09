@@ -106,7 +106,10 @@ pub(crate) fn safe_vault_abs(vault_root: &Path, note_rel: &str) -> Result<PathBu
     resolve_under_vault_root(vault_root, &rel)
 }
 
-pub(crate) fn safe_vault_abs_for_write(vault_root: &Path, note_rel: &str) -> Result<PathBuf, String> {
+pub(crate) fn safe_vault_abs_for_write(
+    vault_root: &Path,
+    note_rel: &str,
+) -> Result<PathBuf, String> {
     let rel = parse_safe_relative_path(note_rel)?;
     let base = canonical_vault_root(vault_root)?;
     reject_symlink_components(&base, &rel)?;
@@ -176,10 +179,7 @@ pub(crate) fn extract_title(path: &Path) -> String {
     };
 
     let mut buf = vec![0u8; 8192];
-    let n = match file.read(&mut buf) {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let n = file.read(&mut buf).unwrap_or_default();
     buf.truncate(n);
 
     let prefix = String::from_utf8_lossy(&buf);
@@ -447,7 +447,7 @@ pub fn write_image_asset(args: WriteImageAssetArgs, app: AppHandle) -> Result<St
     }
 
     let filename = if let Some(custom_filename) = args.custom_filename {
-        let sanitized = custom_filename.replace('/', "").replace('\\', "");
+        let sanitized = custom_filename.replace(['/', '\\'], "");
         let sanitized = sanitized.trim_start_matches('.');
         if sanitized.is_empty() {
             return Err("invalid custom filename".to_string());
@@ -876,7 +876,11 @@ fn remove_existing_move_target(
     Ok(())
 }
 
-fn move_failure(path: &str, new_path: impl Into<String>, error: impl Into<String>) -> MoveItemResult {
+fn move_failure(
+    path: &str,
+    new_path: impl Into<String>,
+    error: impl Into<String>,
+) -> MoveItemResult {
     MoveItemResult {
         path: path.to_string(),
         new_path: new_path.into(),
@@ -894,7 +898,11 @@ fn move_success(path: String, new_path: String) -> MoveItemResult {
     }
 }
 
-fn collect_nested_move_sources(items: &[MoveItem], folder_path: &str, invalid_sources: &mut Vec<String>) {
+fn collect_nested_move_sources(
+    items: &[MoveItem],
+    folder_path: &str,
+    invalid_sources: &mut Vec<String>,
+) {
     for other in items {
         if other.path == folder_path {
             continue;
@@ -965,7 +973,11 @@ fn collect_pending_moves(
         }
 
         if !item.is_folder && !source_meta.is_file() {
-            results.push(move_failure(&item.path, item.path.clone(), "source is not a file"));
+            results.push(move_failure(
+                &item.path,
+                item.path.clone(),
+                "source is not a file",
+            ));
             continue;
         }
 

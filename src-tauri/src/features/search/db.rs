@@ -515,7 +515,7 @@ pub fn get_all_notes_from_db(conn: &Connection) -> Result<BTreeMap<String, Index
         .prepare("SELECT path, title, mtime_ms, size_bytes FROM notes")
         .map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map([], |row| note_meta_from_row(row))
+        .query_map([], note_meta_from_row)
         .map_err(|e| e.to_string())?;
     let mut map = BTreeMap::new();
     for row in rows {
@@ -712,7 +712,7 @@ pub fn get_outlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>,
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(params![path], |row| note_meta_from_row(row))
+        .query_map(params![path], note_meta_from_row)
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>()
@@ -854,7 +854,7 @@ pub fn get_backlinks(conn: &Connection, path: &str) -> Result<Vec<IndexNoteMeta>
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(params![path], |row| note_meta_from_row(row))
+        .query_map(params![path], note_meta_from_row)
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>()

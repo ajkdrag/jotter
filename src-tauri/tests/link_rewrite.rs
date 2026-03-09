@@ -186,10 +186,7 @@ fn format_wiki_target_vault_relative() {
 
 #[test]
 fn format_wiki_target_vault_relative_simple() {
-    assert_eq!(
-        format_wiki_target("source.md", "note.md", false),
-        "note"
-    );
+    assert_eq!(format_wiki_target("source.md", "note.md", false), "note");
 }
 
 #[test]
@@ -218,10 +215,7 @@ fn format_wiki_target_note_relative_from_root() {
 
 #[test]
 fn format_wiki_target_note_relative_sibling_at_root() {
-    assert_eq!(
-        format_wiki_target("source.md", "target.md", true),
-        "target"
-    );
+    assert_eq!(format_wiki_target("source.md", "target.md", true), "target");
 }
 
 #[test]
@@ -281,8 +275,12 @@ fn rewrite_wiki_link_vault_relative() {
 fn rewrite_wiki_link_preserves_label() {
     let mut map = HashMap::new();
     map.insert("docs/old.md".into(), "docs/new.md".into());
-    let result =
-        rewrite_links("[[docs/old|Custom Label]]", "x/source.md", "x/source.md", &map);
+    let result = rewrite_links(
+        "[[docs/old|Custom Label]]",
+        "x/source.md",
+        "x/source.md",
+        &map,
+    );
     assert!(result.changed);
     assert_eq!(result.markdown, "[[docs/new|Custom Label]]");
 }
@@ -300,7 +298,12 @@ fn rewrite_wiki_link_note_relative_preserves_format() {
 fn rewrite_wiki_link_parent_relative_preserves_format() {
     let mut map = HashMap::new();
     map.insert("docs/old.md".into(), "archive/old.md".into());
-    let result = rewrite_links("[[../old]]", "docs/sub/source.md", "docs/sub/source.md", &map);
+    let result = rewrite_links(
+        "[[../old]]",
+        "docs/sub/source.md",
+        "docs/sub/source.md",
+        &map,
+    );
     assert!(result.changed);
     assert_eq!(result.markdown, "[[../../archive/old]]");
 }
@@ -308,24 +311,14 @@ fn rewrite_wiki_link_parent_relative_preserves_format() {
 #[test]
 fn vault_relative_wiki_unchanged_on_source_move() {
     let map = HashMap::new();
-    let result = rewrite_links(
-        "[[sibling]]",
-        "docs/source.md",
-        "archive/source.md",
-        &map,
-    );
+    let result = rewrite_links("[[sibling]]", "docs/source.md", "archive/source.md", &map);
     assert!(!result.changed);
 }
 
 #[test]
 fn note_relative_wiki_rewritten_on_source_move() {
     let map = HashMap::new();
-    let result = rewrite_links(
-        "[[./sibling]]",
-        "docs/source.md",
-        "archive/source.md",
-        &map,
-    );
+    let result = rewrite_links("[[./sibling]]", "docs/source.md", "archive/source.md", &map);
     assert!(result.changed);
     assert_eq!(result.markdown, "[[../docs/sibling]]");
 }
@@ -364,12 +357,7 @@ fn batch_rename_multiple_targets() {
     let mut map = HashMap::new();
     map.insert("docs/a.md".into(), "archive/a.md".into());
     map.insert("docs/b.md".into(), "archive/b.md".into());
-    let result = rewrite_links(
-        "[[docs/a]] then [[docs/b]]",
-        "source.md",
-        "source.md",
-        &map,
-    );
+    let result = rewrite_links("[[docs/a]] then [[docs/b]]", "source.md", "source.md", &map);
     assert!(result.changed);
     assert_eq!(result.markdown, "[[archive/a]] then [[archive/b]]");
 }
@@ -394,12 +382,7 @@ fn mixed_wiki_and_markdown_links_rewrite() {
 fn rewrite_markdown_link_vault_relative_target() {
     let mut map = HashMap::new();
     map.insert("docs/old.md".into(), "docs/new.md".into());
-    let result = rewrite_links(
-        "[label](docs/old.md)",
-        "source.md",
-        "source.md",
-        &map,
-    );
+    let result = rewrite_links("[label](docs/old.md)", "source.md", "source.md", &map);
     assert!(result.changed);
     assert_eq!(result.markdown, "[label](docs/new.md)");
 }
@@ -408,12 +391,7 @@ fn rewrite_markdown_link_vault_relative_target() {
 fn rewrite_markdown_link_vault_relative_from_deep_source() {
     let mut map = HashMap::new();
     map.insert("note.md".into(), "note2.md".into());
-    let result = rewrite_links(
-        "[note](note.md)",
-        "a/b/c/deep.md",
-        "a/b/c/deep.md",
-        &map,
-    );
+    let result = rewrite_links("[note](note.md)", "a/b/c/deep.md", "a/b/c/deep.md", &map);
     assert!(result.changed);
     assert_eq!(result.markdown, "[note](note2.md)");
 }
@@ -577,16 +555,14 @@ fn rewrite_links_in_list_items() {
 #[test]
 fn folder_move_with_mixed_link_formats() {
     let mut map = HashMap::new();
-    map.insert("project/docs/readme.md".into(), "archive/docs/readme.md".into());
+    map.insert(
+        "project/docs/readme.md".into(),
+        "archive/docs/readme.md".into(),
+    );
     map.insert("project/src/main.md".into(), "archive/src/main.md".into());
 
     let md = "See [[project/docs/readme]] and [[./main]]";
-    let result = rewrite_links(
-        md,
-        "project/src/index.md",
-        "archive/src/index.md",
-        &map,
-    );
+    let result = rewrite_links(md, "project/src/index.md", "archive/src/index.md", &map);
     assert!(result.changed);
     assert_eq!(
         result.markdown,
@@ -599,12 +575,7 @@ fn note_relative_outlink_simplified_when_source_moves_to_root() {
     let mut map = HashMap::new();
     map.insert("a/b/noteA.md".into(), "noteA.md".into());
 
-    let result = rewrite_links(
-        "[[../../Testing]]",
-        "a/b/noteA.md",
-        "noteA.md",
-        &map,
-    );
+    let result = rewrite_links("[[../../Testing]]", "a/b/noteA.md", "noteA.md", &map);
     assert!(result.changed);
     assert_eq!(result.markdown, "[[Testing]]");
 }
@@ -614,12 +585,7 @@ fn note_relative_outlink_with_md_ext_simplified_when_source_moves_to_root() {
     let mut map = HashMap::new();
     map.insert("a/b/noteA.md".into(), "noteA.md".into());
 
-    let result = rewrite_links(
-        "[[../../Testing.md]]",
-        "a/b/noteA.md",
-        "noteA.md",
-        &map,
-    );
+    let result = rewrite_links("[[../../Testing.md]]", "a/b/noteA.md", "noteA.md", &map);
     assert!(result.changed);
     assert_eq!(result.markdown, "[[Testing]]");
 }

@@ -337,8 +337,7 @@ fn list_note_paths_by_prefix_respects_folder_boundary() {
         upsert_note(&conn, &meta, body).expect("upsert should succeed");
     }
 
-    let paths =
-        list_note_paths_by_prefix(&conn, "docs/").expect("list by prefix should succeed");
+    let paths = list_note_paths_by_prefix(&conn, "docs/").expect("list by prefix should succeed");
     assert_eq!(
         paths,
         vec!["docs/a.md".to_string(), "docs/sub/b.md".to_string()]
