@@ -1,7 +1,7 @@
 <img src="./assets/icon.png" alt="Otterly" width="150">
 
 [![Release](https://github.com/ajkdrag/otterly/actions/workflows/release.yml/badge.svg)](https://github.com/ajkdrag/otterly/actions/workflows/release.yml)
-
+[![Reddit](https://img.shields.io/reddit/subreddit-subscribers/obsidianalternative?style=social&logo=reddit)](https://www.reddit.com/r/ObsidianAlternative)
 # Otterly
 
 A local-first, privacy-focused markdown editor. No accounts, no cloud dependency, no sync fees — just a folder of markdown files you fully own.
